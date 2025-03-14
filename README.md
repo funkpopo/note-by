@@ -1,4 +1,4 @@
-# NoteBY - Electron + Next.js 笔记应用
+# Note-BY - Electron + Next.js 笔记应用
 
 这是一个使用 Electron 和 Next.js 构建的笔记应用，结合了 Electron 的桌面应用能力和 Next.js 的现代 Web 开发体验。
 
@@ -9,6 +9,9 @@
 - 支持暗黑模式
 - 离线使用
 - 跨平台支持 (Windows, macOS, Linux)
+- 本地文件系统存储笔记
+  - 开发环境：笔记保存在项目根目录的 `/markdown` 文件夹中
+  - 生产环境：笔记保存在应用程序同级目录的 `/markdown` 文件夹中
 
 ## 开发
 

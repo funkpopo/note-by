@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { MdPreview } from 'md-editor-rt';
 import 'md-editor-rt/lib/preview.css';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit } from 'lucide-react';
-import ThemeToggle from '@/components/ThemeToggle';
+import { ArrowLeft, Edit, Menu } from 'lucide-react';
 
 // 添加自定义样式，确保与编辑器一致
 const customStyle = `
@@ -59,6 +58,7 @@ interface NoteViewerProps {
   date: string;
   onBack: () => void;
   onEdit: (id: string) => void;
+  onMenuClick?: () => void;
 }
 
 export default function NoteViewer({
@@ -67,7 +67,8 @@ export default function NoteViewer({
   content,
   date,
   onBack,
-  onEdit
+  onEdit,
+  onMenuClick
 }: NoteViewerProps) {
   const [previewId] = useState(`preview-${id}`);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -107,6 +108,11 @@ export default function NoteViewer({
   return (
     <div className="w-full h-screen flex flex-col">
       <div className="flex items-center p-4 border-b">
+        {onMenuClick && (
+          <Button variant="ghost" onClick={onMenuClick} size="icon" className="mr-3 shrink-0">
+            <Menu size={18} />
+          </Button>
+        )}
         <Button variant="ghost" onClick={onBack} size="icon" className="mr-3 shrink-0">
           <ArrowLeft size={18} />
         </Button>
@@ -114,7 +120,6 @@ export default function NoteViewer({
           <h1 className="text-xl font-bold">{title}</h1>
           <p className="text-sm text-muted-foreground">{date}</p>
         </div>
-        <ThemeToggle className="mr-2" />
         <Button onClick={() => onEdit(id)} className="gap-2 shrink-0 ml-2">
           <Edit size={16} />
           编辑

@@ -45,3 +45,6 @@ next-env.d.ts
 .env.local
 
 .package-lock.json
+
+# markdown files directory
+/markdown

@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { MdEditor } from 'md-editor-rt';
 import 'md-editor-rt/lib/style.css';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save } from 'lucide-react';
-import ThemeToggle from '@/components/ThemeToggle';
+import { ArrowLeft, Save, Menu } from 'lucide-react';
 
 // 添加自定义样式，增大编辑器图标尺寸并调整高度
 const customStyle = `
@@ -83,6 +82,7 @@ interface NoteEditorProps {
   initialContent: string;
   onSave: (id: string, title: string, content: string) => void;
   onCancel: () => void;
+  onMenuClick?: () => void;
 }
 
 export default function NoteEditor({
@@ -90,7 +90,8 @@ export default function NoteEditor({
   initialTitle,
   initialContent,
   onSave,
-  onCancel
+  onCancel,
+  onMenuClick
 }: NoteEditorProps) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -152,6 +153,11 @@ export default function NoteEditor({
   return (
     <div className="w-full h-screen flex flex-col">
       <div className="flex items-center p-4 border-b">
+        {onMenuClick && (
+          <Button variant="ghost" onClick={onMenuClick} size="icon" className="mr-3 shrink-0">
+            <Menu size={18} />
+          </Button>
+        )}
         <Button variant="ghost" onClick={onCancel} size="icon" className="mr-3 shrink-0">
           <ArrowLeft size={18} />
         </Button>
@@ -162,7 +168,6 @@ export default function NoteEditor({
           className="text-xl font-bold bg-transparent border-b border-border px-2 py-1 focus:outline-none focus:border-primary flex-1"
           placeholder="笔记标题"
         />
-        <ThemeToggle className="mr-2" />
         <Button onClick={handleSave} className="gap-2 ml-2 shrink-0">
           <Save size={16} />
           保存

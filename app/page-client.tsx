@@ -7,10 +7,6 @@ const ElectronInfo = dynamic(() => import('@/components/ElectronInfo'), {
   ssr: false,
 });
 
-const ThemeToggle = dynamic(() => import('@/components/ThemeToggle'), {
-  ssr: false,
-});
-
 const NoteList = dynamic(() => import('@/components/NoteList'), {
   ssr: false,
 });
@@ -25,9 +21,6 @@ export default function HomeClient() {
       
       {/* 添加Electron信息组件 */}
       <ElectronInfo />
-      
-      {/* 添加主题切换组件 */}
-      <ThemeToggle />
     </div>
   );
 } 
