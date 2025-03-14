@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import NoteCard from './NoteCard';
 import NoteEditor from './NoteEditor';
 import NoteViewer from './NoteViewer';
 import Sidebar from './Sidebar';
+import RecentNotesView from './RecentNotesView';
 import { Button } from '@/components/ui/button';
-import { Plus, Menu } from 'lucide-react';
+import { Plus, Menu, Clock, Grid, List, FileText, Edit3, Trash } from 'lucide-react';
 
 // 定义Electron API类型
 interface ElectronAPI {
@@ -60,12 +61,17 @@ interface Note {
 // 定义视图状态类型
 type ViewState = 'list' | 'view' | 'edit' | 'create';
 
+// 定义侧边栏视图类型
+type SidebarView = 'all' | 'recent' | 'favorites' | 'tags';
+
 export default function NoteList() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [viewState, setViewState] = useState<ViewState>('list');
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
+  const [currentSidebarView, setCurrentSidebarView] = useState<SidebarView>('all');
+  const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
 
   // 加载所有笔记
   const loadNotes = useCallback(async () => {
@@ -111,6 +117,31 @@ export default function NoteList() {
     setCurrentNote(newNote);
     setViewState('create');
   }, []);
+
+  // 处理侧边栏导航
+  const handleSidebarNavigate = useCallback((view: SidebarView) => {
+    setCurrentSidebarView(view);
+    if (viewState !== 'list') {
+      setViewState('list');
+    }
+  }, [viewState]);
+
+  // 获取最近编辑的笔记
+  const recentNotes = useMemo(() => {
+    // 复制笔记数组并按日期排序（最新的在前）
+    return [...notes]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5); // 只取前5个
+  }, [notes]);
+
+  // 根据当前侧边栏视图获取要显示的笔记
+  const displayedNotes = useMemo(() => {
+    if (currentSidebarView === 'recent') {
+      return recentNotes;
+    }
+    // 其他视图类型的处理可以在这里添加
+    return notes;
+  }, [notes, recentNotes, currentSidebarView]);
 
   useEffect(() => {
     // 检查是否在Electron环境中运行
@@ -243,13 +274,14 @@ export default function NoteList() {
                 ...currentNote,
                 title,
                 content,
+                date: new Date().toISOString().split('T')[0], // 更新日期为当前日期
               };
               setNotes(prev => [newNote, ...prev]);
             }
           } else {
             // 更新现有笔记
             setNotes(notes.map(note => 
-              note.id === id ? { ...note, title, content } : note
+              note.id === id ? { ...note, title, content, date: new Date().toISOString().split('T')[0] } : note
             ));
           }
           setViewState('list');
@@ -268,13 +300,14 @@ export default function NoteList() {
             ...currentNote,
             title,
             content,
+            date: new Date().toISOString().split('T')[0], // 更新日期为当前日期
           };
           setNotes(prev => [newNote, ...prev]);
         }
       } else {
         // 更新现有笔记
         setNotes(notes.map(note => 
-          note.id === id ? { ...note, title, content } : note
+          note.id === id ? { ...note, title, content, date: new Date().toISOString().split('T')[0] } : note
         ));
       }
       setViewState('list');
@@ -289,7 +322,12 @@ export default function NoteList() {
   if (viewState === 'view' && currentNote) {
     return (
       <>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar 
+          isOpen={sidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+          onNavigate={handleSidebarNavigate}
+          currentView={currentSidebarView}
+        />
         <NoteViewer
           id={currentNote.id}
           title={currentNote.title}
@@ -306,7 +344,12 @@ export default function NoteList() {
   if ((viewState === 'edit' || viewState === 'create') && currentNote) {
     return (
       <>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar 
+          isOpen={sidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+          onNavigate={handleSidebarNavigate}
+          currentView={currentSidebarView}
+        />
         <NoteEditor
           id={currentNote.id}
           initialTitle={currentNote.title}
@@ -322,7 +365,12 @@ export default function NoteList() {
   // 默认显示笔记列表
   return (
     <>
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+        onNavigate={handleSidebarNavigate}
+        currentView={currentSidebarView}
+      />
       <div className="w-full h-full flex flex-col">
         <header className="border-b p-4 flex items-center">
           <Button 
@@ -334,38 +382,134 @@ export default function NoteList() {
           >
             <Menu size={20} />
           </Button>
-          <h1 className="text-2xl font-bold flex-1 text-center">Note-BY</h1>
+          <h1 className="text-2xl font-bold flex-1 text-center">Note-By</h1>
         </header>
         
         <div className="flex-1 overflow-auto p-4">
           <div className="w-full max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">我的笔记</h2>
-              <Button onClick={handleAddNote} className="gap-2">
-                <Plus size={16} />
-                添加笔记
-              </Button>
+              <h2 className="text-2xl font-bold flex items-center">
+                {currentSidebarView === 'recent' ? (
+                  <>
+                    <Clock size={24} className="mr-2" />
+                    最近编辑
+                  </>
+                ) : (
+                  '我的笔记'
+                )}
+              </h2>
+              <div className="flex items-center gap-2">
+                {currentSidebarView !== 'recent' && (
+                  <div className="flex border rounded-md overflow-hidden mr-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-none px-3 ${displayMode === 'grid' ? 'bg-muted' : ''}`}
+                      onClick={() => setDisplayMode('grid')}
+                      aria-label="网格视图"
+                    >
+                      <Grid size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-none px-3 ${displayMode === 'list' ? 'bg-muted' : ''}`}
+                      onClick={() => setDisplayMode('list')}
+                      aria-label="列表视图"
+                    >
+                      <List size={16} />
+                    </Button>
+                  </div>
+                )}
+                <Button onClick={handleAddNote} className="gap-2">
+                  <Plus size={16} />
+                  添加笔记
+                </Button>
+              </div>
             </div>
             
-            {notes.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">没有笔记，点击&quot;添加笔记&quot;创建一个新笔记。</p>
-              </div>
+            {currentSidebarView === 'recent' ? (
+              // 使用新的 RecentNotesView 组件显示最近编辑的笔记
+              <RecentNotesView 
+                notes={recentNotes}
+                onViewNote={handleView}
+                onEditNote={handleEdit}
+              />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {notes.map(note => (
-                  <NoteCard
-                    key={note.id}
-                    id={note.id}
-                    title={note.title}
-                    content={note.content}
-                    date={note.date}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onClick={() => handleView(note.id)}
-                  />
-                ))}
-              </div>
+              // 原有的笔记列表显示
+              displayedNotes.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    没有笔记，点击&quot;添加笔记&quot;创建一个新笔记。
+                  </p>
+                </div>
+              ) : displayMode === 'grid' ? (
+                // 网格视图
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {displayedNotes.map(note => (
+                    <NoteCard
+                      key={note.id}
+                      id={note.id}
+                      title={note.title}
+                      content={note.content}
+                      date={note.date}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onClick={() => handleView(note.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                // 列表视图
+                <div className="space-y-3">
+                  {displayedNotes.map(note => (
+                    <div 
+                      key={note.id}
+                      className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer"
+                      onClick={() => handleView(note.id)}
+                    >
+                      <div className="w-12 h-12 flex-shrink-0 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                        <FileText size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium line-clamp-1">{note.title}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {note.content.replace(/^#+ .*$/gm, '').replace(/[*_~`#>-]/g, '').replace(/\s+/g, ' ').trim().substring(0, 100)}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0 flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {note.date}
+                        </span>
+                        <div className="flex">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(note.id);
+                            }}
+                          >
+                            <Edit3 size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive/90"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(note.id);
+                            }}
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>

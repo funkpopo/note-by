@@ -204,7 +204,7 @@ function createMenu() {
                 {
                     label: '了解更多',
                     click: async () => {
-                        await electron_1.shell.openExternal('https://github.com/yourusername/note-by');
+                        await electron_1.shell.openExternal('https://github.com/yourusername/Note-By');
                     }
                 }
             ]

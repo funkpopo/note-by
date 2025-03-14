@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Note-BY - Electron + Next.js App",
+  title: "Note-By - Electron + Next.js App",
   description: "A note-taking application built with Electron and Next.js",
 };
 

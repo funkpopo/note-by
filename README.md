@@ -1,4 +1,4 @@
-# Note-BY - Electron + Next.js 笔记应用
+# Note-By - Electron + Next.js 笔记应用
 
 这是一个使用 Electron 和 Next.js 构建的笔记应用，结合了 Electron 的桌面应用能力和 Next.js 的现代 Web 开发体验。
 

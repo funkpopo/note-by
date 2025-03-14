@@ -1,5 +1,5 @@
 {
-  "name": "note-by",
+  "name": "Note-By",
   "version": "0.1.0",
   "private": true,
   "main": "electron/out/main.js",
