@@ -83,6 +83,10 @@ interface NoteEditorProps {
   onSave: (id: string, title: string, content: string) => void;
   onCancel: () => void;
   onMenuClick?: () => void;
+  folders?: string[];
+  currentFolder?: string;
+  onFolderChange?: (folder: string) => void;
+  onCreateFolder?: (folderPath: string) => Promise<boolean>;
 }
 
 export default function NoteEditor({
@@ -91,12 +95,20 @@ export default function NoteEditor({
   initialContent,
   onSave,
   onCancel,
-  onMenuClick
+  onMenuClick,
+  folders = [],
+  currentFolder = '',
+  onFolderChange,
+  onCreateFolder
 }: NoteEditorProps) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [editorId] = useState(`editor-${id}`);
   const [editorMode] = useState<'editable' | 'preview'>('editable');
+  const [showFolderSelector, setShowFolderSelector] = useState(false);
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newSubfolderParent, setNewSubfolderParent] = useState('');
   
   // 检测是否在暗黑模式下
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -149,6 +161,37 @@ export default function NoteEditor({
   const handleSave = () => {
     onSave(id, title, content);
   };
+
+  // 处理创建新文件夹
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !onCreateFolder) return;
+    
+    // 构建完整的文件夹路径
+    const folderPath = newSubfolderParent 
+      ? `${newSubfolderParent}/${newFolderName.trim()}`
+      : newFolderName.trim();
+    
+    const success = await onCreateFolder(folderPath);
+    
+    if (success) {
+      // 选择新创建的文件夹
+      if (onFolderChange) {
+        onFolderChange(folderPath);
+      }
+      
+      // 重置状态
+      setNewFolderName('');
+      setNewSubfolderParent('');
+      setShowNewFolderInput(false);
+    }
+  };
+  
+  // 获取文件夹显示名称
+  const getFolderDisplayName = (folder: string) => {
+    if (!folder) return '默认位置';
+    const parts = folder.split('/');
+    return parts[parts.length - 1];
+  };
   
   return (
     <div className="w-full h-screen flex flex-col">
@@ -168,6 +211,106 @@ export default function NoteEditor({
           className="text-xl font-bold bg-transparent border-b border-border px-2 py-1 focus:outline-none focus:border-primary flex-1"
           placeholder="笔记标题"
         />
+        
+        {onFolderChange && (
+          <div className="relative mx-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setShowFolderSelector(!showFolderSelector);
+                setShowNewFolderInput(false);
+              }}
+              className="text-sm"
+            >
+              {currentFolder ? getFolderDisplayName(currentFolder) : '默认位置'}
+            </Button>
+            
+            {showFolderSelector && (
+              <div className="absolute right-0 top-full mt-1 w-64 bg-card border rounded-md shadow-md z-10 max-h-80 overflow-y-auto">
+                <div className="py-1">
+                  <button
+                    className={`w-full text-left px-3 py-2 text-sm ${
+                      currentFolder === '' ? 'bg-primary/10' : 'hover:bg-accent/50'
+                    }`}
+                    onClick={() => {
+                      onFolderChange('');
+                      setShowFolderSelector(false);
+                    }}
+                  >
+                    默认位置
+                  </button>
+                  
+                  {folders.map(folder => (
+                    <button
+                      key={folder}
+                      className={`w-full text-left px-3 py-2 text-sm truncate ${
+                        currentFolder === folder ? 'bg-primary/10' : 'hover:bg-accent/50'
+                      }`}
+                      onClick={() => {
+                        onFolderChange(folder);
+                        setShowFolderSelector(false);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setNewSubfolderParent(folder);
+                        setShowNewFolderInput(true);
+                      }}
+                    >
+                      {/* 显示文件夹层次结构 */}
+                      {folder.split('/').map((part, index, array) => (
+                        <span key={index}>
+                          {index > 0 && <span className="text-muted-foreground mx-1">/</span>}
+                          <span className={index === array.length - 1 ? 'font-medium' : ''}>{part}</span>
+                        </span>
+                      ))}
+                    </button>
+                  ))}
+                  
+                  <div className="border-t my-1"></div>
+                  
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent/50"
+                    onClick={() => {
+                      setShowNewFolderInput(true);
+                      setNewSubfolderParent('');
+                    }}
+                  >
+                    + 新建文件夹
+                  </button>
+                  
+                  {showNewFolderInput && (
+                    <div className="p-3 border-t">
+                      {newSubfolderParent && (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          在 <span className="font-medium">{newSubfolderParent}</span> 中创建子文件夹
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newFolderName}
+                          onChange={(e) => setNewFolderName(e.target.value)}
+                          placeholder="文件夹名称"
+                          className="flex-1 px-2 py-1 text-sm border rounded"
+                          autoFocus
+                        />
+                        <Button 
+                          size="sm" 
+                          className="h-7 text-xs"
+                          onClick={handleCreateFolder}
+                        >
+                          创建
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
         <Button onClick={handleSave} className="gap-2 ml-2 shrink-0">
           <Save size={16} />
           保存

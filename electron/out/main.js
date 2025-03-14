@@ -223,8 +223,34 @@ electron_1.ipcMain.handle('test-ipc', () => {
     console.log('Test IPC handler called');
     return { success: true, message: 'IPC is working!' };
 });
+// 递归读取目录中的所有markdown文件
+function readMarkdownFilesRecursively(dir) {
+    const markdownFiles = [];
+    function readDir(currentDir, relativeDir = '') {
+        const items = fs.readdirSync(currentDir);
+        for (const item of items) {
+            const itemPath = path.join(currentDir, item);
+            const stats = fs.statSync(itemPath);
+            if (stats.isDirectory()) {
+                // 如果是目录，递归读取
+                const newRelativeDir = path.join(relativeDir, item);
+                readDir(itemPath, newRelativeDir);
+            }
+            else if (item.endsWith('.md')) {
+                // 如果是markdown文件，添加到结果中
+                const relativePath = path.join(relativeDir, item);
+                markdownFiles.push({
+                    path: itemPath,
+                    relativePath: relativePath
+                });
+            }
+        }
+    }
+    readDir(dir);
+    return markdownFiles;
+}
 // 保存markdown文件
-electron_1.ipcMain.handle('save-markdown', async (_, id, title, content) => {
+electron_1.ipcMain.handle('save-markdown', async (_, id, title, content, folder = '') => {
     try {
         if (!id) {
             console.error('保存markdown文件失败: ID不能为空');
@@ -232,7 +258,15 @@ electron_1.ipcMain.handle('save-markdown', async (_, id, title, content) => {
         }
         const markdownDir = ensureMarkdownDir();
         console.log(`保存markdown文件到目录: ${markdownDir}`);
-        const filePath = path.join(markdownDir, `${id}.md`);
+        // 如果指定了文件夹，确保文件夹存在
+        let targetDir = markdownDir;
+        if (folder && folder.trim() !== '') {
+            targetDir = path.join(markdownDir, folder);
+            // 递归创建文件夹
+            fs.mkdirSync(targetDir, { recursive: true });
+            console.log(`创建目标文件夹: ${targetDir}`);
+        }
+        const filePath = path.join(targetDir, `${id}.md`);
         console.log(`文件完整路径: ${filePath}`);
         // 创建文件内容（可以添加元数据头部）
         const fileContent = `---
@@ -245,7 +279,9 @@ ${content}`;
         // 写入文件
         fs.writeFileSync(filePath, fileContent, 'utf-8');
         console.log(`成功保存文件: ${filePath}`);
-        return { success: true, filePath };
+        // 计算相对路径用于返回
+        const relativePath = folder ? path.join(folder, `${id}.md`) : `${id}.md`;
+        return { success: true, filePath, relativePath };
     }
     catch (error) {
         console.error('保存markdown文件失败:', error);
@@ -271,22 +307,14 @@ electron_1.ipcMain.handle('load-all-markdown', async () => {
             console.error(`[IPC] Markdown目录不存在: ${markdownDir}`);
             return { success: false, error: `Markdown目录不存在: ${markdownDir}` };
         }
-        // 列出目录内容
-        console.log(`[IPC] 目录 ${markdownDir} 的内容:`);
-        const dirContents = fs.readdirSync(markdownDir);
-        dirContents.forEach(item => {
-            const itemPath = path.join(markdownDir, item);
-            const stats = fs.statSync(itemPath);
-            console.log(`[IPC] - ${item} (${stats.isDirectory() ? '目录' : '文件'}, ${stats.size} 字节)`);
-        });
-        const files = dirContents.filter(file => file.endsWith('.md'));
-        console.log(`[IPC] 找到 ${files.length} 个markdown文件`);
+        // 递归读取所有markdown文件
+        const markdownFiles = readMarkdownFilesRecursively(markdownDir);
+        console.log(`[IPC] 找到 ${markdownFiles.length} 个markdown文件`);
         const notes = [];
-        for (const file of files) {
+        for (const file of markdownFiles) {
             try {
-                const filePath = path.join(markdownDir, file);
-                console.log(`[IPC] 读取文件: ${filePath}`);
-                const content = fs.readFileSync(filePath, 'utf-8');
+                console.log(`[IPC] 读取文件: ${file.path}`);
+                const content = fs.readFileSync(file.path, 'utf-8');
                 console.log(`[IPC] 文件内容长度: ${content.length} 字节`);
                 // 解析文件内容，提取元数据和正文
                 const metaMatch = content.match(/^---\s*([\s\S]*?)\s*---\s*([\s\S]*)$/);
@@ -298,25 +326,30 @@ electron_1.ipcMain.handle('load-all-markdown', async () => {
                     const idMatch = metaContent.match(/id:\s*(.*)/);
                     const dateMatch = metaContent.match(/date:\s*(.*)/);
                     if (titleMatch && idMatch) {
+                        // 从相对路径中提取文件夹路径
+                        const folderPath = path.dirname(file.relativePath);
+                        const folderName = folderPath === '.' ? '' : folderPath;
                         const note = {
                             id: idMatch[1],
                             title: titleMatch[1],
                             content: markdownContent,
-                            date: dateMatch ? new Date(dateMatch[1]).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                            date: dateMatch ? new Date(dateMatch[1]).toISOString() : new Date().toISOString(),
+                            folder: folderName, // 添加文件夹信息
+                            path: file.relativePath // 添加相对路径信息
                         };
-                        console.log(`[IPC] 成功解析笔记: ID=${note.id}, 标题=${note.title}, 日期=${note.date}`);
+                        console.log(`[IPC] 成功解析笔记: ID=${note.id}, 标题=${note.title}, 日期=${note.date}, 文件夹=${note.folder}`);
                         notes.push(note);
                     }
                     else {
-                        console.warn(`[IPC] 文件 ${file} 缺少必要的元数据 (title 或 id)`);
+                        console.warn(`[IPC] 文件 ${file.path} 缺少必要的元数据 (title 或 id)`);
                     }
                 }
                 else {
-                    console.warn(`[IPC] 文件 ${file} 格式不正确，无法解析元数据`);
+                    console.warn(`[IPC] 文件 ${file.path} 格式不正确，无法解析元数据`);
                 }
             }
             catch (fileError) {
-                console.error(`[IPC] 处理文件 ${file} 时出错:`, fileError);
+                console.error(`[IPC] 处理文件 ${file.path} 时出错:`, fileError);
                 // 继续处理其他文件
             }
         }
@@ -337,7 +370,7 @@ electron_1.ipcMain.handle('load-all-markdown', async () => {
     }
 });
 // 删除markdown文件
-electron_1.ipcMain.handle('delete-markdown', async (_, id) => {
+electron_1.ipcMain.handle('delete-markdown', async (_, id, filePath = '') => {
     try {
         if (!id) {
             console.error('删除markdown文件失败: ID不能为空');
@@ -345,15 +378,39 @@ electron_1.ipcMain.handle('delete-markdown', async (_, id) => {
         }
         const markdownDir = ensureMarkdownDir();
         console.log(`从目录删除markdown文件: ${markdownDir}`);
-        const filePath = path.join(markdownDir, `${id}.md`);
-        console.log(`要删除的文件路径: ${filePath}`);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            console.log(`成功删除文件: ${filePath}`);
+        let targetPath;
+        // 如果提供了文件路径，使用它
+        if (filePath && filePath.trim() !== '') {
+            targetPath = path.join(markdownDir, filePath);
+        }
+        else {
+            // 否则使用默认路径（根目录下的ID.md）
+            targetPath = path.join(markdownDir, `${id}.md`);
+        }
+        console.log(`要删除的文件路径: ${targetPath}`);
+        if (fs.existsSync(targetPath)) {
+            fs.unlinkSync(targetPath);
+            console.log(`成功删除文件: ${targetPath}`);
+            // 检查并清理空文件夹
+            const dirPath = path.dirname(targetPath);
+            if (dirPath !== markdownDir) { // 不是根目录
+                try {
+                    const dirContents = fs.readdirSync(dirPath);
+                    if (dirContents.length === 0) {
+                        // 文件夹为空，可以删除
+                        fs.rmdirSync(dirPath);
+                        console.log(`删除空文件夹: ${dirPath}`);
+                    }
+                }
+                catch (dirError) {
+                    console.error(`检查/删除文件夹时出错: ${dirError}`);
+                    // 继续执行，不影响主流程
+                }
+            }
             return { success: true };
         }
         else {
-            console.warn(`文件不存在: ${filePath}`);
+            console.warn(`文件不存在: ${targetPath}`);
             return { success: false, error: '文件不存在' };
         }
     }
@@ -399,6 +456,33 @@ electron_1.ipcMain.handle('open-markdown-dir', async () => {
         return {
             success: false,
             error: error.message
+        };
+    }
+});
+// 创建文件夹
+electron_1.ipcMain.handle('create-folder', async (_, folderPath) => {
+    try {
+        if (!folderPath) {
+            console.error('创建文件夹失败: 路径不能为空');
+            return { success: false, error: '路径不能为空' };
+        }
+        const markdownDir = ensureMarkdownDir();
+        const targetDir = path.join(markdownDir, folderPath);
+        console.log(`创建文件夹: ${targetDir}`);
+        // 递归创建文件夹
+        fs.mkdirSync(targetDir, { recursive: true });
+        return { success: true, path: folderPath };
+    }
+    catch (error) {
+        console.error('创建文件夹失败:', error);
+        return {
+            success: false,
+            error: error.message,
+            details: {
+                path: getMarkdownDir(),
+                errorName: error.name,
+                errorStack: error.stack
+            }
         };
     }
 });

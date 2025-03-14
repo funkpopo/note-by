@@ -25,14 +25,14 @@ const electronAPI = {
   },
 
   // 文件系统操作
-  saveMarkdown: (id: string, title: string, content: string) => 
-    ipcRenderer.invoke('save-markdown', id, title, content),
+  saveMarkdown: (id: string, title: string, content: string, folder: string = '') => 
+    ipcRenderer.invoke('save-markdown', id, title, content, folder),
   
   loadAllMarkdown: () => 
     ipcRenderer.invoke('load-all-markdown'),
   
-  deleteMarkdown: (id: string) => 
-    ipcRenderer.invoke('delete-markdown', id),
+  deleteMarkdown: (id: string, filePath: string = '') => 
+    ipcRenderer.invoke('delete-markdown', id, filePath),
     
   // 添加获取和打开markdown文件夹的方法
   getMarkdownDir: () => 
@@ -40,6 +40,10 @@ const electronAPI = {
     
   openMarkdownDir: () => 
     ipcRenderer.invoke('open-markdown-dir'),
+    
+  // 创建文件夹
+  createFolder: (folderPath: string) =>
+    ipcRenderer.invoke('create-folder', folderPath),
 };
 
 // 暴露安全的API给渲染进程

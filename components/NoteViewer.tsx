@@ -56,6 +56,7 @@ interface NoteViewerProps {
   title: string;
   content: string;
   date: string;
+  folder?: string;
   onBack: () => void;
   onEdit: (id: string) => void;
   onMenuClick?: () => void;
@@ -66,6 +67,7 @@ export default function NoteViewer({
   title,
   content,
   date,
+  folder,
   onBack,
   onEdit,
   onMenuClick
@@ -118,7 +120,22 @@ export default function NoteViewer({
         </Button>
         <div className="flex-1">
           <h1 className="text-xl font-bold">{title}</h1>
-          <p className="text-sm text-muted-foreground">{date}</p>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <span>{new Date(date).toLocaleString()}</span>
+            {folder && (
+              <>
+                <span className="mx-2">•</span>
+                <span className="text-primary/80">
+                  {folder.split('/').map((part, index) => (
+                    <span key={index}>
+                      {index > 0 && <span className="mx-1">/</span>}
+                      <span>{part}</span>
+                    </span>
+                  ))}
+                </span>
+              </>
+            )}
+          </div>
         </div>
         <Button onClick={() => onEdit(id)} className="gap-2 shrink-0 ml-2">
           <Edit size={16} />

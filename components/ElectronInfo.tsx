@@ -53,17 +53,17 @@ export default function ElectronInfo() {
   }
 
   return (
-    <div className="fixed bottom-0 right-0 p-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm rounded-tl-lg border-t border-l">
-      <div className="flex items-center gap-2">
+    <div className="fixed bottom-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm rounded-tl-lg border-t border-l border-border dark:border-border/50 shadow-sm">
+      <div className="flex items-center gap-1">
         <div>笔记存储位置: {markdownPath || '加载中...'}</div>
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-6 w-6" 
+          className="h-5 w-5 p-0" 
           onClick={handleOpenFolder}
           title="打开笔记文件夹"
         >
-          <Folder size={14} />
+          <Folder size={12} />
         </Button>
       </div>
     </div>

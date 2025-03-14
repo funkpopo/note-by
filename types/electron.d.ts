@@ -5,9 +5,10 @@ interface ElectronAPI {
   onLoadNotes: (callback: () => void) => () => void;
   
   // 文件系统操作
-  saveMarkdown: (id: string, title: string, content: string) => Promise<{ 
+  saveMarkdown: (id: string, title: string, content: string, folder?: string) => Promise<{ 
     success: boolean; 
     filePath?: string; 
+    relativePath?: string;
     error?: string; 
     details?: { 
       id: string;
@@ -18,7 +19,14 @@ interface ElectronAPI {
   }>;
   loadAllMarkdown: () => Promise<{ 
     success: boolean; 
-    notes?: Array<{ id: string; title: string; content: string; date: string }>; 
+    notes?: Array<{ 
+      id: string; 
+      title: string; 
+      content: string; 
+      date: string;
+      folder?: string;
+      path?: string;
+    }>; 
     error?: string;
     details?: {
       path: string;
@@ -26,7 +34,7 @@ interface ElectronAPI {
       errorStack?: string;
     }
   }>;
-  deleteMarkdown: (id: string) => Promise<{ 
+  deleteMarkdown: (id: string, filePath?: string) => Promise<{ 
     success: boolean; 
     error?: string; 
     details?: {
@@ -38,6 +46,16 @@ interface ElectronAPI {
   }>;
   getMarkdownDir: () => Promise<{ success: boolean; path?: string; error?: string }>;
   openMarkdownDir: () => Promise<{ success: boolean; error?: string }>;
+  createFolder: (folderPath: string) => Promise<{ 
+    success: boolean; 
+    path?: string; 
+    error?: string;
+    details?: {
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
 }
 
 declare global {

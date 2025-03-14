@@ -14,9 +14,10 @@ interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   onMenuNewNote: (callback: () => void) => () => void;
   onLoadNotes: (callback: () => void) => () => void;
-  saveMarkdown: (id: string, title: string, content: string) => Promise<{ 
+  saveMarkdown: (id: string, title: string, content: string, folder?: string) => Promise<{ 
     success: boolean; 
     filePath?: string; 
+    relativePath?: string;
     error?: string; 
     details?: { 
       id: string;
@@ -27,7 +28,7 @@ interface ElectronAPI {
   }>;
   loadAllMarkdown: () => Promise<{ 
     success: boolean; 
-    notes?: Array<{ id: string; title: string; content: string; date: string }>; 
+    notes?: Array<{ id: string; title: string; content: string; date: string; folder?: string; path?: string }>; 
     error?: string;
     details?: {
       path: string;
@@ -35,7 +36,7 @@ interface ElectronAPI {
       errorStack?: string;
     }
   }>;
-  deleteMarkdown: (id: string) => Promise<{ 
+  deleteMarkdown: (id: string, path?: string) => Promise<{ 
     success: boolean; 
     error?: string; 
     details?: {
@@ -48,6 +49,16 @@ interface ElectronAPI {
   testIPC: () => Promise<{ success: boolean; error?: string }>;
   getMarkdownDir: () => Promise<{ success: boolean; path?: string; error?: string }>;
   openMarkdownDir: () => Promise<{ success: boolean; error?: string }>;
+  createFolder: (folderPath: string) => Promise<{ 
+    success: boolean; 
+    path?: string; 
+    error?: string;
+    details?: {
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
 }
 
 // 定义笔记类型
@@ -56,6 +67,8 @@ interface Note {
   title: string;
   content: string;
   date: string;
+  folder?: string; // 文件夹路径
+  path?: string;   // 相对路径
 }
 
 // 定义视图状态类型
@@ -72,6 +85,11 @@ export default function NoteList() {
   const [isElectron, setIsElectron] = useState(false);
   const [currentSidebarView, setCurrentSidebarView] = useState<SidebarView>('all');
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
+  const [folders, setFolders] = useState<string[]>([]); // 存储所有文件夹
+  const [currentFolder, setCurrentFolder] = useState<string>(''); // 当前选中的文件夹
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newSubfolderParent, setNewSubfolderParent] = useState('');
 
   // 加载所有笔记
   const loadNotes = useCallback(async () => {
@@ -96,6 +114,17 @@ export default function NoteList() {
         
         if (result.success && result.notes) {
           setNotes(result.notes);
+          
+          // 提取并设置文件夹列表
+          const uniqueFolders = Array.from(
+            new Set(
+              result.notes
+                .filter(note => note.folder)
+                .map(note => note.folder as string)
+            )
+          ).sort();
+          
+          setFolders(uniqueFolders);
         } else {
           console.error('加载笔记失败:', result.error);
         }
@@ -244,10 +273,31 @@ export default function NoteList() {
     if (isElectron) {
       try {
         const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
-        const result = await electron.deleteMarkdown(id);
+        
+        // 找到要删除的笔记
+        const noteToDelete = notes.find(note => note.id === id);
+        if (!noteToDelete) {
+          console.error('找不到要删除的笔记');
+          return;
+        }
+        
+        // 使用笔记的路径进行删除
+        const result = await electron.deleteMarkdown(id, noteToDelete.path);
         
         if (result.success) {
           setNotes(notes.filter(note => note.id !== id));
+          
+          // 如果删除的是当前文件夹中的最后一个笔记，可能需要更新文件夹列表
+          const remainingNotes = notes.filter(note => note.id !== id);
+          const uniqueFolders = Array.from(
+            new Set(
+              remainingNotes
+                .filter(note => note.folder)
+                .map(note => note.folder as string)
+            )
+          ).sort();
+          
+          setFolders(uniqueFolders);
         } else {
           console.error('删除笔记失败:', result.error);
         }
@@ -264,7 +314,9 @@ export default function NoteList() {
     if (isElectron) {
       try {
         const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
-        const result = await electron.saveMarkdown(id, title, content);
+        
+        // 使用当前文件夹保存笔记
+        const result = await electron.saveMarkdown(id, title, content, currentFolder);
         
         if (result.success) {
           if (viewState === 'create') {
@@ -274,9 +326,16 @@ export default function NoteList() {
                 ...currentNote,
                 title,
                 content,
-                date: new Date().toISOString().split('T')[0], // 更新日期为当前日期
+                date: new Date().toISOString(),
+                folder: currentFolder,
+                path: result.relativePath
               };
               setNotes(prev => [newNote, ...prev]);
+              
+              // 如果是新文件夹，更新文件夹列表
+              if (currentFolder && !folders.includes(currentFolder)) {
+                setFolders(prev => [...prev, currentFolder].sort());
+              }
             }
           } else {
             // 更新现有笔记
@@ -318,6 +377,43 @@ export default function NoteList() {
     setViewState('list');
   };
 
+  // 处理文件夹选择
+  const handleFolderSelect = (folder: string) => {
+    setCurrentFolder(folder);
+  };
+
+  // 处理创建新文件夹
+  const handleCreateFolder = async (folderPath: string) => {
+    if (!folderPath.trim() || !isElectron) return false;
+
+    try {
+      const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
+      const result = await electron.createFolder(folderPath.trim());
+      
+      if (result.success) {
+        // 添加到文件夹列表
+        if (!folders.includes(folderPath.trim())) {
+          setFolders(prev => [...prev, folderPath.trim()].sort());
+        }
+        
+        // 选择新创建的文件夹
+        setCurrentFolder(folderPath.trim());
+        
+        // 重置状态
+        setNewFolderName('');
+        setShowFolderDialog(false);
+        
+        return true;
+      } else {
+        console.error('创建文件夹失败:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('创建文件夹时出错:', error);
+      return false;
+    }
+  };
+
   // 根据当前视图状态渲染不同的组件
   if (viewState === 'view' && currentNote) {
     return (
@@ -333,6 +429,7 @@ export default function NoteList() {
           title={currentNote.title}
           content={currentNote.content}
           date={currentNote.date}
+          folder={currentNote.folder}
           onBack={handleCancel}
           onEdit={handleEdit}
           onMenuClick={() => setSidebarOpen(true)}
@@ -357,10 +454,165 @@ export default function NoteList() {
           onSave={handleSave}
           onCancel={handleCancel}
           onMenuClick={() => setSidebarOpen(true)}
+          folders={folders}
+          currentFolder={currentFolder}
+          onFolderChange={setCurrentFolder}
+          onCreateFolder={handleCreateFolder}
         />
       </>
     );
   }
+
+  // 在渲染部分添加文件夹选择UI
+  // 在列表视图中添加文件夹选择器
+  const renderFolderSelector = () => {
+    // 构建文件夹树结构
+    const buildFolderTree = () => {
+      const tree: Record<string, string[]> = { '': [] };
+      
+      folders.forEach(folder => {
+        const parts = folder.split('/');
+        let currentPath = '';
+        
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          const parentPath = currentPath;
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+          
+          if (!tree[parentPath]) {
+            tree[parentPath] = [];
+          }
+          
+          if (!tree[currentPath]) {
+            tree[currentPath] = [];
+          }
+          
+          if (!tree[parentPath].includes(currentPath)) {
+            tree[parentPath].push(currentPath);
+          }
+        }
+      });
+      
+      return tree;
+    };
+    
+    // 递归渲染文件夹树
+    const renderFolderTree = (parentPath: string = '', level: number = 0) => {
+      const tree = buildFolderTree();
+      const children = tree[parentPath] || [];
+      
+      return (
+        <div className={level > 0 ? "ml-3 border-l pl-2" : ""}>
+          {children.map(folder => {
+            const folderName = folder.split('/').pop() || folder;
+            return (
+              <div key={folder}>
+                <button
+                  onClick={() => handleFolderSelect(folder)}
+                  className={`w-full text-left px-2 py-1 rounded text-sm flex items-center ${
+                    currentFolder === folder ? 'bg-primary/10 font-medium' : 'hover:bg-accent/50'
+                  }`}
+                >
+                  <span className="truncate">{folderName}</span>
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({notes.filter(note => note.folder === folder).length})
+                  </span>
+                </button>
+                {renderFolderTree(folder, level + 1)}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+    
+    return (
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium">文件夹</h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowFolderDialog(true)}
+            className="h-7 text-xs"
+          >
+            新建文件夹
+          </Button>
+        </div>
+        
+        <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+          <button
+            onClick={() => handleFolderSelect('')}
+            className={`w-full text-left px-2 py-1 rounded text-sm flex items-center ${
+              currentFolder === '' ? 'bg-primary/10 font-medium' : 'hover:bg-accent/50'
+            }`}
+          >
+            <span>所有笔记</span>
+            <span className="text-xs text-muted-foreground ml-1">
+              ({notes.length})
+            </span>
+          </button>
+          
+          {renderFolderTree()}
+        </div>
+        
+        {showFolderDialog && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-card border rounded-lg shadow-lg p-4 w-80">
+              <h3 className="text-lg font-medium mb-4">新建文件夹</h3>
+              
+              {/* 添加父文件夹选择 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">位置</label>
+                <select 
+                  className="w-full px-3 py-2 border rounded"
+                  value={newSubfolderParent}
+                  onChange={(e) => setNewSubfolderParent(e.target.value)}
+                >
+                  <option value="">根目录</option>
+                  {folders.map(folder => (
+                    <option key={folder} value={folder}>
+                      {folder}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">文件夹名称</label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="输入文件夹名称"
+                  className="w-full px-3 py-2 border rounded"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => {
+                  setShowFolderDialog(false);
+                  setNewFolderName('');
+                  setNewSubfolderParent('');
+                }}>
+                  取消
+                </Button>
+                <Button onClick={() => {
+                  const folderPath = newSubfolderParent 
+                    ? `${newSubfolderParent}/${newFolderName.trim()}`
+                    : newFolderName.trim();
+                  handleCreateFolder(folderPath);
+                }}>
+                  创建
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // 默认显示笔记列表
   return (
@@ -428,10 +680,13 @@ export default function NoteList() {
               </div>
             </div>
             
+            {/* 添加文件夹选择器 */}
+            {renderFolderSelector()}
+            
             {currentSidebarView === 'recent' ? (
               // 使用新的 RecentNotesView 组件显示最近编辑的笔记
               <RecentNotesView 
-                notes={recentNotes}
+                notes={notes.filter(note => currentFolder === '' || note.folder === currentFolder)}
                 onViewNote={handleView}
                 onEditNote={handleEdit}
               />
