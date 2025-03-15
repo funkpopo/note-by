@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Folder, ChevronRight, ChevronDown, FolderPlus, FileText } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Folder, ChevronRight, ChevronDown, FolderPlus, FileText, Edit, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,17 @@ interface FolderTreeProps {
   onCreateFolder: (folderPath: string) => Promise<boolean>;
   onMoveItem?: (sourcePath: string, targetFolder: string, isFolder: boolean) => Promise<boolean>;
   onNoteSelect?: (id: string) => void;
+  onEditNote?: (id: string) => void;
+  onDeleteNote?: (id: string) => void;
+  onDeleteFolder?: (path: string) => Promise<boolean>;
+}
+
+// 右键菜单项接口
+interface ContextMenuItem {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
 }
 
 export default function FolderTree({
@@ -22,7 +33,10 @@ export default function FolderTree({
   onFolderSelect,
   onCreateFolder,
   onMoveItem,
-  onNoteSelect
+  onNoteSelect,
+  onEditNote,
+  onDeleteNote,
+  onDeleteFolder
 }: FolderTreeProps) {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [showNewFolderInput, setShowNewFolderInput] = useState<string | null>(null);
@@ -30,6 +44,33 @@ export default function FolderTree({
   const [draggedItem, setDraggedItem] = useState<{ path: string; isFolder: boolean } | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const newFolderInputRef = useRef<HTMLInputElement>(null);
+  
+  // 右键菜单状态
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+    visible: boolean;
+  }>({
+    x: 0,
+    y: 0,
+    items: [],
+    visible: false,
+  });
+
+  // 点击外部关闭右键菜单
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [contextMenu.visible]);
 
   // 构建文件夹树结构
   const buildFolderTree = () => {
@@ -182,6 +223,83 @@ export default function FolderTree({
     setDraggedItem(null);
   };
 
+  // 处理文件夹右键菜单
+  const handleFolderContextMenu = (e: React.MouseEvent, folder: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const menuItems: ContextMenuItem[] = [
+      {
+        label: '新建子文件夹',
+        icon: <FolderPlus size={14} />,
+        onClick: () => {
+          setShowNewFolderInput(folder);
+          setNewFolderName('');
+          setTimeout(() => {
+            newFolderInputRef.current?.focus();
+          }, 0);
+        }
+      }
+    ];
+    
+    // 只有非根文件夹才能删除
+    if (folder !== '' && onDeleteFolder) {
+      menuItems.push({
+        label: '删除文件夹',
+        icon: <Trash size={14} />,
+        onClick: async () => {
+          if (window.confirm(`确定要删除文件夹 "${folder.split('/').pop()}" 及其所有内容吗？`)) {
+            await onDeleteFolder(folder);
+          }
+        },
+        danger: true
+      });
+    }
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: menuItems,
+      visible: true
+    });
+  };
+
+  // 处理笔记右键菜单
+  const handleNoteContextMenu = (e: React.MouseEvent, note: { id: string; title: string }) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const menuItems: ContextMenuItem[] = [];
+    
+    if (onEditNote) {
+      menuItems.push({
+        label: '编辑笔记',
+        icon: <Edit size={14} />,
+        onClick: () => onEditNote(note.id)
+      });
+    }
+    
+    if (onDeleteNote) {
+      menuItems.push({
+        label: '删除笔记',
+        icon: <Trash size={14} />,
+        onClick: () => {
+          if (window.confirm(`确定要删除笔记 "${note.title}" 吗？`)) {
+            onDeleteNote(note.id);
+          }
+        },
+        danger: true
+      });
+    }
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: menuItems,
+      visible: true
+    });
+  };
+
   // 递归渲染文件夹树
   const renderFolderTree = (parentPath: string = '', level: number = 0) => {
     const tree = buildFolderTree();
@@ -205,6 +323,7 @@ export default function FolderTree({
                   isDropTarget && "bg-primary/20 border border-dashed border-primary"
                 )}
                 onClick={() => onFolderSelect(folder)}
+                onContextMenu={(e) => handleFolderContextMenu(e, folder)}
                 draggable
                 onDragStart={(e) => handleDragStart(e, folder, true)}
                 onDragEnd={handleDragEnd}
@@ -297,6 +416,7 @@ export default function FolderTree({
                           "hover:bg-accent/50 cursor-pointer"
                         )}
                         onClick={() => onNoteSelect && onNoteSelect(note.id)}
+                        onContextMenu={(e) => handleNoteContextMenu(e, note)}
                         draggable={!!note.path}
                         onDragStart={(e) => note.path && handleDragStart(e, note.path, false)}
                         onDragEnd={handleDragEnd}
@@ -324,6 +444,7 @@ export default function FolderTree({
                 "hover:bg-accent/50 cursor-pointer"
               )}
               onClick={() => onNoteSelect && onNoteSelect(note.id)}
+              onContextMenu={(e) => handleNoteContextMenu(e, note)}
               draggable={!!note.path}
               onDragStart={(e) => note.path && handleDragStart(e, note.path, false)}
               onDragEnd={handleDragEnd}
@@ -339,7 +460,7 @@ export default function FolderTree({
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-4 h-full flex flex-col relative">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium">文件夹</h3>
         <Button 
@@ -358,7 +479,7 @@ export default function FolderTree({
         </Button>
       </div>
       
-      <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+      <div className="space-y-1 flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent scrollbar-thumb-muted hover:scrollbar-thumb-primary/50 transition-colors">
         <div 
           className={cn(
             "flex items-center py-1 px-2 rounded-md",
@@ -366,6 +487,7 @@ export default function FolderTree({
             dropTarget === '' && "bg-primary/20 border border-dashed border-primary"
           )}
           onClick={() => onFolderSelect('')}
+          onContextMenu={(e) => handleFolderContextMenu(e, '')}
           onDragOver={(e) => handleDragOver(e, '')}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, '')}
@@ -407,6 +529,36 @@ export default function FolderTree({
         
         {renderFolderTree()}
       </div>
+      
+      {/* 右键菜单 */}
+      {contextMenu.visible && (
+        <div 
+          className="fixed bg-card border rounded-md shadow-md py-1 z-50 min-w-40"
+          style={{ 
+            left: `${contextMenu.x}px`, 
+            top: `${contextMenu.y}px`,
+            transform: 'translate(0, 0)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.items.map((item, index) => (
+            <button
+              key={index}
+              className={cn(
+                "w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-accent/50",
+                item.danger && "text-destructive hover:bg-destructive/10"
+              )}
+              onClick={() => {
+                item.onClick();
+                setContextMenu(prev => ({ ...prev, visible: false }));
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 } 

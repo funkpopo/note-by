@@ -27,6 +27,7 @@ interface ElectronAPI {
       folder?: string;
       path?: string;
     }>; 
+    folders?: string[];
     error?: string;
     details?: {
       path: string;

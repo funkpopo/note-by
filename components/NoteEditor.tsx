@@ -227,7 +227,7 @@ export default function NoteEditor({
             </Button>
             
             {showFolderSelector && (
-              <div className="absolute right-0 top-full mt-1 w-64 bg-card border rounded-md shadow-md z-10 max-h-80 overflow-y-auto">
+              <div className="absolute right-0 top-full mt-1 w-64 bg-card border rounded-md shadow-md z-10 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent scrollbar-thumb-muted hover:scrollbar-thumb-primary/50 transition-colors">
                 <div className="py-1">
                   <button
                     className={`w-full text-left px-3 py-2 text-sm ${

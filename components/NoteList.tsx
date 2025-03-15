@@ -30,6 +30,7 @@ interface ElectronAPI {
   loadAllMarkdown: () => Promise<{ 
     success: boolean; 
     notes?: Array<{ id: string; title: string; content: string; date: string; folder?: string; path?: string }>; 
+    folders?: string[];
     error?: string;
     details?: {
       path: string;
@@ -523,6 +524,35 @@ export default function NoteList() {
         onCreateFolder={handleCreateFolder}
         onMoveItem={handleMoveItem}
         onNoteSelect={handleView}
+        onEditNote={handleEdit}
+        onDeleteNote={handleDelete}
+        onDeleteFolder={async (path) => {
+          if (path) {
+            // 确认是否要删除文件夹
+            const notesInFolder = notes.filter(note => 
+              note.folder === path || note.folder?.startsWith(`${path}/`)
+            ).length;
+            
+            // 如果文件夹中有笔记，需要删除所有笔记
+            if (notesInFolder > 0) {
+              const notesToDelete = notes.filter(note => 
+                note.folder === path || note.folder?.startsWith(`${path}/`)
+              );
+              
+              // 删除文件夹中的所有笔记
+              for (const note of notesToDelete) {
+                if (note.path) {
+                  await (window as Window & typeof globalThis & { electron: ElectronAPI }).electron.deleteMarkdown(note.id, note.path);
+                }
+              }
+            }
+            
+            // 重新加载笔记列表
+            loadNotes();
+            return true;
+          }
+          return false;
+        }}
       />
     );
   };
@@ -550,8 +580,8 @@ export default function NoteList() {
           <h1 className="text-2xl font-bold flex-1 text-center">Note-By</h1>
         </header>
         
-        <div className="flex-1 overflow-auto p-4">
-          <div className="w-full max-w-5xl mx-auto">
+        <div className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent scrollbar-thumb-muted hover:scrollbar-thumb-primary/50 transition-colors">
+          <div className="w-full max-w-5xl mx-auto h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold flex items-center">
                 {currentSidebarView === 'recent' ? (
@@ -593,14 +623,14 @@ export default function NoteList() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100%-4rem)] flex-1">
               {/* 左侧文件夹树 */}
-              <div className="md:col-span-1">
+              <div className="md:col-span-1 overflow-hidden">
                 {renderFolderSelector()}
               </div>
               
               {/* 右侧笔记列表 */}
-              <div className="md:col-span-3">
+              <div className="md:col-span-3 overflow-auto scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent scrollbar-thumb-muted hover:scrollbar-thumb-primary/50 transition-colors">
                 {currentSidebarView === 'recent' ? (
                   // 使用新的 RecentNotesView 组件显示最近编辑的笔记
                   <RecentNotesView 

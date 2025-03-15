@@ -184,7 +184,7 @@ export default function NoteViewer({
       
       <div className="flex flex-1 overflow-hidden">
         {/* 主要内容区域 */}
-        <div className="flex-1 overflow-auto p-4 sm:p-2 md:p-5" style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff' }}>
+        <div className="flex-1 overflow-auto p-4 sm:p-2 md:p-5 scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent scrollbar-thumb-muted hover:scrollbar-thumb-primary/50 transition-colors" style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff' }}>
           <div className="h-full max-w-3xl mx-auto">
             {/* 标签显示 */}
             {tags.length > 0 && (
