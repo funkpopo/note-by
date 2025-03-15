@@ -30,6 +30,8 @@ const electronAPI = {
     openMarkdownDir: () => electron_1.ipcRenderer.invoke('open-markdown-dir'),
     // 创建文件夹
     createFolder: (folderPath) => electron_1.ipcRenderer.invoke('create-folder', folderPath),
+    // 移动文件或文件夹
+    moveItem: (sourcePath, targetFolder, isFolder) => electron_1.ipcRenderer.invoke('move-item', sourcePath, targetFolder, isFolder),
 };
 // 暴露安全的API给渲染进程
 electron_1.contextBridge.exposeInMainWorld('electron', electronAPI);

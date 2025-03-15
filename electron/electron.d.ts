@@ -56,6 +56,18 @@ interface ElectronAPI {
       errorStack?: string;
     }
   }>;
+  moveItem: (sourcePath: string, targetFolder: string, isFolder: boolean) => Promise<{
+    success: boolean;
+    sourcePath?: string;
+    targetPath?: string;
+    isFolder?: boolean;
+    error?: string;
+    details?: {
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
   // 添加其他需要的方法类型
 }
 

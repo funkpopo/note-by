@@ -27,6 +27,7 @@ interface ElectronAPI {
       folder?: string;
       path?: string;
     }>; 
+    folders?: string[];
     error?: string;
     details?: {
       path: string;
@@ -49,6 +50,18 @@ interface ElectronAPI {
   createFolder: (folderPath: string) => Promise<{ 
     success: boolean; 
     path?: string; 
+    error?: string;
+    details?: {
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
+  moveItem: (sourcePath: string, targetFolder: string, isFolder: boolean) => Promise<{
+    success: boolean;
+    sourcePath?: string;
+    targetPath?: string;
+    isFolder?: boolean;
     error?: string;
     details?: {
       path: string;

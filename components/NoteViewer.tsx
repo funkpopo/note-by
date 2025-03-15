@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { MdPreview } from 'md-editor-rt';
 import 'md-editor-rt/lib/preview.css';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Menu } from 'lucide-react';
+import { ArrowLeft, Edit, Menu, Bookmark, BookmarkCheck, Share, Download, Folder } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // 添加自定义样式，确保与编辑器一致
 const customStyle = `
@@ -74,6 +75,7 @@ export default function NoteViewer({
 }: NoteViewerProps) {
   const [previewId] = useState(`preview-${id}`);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isFavorite, setIsFavorite] = useState(false);
   
   useEffect(() => {
     // 检查当前主题
@@ -106,10 +108,20 @@ export default function NoteViewer({
       document.head.removeChild(styleElement);
     };
   }, []);
+
+  // 提取标题和标签
+  const extractTags = (content: string) => {
+    const tagRegex = /#([a-zA-Z0-9_\u4e00-\u9fa5]+)/g;
+    const matches = content.match(tagRegex) || [];
+    return matches.map(tag => tag.substring(1));
+  };
+
+  const tags = extractTags(content);
   
   return (
     <div className="w-full h-screen flex flex-col">
-      <div className="flex items-center p-4 border-b">
+      {/* 顶部导航栏 */}
+      <div className="flex items-center p-4 border-b bg-card">
         {onMenuClick && (
           <Button variant="ghost" onClick={onMenuClick} size="icon" className="mr-3 shrink-0">
             <Menu size={18} />
@@ -123,9 +135,9 @@ export default function NoteViewer({
           <div className="flex items-center text-sm text-muted-foreground">
             <span>{new Date(date).toLocaleString()}</span>
             {folder && (
-              <>
-                <span className="mx-2">•</span>
-                <span className="text-primary/80">
+              <div className="flex items-center ml-2 text-primary/80">
+                <Folder size={14} className="mr-1" />
+                <span>
                   {folder.split('/').map((part, index) => (
                     <span key={index}>
                       {index > 0 && <span className="mx-1">/</span>}
@@ -133,29 +145,77 @@ export default function NoteViewer({
                     </span>
                   ))}
                 </span>
-              </>
+              </div>
             )}
           </div>
         </div>
-        <Button onClick={() => onEdit(id)} className="gap-2 shrink-0 ml-2">
-          <Edit size={16} />
-          编辑
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9"
+            onClick={() => setIsFavorite(!isFavorite)}
+            title={isFavorite ? "取消收藏" : "收藏笔记"}
+          >
+            {isFavorite ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} />}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9"
+            title="分享笔记"
+          >
+            <Share size={18} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9"
+            title="下载笔记"
+          >
+            <Download size={18} />
+          </Button>
+          <Button onClick={() => onEdit(id)} className="gap-2 shrink-0 ml-2">
+            <Edit size={16} />
+            编辑
+          </Button>
+        </div>
       </div>
       
-      <div className="flex-1 overflow-auto p-4 sm:p-2 md:p-5" style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff' }}>
-        <div className="h-full max-w-1xl mx-auto">
-          <div className="rounded-xl shadow-sm h-full overflow-hidden">
-            <MdPreview
-              modelValue={content}
-              id={previewId}
-              theme={theme}
-              previewTheme="github"
-              language="zh-CN"
-              codeStyleReverse={true}
-              showCodeRowNumber={true}
-              style={{ height: 'calc(100% - 2px)' }}
-            />
+      <div className="flex flex-1 overflow-hidden">
+        {/* 主要内容区域 */}
+        <div className="flex-1 overflow-auto p-4 sm:p-2 md:p-5" style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff' }}>
+          <div className="h-full max-w-3xl mx-auto">
+            {/* 标签显示 */}
+            {tags.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {tags.map((tag, index) => (
+                  <span 
+                    key={index} 
+                    className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {/* Markdown 预览 */}
+            <div className={cn(
+              "rounded-xl shadow-sm h-full overflow-hidden",
+              theme === 'dark' ? 'border border-border/30' : 'border'
+            )}>
+              <MdPreview
+                modelValue={content}
+                id={previewId}
+                theme={theme}
+                previewTheme="github"
+                language="zh-CN"
+                codeStyleReverse={true}
+                showCodeRowNumber={true}
+                style={{ height: 'calc(100% - 2px)' }}
+              />
+            </div>
           </div>
         </div>
       </div>

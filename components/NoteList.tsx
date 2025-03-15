@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import NoteCard from './NoteCard';
+import DraggableNoteCard from './DraggableNoteCard';
 import NoteEditor from './NoteEditor';
 import NoteViewer from './NoteViewer';
 import Sidebar from './Sidebar';
 import RecentNotesView from './RecentNotesView';
+import FolderTree from './FolderTree';
 import { Button } from '@/components/ui/button';
 import { Plus, Menu, Clock, Grid, List, FileText, Edit3, Trash } from 'lucide-react';
 
@@ -59,6 +60,16 @@ interface ElectronAPI {
       errorStack?: string;
     }
   }>;
+  moveItem: (sourcePath: string, targetFolder: string, isFolder: boolean) => Promise<{ 
+    success: boolean; 
+    error?: string; 
+    details?: {
+      id: string;
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
 }
 
 // 定义笔记类型
@@ -82,14 +93,14 @@ export default function NoteList() {
   const [viewState, setViewState] = useState<ViewState>('list');
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isElectron, setIsElectron] = useState(false);
   const [currentSidebarView, setCurrentSidebarView] = useState<SidebarView>('all');
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
-  const [folders, setFolders] = useState<string[]>([]); // 存储所有文件夹
-  const [currentFolder, setCurrentFolder] = useState<string>(''); // 当前选中的文件夹
+  const [folders, setFolders] = useState<string[]>([]);
+  const [currentFolder, setCurrentFolder] = useState<string>('');
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newSubfolderParent, setNewSubfolderParent] = useState('');
+  const [isElectron, setIsElectron] = useState(false);
 
   // 加载所有笔记
   const loadNotes = useCallback(async () => {
@@ -115,16 +126,21 @@ export default function NoteList() {
         if (result.success && result.notes) {
           setNotes(result.notes);
           
-          // 提取并设置文件夹列表
-          const uniqueFolders = Array.from(
-            new Set(
-              result.notes
-                .filter(note => note.folder)
-                .map(note => note.folder as string)
-            )
-          ).sort();
-          
-          setFolders(uniqueFolders);
+          // 使用服务器返回的文件夹列表
+          if (result.folders && Array.isArray(result.folders)) {
+            setFolders(result.folders.sort());
+          } else {
+            // 如果服务器没有返回文件夹列表，则从笔记中提取
+            const uniqueFolders = Array.from(
+              new Set(
+                result.notes
+                  .filter(note => note.folder)
+                  .map(note => note.folder as string)
+              )
+            ).sort();
+            
+            setFolders(uniqueFolders);
+          }
         } else {
           console.error('加载笔记失败:', result.error);
         }
@@ -414,6 +430,38 @@ export default function NoteList() {
     }
   };
 
+  // 处理移动文件或文件夹
+  const handleMoveItem = async (sourcePath: string, targetFolder: string, isFolder: boolean) => {
+    if (!isElectron) return false;
+
+    try {
+      const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
+      const result = await electron.moveItem(sourcePath, targetFolder, isFolder);
+      
+      if (result.success) {
+        // 重新加载笔记列表
+        await loadNotes();
+        return true;
+      } else {
+        console.error('移动项目失败:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('移动项目时出错:', error);
+      return false;
+    }
+  };
+
+  // 处理拖拽开始
+  const handleDragStart = () => {
+    // 只需要传递给FolderTree组件，不需要在NoteList中保存状态
+  };
+
+  // 处理拖拽结束
+  const handleDragEnd = () => {
+    // 只需要传递给FolderTree组件，不需要在NoteList中保存状态
+  };
+
   // 根据当前视图状态渲染不同的组件
   if (viewState === 'view' && currentNote) {
     return (
@@ -466,151 +514,16 @@ export default function NoteList() {
   // 在渲染部分添加文件夹选择UI
   // 在列表视图中添加文件夹选择器
   const renderFolderSelector = () => {
-    // 构建文件夹树结构
-    const buildFolderTree = () => {
-      const tree: Record<string, string[]> = { '': [] };
-      
-      folders.forEach(folder => {
-        const parts = folder.split('/');
-        let currentPath = '';
-        
-        for (let i = 0; i < parts.length; i++) {
-          const part = parts[i];
-          const parentPath = currentPath;
-          currentPath = currentPath ? `${currentPath}/${part}` : part;
-          
-          if (!tree[parentPath]) {
-            tree[parentPath] = [];
-          }
-          
-          if (!tree[currentPath]) {
-            tree[currentPath] = [];
-          }
-          
-          if (!tree[parentPath].includes(currentPath)) {
-            tree[parentPath].push(currentPath);
-          }
-        }
-      });
-      
-      return tree;
-    };
-    
-    // 递归渲染文件夹树
-    const renderFolderTree = (parentPath: string = '', level: number = 0) => {
-      const tree = buildFolderTree();
-      const children = tree[parentPath] || [];
-      
-      return (
-        <div className={level > 0 ? "ml-3 border-l pl-2" : ""}>
-          {children.map(folder => {
-            const folderName = folder.split('/').pop() || folder;
-            return (
-              <div key={folder}>
-                <button
-                  onClick={() => handleFolderSelect(folder)}
-                  className={`w-full text-left px-2 py-1 rounded text-sm flex items-center ${
-                    currentFolder === folder ? 'bg-primary/10 font-medium' : 'hover:bg-accent/50'
-                  }`}
-                >
-                  <span className="truncate">{folderName}</span>
-                  <span className="text-xs text-muted-foreground ml-1">
-                    ({notes.filter(note => note.folder === folder).length})
-                  </span>
-                </button>
-                {renderFolderTree(folder, level + 1)}
-              </div>
-            );
-          })}
-        </div>
-      );
-    };
-    
     return (
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium">文件夹</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowFolderDialog(true)}
-            className="h-7 text-xs"
-          >
-            新建文件夹
-          </Button>
-        </div>
-        
-        <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-          <button
-            onClick={() => handleFolderSelect('')}
-            className={`w-full text-left px-2 py-1 rounded text-sm flex items-center ${
-              currentFolder === '' ? 'bg-primary/10 font-medium' : 'hover:bg-accent/50'
-            }`}
-          >
-            <span>所有笔记</span>
-            <span className="text-xs text-muted-foreground ml-1">
-              ({notes.length})
-            </span>
-          </button>
-          
-          {renderFolderTree()}
-        </div>
-        
-        {showFolderDialog && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-card border rounded-lg shadow-lg p-4 w-80">
-              <h3 className="text-lg font-medium mb-4">新建文件夹</h3>
-              
-              {/* 添加父文件夹选择 */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">位置</label>
-                <select 
-                  className="w-full px-3 py-2 border rounded"
-                  value={newSubfolderParent}
-                  onChange={(e) => setNewSubfolderParent(e.target.value)}
-                >
-                  <option value="">根目录</option>
-                  {folders.map(folder => (
-                    <option key={folder} value={folder}>
-                      {folder}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">文件夹名称</label>
-                <input
-                  type="text"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="输入文件夹名称"
-                  className="w-full px-3 py-2 border rounded"
-                  autoFocus
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => {
-                  setShowFolderDialog(false);
-                  setNewFolderName('');
-                  setNewSubfolderParent('');
-                }}>
-                  取消
-                </Button>
-                <Button onClick={() => {
-                  const folderPath = newSubfolderParent 
-                    ? `${newSubfolderParent}/${newFolderName.trim()}`
-                    : newFolderName.trim();
-                  handleCreateFolder(folderPath);
-                }}>
-                  创建
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <FolderTree 
+        folders={folders}
+        notes={notes}
+        currentFolder={currentFolder}
+        onFolderSelect={handleFolderSelect}
+        onCreateFolder={handleCreateFolder}
+        onMoveItem={handleMoveItem}
+        onNoteSelect={handleView}
+      />
     );
   };
 
@@ -638,7 +551,7 @@ export default function NoteList() {
         </header>
         
         <div className="flex-1 overflow-auto p-4">
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full max-w-5xl mx-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold flex items-center">
                 {currentSidebarView === 'recent' ? (
@@ -680,95 +593,182 @@ export default function NoteList() {
               </div>
             </div>
             
-            {/* 添加文件夹选择器 */}
-            {renderFolderSelector()}
-            
-            {currentSidebarView === 'recent' ? (
-              // 使用新的 RecentNotesView 组件显示最近编辑的笔记
-              <RecentNotesView 
-                notes={notes.filter(note => currentFolder === '' || note.folder === currentFolder)}
-                onViewNote={handleView}
-                onEditNote={handleEdit}
-              />
-            ) : (
-              // 原有的笔记列表显示
-              displayedNotes.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    没有笔记，点击&quot;添加笔记&quot;创建一个新笔记。
-                  </p>
-                </div>
-              ) : displayMode === 'grid' ? (
-                // 网格视图
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {displayedNotes.map(note => (
-                    <NoteCard
-                      key={note.id}
-                      id={note.id}
-                      title={note.title}
-                      content={note.content}
-                      date={note.date}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onClick={() => handleView(note.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                // 列表视图
-                <div className="space-y-3">
-                  {displayedNotes.map(note => (
-                    <div 
-                      key={note.id}
-                      className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer"
-                      onClick={() => handleView(note.id)}
-                    >
-                      <div className="w-12 h-12 flex-shrink-0 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                        <FileText size={20} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium line-clamp-1">{note.title}</h4>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {note.content.replace(/^#+ .*$/gm, '').replace(/[*_~`#>-]/g, '').replace(/\s+/g, ' ').trim().substring(0, 100)}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0 flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">
-                          {note.date}
-                        </span>
-                        <div className="flex">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(note.id);
-                            }}
-                          >
-                            <Edit3 size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-destructive hover:text-destructive/90"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(note.id);
-                            }}
-                          >
-                            <Trash size={16} />
-                          </Button>
-                        </div>
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* 左侧文件夹树 */}
+              <div className="md:col-span-1">
+                {renderFolderSelector()}
+              </div>
+              
+              {/* 右侧笔记列表 */}
+              <div className="md:col-span-3">
+                {currentSidebarView === 'recent' ? (
+                  // 使用新的 RecentNotesView 组件显示最近编辑的笔记
+                  <RecentNotesView 
+                    notes={notes.filter(note => currentFolder === '' || note.folder === currentFolder)}
+                    onViewNote={handleView}
+                    onEditNote={handleEdit}
+                  />
+                ) : (
+                  // 原有的笔记列表显示
+                  displayedNotes.filter(note => currentFolder === '' || note.folder === currentFolder).length === 0 ? (
+                    <div className="text-center py-12 bg-card rounded-lg border p-6">
+                      <FileText size={48} className="mx-auto text-muted-foreground opacity-20 mb-4" />
+                      <p className="text-muted-foreground">
+                        没有笔记，点击&quot;添加笔记&quot;创建一个新笔记。
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )
-            )}
+                  ) : displayMode === 'grid' ? (
+                    // 网格视图
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                      {displayedNotes
+                        .filter(note => currentFolder === '' || note.folder === currentFolder)
+                        .map(note => (
+                          <DraggableNoteCard
+                            key={note.id}
+                            id={note.id}
+                            title={note.title}
+                            content={note.content}
+                            date={note.date}
+                            folder={note.folder}
+                            path={note.path}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onClick={() => handleView(note.id)}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                          />
+                        ))}
+                    </div>
+                  ) : (
+                    // 列表视图
+                    <div className="space-y-3">
+                      {displayedNotes
+                        .filter(note => currentFolder === '' || note.folder === currentFolder)
+                        .map(note => (
+                          <div 
+                            key={note.id}
+                            className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer"
+                            onClick={() => handleView(note.id)}
+                            draggable={!!note.path}
+                            onDragStart={(e) => {
+                              if (!note.path) return;
+                              e.dataTransfer.setData('text/plain', note.path);
+                              e.dataTransfer.effectAllowed = 'move';
+                              handleDragStart();
+                            }}
+                            onDragEnd={handleDragEnd}
+                          >
+                            <div className="w-12 h-12 flex-shrink-0 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                              <FileText size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium line-clamp-1">{note.title}</h4>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <span className="line-clamp-1 mr-2">
+                                  {note.content.replace(/^#+ .*$/gm, '').replace(/[*_~`#>-]/g, '').replace(/\s+/g, ' ').trim().substring(0, 60)}
+                                </span>
+                                {note.folder && (
+                                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
+                                    {note.folder.split('/').pop()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0 flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {new Date(note.date).toLocaleString()}
+                              </span>
+                              <div className="flex">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(note.id);
+                                  }}
+                                >
+                                  <Edit3 size={16} />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-destructive hover:text-destructive/90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(note.id);
+                                  }}
+                                >
+                                  <Trash size={16} />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      
+      {/* 文件夹创建对话框 */}
+      {showFolderDialog && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card border rounded-lg shadow-lg p-4 w-80">
+            <h3 className="text-lg font-medium mb-4">新建文件夹</h3>
+            
+            {/* 添加父文件夹选择 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">位置</label>
+              <select 
+                className="w-full px-3 py-2 border rounded"
+                value={newSubfolderParent}
+                onChange={(e) => setNewSubfolderParent(e.target.value)}
+              >
+                <option value="">根目录</option>
+                {folders.map(folder => (
+                  <option key={folder} value={folder}>
+                    {folder}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">文件夹名称</label>
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="输入文件夹名称"
+                className="w-full px-3 py-2 border rounded"
+                autoFocus
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setShowFolderDialog(false);
+                setNewFolderName('');
+                setNewSubfolderParent('');
+              }}>
+                取消
+              </Button>
+              <Button onClick={() => {
+                const folderPath = newSubfolderParent 
+                  ? `${newSubfolderParent}/${newFolderName.trim()}`
+                  : newFolderName.trim();
+                handleCreateFolder(folderPath);
+              }}>
+                创建
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 } 

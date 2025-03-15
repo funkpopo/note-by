@@ -44,6 +44,10 @@ const electronAPI = {
   // 创建文件夹
   createFolder: (folderPath: string) =>
     ipcRenderer.invoke('create-folder', folderPath),
+    
+  // 移动文件或文件夹
+  moveItem: (sourcePath: string, targetFolder: string, isFolder: boolean) =>
+    ipcRenderer.invoke('move-item', sourcePath, targetFolder, isFolder),
 };
 
 // 暴露安全的API给渲染进程

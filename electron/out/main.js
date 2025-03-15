@@ -223,6 +223,25 @@ electron_1.ipcMain.handle('test-ipc', () => {
     console.log('Test IPC handler called');
     return { success: true, message: 'IPC is working!' };
 });
+// 递归读取目录中的所有文件夹
+function readAllFolders(dir) {
+    const folders = [];
+    function readDir(currentDir, relativeDir = '') {
+        const items = fs.readdirSync(currentDir);
+        for (const item of items) {
+            const itemPath = path.join(currentDir, item);
+            const stats = fs.statSync(itemPath);
+            if (stats.isDirectory()) {
+                // 如果是目录，添加到结果中并递归读取
+                const newRelativeDir = path.join(relativeDir, item);
+                folders.push(newRelativeDir);
+                readDir(itemPath, newRelativeDir);
+            }
+        }
+    }
+    readDir(dir);
+    return folders;
+}
 // 递归读取目录中的所有markdown文件
 function readMarkdownFilesRecursively(dir) {
     const markdownFiles = [];
@@ -307,6 +326,9 @@ electron_1.ipcMain.handle('load-all-markdown', async () => {
             console.error(`[IPC] Markdown目录不存在: ${markdownDir}`);
             return { success: false, error: `Markdown目录不存在: ${markdownDir}` };
         }
+        // 递归读取所有文件夹
+        const allFolders = readAllFolders(markdownDir);
+        console.log(`[IPC] 找到 ${allFolders.length} 个文件夹`);
         // 递归读取所有markdown文件
         const markdownFiles = readMarkdownFilesRecursively(markdownDir);
         console.log(`[IPC] 找到 ${markdownFiles.length} 个markdown文件`);
@@ -354,7 +376,7 @@ electron_1.ipcMain.handle('load-all-markdown', async () => {
             }
         }
         console.log(`[IPC] 成功加载 ${notes.length} 个笔记`);
-        return { success: true, notes };
+        return { success: true, notes, folders: allFolders };
     }
     catch (error) {
         console.error('[IPC] 加载markdown文件失败:', error);
@@ -475,6 +497,122 @@ electron_1.ipcMain.handle('create-folder', async (_, folderPath) => {
     }
     catch (error) {
         console.error('创建文件夹失败:', error);
+        return {
+            success: false,
+            error: error.message,
+            details: {
+                path: getMarkdownDir(),
+                errorName: error.name,
+                errorStack: error.stack
+            }
+        };
+    }
+});
+// 移动文件或文件夹
+electron_1.ipcMain.handle('move-item', async (_, sourcePath, targetFolder, isFolder) => {
+    try {
+        if (!sourcePath) {
+            console.error('移动项目失败: 源路径不能为空');
+            return { success: false, error: '源路径不能为空' };
+        }
+        const markdownDir = ensureMarkdownDir();
+        const sourceFullPath = path.join(markdownDir, sourcePath);
+        // 检查源路径是否存在
+        if (!fs.existsSync(sourceFullPath)) {
+            console.error(`移动项目失败: 源路径不存在 ${sourceFullPath}`);
+            return { success: false, error: '源路径不存在' };
+        }
+        // 确保目标文件夹存在
+        let targetDir = markdownDir;
+        if (targetFolder && targetFolder.trim() !== '') {
+            targetDir = path.join(markdownDir, targetFolder);
+            // 递归创建文件夹
+            fs.mkdirSync(targetDir, { recursive: true });
+            console.log(`确保目标文件夹存在: ${targetDir}`);
+        }
+        // 获取源文件/文件夹名称
+        const sourceName = path.basename(sourcePath);
+        const targetPath = path.join(targetDir, sourceName);
+        // 检查目标路径是否已存在
+        if (fs.existsSync(targetPath)) {
+            console.error(`移动项目失败: 目标路径已存在 ${targetPath}`);
+            return { success: false, error: '目标路径已存在同名文件或文件夹' };
+        }
+        if (isFolder) {
+            // 移动文件夹
+            console.log(`移动文件夹: ${sourceFullPath} -> ${targetPath}`);
+            // 递归复制文件夹内容
+            const copyFolderRecursive = (src, dest) => {
+                // 创建目标文件夹
+                fs.mkdirSync(dest, { recursive: true });
+                // 读取源文件夹内容
+                const entries = fs.readdirSync(src, { withFileTypes: true });
+                for (const entry of entries) {
+                    const srcPath = path.join(src, entry.name);
+                    const destPath = path.join(dest, entry.name);
+                    if (entry.isDirectory()) {
+                        // 递归复制子文件夹
+                        copyFolderRecursive(srcPath, destPath);
+                    }
+                    else {
+                        // 复制文件
+                        fs.copyFileSync(srcPath, destPath);
+                    }
+                }
+            };
+            // 复制文件夹内容
+            copyFolderRecursive(sourceFullPath, targetPath);
+            // 删除源文件夹
+            const deleteFolderRecursive = (folderPath) => {
+                if (fs.existsSync(folderPath)) {
+                    fs.readdirSync(folderPath).forEach((file) => {
+                        const curPath = path.join(folderPath, file);
+                        if (fs.lstatSync(curPath).isDirectory()) {
+                            // 递归删除子文件夹
+                            deleteFolderRecursive(curPath);
+                        }
+                        else {
+                            // 删除文件
+                            fs.unlinkSync(curPath);
+                        }
+                    });
+                    // 删除空文件夹 - 但不删除顶层文件夹
+                    if (folderPath !== sourceFullPath) {
+                        fs.rmdirSync(folderPath);
+                    }
+                }
+            };
+            deleteFolderRecursive(sourceFullPath);
+            // 计算相对路径
+            const relativeTargetPath = targetFolder ? path.join(targetFolder, sourceName) : sourceName;
+            return {
+                success: true,
+                sourcePath: sourcePath,
+                targetPath: relativeTargetPath,
+                isFolder: true
+            };
+        }
+        else {
+            // 移动文件
+            console.log(`移动文件: ${sourceFullPath} -> ${targetPath}`);
+            // 读取源文件内容
+            const fileContent = fs.readFileSync(sourceFullPath, 'utf-8');
+            // 写入目标文件
+            fs.writeFileSync(targetPath, fileContent, 'utf-8');
+            // 删除源文件
+            fs.unlinkSync(sourceFullPath);
+            // 计算相对路径
+            const relativeTargetPath = targetFolder ? path.join(targetFolder, sourceName) : sourceName;
+            return {
+                success: true,
+                sourcePath: sourcePath,
+                targetPath: relativeTargetPath,
+                isFolder: false
+            };
+        }
+    }
+    catch (error) {
+        console.error('移动项目失败:', error);
         return {
             success: false,
             error: error.message,
