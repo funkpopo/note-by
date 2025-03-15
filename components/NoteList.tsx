@@ -71,6 +71,17 @@ interface ElectronAPI {
       errorStack?: string;
     }
   }>;
+  onFileSystemChange: (callback: (event: { type: string; path: string; fullPath: string }) => void) => () => void;
+  deleteFolder: (folderPath: string) => Promise<{ 
+    success: boolean; 
+    error?: string; 
+    details?: {
+      id: string;
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
 }
 
 // 定义笔记类型
@@ -89,6 +100,9 @@ type ViewState = 'list' | 'view' | 'edit' | 'create';
 // 定义侧边栏视图类型
 type SidebarView = 'all' | 'recent' | 'favorites' | 'tags';
 
+// 在组件外部定义防抖变量
+let fileSystemChangeDebounceTimeout: NodeJS.Timeout | null = null;
+
 export default function NoteList() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [viewState, setViewState] = useState<ViewState>('list');
@@ -102,12 +116,14 @@ export default function NoteList() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newSubfolderParent, setNewSubfolderParent] = useState('');
   const [isElectron, setIsElectron] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 加载所有笔记
+  // 加载笔记列表
   const loadNotes = useCallback(async () => {
     // 检查是否在Electron环境中运行
     if (typeof window !== 'undefined' && 'electron' in window) {
       try {
+        setIsLoading(true);
         console.log('Attempting to load notes...');
         
         // 使用更安全的方式访问electron对象
@@ -147,6 +163,8 @@ export default function NoteList() {
         }
       } catch (error) {
         console.error('加载笔记时出错:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
   }, []);
@@ -189,85 +207,59 @@ export default function NoteList() {
     return notes;
   }, [notes, recentNotes, currentSidebarView]);
 
+  // 初始化
   useEffect(() => {
     // 检查是否在Electron环境中运行
     const isRunningInElectron = typeof window !== 'undefined' && 'electron' in window;
     setIsElectron(isRunningInElectron);
-
-    // 添加调试信息
-    if (isRunningInElectron) {
-      try {
-        const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
-        console.log('Electron API available:', electron);
-        console.log('Available methods:', Object.keys(electron));
-        
-        // 测试IPC通信
-        if (electron && typeof electron.testIPC === 'function') {
-          console.log('Testing IPC communication...');
-          electron.testIPC()
-            .then(result => {
-              console.log('IPC test result:', result);
-              
-              // 如果IPC测试成功，尝试加载笔记
-              if (result.success) {
-                loadNotes();
-              }
-            })
-            .catch(error => {
-              console.error('IPC test failed:', error);
-            });
-        } else {
-          console.error('testIPC method does not exist');
-        }
-        
-        // 检查是否有loadAllMarkdown方法
-        if (electron && typeof electron.loadAllMarkdown === 'function') {
-          console.log('loadAllMarkdown method exists');
-        } else {
-          console.error('loadAllMarkdown method does not exist');
-          // 尝试重新加载页面
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-        
-        // 监听load-notes事件
-        if (electron && typeof electron.onLoadNotes === 'function') {
-          console.log('Setting up load-notes event listener');
-          const unsubscribeLoadNotes = electron.onLoadNotes(() => {
-            console.log('Received load-notes event from main process');
-            loadNotes();
-          });
-          
-          // 清理函数中添加移除监听器
-          return () => {
-            if (typeof unsubscribeLoadNotes === 'function') {
-              unsubscribeLoadNotes();
-            }
-          };
-        }
-      } catch (error) {
-        console.error('Error accessing Electron API:', error);
-      }
-    } else {
-      console.log('Not running in Electron environment');
-    }
-
-    // 不在这里直接调用loadNotes，而是在IPC测试成功后调用
     
-    // 如果在Electron环境中，监听菜单事件
+    // 加载笔记
+    loadNotes();
+    
+    // 监听菜单"新建笔记"事件
+    let removeMenuListener: (() => void) | null = null;
+    let removeLoadListener: (() => void) | null = null;
+    let removeFileSystemChangeListener: (() => void) | null = null;
+    
     if (isRunningInElectron) {
-      // 使用类型断言，避免使用any
       const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
-      const unsubscribe = electron.onMenuNewNote(() => {
+      
+      // 监听菜单"新建笔记"事件
+      removeMenuListener = electron.onMenuNewNote(() => {
         handleAddNote();
       });
-
-      // 清理函数
-      return () => {
-        unsubscribe();
-      };
+      
+      // 监听加载笔记事件
+      removeLoadListener = electron.onLoadNotes(() => {
+        loadNotes();
+      });
+      
+      // 监听文件系统变化事件
+      removeFileSystemChangeListener = electron.onFileSystemChange((event: { type: string; path: string; fullPath: string }) => {
+        console.log('文件系统变化:', event);
+        
+        // 当文件系统发生变化时，重新加载笔记列表
+        // 为了避免频繁刷新，可以使用防抖
+        if (fileSystemChangeDebounceTimeout) {
+          clearTimeout(fileSystemChangeDebounceTimeout);
+        }
+        
+        fileSystemChangeDebounceTimeout = setTimeout(() => {
+          loadNotes();
+        }, 300);
+      });
     }
+    
+    // 清理函数
+    return () => {
+      if (removeMenuListener) removeMenuListener();
+      if (removeLoadListener) removeLoadListener();
+      if (removeFileSystemChangeListener) removeFileSystemChangeListener();
+      
+      if (fileSystemChangeDebounceTimeout) {
+        clearTimeout(fileSystemChangeDebounceTimeout);
+      }
+    };
   }, [handleAddNote, loadNotes]);
 
   const handleView = (id: string) => {
@@ -302,19 +294,26 @@ export default function NoteList() {
         const result = await electron.deleteMarkdown(id, noteToDelete.path);
         
         if (result.success) {
-          setNotes(notes.filter(note => note.id !== id));
+          // 更新笔记列表，移除已删除的笔记
+          setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
           
-          // 如果删除的是当前文件夹中的最后一个笔记，可能需要更新文件夹列表
+          // 检查是否需要更新文件夹列表
+          // 获取所有笔记的文件夹（排除刚刚删除的笔记）
           const remainingNotes = notes.filter(note => note.id !== id);
-          const uniqueFolders = Array.from(
-            new Set(
-              remainingNotes
-                .filter(note => note.folder)
-                .map(note => note.folder as string)
-            )
-          ).sort();
+          const noteFolders = remainingNotes
+            .filter(note => note.folder)
+            .map(note => note.folder as string);
           
+          // 获取唯一的文件夹列表
+          const uniqueFolders = Array.from(new Set(noteFolders)).sort();
+          
+          // 更新文件夹列表
           setFolders(uniqueFolders);
+          
+          // 如果当前没有笔记，重新加载以确保状态同步
+          if (remainingNotes.length === 0) {
+            await loadNotes();
+          }
         } else {
           console.error('删除笔记失败:', result.error);
         }
@@ -528,34 +527,75 @@ export default function NoteList() {
         onDeleteNote={handleDelete}
         onDeleteFolder={async (path) => {
           if (path) {
-            // 确认是否要删除文件夹
-            const notesInFolder = notes.filter(note => 
-              note.folder === path || note.folder?.startsWith(`${path}/`)
-            ).length;
-            
-            // 如果文件夹中有笔记，需要删除所有笔记
-            if (notesInFolder > 0) {
-              const notesToDelete = notes.filter(note => 
+            try {
+              // 确认是否要删除文件夹
+              const notesInFolder = notes.filter(note => 
                 note.folder === path || note.folder?.startsWith(`${path}/`)
-              );
+              ).length;
               
-              // 删除文件夹中的所有笔记
-              for (const note of notesToDelete) {
-                if (note.path) {
-                  await (window as Window & typeof globalThis & { electron: ElectronAPI }).electron.deleteMarkdown(note.id, note.path);
+              // 如果文件夹中有笔记，需要删除所有笔记
+              if (notesInFolder > 0) {
+                const notesToDelete = notes.filter(note => 
+                  note.folder === path || note.folder?.startsWith(`${path}/`)
+                );
+                
+                // 删除文件夹中的所有笔记
+                for (const note of notesToDelete) {
+                  if (note.path) {
+                    await (window as Window & typeof globalThis & { electron: ElectronAPI }).electron.deleteMarkdown(note.id, note.path);
+                  }
                 }
+                
+                // 更新笔记列表，移除已删除的笔记
+                setNotes(prevNotes => prevNotes.filter(note => 
+                  !(note.folder === path || note.folder?.startsWith(`${path}/`))
+                ));
               }
+              
+              // 使用新的deleteFolder API删除文件夹
+              const electron = (window as Window & typeof globalThis & { electron: ElectronAPI }).electron;
+              const result = await electron.deleteFolder(path);
+              
+              if (result.success) {
+                // 更新文件夹列表，移除已删除的文件夹及其子文件夹
+                setFolders(prevFolders => prevFolders.filter(folder => 
+                  !(folder === path || folder.startsWith(`${path}/`))
+                ));
+                
+                // 如果当前选中的是被删除的文件夹，则切换到根文件夹
+                if (currentFolder === path || currentFolder.startsWith(`${path}/`)) {
+                  setCurrentFolder('');
+                }
+                
+                // 重新加载笔记列表以确保状态同步
+                await loadNotes();
+                return true;
+              } else {
+                console.error('删除文件夹失败:', result.error);
+                return false;
+              }
+            } catch (error) {
+              console.error('删除文件夹时出错:', error);
+              return false;
             }
-            
-            // 重新加载笔记列表
-            loadNotes();
-            return true;
           }
           return false;
         }}
       />
     );
   };
+
+  // 在渲染部分添加加载状态显示
+  if (isLoading && notes.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">加载笔记中...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 默认显示笔记列表
   return (

@@ -21,6 +21,13 @@ const electronAPI = {
             electron_1.ipcRenderer.removeAllListeners('load-notes');
         };
     },
+    // 添加文件系统变化事件监听
+    onFileSystemChange: (callback) => {
+        electron_1.ipcRenderer.on('file-system-change', (_, data) => callback(data));
+        return () => {
+            electron_1.ipcRenderer.removeAllListeners('file-system-change');
+        };
+    },
     // 文件系统操作
     saveMarkdown: (id, title, content, folder = '') => electron_1.ipcRenderer.invoke('save-markdown', id, title, content, folder),
     loadAllMarkdown: () => electron_1.ipcRenderer.invoke('load-all-markdown'),
@@ -32,6 +39,8 @@ const electronAPI = {
     createFolder: (folderPath) => electron_1.ipcRenderer.invoke('create-folder', folderPath),
     // 移动文件或文件夹
     moveItem: (sourcePath, targetFolder, isFolder) => electron_1.ipcRenderer.invoke('move-item', sourcePath, targetFolder, isFolder),
+    // 删除文件夹
+    deleteFolder: (folderPath) => electron_1.ipcRenderer.invoke('delete-folder', folderPath),
 };
 // 暴露安全的API给渲染进程
 electron_1.contextBridge.exposeInMainWorld('electron', electronAPI);

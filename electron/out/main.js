@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
+const chokidar = __importStar(require("chokidar"));
 const electron_serve_1 = __importDefault(require("electron-serve"));
 // 添加启动日志
 console.log('=== Electron main process starting ===');
@@ -46,6 +47,7 @@ console.log('Current working directory:', process.cwd());
 console.log('NODE_ENV:', process.env.NODE_ENV);
 const loadURL = (0, electron_serve_1.default)({ directory: '.next' });
 let mainWindow;
+let fsWatcher = null;
 const isDev = process.env.NODE_ENV === 'development';
 const port = process.env.PORT || 3000;
 const devUrl = `http://localhost:${port}`;
@@ -86,6 +88,69 @@ function ensureMarkdownDir() {
         }
     }
     return markdownDir;
+}
+// 监听文件系统变化
+function watchFileSystem() {
+    if (fsWatcher) {
+        fsWatcher.close();
+    }
+    const markdownDir = getMarkdownDir();
+    console.log(`[MAIN] 开始监听文件系统变化: ${markdownDir}`);
+    // 使用chokidar监听文件系统变化
+    fsWatcher = chokidar.watch(markdownDir, {
+        persistent: true,
+        ignoreInitial: true,
+        awaitWriteFinish: {
+            stabilityThreshold: 300,
+            pollInterval: 100
+        },
+        depth: 99, // 监听所有子目录
+        ignorePermissionErrors: true
+    });
+    // 监听文件添加事件
+    fsWatcher.on('add', (filePath) => {
+        console.log(`[MAIN] 文件被添加: ${filePath}`);
+        notifyFileSystemChange('add', filePath);
+    });
+    // 监听文件修改事件
+    fsWatcher.on('change', (filePath) => {
+        console.log(`[MAIN] 文件被修改: ${filePath}`);
+        notifyFileSystemChange('change', filePath);
+    });
+    // 监听文件删除事件
+    fsWatcher.on('unlink', (filePath) => {
+        console.log(`[MAIN] 文件被删除: ${filePath}`);
+        notifyFileSystemChange('unlink', filePath);
+    });
+    // 监听目录添加事件
+    fsWatcher.on('addDir', (dirPath) => {
+        console.log(`[MAIN] 目录被添加: ${dirPath}`);
+        notifyFileSystemChange('addDir', dirPath);
+    });
+    // 监听目录删除事件
+    fsWatcher.on('unlinkDir', (dirPath) => {
+        console.log(`[MAIN] 目录被删除: ${dirPath}`);
+        notifyFileSystemChange('unlinkDir', dirPath);
+    });
+    // 监听错误事件
+    fsWatcher.on('error', (error) => {
+        console.error(`[MAIN] 文件监听错误: ${error}`);
+    });
+    // 监听就绪事件
+    fsWatcher.on('ready', () => {
+        console.log(`[MAIN] 文件监听器已就绪`);
+    });
+}
+// 通知渲染进程文件系统变化
+function notifyFileSystemChange(eventType, path) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        const relativePath = path.replace(getMarkdownDir(), '').replace(/\\/g, '/');
+        mainWindow.webContents.send('file-system-change', {
+            type: eventType,
+            path: relativePath.startsWith('/') ? relativePath.substring(1) : relativePath,
+            fullPath: path
+        });
+    }
 }
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
@@ -624,25 +689,83 @@ electron_1.ipcMain.handle('move-item', async (_, sourcePath, targetFolder, isFol
         };
     }
 });
-electron_1.app.on('ready', createWindow);
+// 删除文件夹
+electron_1.ipcMain.handle('delete-folder', async (_, folderPath) => {
+    try {
+        if (!folderPath) {
+            console.error('删除文件夹失败: 路径不能为空');
+            return { success: false, error: '路径不能为空' };
+        }
+        const markdownDir = ensureMarkdownDir();
+        const targetDir = path.join(markdownDir, folderPath);
+        // 检查文件夹是否存在
+        if (!fs.existsSync(targetDir)) {
+            console.error(`删除文件夹失败: 文件夹不存在 ${targetDir}`);
+            return { success: false, error: '文件夹不存在' };
+        }
+        // 检查是否是文件夹
+        const stats = fs.statSync(targetDir);
+        if (!stats.isDirectory()) {
+            console.error(`删除文件夹失败: 路径不是文件夹 ${targetDir}`);
+            return { success: false, error: '路径不是文件夹' };
+        }
+        console.log(`删除文件夹: ${targetDir}`);
+        // 递归删除文件夹
+        const deleteFolderRecursive = (folderPath) => {
+            if (fs.existsSync(folderPath)) {
+                fs.readdirSync(folderPath).forEach((file) => {
+                    const curPath = path.join(folderPath, file);
+                    if (fs.lstatSync(curPath).isDirectory()) {
+                        // 递归删除子文件夹
+                        deleteFolderRecursive(curPath);
+                    }
+                    else {
+                        // 删除文件
+                        fs.unlinkSync(curPath);
+                    }
+                });
+                // 删除空文件夹
+                fs.rmdirSync(folderPath);
+            }
+        };
+        // 执行删除
+        deleteFolderRecursive(targetDir);
+        return { success: true, path: folderPath };
+    }
+    catch (error) {
+        console.error('删除文件夹失败:', error);
+        return {
+            success: false,
+            error: error.message,
+            details: {
+                path: folderPath,
+                errorName: error.name,
+                errorStack: error.stack
+            }
+        };
+    }
+});
+// 在app.whenReady()中添加启动文件系统监听
+electron_1.app.whenReady().then(() => {
+    ensureMarkdownDir();
+    createWindow();
+    watchFileSystem(); // 启动文件系统监听
+    electron_1.app.on('activate', () => {
+        if (electron_1.BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+    });
+});
+// 在应用退出前停止文件系统监听
+electron_1.app.on('before-quit', () => {
+    if (fsWatcher) {
+        console.log('[MAIN] 停止文件系统监听');
+        fsWatcher.close();
+        fsWatcher = null;
+    }
+});
 electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         electron_1.app.quit();
     }
 });
-electron_1.app.on('activate', () => {
-    if (mainWindow === null) {
-        createWindow();
-    }
-});
-electron_1.app.on('before-quit', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.removeAllListeners('closed');
-        mainWindow.close();
-    }
-});
-if (isDev) {
-    electron_1.app.on('quit', () => {
-        process.exit(0);
-    });
-}

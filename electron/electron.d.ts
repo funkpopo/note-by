@@ -3,6 +3,11 @@ interface ElectronAPI {
   testIPC: () => Promise<{ success: boolean; message: string }>;
   onMenuNewNote: (callback: () => void) => () => void;
   onLoadNotes: (callback: () => void) => () => void;
+  onFileSystemChange: (callback: (event: { 
+    type: string; 
+    path: string; 
+    fullPath: string 
+  }) => void) => () => void;
   
   // 文件系统操作
   saveMarkdown: (id: string, title: string, content: string, folder?: string) => Promise<{ 
@@ -62,6 +67,16 @@ interface ElectronAPI {
     sourcePath?: string;
     targetPath?: string;
     isFolder?: boolean;
+    error?: string;
+    details?: {
+      path: string;
+      errorName: string;
+      errorStack?: string;
+    }
+  }>;
+  deleteFolder: (folderPath: string) => Promise<{
+    success: boolean;
+    path?: string;
     error?: string;
     details?: {
       path: string;

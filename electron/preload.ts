@@ -24,6 +24,14 @@ const electronAPI = {
     };
   },
 
+  // 添加文件系统变化事件监听
+  onFileSystemChange: (callback: (event: { type: string; path: string; fullPath: string }) => void) => {
+    ipcRenderer.on('file-system-change', (_, data) => callback(data));
+    return () => {
+      ipcRenderer.removeAllListeners('file-system-change');
+    };
+  },
+
   // 文件系统操作
   saveMarkdown: (id: string, title: string, content: string, folder: string = '') => 
     ipcRenderer.invoke('save-markdown', id, title, content, folder),
@@ -48,6 +56,10 @@ const electronAPI = {
   // 移动文件或文件夹
   moveItem: (sourcePath: string, targetFolder: string, isFolder: boolean) =>
     ipcRenderer.invoke('move-item', sourcePath, targetFolder, isFolder),
+    
+  // 删除文件夹
+  deleteFolder: (folderPath: string) =>
+    ipcRenderer.invoke('delete-folder', folderPath),
 };
 
 // 暴露安全的API给渲染进程
