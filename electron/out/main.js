@@ -98,47 +98,25 @@ function watchFileSystem() {
     console.log(`[MAIN] 开始监听文件系统变化: ${markdownDir}`);
     // 使用chokidar监听文件系统变化
     fsWatcher = chokidar.watch(markdownDir, {
+        ignored: /(^|[\/\\])\../, // 忽略以点开头的文件
         persistent: true,
-        ignoreInitial: true,
-        awaitWriteFinish: {
-            stabilityThreshold: 300,
-            pollInterval: 100
-        },
-        depth: 99, // 监听所有子目录
-        ignorePermissionErrors: true
+        ignoreInitial: true
     });
     // 监听文件添加事件
-    fsWatcher.on('add', (filePath) => {
-        console.log(`[MAIN] 文件被添加: ${filePath}`);
-        notifyFileSystemChange('add', filePath);
-    });
+    fsWatcher.on('add', (path) => notifyFileSystemChange('add', path));
     // 监听文件修改事件
-    fsWatcher.on('change', (filePath) => {
-        console.log(`[MAIN] 文件被修改: ${filePath}`);
-        notifyFileSystemChange('change', filePath);
-    });
+    fsWatcher.on('change', (path) => notifyFileSystemChange('change', path));
     // 监听文件删除事件
-    fsWatcher.on('unlink', (filePath) => {
-        console.log(`[MAIN] 文件被删除: ${filePath}`);
-        notifyFileSystemChange('unlink', filePath);
-    });
+    fsWatcher.on('unlink', (path) => notifyFileSystemChange('unlink', path));
     // 监听目录添加事件
-    fsWatcher.on('addDir', (dirPath) => {
-        console.log(`[MAIN] 目录被添加: ${dirPath}`);
-        notifyFileSystemChange('addDir', dirPath);
-    });
+    fsWatcher.on('addDir', (path) => notifyFileSystemChange('addDir', path));
     // 监听目录删除事件
-    fsWatcher.on('unlinkDir', (dirPath) => {
-        console.log(`[MAIN] 目录被删除: ${dirPath}`);
-        notifyFileSystemChange('unlinkDir', dirPath);
-    });
-    // 监听错误事件
-    fsWatcher.on('error', (error) => {
-        console.error(`[MAIN] 文件监听错误: ${error}`);
-    });
+    fsWatcher.on('unlinkDir', (path) => notifyFileSystemChange('unlinkDir', path));
     // 监听就绪事件
-    fsWatcher.on('ready', () => {
-        console.log(`[MAIN] 文件监听器已就绪`);
+    fsWatcher.on('ready', () => console.log('[MAIN] 文件监听器已就绪'));
+    // 监听错误事件
+    fsWatcher.on('error', (err) => {
+        console.error(`[MAIN] 文件监听错误: ${err}`);
     });
 }
 // 通知渲染进程文件系统变化
@@ -641,10 +619,8 @@ electron_1.ipcMain.handle('move-item', async (_, sourcePath, targetFolder, isFol
                             fs.unlinkSync(curPath);
                         }
                     });
-                    // 删除空文件夹 - 但不删除顶层文件夹
-                    if (folderPath !== sourceFullPath) {
-                        fs.rmdirSync(folderPath);
-                    }
+                    // 删除空文件夹 - 删除所有文件夹，包括顶层文件夹
+                    fs.rmdirSync(folderPath);
                 }
             };
             deleteFolderRecursive(sourceFullPath);

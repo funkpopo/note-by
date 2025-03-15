@@ -99,16 +99,29 @@ export default function FolderTree({
 
   // 确保输入框在显示时获得焦点
   useEffect(() => {
-    if (showNewFolderInput !== null && newFolderInputRef.current) {
-      // 短暂延迟以确保DOM已更新
-      const timer = setTimeout(() => {
-        if (newFolderInputRef.current) {
-          newFolderInputRef.current.focus();
-          // 选中所有文本（如果有的话）
-          newFolderInputRef.current.select();
-        }
-      }, 10);
-      return () => clearTimeout(timer);
+    if (showNewFolderInput !== null) {
+      // 使用多个延迟尝试聚焦，以确保DOM已更新
+      const timers = [50, 100, 200].map(delay => 
+        setTimeout(() => {
+          if (newFolderInputRef.current) {
+            console.log('Focusing input at delay:', delay); // 添加日志
+            newFolderInputRef.current.focus();
+            try {
+              // 尝试选中所有文本
+              newFolderInputRef.current.select();
+            } catch (e) {
+              console.error('Error selecting text:', e);
+            }
+          } else {
+            console.log('Input ref not available at delay:', delay); // 添加日志
+          }
+        }, delay)
+      );
+      
+      return () => {
+        // 清除所有定时器
+        timers.forEach(timer => clearTimeout(timer));
+      };
     }
   }, [showNewFolderInput]);
 
@@ -230,6 +243,7 @@ export default function FolderTree({
       ? `${parentFolder}/${newFolderName.trim()}`
       : newFolderName.trim();
     
+    console.log('Creating folder:', folderPath); // 添加日志
     const success = await onCreateFolder(folderPath);
     
     if (success) {
@@ -357,17 +371,10 @@ export default function FolderTree({
           // 先关闭右键菜单
           setContextMenu(prev => ({ ...prev, visible: false }));
           
-          // 设置状态并在下一帧聚焦
-          setTimeout(() => {
-            setShowNewFolderInput(folder);
-            setNewFolderName('');
-            
-            requestAnimationFrame(() => {
-              if (newFolderInputRef.current) {
-                newFolderInputRef.current.focus();
-              }
-            });
-          }, 50);
+          // 设置状态
+          console.log('Context menu: Create subfolder clicked for folder:', folder); // 添加日志
+          setShowNewFolderInput(folder);
+          setNewFolderName('');
         }
       }
     ];
@@ -570,15 +577,9 @@ export default function FolderTree({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      console.log('Create subfolder button clicked for folder:', folder); // 添加日志
                       setShowNewFolderInput(folder);
                       setNewFolderName('');
-                      
-                      // 在下一帧聚焦
-                      requestAnimationFrame(() => {
-                        if (newFolderInputRef.current) {
-                          newFolderInputRef.current.focus();
-                        }
-                      });
                     }}
                     onContextMenu={(e: React.MouseEvent) => {
                       e.preventDefault();
@@ -594,7 +595,14 @@ export default function FolderTree({
               {showNewFolderInput === folder && (
                 <div 
                   className="ml-8 my-1 flex items-center folder-input-container"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                 >
                   <input
                     ref={newFolderInputRef}
@@ -602,7 +610,9 @@ export default function FolderTree({
                     value={newFolderName}
                     onChange={(e) => {
                       e.stopPropagation();
-                      setNewFolderName(e.target.value);
+                      const value = e.target.value;
+                      console.log('Input changed:', value); // 添加日志
+                      setNewFolderName(value);
                     }}
                     placeholder="文件夹名称"
                     className="flex-1 px-2 py-1 text-sm border rounded"
@@ -614,7 +624,12 @@ export default function FolderTree({
                         setShowNewFolderInput(null);
                       }
                     }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
                     onFocus={(e) => e.stopPropagation()}
                     autoFocus
                   />
@@ -624,6 +639,7 @@ export default function FolderTree({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      console.log('Create button clicked, folder name:', newFolderName.trim()); // 添加日志
                       if (newFolderName.trim()) {
                         handleCreateFolder(folder);
                       }
@@ -739,15 +755,11 @@ export default function FolderTree({
           variant="ghost" 
           size="sm" 
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
+            console.log('New folder button clicked'); // 添加日志
             setShowNewFolderInput('');
             setNewFolderName('');
-            // 增加延迟以确保DOM已更新
-            setTimeout(() => {
-              if (newFolderInputRef.current) {
-                newFolderInputRef.current.focus();
-              }
-            }, 50);
           }}
           className="h-7 text-xs"
         >
@@ -785,7 +797,14 @@ export default function FolderTree({
         {showNewFolderInput === '' && (
           <div 
             className="ml-6 my-1 flex items-center folder-input-container"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <input
               ref={newFolderInputRef}
@@ -793,7 +812,9 @@ export default function FolderTree({
               value={newFolderName}
               onChange={(e) => {
                 e.stopPropagation();
-                setNewFolderName(e.target.value);
+                const value = e.target.value;
+                console.log('Root input changed:', value); // 添加日志
+                setNewFolderName(value);
               }}
               placeholder="文件夹名称"
               className="flex-1 px-2 py-1 text-sm border rounded"
@@ -805,7 +826,12 @@ export default function FolderTree({
                   setShowNewFolderInput(null);
                 }
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
               onFocus={(e) => e.stopPropagation()}
               autoFocus
             />
@@ -815,6 +841,7 @@ export default function FolderTree({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                console.log('Create button clicked, folder name:', newFolderName.trim()); // 添加日志
                 if (newFolderName.trim()) {
                   handleCreateFolder('');
                 }
