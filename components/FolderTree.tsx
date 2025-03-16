@@ -38,7 +38,27 @@ export default function FolderTree({
   onDeleteNote,
   onDeleteFolder
 }: FolderTreeProps) {
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  // 初始化展开状态，确保当前文件夹及其父文件夹都展开
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {};
+    
+    // 如果有当前选中的文件夹，确保它和它的所有父文件夹都展开
+    if (currentFolder) {
+      // 展开当前文件夹
+      initialState[currentFolder] = true;
+      
+      // 展开所有父文件夹
+      const parts = currentFolder.split('/');
+      let parentPath = '';
+      
+      for (let i = 0; i < parts.length - 1; i++) {
+        parentPath = parentPath ? `${parentPath}/${parts[i]}` : parts[i];
+        initialState[parentPath] = true;
+      }
+    }
+    
+    return initialState;
+  });
   const [showNewFolderInput, setShowNewFolderInput] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [draggedItem, setDraggedItem] = useState<{ path: string; isFolder: boolean } | null>(null);
@@ -94,8 +114,50 @@ export default function FolderTree({
 
   // 当文件夹列表或笔记列表变化时，重新构建文件夹树
   useEffect(() => {
+    // 保存当前展开状态
+    const currentExpandedState = { ...expandedFolders };
+    
+    // 重新构建文件夹树
     setFolderTree(buildFolderTree());
+    
+    // 保留已展开的文件夹状态，确保已展开的文件夹保持展开
+    setExpandedFolders(prev => {
+      // 合并之前的展开状态，确保所有true值被保留
+      const newState = { ...prev };
+      
+      // 只保留true值，不覆盖已展开的文件夹
+      Object.keys(currentExpandedState).forEach(key => {
+        if (currentExpandedState[key]) {
+          newState[key] = true;
+        }
+      });
+      
+      return newState;
+    });
   }, [folders, notes]);
+
+  // 当选择文件夹时，自动展开该文件夹
+  useEffect(() => {
+    if (currentFolder) {
+      // 展开当前选中的文件夹
+      setExpandedFolders(prev => ({
+        ...prev,
+        [currentFolder]: true
+      }));
+      
+      // 同时展开所有父文件夹
+      const parts = currentFolder.split('/');
+      let parentPath = '';
+      
+      for (let i = 0; i < parts.length - 1; i++) {
+        parentPath = parentPath ? `${parentPath}/${parts[i]}` : parts[i];
+        setExpandedFolders(prev => ({
+          ...prev,
+          [parentPath]: true
+        }));
+      }
+    }
+  }, [currentFolder]);
 
   // 确保输入框在显示时获得焦点
   useEffect(() => {
@@ -225,10 +287,31 @@ export default function FolderTree({
   // 切换文件夹展开/折叠状态
   const toggleFolder = (folder: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // 获取当前展开状态
+    const isCurrentlyExpanded = !!expandedFolders[folder];
+    
+    // 如果当前是展开状态，则允许折叠
+    // 如果当前是折叠状态，则展开
     setExpandedFolders(prev => ({
       ...prev,
-      [folder]: !prev[folder]
+      [folder]: !isCurrentlyExpanded
     }));
+    
+    // 如果是折叠操作，同时折叠所有子文件夹
+    if (isCurrentlyExpanded) {
+      const childFolders = Object.keys(expandedFolders).filter(path => 
+        path.startsWith(`${folder}/`)
+      );
+      
+      if (childFolders.length > 0) {
+        const updatedState = { ...expandedFolders };
+        childFolders.forEach(childPath => {
+          updatedState[childPath] = false;
+        });
+        setExpandedFolders(updatedState);
+      }
+    }
   };
 
   // 处理创建新文件夹
@@ -250,16 +333,12 @@ export default function FolderTree({
       setNewFolderName('');
       setShowNewFolderInput(null);
       
-      // 展开父文件夹
-      if (parentFolder) {
-        setExpandedFolders(prev => ({
-          ...prev,
-          [parentFolder]: true
-        }));
-      }
-      
-      // 更新文件夹树
-      setFolderTree(buildFolderTree());
+      // 展开父文件夹和新创建的文件夹
+      setExpandedFolders(prev => ({
+        ...prev,
+        [parentFolder]: true,
+        [folderPath]: true
+      }));
     }
   };
 
@@ -348,9 +427,6 @@ export default function FolderTree({
           ...prev,
           [targetFolder]: true
         }));
-        
-        // 更新文件夹树
-        setFolderTree(buildFolderTree());
       }
     }
     
@@ -375,6 +451,12 @@ export default function FolderTree({
           console.log('Context menu: Create subfolder clicked for folder:', folder); // 添加日志
           setShowNewFolderInput(folder);
           setNewFolderName('');
+          
+          // 展开当前文件夹
+          setExpandedFolders(prev => ({
+            ...prev,
+            [folder]: true
+          }));
         }
       }
     ];
@@ -397,15 +479,23 @@ export default function FolderTree({
                 folderElement.classList.add('opacity-50');
               }
               
+              // 获取父文件夹路径
+              const parentFolder = folder.split('/').slice(0, -1).join('/');
+              
               const success = await onDeleteFolder(folder);
               
               if (success) {
-                // 更新文件夹树
-                setFolderTree(buildFolderTree());
-                
                 // 如果当前选中的是被删除的文件夹，则切换到根文件夹
                 if (currentFolder === folder || currentFolder.startsWith(`${folder}/`)) {
                   onFolderSelect('');
+                }
+                
+                // 确保父文件夹保持展开状态
+                if (parentFolder) {
+                  setExpandedFolders(prev => ({
+                    ...prev,
+                    [parentFolder]: true
+                  }));
                 }
               } else {
                 // 删除失败，恢复UI状态
@@ -580,6 +670,12 @@ export default function FolderTree({
                       console.log('Create subfolder button clicked for folder:', folder); // 添加日志
                       setShowNewFolderInput(folder);
                       setNewFolderName('');
+                      
+                      // 展开当前文件夹
+                      setExpandedFolders(prev => ({
+                        ...prev,
+                        [folder]: true
+                      }));
                     }}
                     onContextMenu={(e: React.MouseEvent) => {
                       e.preventDefault();
