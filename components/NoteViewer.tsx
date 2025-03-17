@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { MdPreview } from 'md-editor-rt';
 import 'md-editor-rt/lib/preview.css';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Menu, Bookmark, BookmarkCheck, Share, Download, Folder } from 'lucide-react';
+import { ArrowLeft, Edit, Menu, Share, Download, Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // 添加自定义样式，确保与编辑器一致
@@ -75,7 +75,6 @@ export default function NoteViewer({
 }: NoteViewerProps) {
   const [previewId] = useState(`preview-${id}`);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [isFavorite, setIsFavorite] = useState(false);
   
   useEffect(() => {
     // 检查当前主题
@@ -150,15 +149,6 @@ export default function NoteViewer({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-9 w-9"
-            onClick={() => setIsFavorite(!isFavorite)}
-            title={isFavorite ? "取消收藏" : "收藏笔记"}
-          >
-            {isFavorite ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} />}
-          </Button>
           <Button 
             variant="ghost" 
             size="icon" 

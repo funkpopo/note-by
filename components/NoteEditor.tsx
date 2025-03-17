@@ -5,6 +5,7 @@ import { MdEditor } from 'md-editor-rt';
 import 'md-editor-rt/lib/style.css';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save, Menu } from 'lucide-react';
+import AIAssistant from './AIAssistant';
 
 // 添加自定义样式，增大编辑器图标尺寸并调整高度
 const customStyle = `
@@ -192,10 +193,19 @@ export default function NoteEditor({
     const parts = folder.split('/');
     return parts[parts.length - 1];
   };
-  
+
+  // 处理AI助手插入文本
+  const handleInsertAIText = (text: string) => {
+    // 在当前光标位置插入文本
+    setContent((prevContent) => {
+      // 简单地追加到内容末尾
+      return prevContent + '\n\n' + text;
+    });
+  };
+
   return (
     <div className="w-full h-screen flex flex-col">
-      <div className="flex items-center p-4 border-b">
+      <div className="flex items-center p-4 border-b bg-card">
         {onMenuClick && (
           <Button variant="ghost" onClick={onMenuClick} size="icon" className="mr-3 shrink-0">
             <Menu size={18} />
@@ -204,88 +214,87 @@ export default function NoteEditor({
         <Button variant="ghost" onClick={onCancel} size="icon" className="mr-3 shrink-0">
           <ArrowLeft size={18} />
         </Button>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="text-xl font-bold bg-transparent border-b border-border px-2 py-1 focus:outline-none focus:border-primary flex-1"
-          placeholder="笔记标题"
-        />
+        <div className="flex-1">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="笔记标题"
+            className="w-full text-xl font-bold bg-transparent border-none outline-none focus:ring-0"
+          />
+        </div>
         
-        {onFolderChange && (
-          <div className="relative mx-2">
+        <div className="flex items-center gap-2">
+          <AIAssistant 
+            onInsertText={handleInsertAIText}
+            currentContent={content}
+          />
+          
+          <div className="relative">
             <Button 
               variant="outline" 
-              size="sm"
-              onClick={() => {
-                setShowFolderSelector(!showFolderSelector);
-                setShowNewFolderInput(false);
-              }}
-              className="text-sm"
+              size="sm" 
+              onClick={() => setShowFolderSelector(!showFolderSelector)}
+              className="gap-1"
             >
-              {currentFolder ? getFolderDisplayName(currentFolder) : '默认位置'}
+              {currentFolder ? getFolderDisplayName(currentFolder) : '选择文件夹'}
             </Button>
             
             {showFolderSelector && (
-              <div className="absolute right-0 top-full mt-1 w-64 bg-card border rounded-md shadow-md z-10 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent scrollbar-thumb-muted hover:scrollbar-thumb-primary/50 transition-colors">
-                <div className="py-1">
-                  <button
-                    className={`w-full text-left px-3 py-2 text-sm ${
-                      currentFolder === '' ? 'bg-primary/10' : 'hover:bg-accent/50'
-                    }`}
+              <div className="absolute right-0 top-full mt-1 w-64 bg-card border rounded-lg shadow-lg p-2 z-10">
+                <div className="max-h-60 overflow-y-auto">
+                  <div 
+                    className={`px-3 py-1.5 rounded-md cursor-pointer hover:bg-accent ${currentFolder === '' ? 'bg-accent' : ''}`}
                     onClick={() => {
-                      onFolderChange('');
+                      if (onFolderChange) onFolderChange('');
                       setShowFolderSelector(false);
                     }}
                   >
-                    默认位置
-                  </button>
+                    根目录
+                  </div>
                   
                   {folders.map(folder => (
-                    <button
+                    <div 
                       key={folder}
-                      className={`w-full text-left px-3 py-2 text-sm truncate ${
-                        currentFolder === folder ? 'bg-primary/10' : 'hover:bg-accent/50'
-                      }`}
+                      className={`px-3 py-1.5 rounded-md cursor-pointer hover:bg-accent ${currentFolder === folder ? 'bg-accent' : ''}`}
                       onClick={() => {
-                        onFolderChange(folder);
+                        if (onFolderChange) onFolderChange(folder);
                         setShowFolderSelector(false);
                       }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setNewSubfolderParent(folder);
-                        setShowNewFolderInput(true);
-                      }}
                     >
-                      {/* 显示文件夹层次结构 */}
-                      {folder.split('/').map((part, index, array) => (
-                        <span key={index}>
-                          {index > 0 && <span className="text-muted-foreground mx-1">/</span>}
-                          <span className={index === array.length - 1 ? 'font-medium' : ''}>{part}</span>
-                        </span>
-                      ))}
-                    </button>
+                      {getFolderDisplayName(folder)}
+                    </div>
                   ))}
-                  
-                  <div className="border-t my-1"></div>
-                  
-                  <button
-                    className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent/50"
-                    onClick={() => {
-                      setShowNewFolderInput(true);
-                      setNewSubfolderParent('');
-                    }}
+                </div>
+                
+                <div className="mt-2 pt-2 border-t">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-start text-sm"
+                    onClick={() => setShowNewFolderInput(!showNewFolderInput)}
                   >
                     + 新建文件夹
-                  </button>
+                  </Button>
                   
                   {showNewFolderInput && (
-                    <div className="p-3 border-t">
-                      {newSubfolderParent && (
-                        <div className="text-xs text-muted-foreground mb-2">
-                          在 <span className="font-medium">{newSubfolderParent}</span> 中创建子文件夹
-                        </div>
-                      )}
+                    <div className="mt-2 p-2 bg-muted/50 rounded-md">
+                      <div className="mb-2">
+                        <label className="block text-xs mb-1">父文件夹</label>
+                        <select 
+                          className="w-full px-2 py-1 text-sm border rounded"
+                          value={newSubfolderParent}
+                          onChange={(e) => setNewSubfolderParent(e.target.value)}
+                        >
+                          <option value="">根目录</option>
+                          {folders.map(folder => (
+                            <option key={folder} value={folder}>
+                              {getFolderDisplayName(folder)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -309,12 +318,12 @@ export default function NoteEditor({
               </div>
             )}
           </div>
-        )}
-        
-        <Button onClick={handleSave} className="gap-2 ml-2 shrink-0">
-          <Save size={16} />
-          保存
-        </Button>
+          
+          <Button onClick={handleSave} className="gap-2 ml-2 shrink-0">
+            <Save size={16} />
+            保存
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1 overflow-hidden">

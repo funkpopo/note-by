@@ -9,8 +9,8 @@ import ThemeToggle from './ThemeToggle';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigate?: (view: 'all' | 'recent' | 'favorites' | 'tags') => void;
-  currentView?: 'all' | 'recent' | 'favorites' | 'tags';
+  onNavigate?: (view: 'all' | 'recent' | 'tags' | 'ai-settings') => void;
+  currentView?: 'all' | 'recent' | 'tags' | 'ai-settings';
 }
 
 export default function Sidebar({ isOpen, onClose, onNavigate, currentView = 'all' }: SidebarProps) {
@@ -63,18 +63,6 @@ export default function Sidebar({ isOpen, onClose, onNavigate, currentView = 'al
             </button>
             <button 
               onClick={() => {
-                if (onNavigate) onNavigate('favorites');
-                onClose();
-              }}
-              className={cn(
-                "block w-full text-left px-3 py-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors",
-                currentView === 'favorites' && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              )}
-            >
-              收藏笔记
-            </button>
-            <button 
-              onClick={() => {
                 if (onNavigate) onNavigate('recent');
                 onClose();
               }}
@@ -96,6 +84,18 @@ export default function Sidebar({ isOpen, onClose, onNavigate, currentView = 'al
               )}
             >
               标签管理
+            </button>
+            <button 
+              onClick={() => {
+                if (onNavigate) onNavigate('ai-settings');
+                onClose();
+              }}
+              className={cn(
+                "block w-full text-left px-3 py-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors",
+                currentView === 'ai-settings' && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              )}
+            >
+              AI 设置
             </button>
           </nav>
         </div>

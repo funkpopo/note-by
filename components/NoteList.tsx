@@ -7,6 +7,7 @@ import NoteViewer from './NoteViewer';
 import Sidebar from './Sidebar';
 import RecentNotesView from './RecentNotesView';
 import FolderTree from './FolderTree';
+import AISettings from './AISettings';
 import { Button } from '@/components/ui/button';
 import { Plus, Menu, Clock, Grid, List, FileText, Edit3, Trash } from 'lucide-react';
 
@@ -98,7 +99,7 @@ interface Note {
 type ViewState = 'list' | 'view' | 'edit' | 'create';
 
 // 定义侧边栏视图类型
-type SidebarView = 'all' | 'recent' | 'favorites' | 'tags';
+type SidebarView = 'all' | 'recent' | 'tags' | 'ai-settings';
 
 // 在组件外部定义防抖变量
 let fileSystemChangeDebounceTimeout: NodeJS.Timeout | null = null;
@@ -183,7 +184,7 @@ export default function NoteList() {
   }, []);
 
   // 处理侧边栏导航
-  const handleSidebarNavigate = useCallback((view: SidebarView) => {
+  const handleSidebarNavigate = useCallback((view: 'all' | 'recent' | 'tags' | 'ai-settings') => {
     setCurrentSidebarView(view);
     if (viewState !== 'list') {
       setViewState('list');
@@ -506,6 +507,25 @@ export default function NoteList() {
           currentFolder={currentFolder}
           onFolderChange={setCurrentFolder}
           onCreateFolder={handleCreateFolder}
+        />
+      </>
+    );
+  }
+
+  // 显示AI设置页面
+  if (currentSidebarView === 'ai-settings') {
+    return (
+      <>
+        <Sidebar 
+          isOpen={sidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+          onNavigate={handleSidebarNavigate}
+          currentView={currentSidebarView}
+        />
+        <AISettings 
+          onBack={() => {
+            setCurrentSidebarView('all');
+          }}
         />
       </>
     );

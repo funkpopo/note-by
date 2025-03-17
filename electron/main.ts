@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as chokidar from 'chokidar';
 import serve from 'electron-serve';
+import { getAIConfig, saveAIConfig } from './ai-config';
 
 // 添加启动日志
 console.log('=== Electron main process starting ===');
@@ -149,6 +150,15 @@ function createWindow() {
   });
 
   createMenu();
+
+  // 添加AI配置相关的IPC处理程序
+  ipcMain.handle('get-ai-config', async () => {
+    return await getAIConfig();
+  });
+  
+  ipcMain.handle('save-ai-config', async (_, providers) => {
+    return await saveAIConfig(providers);
+  });
 }
 
 function createMenu() {

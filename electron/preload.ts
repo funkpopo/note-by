@@ -60,6 +60,20 @@ const electronAPI = {
   // 删除文件夹
   deleteFolder: (folderPath: string) =>
     ipcRenderer.invoke('delete-folder', folderPath),
+    
+  // AI 配置操作
+  getAIConfig: () =>
+    ipcRenderer.invoke('get-ai-config'),
+    
+  saveAIConfig: (providers: Array<{
+    id: string;
+    name: string;
+    apiEndpoint: string;
+    apiKey: string;
+    model: string;
+    isDefault: boolean;
+  }>) =>
+    ipcRenderer.invoke('save-ai-config', providers),
 };
 
 // 暴露安全的API给渲染进程

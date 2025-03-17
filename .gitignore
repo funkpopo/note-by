@@ -48,3 +48,5 @@ next-env.d.ts
 
 # markdown files directory
 /markdown
+
+aiconfig.json

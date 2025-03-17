@@ -41,6 +41,7 @@ const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const chokidar = __importStar(require("chokidar"));
 const electron_serve_1 = __importDefault(require("electron-serve"));
+const ai_config_1 = require("./ai-config");
 // 添加启动日志
 console.log('=== Electron main process starting ===');
 console.log('Current working directory:', process.cwd());
@@ -167,6 +168,13 @@ function createWindow() {
         mainWindow = null;
     });
     createMenu();
+    // 添加AI配置相关的IPC处理程序
+    electron_1.ipcMain.handle('get-ai-config', async () => {
+        return await (0, ai_config_1.getAIConfig)();
+    });
+    electron_1.ipcMain.handle('save-ai-config', async (_, providers) => {
+        return await (0, ai_config_1.saveAIConfig)(providers);
+    });
 }
 function createMenu() {
     const isMac = process.platform === 'darwin';

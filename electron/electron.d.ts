@@ -84,6 +84,31 @@ interface ElectronAPI {
       errorStack?: string;
     }
   }>;
+  
+  // AI 配置操作
+  getAIConfig: () => Promise<{
+    success: boolean;
+    providers?: Array<{
+      id: string;
+      name: string;
+      apiEndpoint: string;
+      apiKey: string;
+      model: string;
+      isDefault: boolean;
+    }>;
+    error?: string;
+  }>;
+  saveAIConfig: (providers: Array<{
+    id: string;
+    name: string;
+    apiEndpoint: string;
+    apiKey: string;
+    model: string;
+    isDefault: boolean;
+  }>) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
   // 添加其他需要的方法类型
 }
 
