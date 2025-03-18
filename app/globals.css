@@ -42,6 +42,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-icon: var(--icon);
+  --color-icon-hover: var(--icon-hover);
 }
 
 :root {
@@ -77,6 +79,8 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+  --icon: oklch(0.4 0.02 285.9);
+  --icon-hover: oklch(0.2 0.05 285.9);
 }
 
 .dark {
@@ -111,6 +115,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+  --icon: oklch(0.85 0.015 286.067);
+  --icon-hover: oklch(1 0.02 286.067);
 }
 
 @layer base {
@@ -122,36 +128,184 @@
   }
 }
 
-/* Custom Scrollbar Styles */
-@layer utilities {
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  .scrollbar-track-transparent::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .scrollbar-thumb-rounded-md::-webkit-scrollbar-thumb {
-    border-radius: var(--radius-md);
-  }
-  
-  .scrollbar-thumb-muted::-webkit-scrollbar-thumb {
-    background-color: var(--muted);
-  }
-  
-  .hover\:scrollbar-thumb-primary\/50:hover::-webkit-scrollbar-thumb {
-    background-color: oklch(from var(--primary) l c h / 50%);
-  }
-  
-  /* Firefox scrollbar */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--muted) transparent;
-  }
-  
-  .hover\:scrollbar-thumb-primary\/50:hover {
-    scrollbar-color: oklch(from var(--primary) l c h / 50%) transparent;
-  }
+/* Cherry Markdown Customizations */
+.light .cherry-markdown.note-by {
+  --cherry-toolbar-background: var(--card);
+  --cherry-toolbar-icon-color: var(--foreground);
+  --cherry-toolbar-icon-hover-background: var(--muted);
+  --cherry-toolbar-border-color: var(--border);
+  --cherry-editor-background: var(--background);
+  --cherry-preview-background: var(--background);
+  --cherry-editor-color: var(--foreground);
+}
+
+.dark .cherry-markdown.note-by {
+  --cherry-toolbar-background: var(--card);
+  --cherry-toolbar-icon-color: var(--foreground);
+  --cherry-toolbar-icon-hover-background: var(--muted);
+  --cherry-toolbar-border-color: var(--border);
+  --cherry-editor-background: var(--background);
+  --cherry-preview-background: var(--background);
+  --cherry-editor-color: var(--foreground);
+}
+
+/* Improved scrollbar */
+.cherry-editor__codemirror-wrapper .cm-scroller::-webkit-scrollbar,
+.cherry-editor__preview::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cherry-editor__codemirror-wrapper .cm-scroller::-webkit-scrollbar-thumb,
+.cherry-editor__preview::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 10px;
+}
+
+.cherry-editor__codemirror-wrapper .cm-scroller::-webkit-scrollbar-track,
+.cherry-editor__preview::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 10px;
+}
+
+/* 优化笔记组样式 */
+.note-group {
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.note-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: var(--primary);
+  opacity: 0.6;
+}
+
+.note-group:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.dark .note-group {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.dark .note-group:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Enhanced note items */
+.note-item {
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.note-item:hover {
+  border-left-color: var(--primary);
+  background-color: oklch(0.98 0.005 286.375);
+}
+
+.dark .note-item:hover {
+  background-color: oklch(0.25 0.008 286.033);
+}
+
+.note-item.active {
+  border-left-color: var(--primary);
+  background-color: var(--primary-foreground);
+}
+
+/* 图标样式优化 */
+.icon-button {
+  color: var(--icon);
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  color: var(--icon-hover);
+  transform: scale(1.1);
+}
+
+.dark .icon-button {
+  opacity: 0.9;
+}
+
+.dark .icon-button:hover {
+  opacity: 1;
+}
+
+/* Card样式增强 */
+.card-enhanced {
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.card-enhanced:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dark .card-enhanced {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .card-enhanced:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Action buttons in lists with better visibility */
+.action-button {
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.dark .action-button {
+  opacity: 0.85;
+}
+
+.dark .action-button:hover {
+  opacity: 1;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+/* 浅色模式滚动条 */
+::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 100, 100, 0.6);
+}
+
+/* 深色模式滚动条 */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(180, 180, 180, 0.4);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(180, 180, 180, 0.6);
 }

@@ -1,0 +1,4 @@
+# Ignore electron files
+electron/**/*.js 
+# Ignore scripts
+scripts/**/*.js 

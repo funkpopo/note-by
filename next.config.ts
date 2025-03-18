@@ -1,11 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  output: 'export', // 静态导出，用于Electron
-  distDir: '.next',
+  output: 'export', // 静态导出
+  distDir: '.next', // 输出目录
   images: {
-    unoptimized: true, // 在Electron中不需要Next.js的图像优化
+    unoptimized: true, // 为了静态导出禁用图像优化
   },
 };
 
