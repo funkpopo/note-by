@@ -8,12 +8,65 @@ export interface AIProvider {
   isDefault: boolean;
 }
 
+// AI提示词类型
+export interface AIPrompt {
+  id: string;
+  name: string;
+  prompt: string;
+  isDefault?: boolean;
+}
+
+// AI提示词分类
+export interface AIPrompts {
+  understand: AIPrompt[]; // 理解内容
+  rewrite: AIPrompt[];    // 改写内容
+  expand: AIPrompt[];     // 扩展写作
+  continue: AIPrompt[];   // 继续写作
+}
+
 // Electron API 类型定义
 interface ElectronAIConfig {
   success: boolean;
   providers?: AIProvider[];
+  prompts?: AIPrompts;
   error?: string;
 }
+
+// 默认提示词配置
+export const defaultPrompts: AIPrompts = {
+  understand: [
+    {
+      id: 'default-understand',
+      name: '默认理解',
+      prompt: '请帮我理解以下内容，解释其中的含义和关键点：\n\n{{content}}',
+      isDefault: true
+    }
+  ],
+  rewrite: [
+    {
+      id: 'default-rewrite',
+      name: '默认改写',
+      prompt: '请帮我改写以下内容，保持原意但使表达更加清晰和流畅：\n\n{{content}}',
+      isDefault: true
+    }
+  ],
+  expand: [
+    {
+      id: 'default-expand',
+      name: '默认扩展',
+      prompt: '请基于以下内容进行扩展写作，添加更多相关的观点、例子或细节：\n\n{{content}}',
+      isDefault: true
+    }
+  ],
+  continue: [
+    {
+      id: 'default-continue',
+      name: '默认续写',
+      prompt: '请基于以下内容继续写作，保持风格一致并发展后续内容：\n\n{{content}}',
+      isDefault: true
+    }
+  ]
+};
 
 // 获取所有AI提供商
 export function getAIProviders(): AIProvider[] {
@@ -24,7 +77,7 @@ export function getAIProviders(): AIProvider[] {
     if ('electron' in window) {
       const electron = (window as Window & typeof globalThis & { electron: { 
         getAIConfig: () => Promise<ElectronAIConfig>;
-        saveAIConfig: (providers: AIProvider[]) => Promise<{ success: boolean; error?: string }>;
+        saveAIConfig: (config: { providers?: AIProvider[]; prompts?: AIPrompts }) => Promise<{ success: boolean; error?: string }>;
       } }).electron;
       
       // 使用Electron IPC调用获取AI配置
@@ -60,6 +113,45 @@ export function getAIProviders(): AIProvider[] {
   return [];
 }
 
+// 获取所有AI提示词
+export async function getAIPrompts(): Promise<AIPrompts> {
+  if (typeof window === 'undefined') return defaultPrompts;
+  
+  try {
+    // 检查是否在Electron环境中运行
+    if ('electron' in window) {
+      const electron = (window as Window & typeof globalThis & { electron: { 
+        getAIConfig: () => Promise<ElectronAIConfig>;
+      } }).electron;
+      
+      // 使用Electron IPC调用获取AI配置
+      const result = await electron.getAIConfig();
+      
+      if (result && result.success && result.prompts) {
+        // 保存到localStorage以供后续使用
+        localStorage.setItem('aiPrompts', JSON.stringify(result.prompts));
+        return result.prompts;
+      }
+      
+      // 如果无法从Electron获取，尝试从localStorage获取
+      const cachedPrompts = localStorage.getItem('aiPrompts');
+      if (cachedPrompts) {
+        return JSON.parse(cachedPrompts);
+      }
+    } else {
+      // 在非Electron环境中使用localStorage
+      const savedPrompts = localStorage.getItem('aiPrompts');
+      if (savedPrompts) {
+        return JSON.parse(savedPrompts);
+      }
+    }
+  } catch (error) {
+    console.error('加载AI提示词设置失败:', error);
+  }
+  
+  return defaultPrompts;
+}
+
 // 获取默认AI提供商
 export function getDefaultAIProvider(): AIProvider | null {
   const providers = getAIProviders();
@@ -73,11 +165,11 @@ export function saveAIProviders(providers: AIProvider[]): boolean {
     if (typeof window !== 'undefined' && 'electron' in window) {
       const electron = (window as Window & typeof globalThis & { electron: { 
         getAIConfig: () => Promise<ElectronAIConfig>;
-        saveAIConfig: (providers: AIProvider[]) => Promise<{ success: boolean; error?: string }>;
+        saveAIConfig: (config: { providers?: AIProvider[]; prompts?: AIPrompts }) => Promise<{ success: boolean; error?: string }>;
       } }).electron;
       
       // 使用Electron IPC调用保存AI配置
-      electron.saveAIConfig(providers).then((result: { success: boolean; error?: string }) => {
+      electron.saveAIConfig({ providers }).then((result: { success: boolean; error?: string }) => {
         if (result && result.success) {
           // 更新本地缓存
           localStorage.setItem('aiProviders', JSON.stringify(providers));
@@ -99,6 +191,90 @@ export function saveAIProviders(providers: AIProvider[]): boolean {
   } catch (error) {
     console.error('保存AI提供商设置失败:', error);
     return false;
+  }
+}
+
+// 保存AI提示词设置
+export async function saveAIPrompts(prompts: AIPrompts): Promise<boolean> {
+  try {
+    // 检查是否在Electron环境中运行
+    if (typeof window !== 'undefined' && 'electron' in window) {
+      const electron = (window as Window & typeof globalThis & { electron: { 
+        saveAIConfig: (config: { providers?: AIProvider[]; prompts?: AIPrompts }) => Promise<{ success: boolean; error?: string }>;
+      } }).electron;
+      
+      // 使用Electron IPC调用保存AI配置
+      const result = await electron.saveAIConfig({ prompts });
+      
+      if (result && result.success) {
+        // 更新本地缓存
+        localStorage.setItem('aiPrompts', JSON.stringify(prompts));
+        return true;
+      } else {
+        console.error('保存AI提示词设置失败:', result.error);
+        return false;
+      }
+    } else {
+      // 在非Electron环境中使用localStorage
+      localStorage.setItem('aiPrompts', JSON.stringify(prompts));
+      return true;
+    }
+  } catch (error) {
+    console.error('保存AI提示词设置失败:', error);
+    return false;
+  }
+}
+
+// 调用AI处理选定文本
+export async function callAIWithPrompt(
+  promptType: keyof AIPrompts,
+  promptId: string,
+  content: string
+): Promise<{ success: boolean; content?: string; error?: string }> {
+  try {
+    if (typeof window === 'undefined') {
+      return { success: false, error: '只能在客户端环境中使用' };
+    }
+    
+    // 检查是否在Electron环境中运行
+    if ('electron' in window) {
+      const electron = (window as Window & typeof globalThis & { electron: { 
+        callAIWithPrompt: (promptType: string, promptId: string, content: string) => 
+          Promise<{ success: boolean; content?: string; error?: string }>;
+      } }).electron;
+      
+      // 调用Electron方法处理
+      return await electron.callAIWithPrompt(promptType, promptId, content);
+    } else {
+      // 非Electron环境，可以使用替代方法
+      const prompts = await getAIPrompts();
+      if (!prompts[promptType]) {
+        return { success: false, error: `无效的提示词类型: ${promptType}` };
+      }
+      
+      const promptList = prompts[promptType];
+      let targetPrompt = promptList.find(p => p.id === promptId);
+      
+      if (!targetPrompt) {
+        targetPrompt = promptList.find(p => p.isDefault) || promptList[0];
+      }
+      
+      if (!targetPrompt) {
+        return { success: false, error: '找不到有效的提示词' };
+      }
+      
+      // 替换提示词模板中的{{content}}变量
+      const finalPrompt = targetPrompt.prompt.replace('{{content}}', content);
+      
+      // 使用现有的callAI函数发送请求
+      return await callAI(finalPrompt);
+    }
+  } catch (error) {
+    console.error('调用AI处理文本失败:', error);
+    return { 
+      success: false, 
+      error: `调用AI处理文本失败: ${error instanceof Error ? error.message : String(error)}` 
+    };
   }
 }
 

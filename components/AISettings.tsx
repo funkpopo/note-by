@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Save, AlertCircle, CheckCircle, Zap, X } from 'lucide-react';
+import { PlusCircle, Trash2, Save, AlertCircle, CheckCircle, Zap, X, Brain, Pencil, Plus, ArrowRight, Edit, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AIProvider, getAIProviders, saveAIProviders, callAI } from '@/lib/ai-utils';
+import { AIProvider, getAIProviders, saveAIProviders, callAI, getAIPrompts, saveAIPrompts, AIPrompt, AIPrompts, defaultPrompts } from '@/lib/ai-utils';
 
 interface AISettingsProps {
   onBack?: () => void;
@@ -172,6 +172,16 @@ export default function AISettings({ onBack }: AISettingsProps) {
   const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // AI 提示词设置相关状态
+  const [prompts, setPrompts] = useState<AIPrompts | null>(null);
+  const [activeTab, setActiveTab] = useState<'providers' | 'prompts'>('providers');
+  const [expandedPromptType, setExpandedPromptType] = useState<keyof AIPrompts | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState<{
+    type: keyof AIPrompts;
+    prompt: AIPrompt;
+    isNew: boolean;
+  } | null>(null);
+
   // 加载保存的AI提供商设置
   useEffect(() => {
     const loadProviders = () => {
@@ -186,6 +196,22 @@ export default function AISettings({ onBack }: AISettingsProps) {
     };
 
     loadProviders();
+  }, []);
+
+  // 加载保存的 AI 提示词设置
+  useEffect(() => {
+    const loadPrompts = async () => {
+      try {
+        const savedPrompts = await getAIPrompts();
+        setPrompts(savedPrompts);
+      } catch (error) {
+        console.error('加载AI提示词设置失败:', error);
+        // 使用默认提示词
+        setPrompts(defaultPrompts);
+      }
+    };
+
+    loadPrompts();
   }, []);
 
   // 添加新的AI提供商
@@ -396,13 +422,220 @@ export default function AISettings({ onBack }: AISettingsProps) {
     setIsEditing(true);
   };
 
+  // 获取提示词类型的显示名称
+  const getPromptTypeName = (type: keyof AIPrompts): string => {
+    const nameMap: Record<keyof AIPrompts, string> = {
+      understand: '理解内容',
+      rewrite: '改写内容',
+      expand: '扩展写作',
+      continue: '继续写作'
+    };
+    
+    return nameMap[type] || type;
+  };
+  
+  // 获取提示词类型的图标
+  const getPromptTypeIcon = (type: keyof AIPrompts) => {
+    const iconMap: Record<keyof AIPrompts, React.ReactNode> = {
+      understand: <Brain size={18} />,
+      rewrite: <Pencil size={18} />,
+      expand: <Plus size={18} />,
+      continue: <ArrowRight size={18} />
+    };
+    
+    return iconMap[type] || null;
+  };
+
+  // 添加新的提示词
+  const handleAddPrompt = (type: keyof AIPrompts) => {
+    setEditingPrompt({
+      type,
+      prompt: {
+        id: `new-${Date.now()}`,
+        name: '',
+        prompt: '',
+        isDefault: false
+      },
+      isNew: true
+    });
+  };
+
+  // 编辑现有提示词
+  const handleEditPrompt = (type: keyof AIPrompts, prompt: AIPrompt) => {
+    setEditingPrompt({
+      type,
+      prompt: { ...prompt },
+      isNew: false
+    });
+  };
+
+  // 删除提示词
+  const handleDeletePrompt = async (type: keyof AIPrompts, id: string) => {
+    if (!prompts) return;
+
+    // 创建新的提示词列表，排除要删除的提示词
+    const updatedPromptList = prompts[type].filter(p => p.id !== id);
+    
+    // 如果删除的是默认提示词，则将第一个提示词设置为默认
+    if (prompts[type].find(p => p.id === id)?.isDefault && updatedPromptList.length > 0) {
+      updatedPromptList[0].isDefault = true;
+    }
+    
+    // 更新提示词列表
+    const updatedPrompts = {
+      ...prompts,
+      [type]: updatedPromptList
+    };
+    
+    setPrompts(updatedPrompts);
+    
+    // 保存到设置
+    try {
+      await saveAIPrompts(updatedPrompts);
+      setToast({
+        message: '提示词已删除',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('删除提示词失败:', error);
+      setToast({
+        message: '删除提示词失败',
+        type: 'error'
+      });
+    }
+  };
+
+  // 设置默认提示词
+  const handleSetDefaultPrompt = async (type: keyof AIPrompts, id: string) => {
+    if (!prompts) return;
+
+    // 更新提示词列表，设置选中的提示词为默认
+    const updatedPromptList = prompts[type].map(p => ({
+      ...p,
+      isDefault: p.id === id
+    }));
+    
+    // 更新提示词列表
+    const updatedPrompts = {
+      ...prompts,
+      [type]: updatedPromptList
+    };
+    
+    setPrompts(updatedPrompts);
+    
+    // 保存到设置
+    try {
+      await saveAIPrompts(updatedPrompts);
+      setToast({
+        message: '默认提示词已设置',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('设置默认提示词失败:', error);
+      setToast({
+        message: '设置默认提示词失败',
+        type: 'error'
+      });
+    }
+  };
+
+  // 保存编辑中的提示词
+  const handleSavePrompt = async () => {
+    if (!editingPrompt || !prompts) return;
+
+    const { type, prompt, isNew } = editingPrompt;
+    
+    // 验证输入
+    if (!prompt.name.trim() || !prompt.prompt.trim()) {
+      setToast({
+        message: '名称和提示词内容不能为空',
+        type: 'error'
+      });
+      return;
+    }
+
+    let updatedPromptList: AIPrompt[];
+    
+    if (isNew) {
+      // 添加新提示词
+      updatedPromptList = [
+        ...prompts[type],
+        {
+          ...prompt,
+          id: `prompt-${Date.now()}`
+        }
+      ];
+    } else {
+      // 更新现有提示词
+      updatedPromptList = prompts[type].map(p => 
+        p.id === prompt.id ? prompt : (prompt.isDefault ? { ...p, isDefault: false } : p)
+      );
+    }
+    
+    // 如果只有一个提示词，确保它是默认的
+    if (updatedPromptList.length === 1) {
+      updatedPromptList[0].isDefault = true;
+    }
+    
+    // 确保至少有一个默认提示词
+    if (!updatedPromptList.some(p => p.isDefault)) {
+      updatedPromptList[0].isDefault = true;
+    }
+    
+    // 更新提示词列表
+    const updatedPrompts = {
+      ...prompts,
+      [type]: updatedPromptList
+    };
+    
+    setPrompts(updatedPrompts);
+    setEditingPrompt(null);
+    
+    // 保存到设置
+    try {
+      await saveAIPrompts(updatedPrompts);
+      setToast({
+        message: isNew ? '提示词已添加' : '提示词已更新',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('保存提示词失败:', error);
+      setToast({
+        message: '保存提示词失败',
+        type: 'error'
+      });
+    }
+  };
+
+  // 重置提示词为默认值
+  const handleResetPrompts = async () => {
+    if (window.confirm('确定要将所有提示词重置为默认值吗？此操作不可撤销。')) {
+      setPrompts(defaultPrompts);
+      
+      // 保存到设置
+      try {
+        await saveAIPrompts(defaultPrompts);
+        setToast({
+          message: '提示词已重置为默认值',
+          type: 'success'
+        });
+      } catch (error) {
+        console.error('重置提示词失败:', error);
+        setToast({
+          message: '重置提示词失败',
+          type: 'error'
+        });
+      }
+    }
+  };
+
   return (
     <div className="w-full h-screen flex flex-col">
       {/* 顶部导航栏 */}
       <div className="flex items-center p-4 border-b bg-card">
         <div className="flex-1">
           <h1 className="text-xl font-bold">AI 设置</h1>
-          <p className="text-sm text-muted-foreground">配置AI提供商和API密钥</p>
+          <p className="text-sm text-muted-foreground">配置AI提供商和提示词</p>
         </div>
         {onBack && (
           <Button onClick={onBack} variant="outline">
@@ -411,8 +644,8 @@ export default function AISettings({ onBack }: AISettingsProps) {
         )}
       </div>
       
-      <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-3xl mx-auto">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-3xl mx-auto p-6">
           {/* 状态消息 */}
           {saveStatus !== 'idle' && (
             <div className={cn(
@@ -425,218 +658,472 @@ export default function AISettings({ onBack }: AISettingsProps) {
             </div>
           )}
           
-          {/* 已配置的AI提供商列表 */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">已配置的AI提供商</h2>
-            
-            {providers.length === 0 ? (
-              <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed">
-                <p className="text-muted-foreground">尚未配置任何AI提供商</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {providers.map(provider => (
-                  <div key={provider.id} className="bg-card border rounded-lg p-4 shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{provider.name}</h3>
-                          {provider.isDefault && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                              默认
-                            </span>
-                          )}
+          {/* 选项卡 */}
+          <div className="border-b mb-6">
+            <div className="flex">
+              <button
+                className={cn(
+                  "px-4 py-2 font-medium text-sm border-b-2 -mb-px",
+                  activeTab === 'providers' 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setActiveTab('providers')}
+              >
+                提供商设置
+              </button>
+              <button
+                className={cn(
+                  "px-4 py-2 font-medium text-sm border-b-2 -mb-px",
+                  activeTab === 'prompts' 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setActiveTab('prompts')}
+              >
+                提示词设置
+              </button>
+            </div>
+          </div>
+          
+          {activeTab === 'providers' ? (
+            <>
+              {/* 已配置的AI提供商列表（保持现有代码不变）*/}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4">已配置的AI提供商</h2>
+                
+                {providers.length === 0 ? (
+                  <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed">
+                    <p className="text-muted-foreground">尚未配置任何AI提供商</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {providers.map(provider => (
+                      <div key={provider.id} className="bg-card border rounded-lg p-4 shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{provider.name}</h3>
+                              {provider.isDefault && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                  默认
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">端点: {provider.apiEndpoint}</p>
+                            {provider.model && (
+                              <p className="text-sm text-muted-foreground">模型: {provider.model}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              API密钥: {provider.apiKey ? '••••••••' + provider.apiKey.slice(-4) : '未设置'}
+                            </p>
+                            
+                            {/* 测试中状态显示 */}
+                            {testingProvider === provider.id && (
+                              <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                                <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-primary"></div>
+                                <span>测试中...</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => handleTestProvider(provider.id)}
+                              disabled={testingProvider !== null}
+                            >
+                              <Zap size={14} />
+                              测试
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleEditProvider(provider.id)}
+                            >
+                              编辑
+                            </Button>
+                            {!provider.isDefault && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleSetDefault(provider.id)}
+                              >
+                                设为默认
+                              </Button>
+                            )}
+                            <Button 
+                              variant="destructive" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => confirmDeleteProvider(provider.id)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">端点: {provider.apiEndpoint}</p>
-                        {provider.model && (
-                          <p className="text-sm text-muted-foreground">模型: {provider.model}</p>
-                        )}
-                        <p className="text-sm text-muted-foreground">
-                          API密钥: {provider.apiKey ? '••••••••' + provider.apiKey.slice(-4) : '未设置'}
-                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* 添加新的AI提供商（保持现有代码不变）*/}
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold">添加新的AI提供商</h2>
+                  {!isEditing && (
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={handleQuickAddOpenAI}
+                      >
+                        <Zap size={14} />
+                        快速添加 OpenAI
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        <PlusCircle size={16} />
+                        自定义添加
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* 添加OpenAI API配置指南 */}
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg">
+                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">OpenAI API 配置指南</h3>
+                  <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc pl-4">
+                    <li>API端点: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">https://api.openai.com/v1/chat/completions</code></li>
+                    <li>模型名称: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">gpt-3.5-turbo</code> 或 <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">gpt-4</code></li>
+                    <li>API密钥: 在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">OpenAI平台</a> 获取</li>
+                  </ul>
+                </div>
+                
+                {isEditing && (
+                  <div className="bg-card border rounded-lg p-4 shadow-sm">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-base font-medium">
+                        {editingProviderId ? '编辑提供商' : '添加新提供商'}
+                      </h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">名称 *</label>
+                        <input
+                          type="text"
+                          value={newProvider.name}
+                          onChange={(e) => setNewProvider({...newProvider, name: e.target.value})}
+                          placeholder="例如: OpenAI, Anthropic"
+                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">API端点 *</label>
+                        <input
+                          type="text"
+                          value={newProvider.apiEndpoint}
+                          onChange={(e) => setNewProvider({...newProvider, apiEndpoint: e.target.value})}
+                          placeholder="例如: https://api.openai.com/v1/chat/completions"
+                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">API密钥</label>
+                        <input
+                          type="password"
+                          value={newProvider.apiKey}
+                          onChange={(e) => setNewProvider({...newProvider, apiKey: e.target.value})}
+                          placeholder="输入API密钥"
+                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">模型名称</label>
+                        <input
+                          type="text"
+                          value={newProvider.model}
+                          onChange={(e) => setNewProvider({...newProvider, model: e.target.value})}
+                          placeholder="例如: gpt-4, claude-3"
+                          className="w-full px-3 py-2 border rounded-md bg-background"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center mb-4">
+                      <input
+                        type="checkbox"
+                        id="isDefault"
+                        checked={newProvider.isDefault}
+                        onChange={(e) => setNewProvider({...newProvider, isDefault: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <label htmlFor="isDefault" className="text-sm">设为默认提供商</label>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditingProviderId(null);
+                          setNewProvider({
+                            id: '',
+                            name: '',
+                            apiEndpoint: '',
+                            apiKey: '',
+                            model: '',
+                            isDefault: false
+                          });
+                        }}
+                      >
+                        取消
+                      </Button>
+                      <Button 
+                        onClick={handleAddProvider}
+                        className="gap-1"
+                      >
+                        <Save size={16} />
+                        {editingProviderId ? '更新' : '保存'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            // 提示词设置选项卡
+            <>
+              {/* 头部和重置按钮 */}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold">AI 提示词设置</h2>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleResetPrompts}
+                  className="gap-1"
+                >
+                  <Zap size={14} />
+                  重置为默认值
+                </Button>
+              </div>
+              
+              {/* 提示词说明 */}
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg">
+                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">使用提示词模板</h3>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                  您可以在提示词中使用 <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">{'{{content}}'}</code> 作为占位符，它将在运行时被替换为用户选择的文本内容。
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  例如: &ldquo;请帮我分析以下文本：<code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">{'{{content}}'}</code>&rdquo;
+                </p>
+              </div>
+              
+              {prompts ? (
+                <div className="space-y-4">
+                  {Object.keys(prompts).map((typeKey) => {
+                    const type = typeKey as keyof AIPrompts;
+                    const promptList = prompts[type];
+                    const isExpanded = expandedPromptType === type;
+                    
+                    return (
+                      <div key={type} className="border rounded-lg overflow-hidden">
+                        {/* 提示词类型标题和切换按钮 */}
+                        <div 
+                          className="flex items-center justify-between p-4 bg-card cursor-pointer"
+                          onClick={() => setExpandedPromptType(isExpanded ? null : type)}
+                        >
+                          <div className="flex items-center gap-2">
+                            {getPromptTypeIcon(type)}
+                            <h3 className="font-medium">{getPromptTypeName(type)}</h3>
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                              {promptList.length} 个提示词
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddPrompt(type);
+                              }}
+                            >
+                              <PlusCircle size={16} />
+                            </Button>
+                            {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                          </div>
+                        </div>
                         
-                        {/* 测试中状态显示 */}
-                        {testingProvider === provider.id && (
-                          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-primary"></div>
-                            <span>测试中...</span>
+                        {/* 提示词列表 */}
+                        {isExpanded && (
+                          <div className="border-t">
+                            {promptList.length === 0 ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                没有自定义提示词。点击 + 按钮添加。
+                              </div>
+                            ) : (
+                              <div className="divide-y">
+                                {promptList.map(prompt => (
+                                  <div key={prompt.id} className="p-4">
+                                    <div className="flex items-start justify-between">
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="font-medium">{prompt.name}</h4>
+                                          {prompt.isDefault && (
+                                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                              默认
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                                          {prompt.prompt.length > 100 
+                                            ? `${prompt.prompt.substring(0, 100)}...` 
+                                            : prompt.prompt}
+                                        </p>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          onClick={() => handleEditPrompt(type, prompt)}
+                                        >
+                                          <Edit size={14} />
+                                        </Button>
+                                        {!prompt.isDefault && (
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => handleSetDefaultPrompt(type, prompt.id)}
+                                          >
+                                            设为默认
+                                          </Button>
+                                        )}
+                                        <Button 
+                                          variant="destructive" 
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() => handleDeletePrompt(type, prompt.id)}
+                                          // 禁用删除默认提示词，如果它是最后一个提示词
+                                          disabled={promptList.length === 1}
+                                        >
+                                          <Trash2 size={14} />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => handleTestProvider(provider.id)}
-                          disabled={testingProvider !== null}
-                        >
-                          <Zap size={14} />
-                          测试
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleEditProvider(provider.id)}
-                        >
-                          编辑
-                        </Button>
-                        {!provider.isDefault && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleSetDefault(provider.id)}
-                          >
-                            设为默认
-                          </Button>
-                        )}
-                        <Button 
-                          variant="destructive" 
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => confirmDeleteProvider(provider.id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          {/* 添加新的AI提供商 */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">添加新的AI提供商</h2>
-              {!isEditing && (
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-1"
-                    onClick={handleQuickAddOpenAI}
-                  >
-                    <Zap size={14} />
-                    快速添加 OpenAI
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-1"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <PlusCircle size={16} />
-                    自定义添加
-                  </Button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                  <span className="ml-3">加载中...</span>
                 </div>
               )}
-            </div>
-            
-            {/* 添加OpenAI API配置指南 */}
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-2">OpenAI API 配置指南</h3>
-              <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc pl-4">
-                <li>API端点: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">https://api.openai.com/v1/chat/completions</code></li>
-                <li>模型名称: <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">gpt-3.5-turbo</code> 或 <code className="bg-blue-100 dark:bg-blue-800/50 px-1 rounded">gpt-4</code></li>
-                <li>API密钥: 在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">OpenAI平台</a> 获取</li>
-              </ul>
-            </div>
-            
-            {isEditing && (
-              <div className="bg-card border rounded-lg p-4 shadow-sm">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-base font-medium">
-                    {editingProviderId ? '编辑提供商' : '添加新提供商'}
-                  </h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">名称 *</label>
-                    <input
-                      type="text"
-                      value={newProvider.name}
-                      onChange={(e) => setNewProvider({...newProvider, name: e.target.value})}
-                      placeholder="例如: OpenAI, Anthropic"
-                      className="w-full px-3 py-2 border rounded-md bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">API端点 *</label>
-                    <input
-                      type="text"
-                      value={newProvider.apiEndpoint}
-                      onChange={(e) => setNewProvider({...newProvider, apiEndpoint: e.target.value})}
-                      placeholder="例如: https://api.openai.com/v1/chat/completions"
-                      className="w-full px-3 py-2 border rounded-md bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">API密钥</label>
-                    <input
-                      type="password"
-                      value={newProvider.apiKey}
-                      onChange={(e) => setNewProvider({...newProvider, apiKey: e.target.value})}
-                      placeholder="输入API密钥"
-                      className="w-full px-3 py-2 border rounded-md bg-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">模型名称</label>
-                    <input
-                      type="text"
-                      value={newProvider.model}
-                      onChange={(e) => setNewProvider({...newProvider, model: e.target.value})}
-                      placeholder="例如: gpt-4, claude-3"
-                      className="w-full px-3 py-2 border rounded-md bg-background"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center mb-4">
-                  <input
-                    type="checkbox"
-                    id="isDefault"
-                    checked={newProvider.isDefault}
-                    onChange={(e) => setNewProvider({...newProvider, isDefault: e.target.checked})}
-                    className="mr-2"
-                  />
-                  <label htmlFor="isDefault" className="text-sm">设为默认提供商</label>
-                </div>
-                
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setIsEditing(false);
-                      setEditingProviderId(null);
-                      setNewProvider({
-                        id: '',
-                        name: '',
-                        apiEndpoint: '',
-                        apiKey: '',
-                        model: '',
-                        isDefault: false
-                      });
-                    }}
-                  >
-                    取消
-                  </Button>
-                  <Button 
-                    onClick={handleAddProvider}
-                    className="gap-1"
-                  >
-                    <Save size={16} />
-                    {editingProviderId ? '更新' : '保存'}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
+      
+      {/* 编辑提示词模态框 */}
+      {editingPrompt && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border rounded-lg shadow-lg p-6 w-full max-w-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                {getPromptTypeIcon(editingPrompt.type)}
+                {editingPrompt.isNew ? '添加新提示词' : '编辑提示词'}
+                <span className="text-sm text-muted-foreground">
+                  ({getPromptTypeName(editingPrompt.type)})
+                </span>
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setEditingPrompt(null)}
+                className="h-8 w-8"
+              >
+                <X size={18} />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">提示词名称 *</label>
+                <input
+                  type="text"
+                  value={editingPrompt.prompt.name}
+                  onChange={(e) => setEditingPrompt({
+                    ...editingPrompt,
+                    prompt: { ...editingPrompt.prompt, name: e.target.value }
+                  })}
+                  placeholder="例如: 简洁解释, 详细改写"
+                  className="w-full px-3 py-2 border rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">提示词内容 *</label>
+                <textarea
+                  value={editingPrompt.prompt.prompt}
+                  onChange={(e) => setEditingPrompt({
+                    ...editingPrompt,
+                    prompt: { ...editingPrompt.prompt, prompt: e.target.value }
+                  })}
+                  placeholder={`请在提示词中使用 {{content}} 作为占位符，例如:\n请帮我理解以下内容，解释其中的含义和关键点：\n\n{{content}}`}
+                  className="w-full px-3 py-2 border rounded-md bg-background min-h-[200px]"
+                />
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isDefaultPrompt"
+                  checked={editingPrompt.prompt.isDefault || false}
+                  onChange={(e) => setEditingPrompt({
+                    ...editingPrompt,
+                    prompt: { ...editingPrompt.prompt, isDefault: e.target.checked }
+                  })}
+                  className="mr-2"
+                />
+                <label htmlFor="isDefaultPrompt" className="text-sm">设为默认提示词</label>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setEditingPrompt(null)}
+              >
+                取消
+              </Button>
+              <Button 
+                onClick={handleSavePrompt}
+                className="gap-1"
+              >
+                <Save size={16} />
+                保存
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* 测试结果模态框 */}
       <TestResultModal 

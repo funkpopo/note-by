@@ -43,7 +43,9 @@ const electronAPI = {
     deleteFolder: (folderPath) => electron_1.ipcRenderer.invoke('delete-folder', folderPath),
     // AI 配置操作
     getAIConfig: () => electron_1.ipcRenderer.invoke('get-ai-config'),
-    saveAIConfig: (providers) => electron_1.ipcRenderer.invoke('save-ai-config', providers),
+    saveAIConfig: (config) => electron_1.ipcRenderer.invoke('save-ai-config', config),
+    // 调用AI处理文本
+    callAIWithPrompt: (promptType, promptId, content) => electron_1.ipcRenderer.invoke('call-ai-with-prompt', promptType, promptId, content),
 };
 // 暴露安全的API给渲染进程
 electron_1.contextBridge.exposeInMainWorld('electron', electronAPI);

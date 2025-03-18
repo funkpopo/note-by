@@ -173,7 +173,7 @@ export default function NoteList() {
   // 使用useCallback记忆handleAddNote函数
   const handleAddNote = useCallback(() => {
     const newNote = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: '新笔记',
       content: '# 新笔记\n\n开始编写您的笔记...',
       date: new Date().toISOString().split('T')[0],
@@ -463,6 +463,26 @@ export default function NoteList() {
     // 只需要传递给FolderTree组件，不需要在NoteList中保存状态
   };
 
+  // 处理笔记移动
+  const handleMoveNote = async (id: string, newFolder: string) => {
+    if (!isElectron || !currentNote?.path) return;
+    
+    const result = await (window as Window & typeof globalThis & { electron: ElectronAPI }).electron.moveItem(
+      currentNote.path,
+      newFolder,
+      false // isFolder = false 表示移动文件
+    );
+    
+    if (result.success) {
+      // 更新当前笔记的文件夹信息
+      setCurrentNote(prev => prev ? { ...prev, folder: newFolder } : null);
+      // 重新加载笔记列表
+      loadNotes();
+    } else {
+      console.error('移动笔记失败:', result.error);
+    }
+  };
+
   // 根据当前视图状态渲染不同的组件
   if (viewState === 'view' && currentNote) {
     return (
@@ -502,11 +522,12 @@ export default function NoteList() {
           initialContent={currentNote.content}
           onSave={handleSave}
           onCancel={handleCancel}
-          onMenuClick={() => setSidebarOpen(true)}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           folders={folders}
           currentFolder={currentFolder}
-          onFolderChange={setCurrentFolder}
+          onFolderChange={handleFolderSelect}
           onCreateFolder={handleCreateFolder}
+          onMove={handleMoveNote}
         />
       </>
     );

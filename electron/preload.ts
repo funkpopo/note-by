@@ -65,15 +65,47 @@ const electronAPI = {
   getAIConfig: () =>
     ipcRenderer.invoke('get-ai-config'),
     
-  saveAIConfig: (providers: Array<{
-    id: string;
-    name: string;
-    apiEndpoint: string;
-    apiKey: string;
-    model: string;
-    isDefault: boolean;
-  }>) =>
-    ipcRenderer.invoke('save-ai-config', providers),
+  saveAIConfig: (config: {
+    providers?: Array<{
+      id: string;
+      name: string;
+      apiEndpoint: string;
+      apiKey: string;
+      model: string;
+      isDefault: boolean;
+    }>;
+    prompts?: {
+      understand: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      rewrite: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      expand: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      continue: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+    };
+  }) =>
+    ipcRenderer.invoke('save-ai-config', config),
+    
+  // 调用AI处理文本
+  callAIWithPrompt: (promptType: string, promptId: string, content: string) =>
+    ipcRenderer.invoke('call-ai-with-prompt', promptType, promptId, content),
 };
 
 // 暴露安全的API给渲染进程

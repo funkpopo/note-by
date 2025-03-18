@@ -96,17 +96,77 @@ interface ElectronAPI {
       model: string;
       isDefault: boolean;
     }>;
+    prompts?: {
+      understand: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      rewrite: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      expand: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      continue: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+    };
     error?: string;
   }>;
-  saveAIConfig: (providers: Array<{
-    id: string;
-    name: string;
-    apiEndpoint: string;
-    apiKey: string;
-    model: string;
-    isDefault: boolean;
-  }>) => Promise<{
+  saveAIConfig: (config: {
+    providers?: Array<{
+      id: string;
+      name: string;
+      apiEndpoint: string;
+      apiKey: string;
+      model: string;
+      isDefault: boolean;
+    }>;
+    prompts?: {
+      understand: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      rewrite: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      expand: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+      continue: Array<{
+        id: string;
+        name: string;
+        prompt: string;
+        isDefault?: boolean;
+      }>;
+    };
+  }) => Promise<{
     success: boolean;
+    error?: string;
+  }>;
+  // 调用AI处理文本
+  callAIWithPrompt: (promptType: string, promptId: string, content: string) => Promise<{
+    success: boolean;
+    content?: string;
     error?: string;
   }>;
   // 添加其他需要的方法类型

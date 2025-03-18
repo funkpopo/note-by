@@ -156,8 +156,101 @@ function createWindow() {
     return await getAIConfig();
   });
   
-  ipcMain.handle('save-ai-config', async (_, providers) => {
-    return await saveAIConfig(providers);
+  ipcMain.handle('save-ai-config', async (_, config) => {
+    return await saveAIConfig(config);
+  });
+  
+  // 处理AI提示词调用
+  ipcMain.handle('call-ai-with-prompt', async (_, promptType: string, promptId: string, selectedContent: string) => {
+    try {
+      // 获取AI配置
+      const aiConfig = await getAIConfig();
+      
+      if (!aiConfig.success) {
+        return { 
+          success: false, 
+          error: aiConfig.error || 'Failed to get AI configuration' 
+        };
+      }
+      
+      // 检查提示词类型是否有效
+      if (!aiConfig.prompts || !aiConfig.prompts[promptType as keyof typeof aiConfig.prompts]) {
+        return { 
+          success: false, 
+          error: `无效的提示词类型: ${promptType}` 
+        };
+      }
+      
+      // 查找指定ID的提示词，如果找不到则使用默认提示词
+      const promptGroup = aiConfig.prompts[promptType as keyof typeof aiConfig.prompts];
+      let targetPrompt = promptGroup.find((p: { id: string }) => p.id === promptId);
+      
+      // 如果找不到指定ID的提示词，则使用默认提示词
+      if (!targetPrompt) {
+        targetPrompt = promptGroup.find((p: { isDefault?: boolean }) => p.isDefault) || promptGroup[0];
+      }
+      
+      if (!targetPrompt) {
+        return { 
+          success: false, 
+          error: `找不到提示词: ${promptId}` 
+        };
+      }
+      
+      // 从providers中获取默认提供商
+      const providers = aiConfig.providers || [];
+      const provider = providers.find(p => p.isDefault) || 
+                      (providers.length > 0 ? providers[0] : null);
+      
+      if (!provider) {
+        return { 
+          success: false, 
+          error: '未配置AI提供商' 
+        };
+      }
+      
+      // 替换提示词模板中的{{content}}变量
+      const finalPrompt: string = targetPrompt.prompt.replace('{{content}}', selectedContent);
+      
+      // 构建请求体
+      const requestBody = {
+        model: provider.model || 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: finalPrompt }],
+        temperature: 0.7,
+        max_tokens: 2000
+      };
+      
+      // 发送请求到AI提供商
+      const response = await fetch(provider.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${provider.apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return { 
+          success: false, 
+          error: `API请求失败: ${response.status} ${response.statusText} - ${errorData.error?.message || JSON.stringify(errorData)}` 
+        };
+      }
+      
+      const data = await response.json();
+      
+      // 假设返回格式是OpenAI兼容的
+      const responseContent = data.choices?.[0]?.message?.content || '';
+      
+      return { success: true, content: responseContent };
+    } catch (error) {
+      console.error('AI提示词调用失败:', error);
+      return { 
+        success: false, 
+        error: `AI提示词调用失败: ${error instanceof Error ? error.message : String(error)}` 
+      };
+    }
   });
 }
 
@@ -338,7 +431,24 @@ ipcMain.handle('save-markdown', async (_, id: string, title: string, content: st
       console.log(`创建目标文件夹: ${targetDir}`);
     }
     
-    const filePath = path.join(targetDir, `${id}.md`);
+    // 格式化标题作为文件名，替换非法字符并确保文件名合法
+    let fileName = title.trim();
+    if (!fileName) {
+      fileName = `未命名笔记_${id}`;
+    }
+    
+    // 替换文件名中的非法字符
+    fileName = fileName
+      .replace(/[\\/:*?"<>|]/g, '_') // 替换Windows不允许的字符
+      .replace(/\s+/g, '_')          // 替换空格为下划线
+      .replace(/\./g, '_')           // 替换句点
+      .replace(/__+/g, '_')          // 替换多个连续下划线为单个下划线
+      .substring(0, 200);            // 限制文件名长度
+    
+    // 为了避免重名，添加id作为文件名后缀
+    const fileNameWithId = `${fileName}_${id}.md`;
+    
+    const filePath = path.join(targetDir, fileNameWithId);
     console.log(`文件完整路径: ${filePath}`);
     
     // 创建文件内容（可以添加元数据头部）
@@ -355,7 +465,7 @@ ${content}`;
     console.log(`成功保存文件: ${filePath}`);
     
     // 计算相对路径用于返回
-    const relativePath = folder ? path.join(folder, `${id}.md`) : `${id}.md`;
+    const relativePath = folder ? path.join(folder, fileNameWithId) : fileNameWithId;
     
     return { success: true, filePath, relativePath };
   } catch (error) {
