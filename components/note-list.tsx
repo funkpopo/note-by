@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { Note, NoteGroup } from "@/types/note";
-import { ChevronDown, ChevronRight, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderPlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -15,12 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 interface NoteListProps {
@@ -31,6 +25,7 @@ interface NoteListProps {
   onCreateGroup: (groupName: string) => Promise<boolean>;
   onDeleteGroup: (groupName: string) => Promise<boolean>;
   onMoveNote: (note: Note, targetGroup: string) => Promise<boolean>;
+  onMoveGroup: (sourceGroup: string, targetGroup: string) => Promise<boolean>;
   isLoading: boolean;
   emptyGroups?: string[];
 }
@@ -43,6 +38,7 @@ export function NoteList({
   onCreateGroup,
   onDeleteGroup,
   onMoveNote,
+  onMoveGroup,
   isLoading,
   emptyGroups = [],
 }: NoteListProps) {
@@ -53,6 +49,7 @@ export function NoteList({
   });
   const [parentGroup, setParentGroup] = useState<string | null>(null);
   const [draggedNote, setDraggedNote] = useState<Note | null>(null);
+  const [draggedGroup, setDraggedGroup] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // 格式化日期
@@ -100,10 +97,10 @@ export function NoteList({
 
   // 获取所有分组及其笔记
   const getNoteGroups = (): NoteGroup[] => {
-    console.log("getNoteGroups - emptyGroups:", emptyGroups); // 添加日志
+    console.log("getNoteGroups - emptyGroups:", emptyGroups);
     
     const groupMap: Record<string, NoteGroup> = {
-      default: { name: "未分组", notes: [], isExpanded: expandedGroups.default }
+      default: { name: "未分组", notes: [], isExpanded: expandedGroups.default, children: [] }
     };
     
     // 处理层级分组
@@ -120,9 +117,20 @@ export function NoteList({
           isExpanded: expandedGroups[groupName] || false,
           parent: groupName.includes('/') 
             ? groupName.substring(0, groupName.lastIndexOf('/')) 
-            : null
+            : null,
+          children: []
         };
+        
+        // 如果有父分组，将此分组添加到父分组的children中
+        if (groupMap[groupName].parent) {
+          const parentGroup = groupMap[groupMap[groupName].parent];
+          if (parentGroup) {
+            parentGroup.children = parentGroup.children || [];
+            parentGroup.children.push(groupMap[groupName]);
+          }
+        }
       }
+      return groupMap[groupName];
     };
     
     // 将笔记按组归类
@@ -130,7 +138,7 @@ export function NoteList({
       const groupName = note.group || "default";
       
       // 确保分组存在
-      processNestedGroups(groupName);
+      const group = processNestedGroups(groupName);
       
       // 为多级分组创建父分组
       if (groupName.includes('/')) {
@@ -149,7 +157,7 @@ export function NoteList({
       }
       
       // 添加笔记到分组
-      groupMap[groupName].notes.push(note);
+      group.notes.push(note);
     });
     
     // 处理空分组（确保从后端返回的所有空分组都被创建）
@@ -184,6 +192,11 @@ export function NoteList({
           new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
         );
       }
+      
+      // 对子分组按名称排序
+      if (group.children && group.children.length > 0) {
+        group.children.sort((a, b) => a.name.localeCompare(b.name));
+      }
     });
     
     // 整理分组为树形结构
@@ -208,18 +221,30 @@ export function NoteList({
       return a.name.localeCompare(b.name);
     });
     
-    console.log("getNoteGroups - rootGroups:", rootGroups); // 添加日志
     return rootGroups;
   };
 
-  // 处理拖拽开始
+  // 处理拖拽开始 - 笔记
   const handleDragStart = (e: React.DragEvent, note: Note) => {
     e.stopPropagation();
     setDraggedNote(note);
     // 设置拖拽数据
     e.dataTransfer.setData('application/json', JSON.stringify({ 
+      type: 'note',
       noteId: note.path,
       sourceGroup: note.group
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // 处理拖拽开始 - 分组
+  const handleGroupDragStart = (e: React.DragEvent, groupName: string) => {
+    e.stopPropagation();
+    setDraggedGroup(groupName);
+    // 设置拖拽数据
+    e.dataTransfer.setData('application/json', JSON.stringify({ 
+      type: 'group',
+      sourceGroup: groupName
     }));
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -227,6 +252,7 @@ export function NoteList({
   // 处理拖拽结束
   const handleDragEnd = () => {
     setDraggedNote(null);
+    setDraggedGroup(null);
     setDropTarget(null);
   };
 
@@ -234,9 +260,55 @@ export function NoteList({
   const handleDragOver = (e: React.DragEvent, groupName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (draggedNote && draggedNote.group !== groupName) {
-      setDropTarget(groupName);
-      e.dataTransfer.dropEffect = 'move';
+    
+    try {
+      // 尝试解析拖拽数据
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (dataStr) {
+        const data = JSON.parse(dataStr);
+        
+        if (data.type === 'note' && draggedNote) {
+          // 处理笔记拖拽
+          if (draggedNote.group !== groupName) {
+            setDropTarget(groupName);
+            e.dataTransfer.dropEffect = 'move';
+          }
+        } else if (data.type === 'group' && draggedGroup) {
+          // 处理分组拖拽 - 不能拖拽到自己或子分组中
+          // 允许拖拽到default（根级别）但不允许拖拽到"未分组"
+          if ((draggedGroup !== groupName && 
+              !groupName.startsWith(draggedGroup + '/')) && 
+              (groupName === 'default' || groupName !== '未分组')) {
+            setDropTarget(groupName);
+            e.dataTransfer.dropEffect = 'move';
+          }
+        }
+      } else if (draggedNote && draggedNote.group !== groupName) {
+        // 向后兼容：处理无数据的拖拽 - 假设是笔记
+        setDropTarget(groupName);
+        e.dataTransfer.dropEffect = 'move';
+      } else if (draggedGroup && 
+                ((draggedGroup !== groupName && 
+                !groupName.startsWith(draggedGroup + '/')) && 
+                (groupName === 'default' || groupName !== '未分组'))) {
+        // 向后兼容：处理无数据的拖拽 - 假设是分组
+        setDropTarget(groupName);
+        e.dataTransfer.dropEffect = 'move';
+      }
+    } catch (error) {
+      console.error("解析拖拽数据出错:", error);
+      
+      // 出错时使用状态判断
+      if (draggedNote && draggedNote.group !== groupName) {
+        setDropTarget(groupName);
+        e.dataTransfer.dropEffect = 'move';
+      } else if (draggedGroup && 
+                ((draggedGroup !== groupName && 
+                !groupName.startsWith(draggedGroup + '/')) && 
+                (groupName === 'default' || groupName !== '未分组'))) {
+        setDropTarget(groupName);
+        e.dataTransfer.dropEffect = 'move';
+      }
     }
   };
 
@@ -247,67 +319,99 @@ export function NoteList({
     setDropTarget(null);
   };
 
-  // 处理放置笔记到分组
+  // 处理放置到分组
   const handleDrop = async (e: React.DragEvent, targetGroup: string) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!draggedNote) return;
-    
-    // 确保不是拖放到同一个分组
-    if (draggedNote.group === targetGroup) {
-      setDropTarget(null);
-      return;
-    }
-    
     try {
-      // 移动笔记到目标分组
-      await onMoveNote(draggedNote, targetGroup);
-      setDropTarget(null);
+      // 尝试解析拖拽数据
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (dataStr) {
+        const data = JSON.parse(dataStr);
+        
+        if (data.type === 'note' && draggedNote) {
+          // 处理笔记拖拽
+          if (draggedNote.group !== targetGroup) {
+            await onMoveNote(draggedNote, targetGroup);
+          }
+        } else if (data.type === 'group' && draggedGroup) {
+          // 处理分组拖拽
+          if ((draggedGroup !== targetGroup && 
+              !targetGroup.startsWith(draggedGroup + '/')) && 
+              (targetGroup === 'default' || targetGroup !== '未分组')) {
+            await onMoveGroup(draggedGroup, targetGroup);
+          }
+        }
+      } else if (draggedNote && draggedNote.group !== targetGroup) {
+        // 向后兼容：处理无数据的拖拽 - 假设是笔记
+        await onMoveNote(draggedNote, targetGroup);
+      } else if (draggedGroup && 
+                ((draggedGroup !== targetGroup && 
+                !targetGroup.startsWith(draggedGroup + '/')) && 
+                (targetGroup === 'default' || targetGroup !== '未分组'))) {
+        // 向后兼容：处理无数据的拖拽 - 假设是分组
+        await onMoveGroup(draggedGroup, targetGroup);
+      }
     } catch (error) {
-      console.error("拖放笔记失败:", error);
+      console.error("处理拖放出错:", error);
+    } finally {
+      setDropTarget(null);
     }
   };
 
   // 递归渲染分组及其子分组
   const renderGroup = (group: NoteGroup) => {
-    // 查找所有直接子分组
-    const childGroups = Object.values(getNoteGroups())
-      .filter(g => g.parent === (group.fullName || group.name))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    
     const isDropTarget = dropTarget === (group.fullName || group.name);
+    const isNestedGroup = group.parent !== null;
     
     return (
       <div 
         key={group.fullName || group.name} 
         className={cn(
           "mb-3 border border-border rounded-md overflow-hidden note-group card-enhanced",
-          isDropTarget && "ring-2 ring-primary"
+          isDropTarget && "ring-2 ring-primary group-drag-over",
+          isNestedGroup && "nested-group"
         )}
-        onDragOver={(e) => handleDragOver(e, group.fullName || group.name)}
+        onDragOver={(e) => {
+          // 允许将笔记拖入任何分组，但分组只能拖入非"未分组"卡片
+          if (draggedNote || (draggedGroup && group.name !== "未分组")) {
+            handleDragOver(e, group.fullName || group.name);
+          }
+        }}
         onDragLeave={handleDragLeave}
-        onDrop={(e) => handleDrop(e, group.fullName || group.name)}
+        onDrop={(e) => {
+          // 允许将笔记拖入任何分组，但分组只能拖入非"未分组"卡片
+          if (draggedNote || (draggedGroup && group.name !== "未分组")) {
+            handleDrop(e, group.fullName || group.name);
+          }
+        }}
       >
         <div 
           className={cn(
             "flex items-center justify-between py-2 px-3 cursor-pointer",
-            group.isExpanded ? "bg-primary/10" : "bg-card/60 hover:bg-secondary/50",
-            isDropTarget && "bg-primary/20"
+            group.isExpanded ? "group-header-expanded" : "bg-card/60 hover:bg-secondary/50",
+            isDropTarget && "bg-primary/20",
+            group.name !== "未分组" && "draggable-group"
           )}
           onClick={() => toggleGroupExpanded(group.fullName || group.name)}
+          draggable={group.name !== "未分组"}
+          onDragStart={(e) => group.name !== "未分组" && handleGroupDragStart(e, group.fullName || group.name)}
+          onDragEnd={handleDragEnd}
         >
           <div className="flex items-center">
-            {group.isExpanded ? (
-              <ChevronDown className="h-4 w-4 mr-1.5 text-primary icon-button" />
-            ) : (
-              <ChevronRight className="h-4 w-4 mr-1.5 text-primary icon-button" />
+            {(group.children?.length > 0 || group.notes.length > 0) && (
+              group.isExpanded ? (
+                <ChevronDown className="h-4 w-4 mr-1.5 text-primary" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1.5 text-primary" />
+              )
             )}
             <span className="text-sm font-semibold">{group.name}</span>
             <span className="text-xs text-muted-foreground ml-1.5 font-medium">
               ({group.notes.length})
             </span>
-            {isDropTarget && (
+            {dropTarget === group.fullName && (
               <span className="ml-2 text-xs text-primary animate-pulse">
                 放置到此分组
               </span>
@@ -320,7 +424,7 @@ export function NoteList({
               size="icon"
               title="创建子分组"
               onClick={(e) => openCreateSubgroupDialog(group.fullName || group.name, e)}
-              className="h-6 w-6 icon-button group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <FolderPlus className="h-3 w-3" />
               <span className="sr-only">创建子分组</span>
@@ -328,7 +432,7 @@ export function NoteList({
             
             {group.name !== "未分组" && (
               <Button
-                variant="ghost"
+                variant={group.notes.length > 0 ? "destructive" : "ghost"}
                 size="icon"
                 title={`删除${group.notes.length > 0 ? '非空' : '空'}分组`}
                 onClick={(e) => {
@@ -342,10 +446,7 @@ export function NoteList({
                     onDeleteGroup(group.fullName || group.name);
                   }
                 }}
-                className={cn(
-                  "h-6 w-6 icon-button action-button group-hover:opacity-100 transition-opacity",
-                  group.notes.length > 0 && "text-yellow-600 hover:text-destructive"
-                )}
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3 w-3" />
                 <span className="sr-only">删除分组</span>
@@ -357,9 +458,9 @@ export function NoteList({
         {group.isExpanded && (
           <div className="space-y-1 py-1 bg-background">
             {/* 渲染子分组 */}
-            {childGroups.length > 0 && (
+            {group.children && group.children.length > 0 && (
               <div className="pl-2 pr-1 space-y-1 pt-1 pb-2">
-                {childGroups.map(childGroup => renderGroup(childGroup))}
+                {group.children.map(childGroup => renderGroup(childGroup))}
               </div>
             )}
             
@@ -374,7 +475,7 @@ export function NoteList({
                   className={cn(
                     "flex items-center justify-between py-2 px-3 rounded-sm group border border-transparent note-item",
                     currentNote?.path === note.path
-                      ? "bg-primary text-primary-foreground border-primary/20 active"
+                      ? "active"
                       : "hover:bg-muted hover:border-border cursor-grab active:cursor-grabbing",
                     draggedNote?.path === note.path && "opacity-50 border-dashed"
                   )}
@@ -389,46 +490,14 @@ export function NoteList({
                     <div className="font-medium truncate">
                       {note.name.replace(/\.md$/, "")}
                     </div>
-                    <div className="text-xs text-muted-foreground dark:text-primary-foreground/70 mt-0.5 flex items-center">
+                    <div className="text-xs text-muted-foreground dark:text-primary-foreground/70 mt-0.5 flex items-center note-metadata">
                       <span className="inline-block w-2 h-2 bg-primary/40 rounded-full mr-1.5"></span>
                       {formatDate(note.lastModified)}
                     </div>
                   </div>
                   <div className="flex space-x-1">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "h-7 w-7 icon-button action-button group-hover:opacity-100",
-                            currentNote?.path === note.path ? "opacity-100" : ""
-                          )}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {Object.values(getNoteGroups())
-                          .filter(g => (g.fullName || g.name) !== note.group)
-                          .map(g => (
-                            <DropdownMenuItem
-                              key={g.fullName || g.name}
-                              onClick={() => onMoveNote(
-                                note, 
-                                g.fullName || g.name
-                              )}
-                              className="cursor-pointer"
-                            >
-                              移动到 {g.name}
-                            </DropdownMenuItem>
-                          ))
-                        }
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    
                     <Button
-                      variant="ghost"
+                      variant="destructive"
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -437,7 +506,7 @@ export function NoteList({
                         }
                       }}
                       className={cn(
-                        "h-7 w-7 icon-button action-button group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive",
+                        "h-7 w-7 opacity-0 group-hover:opacity-100",
                         currentNote?.path === note.path ? "opacity-100" : ""
                       )}
                     >
@@ -477,16 +546,39 @@ export function NoteList({
 
   // 即使没有笔记也应该显示分组列表，特别是空分组
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4 sticky top-0 bg-muted/30 backdrop-blur-sm py-1 z-10 px-1">
-        <h2 className="text-sm font-bold text-foreground">笔记分组</h2>
+    <div 
+      className="space-y-4"
+      onDragOver={(e) => {
+        // 只允许将分组拖动到根级别，不允许拖动到"未分组"
+        if (draggedGroup) {
+          handleDragOver(e, 'default');
+        }
+      }}
+      onDragLeave={handleDragLeave}
+      onDrop={(e) => {
+        // 只允许将分组拖动到根级别，不允许拖动到"未分组"
+        if (draggedGroup) {
+          handleDrop(e, 'default');
+        }
+      }}
+    >
+      <div className={cn(
+        "flex justify-between items-center mb-4 sticky top-0 bg-muted/30 backdrop-blur-sm py-1 z-10 px-1",
+        dropTarget === 'default' && "ring-2 ring-primary rounded-md bg-primary/10"
+      )}>
+        <h2 className="text-sm font-bold text-foreground">
+          笔记分组
+          {dropTarget === 'default' && (
+            <span className="ml-2 text-xs text-primary animate-pulse">放置到顶层</span>
+          )}
+        </h2>
         <Dialog open={isGroupDialogOpen} onOpenChange={(open) => {
             setIsGroupDialogOpen(open);
             if (!open) setParentGroup(null);
           }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs">
-              <FolderPlus className="h-3.5 w-3.5 icon-button" />
+              <FolderPlus className="h-3.5 w-3.5" />
               <span>新建分组</span>
             </Button>
           </DialogTrigger>

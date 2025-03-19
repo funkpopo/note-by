@@ -11,5 +11,5 @@ export interface NoteGroup {
   isExpanded?: boolean;
   fullName?: string;
   parent?: string | null;
-  children?: NoteGroup[];
+  children: NoteGroup[];
 } 

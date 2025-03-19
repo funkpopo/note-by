@@ -26,7 +26,37 @@ interface Electron {
     newPath?: string;
     error?: string;
   }>;
+  moveGroup: (sourceGroup: string, targetGroup: string) => Promise<{
+    success: boolean;
+    newGroupPath?: string;
+    error?: string;
+  }>;
+  renameNote: (oldPath: string, newName: string) => Promise<{
+    success: boolean;
+    newPath?: string;
+    error?: string;
+  }>;
   onNotesChanged: (callback: () => void) => (() => void);
+  
+  // AI config related functions
+  getAIConfigs: () => Promise<AIConfig[]>;
+  saveAIConfig: (config: AIConfig) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  updateAIConfig: (id: string, config: Partial<AIConfig>) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  deleteAIConfig: (id: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  testAIConfig: (config: AIConfig) => Promise<{
+    success: boolean;
+    message: string;
+    models?: string[];
+  }>;
 }
 
 interface Note {
@@ -34,6 +64,17 @@ interface Note {
   path: string;
   lastModified: Date;
   group: string;
+}
+
+// AI configuration interface
+interface AIConfig {
+  id: string;
+  name: string;
+  apiKey: string;
+  apiUrl: string;
+  organizationId?: string;
+  isDefault?: boolean;
+  lastTested?: Date;
 }
 
 declare global {

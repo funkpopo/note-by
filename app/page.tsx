@@ -12,17 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, FolderPlus, PlusIcon } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle,
-  DialogTrigger 
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ChevronDown, PlusIcon, Settings } from "lucide-react";
+import Link from "next/link";
 
 // Dynamically import NoteEditor to prevent server-side rendering issues with Cherry Markdown
 const NoteEditor = dynamic(() => import("@/components/note-editor").then(mod => mod.NoteEditor), {
@@ -35,8 +26,6 @@ export default function Home() {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string>("default");
   const [groupNames, setGroupNames] = useState<string[]>(["default"]);
   const [emptyGroups, setEmptyGroups] = useState<string[]>([]);
@@ -114,12 +103,15 @@ export default function Home() {
         );
         
         if (result.success && result.path) {
-          await fetchNotes();
+          // 刷新笔记列表
+          const response = await window.electron.getNotes();
+          setNotes(response.notes);
           
-          // 找到新创建的笔记并加载它
-          const newNote = notes.find(note => note.path === result.path);
+          // 直接从返回的notes中查找新创建的笔记
+          const newNote = response.notes.find(note => note.path === result.path);
           if (newNote) {
-            loadNoteContent(newNote);
+            // 直接加载新笔记的内容
+            await loadNoteContent(newNote);
           }
         }
       }
@@ -224,6 +216,73 @@ export default function Home() {
     }
   };
 
+  // 移动分组到其他分组
+  const moveGroup = async (sourceGroup: string, targetGroup: string): Promise<boolean> => {
+    if (typeof window !== 'undefined' && 'electron' in window) {
+      try {
+        // 如果目标是default，将其视为移动到根级别
+        const result = await window.electron.moveGroup(sourceGroup, targetGroup);
+
+        console.log('移动分组结果:', result);
+
+        if (result.success) {
+          // 如果分组移动成功，需要更新当前笔记的分组路径（如果当前笔记属于被移动的分组）
+          if (currentNote?.path && 
+              (currentNote.group === sourceGroup || 
+               currentNote.group.startsWith(`${sourceGroup}/`))) {
+            
+            // 替换分组前缀
+            let newGroup = currentNote.group;
+            if (targetGroup === 'default') {
+              // 移动到根级别
+              const groupName = sourceGroup.split('/').pop() || '';
+              if (currentNote.group === sourceGroup) {
+                newGroup = groupName;
+              } else {
+                // 替换前缀
+                newGroup = currentNote.group.replace(
+                  new RegExp(`^${sourceGroup}/`), 
+                  `${groupName}/`
+                );
+              }
+            } else {
+              // 移动到其他分组
+              if (currentNote.group === sourceGroup) {
+                newGroup = `${targetGroup}/${sourceGroup.split('/').pop() || ''}`;
+              } else {
+                // 替换前缀
+                newGroup = currentNote.group.replace(
+                  new RegExp(`^${sourceGroup}/`), 
+                  `${targetGroup}/${sourceGroup.split('/').pop() || ''}/`
+                );
+              }
+            }
+            
+            // 更新当前笔记的分组
+            setCurrentNote(prev => 
+              prev ? { ...prev, group: newGroup } : null
+            );
+          }
+          
+          await fetchNotes();
+          return true;
+        } else {
+          console.error('移动分组失败:', result.error);
+          if (result.error) {
+            alert(`移动分组失败: ${result.error}`);
+          }
+          return false;
+        }
+      } catch (error) {
+        console.error('移动分组出错:', error);
+        alert(`移动分组时发生错误: ${error}`);
+        return false;
+      }
+    }
+    
+    return false;
+  };
+
   // 删除笔记
   const deleteNote = async (note: Note) => {
     try {
@@ -261,6 +320,34 @@ export default function Home() {
     }
   };
 
+  // 重命名笔记
+  const renameNote = async (note: Note, newName: string): Promise<boolean> => {
+    try {
+      if (typeof window.electron !== 'undefined') {
+        const result = await window.electron.renameNote(note.path, newName);
+        
+        if (result.success && result.newPath) {
+          // 更新当前笔记的路径（如果是正在编辑的笔记）
+          if (currentNote?.path === note.path) {
+            setCurrentNote({
+              ...note,
+              path: result.newPath,
+              name: newName.endsWith('.md') ? newName : `${newName}.md`
+            });
+          }
+          
+          // 刷新笔记列表
+          await fetchNotes();
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error("Error renaming note:", error);
+      return false;
+    }
+  };
+
   // 初始加载
   useEffect(() => {
     fetchNotes();
@@ -294,17 +381,6 @@ export default function Home() {
     return () => clearInterval(autoSaveInterval);
   }, [currentNote, content]);
 
-  // 处理创建新分组
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-    
-    const success = await createNewGroup(newGroupName.trim());
-    if (success) {
-      setNewGroupName("");
-      setIsCreateGroupOpen(false);
-    }
-  };
-
   // Select group from the dropdown
   const handleSelectGroup = (group: string) => {
     setSelectedGroup(group);
@@ -316,39 +392,6 @@ export default function Home() {
       <header className="flex justify-between items-center px-4 py-2 border-b shadow-sm bg-card">
         <h1 className="text-xl font-semibold">Note-By</h1>
         <div className="flex items-center gap-2">
-          <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1"
-              >
-                <FolderPlus className="h-4 w-4 icon-button" />
-                新建分组
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="card-enhanced">
-              <DialogHeader>
-                <DialogTitle>创建新分组</DialogTitle>
-              </DialogHeader>
-              <div className="py-4">
-                <Label htmlFor="new-group-name" className="block mb-2">
-                  分组名称
-                </Label>
-                <Input
-                  id="new-group-name"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="输入分组名称..."
-                />
-              </div>
-              <DialogFooter>
-                <Button onClick={() => setIsCreateGroupOpen(false)} variant="outline">取消</Button>
-                <Button onClick={handleCreateGroup}>创建</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -356,9 +399,9 @@ export default function Home() {
                 size="sm"
                 className="gap-1"
               >
-                <PlusIcon className="h-4 w-4 icon-button" />
+                <PlusIcon className="h-4 w-4" />
                 新建笔记
-                <ChevronDown className="h-4 w-4 icon-button" />
+                <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="card-enhanced">
@@ -379,6 +422,17 @@ export default function Home() {
             </DropdownMenuContent>
           </DropdownMenu>
           
+          <Link href="/settings">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              title="设置"
+            >
+              <Settings className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
+          </Link>
+          
           <ThemeToggle />
         </div>
       </header>
@@ -393,6 +447,7 @@ export default function Home() {
             onCreateGroup={createNewGroup}
             onDeleteGroup={deleteGroup}
             onMoveNote={moveNote}
+            onMoveGroup={moveGroup}
             isLoading={isLoading}
             emptyGroups={emptyGroups}
           />
@@ -405,6 +460,7 @@ export default function Home() {
               onChange={setContent}
               onSave={saveNoteContent}
               note={currentNote}
+              onRename={renameNote}
             />
           ) : (
             <div className="flex items-center justify-center h-full">
@@ -414,7 +470,7 @@ export default function Home() {
                   从侧边栏选择一个笔记或创建一个新笔记。
                 </p>
                 <Button onClick={() => createNewNote()} className="px-5 py-6">
-                  <PlusIcon className="h-5 w-5 mr-2 icon-button" />
+                  <PlusIcon className="h-5 w-5 mr-2" />
                   创建新笔记
                 </Button>
               </div>

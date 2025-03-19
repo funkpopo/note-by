@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# configs
+aiconfig.json
+
+# markdown
+/markdown/
+markdown/*
+*.md
+*.mdx
+*.mdx

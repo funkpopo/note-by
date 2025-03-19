@@ -32,6 +32,12 @@ contextBridge.exposeInMainWorld('electron', {
   // 移动笔记到其他分组
   moveNote: (notePath, targetGroup) => ipcRenderer.invoke('move-note', { notePath, targetGroup }),
   
+  // 移动分组到其他分组
+  moveGroup: (sourceGroup, targetGroup) => ipcRenderer.invoke('move-group', { sourceGroup, targetGroup }),
+  
+  // 重命名笔记
+  renameNote: (oldPath, newName) => ipcRenderer.invoke('rename-note', { oldPath, newName }),
+  
   // 监听文件系统变化
   onNotesChanged: (callback) => {
     const newCallback = () => callback();
@@ -39,5 +45,20 @@ contextBridge.exposeInMainWorld('electron', {
     return () => {
       ipcRenderer.removeListener('notes-changed', newCallback);
     };
-  }
+  },
+  
+  // 获取所有AI配置
+  getAIConfigs: () => ipcRenderer.invoke('get-ai-configs'),
+  
+  // 保存新的AI配置
+  saveAIConfig: (config) => ipcRenderer.invoke('save-ai-config', config),
+  
+  // 更新现有AI配置
+  updateAIConfig: (id, config) => ipcRenderer.invoke('update-ai-config', { id, config }),
+  
+  // 删除AI配置
+  deleteAIConfig: (id) => ipcRenderer.invoke('delete-ai-config', id),
+  
+  // 测试AI配置
+  testAIConfig: (config) => ipcRenderer.invoke('test-ai-config', config)
 }); 

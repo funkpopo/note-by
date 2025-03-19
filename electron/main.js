@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const isDev = require('electron-is-dev');
+const { OpenAI } = require('openai');
 
 let mainWindow;
 let watcher = null;
@@ -122,6 +123,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
+  
+  // 移除菜单栏
+  mainWindow.setMenu(null);
 
   const startUrl = isDev
     ? 'http://localhost:3000'
@@ -152,6 +156,8 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+
+  setupAIConfigHandlers();
 });
 
 // 当所有窗口关闭时退出应用
@@ -242,6 +248,38 @@ ipcMain.handle('get-notes', async () => {
   } catch (err) {
     console.error('Error reading notes directory:', err);
     return { notes: [], emptyGroups: [] };
+  }
+});
+
+// 添加重命名笔记的处理函数
+ipcMain.handle('rename-note', async (event, { oldPath, newName }) => {
+  try {
+    // 获取目录和文件名
+    const dirName = path.dirname(oldPath);
+    const newFileName = newName.endsWith('.md') ? newName : `${newName}.md`;
+    const newPath = path.join(dirName, newFileName);
+    
+    // 检查新文件名是否已存在
+    if (fs.existsSync(newPath) && oldPath !== newPath) {
+      return {
+        success: false,
+        error: '该目录中已存在同名文件'
+      };
+    }
+    
+    // 重命名文件
+    fs.renameSync(oldPath, newPath);
+    
+    return {
+      success: true,
+      newPath: newPath
+    };
+  } catch (err) {
+    console.error('Error renaming note:', err);
+    return {
+      success: false,
+      error: err.message
+    };
   }
 });
 
@@ -340,6 +378,112 @@ ipcMain.handle('move-note', async (event, { notePath, targetGroup }) => {
   }
 });
 
+// 移动分组
+ipcMain.handle('move-group', async (event, { sourceGroup, targetGroup }) => {
+  // 分组不能移动到其子分组下或自己下
+  if (targetGroup === sourceGroup || targetGroup.startsWith(sourceGroup + '/')) {
+    return {
+      success: false,
+      error: '不能将分组移动到其自身或子分组下'
+    };
+  }
+  
+  try {
+    const baseDir = getMarkdownDir();
+    const sourceDir = path.join(baseDir, sourceGroup);
+    
+    // 确认源目录存在
+    if (!fs.existsSync(sourceDir)) {
+      return {
+        success: false,
+        error: `分组 "${sourceGroup}" 不存在`
+      };
+    }
+    
+    // 获取分组的名称（最后一部分）
+    const groupName = sourceGroup.split('/').pop();
+    
+    // 确保目标目录存在
+    const targetParentDir = targetGroup === 'default' 
+      ? baseDir 
+      : ensureGroupDirExists(targetGroup);
+    
+    // 新的分组完整路径
+    const newGroupPath = targetGroup === 'default' 
+      ? groupName 
+      : `${targetGroup}/${groupName}`;
+    
+    // 新的物理路径
+    const newDir = path.join(targetParentDir, groupName);
+    
+    // 检查目标路径是否已存在
+    if (fs.existsSync(newDir)) {
+      return {
+        success: false,
+        error: `目标位置已存在同名分组：${groupName}`
+      };
+    }
+    
+    // 移动目录，通过创建新目录、复制所有内容，然后删除原目录
+    fs.mkdirSync(newDir, { recursive: true });
+    
+    // 递归复制所有文件和子目录
+    const copyDir = (src, dest) => {
+      // 获取源目录中的所有文件和文件夹
+      const entries = fs.readdirSync(src, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        
+        if (entry.isDirectory()) {
+          // 为子目录递归执行复制
+          fs.mkdirSync(destPath, { recursive: true });
+          copyDir(srcPath, destPath);
+        } else {
+          // 复制文件
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    };
+    
+    // 执行复制
+    copyDir(sourceDir, newDir);
+    
+    // 删除原目录
+    const deleteDir = (dirPath) => {
+      if (fs.existsSync(dirPath)) {
+        const files = fs.readdirSync(dirPath);
+        
+        for (const file of files) {
+          const curPath = path.join(dirPath, file);
+          
+          if (fs.lstatSync(curPath).isDirectory()) {
+            deleteDir(curPath);
+          } else {
+            fs.unlinkSync(curPath);
+          }
+        }
+        
+        fs.rmdirSync(dirPath);
+      }
+    };
+    
+    deleteDir(sourceDir);
+    
+    return {
+      success: true,
+      newGroupPath: newGroupPath
+    };
+  } catch (err) {
+    console.error('Error moving group:', err);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+});
+
 ipcMain.handle('delete-note', async (event, notePath) => {
   try {
     // 获取笔记所在分组
@@ -428,4 +572,192 @@ ipcMain.handle('delete-group', async (event, groupName) => {
       error: `删除分组失败: ${err.message}`
     };
   }
-}); 
+});
+
+// 获取AI配置文件路径
+const getAIConfigPath = () => {
+  if (isDev) {
+    // 开发环境：配置保存在项目根目录
+    return path.join(__dirname, '..', 'aiconfig.json');
+  } else {
+    // 生产环境：配置保存在应用程序同级目录
+    return path.join(path.dirname(app.getPath('exe')), 'aiconfig.json');
+  }
+};
+
+// 读取AI配置文件
+const readAIConfigs = () => {
+  const configPath = getAIConfigPath();
+  
+  try {
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(configData);
+    }
+  } catch (error) {
+    console.error('Error reading AI config file:', error);
+  }
+  
+  // 如果文件不存在或读取出错，返回空数组
+  return [];
+};
+
+// 保存AI配置到文件
+const saveAIConfigsToFile = (configs) => {
+  const configPath = getAIConfigPath();
+  
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(configs, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving AI config file:', error);
+    return false;
+  }
+};
+
+// 添加AI配置相关的IPC处理程序
+const setupAIConfigHandlers = () => {
+  // 获取所有AI配置
+  ipcMain.handle('get-ai-configs', async () => {
+    return readAIConfigs();
+  });
+  
+  // 保存新的AI配置
+  ipcMain.handle('save-ai-config', async (event, config) => {
+    try {
+      const configs = readAIConfigs();
+      
+      // 如果设置为默认，先将其他配置设为非默认
+      if (config.isDefault) {
+        configs.forEach(c => {
+          c.isDefault = false;
+        });
+      }
+      
+      // 如果没有配置，则此配置默认为默认
+      if (configs.length === 0) {
+        config.isDefault = true;
+      }
+      
+      // 确保有唯一ID
+      config.id = config.id || Date.now().toString();
+      
+      configs.push(config);
+      const success = saveAIConfigsToFile(configs);
+      
+      return { success };
+    } catch (error) {
+      console.error('Error saving AI config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // 更新AI配置
+  ipcMain.handle('update-ai-config', async (event, { id, config }) => {
+    try {
+      const configs = readAIConfigs();
+      const index = configs.findIndex(c => c.id === id);
+      
+      if (index === -1) {
+        return { success: false, error: '找不到指定的配置' };
+      }
+      
+      // 如果设置为默认，先将其他配置设为非默认
+      if (config.isDefault) {
+        configs.forEach(c => {
+          c.isDefault = false;
+        });
+      }
+      
+      // 更新配置
+      configs[index] = { ...configs[index], ...config };
+      
+      const success = saveAIConfigsToFile(configs);
+      return { success };
+    } catch (error) {
+      console.error('Error updating AI config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // 删除AI配置
+  ipcMain.handle('delete-ai-config', async (event, id) => {
+    try {
+      let configs = readAIConfigs();
+      const index = configs.findIndex(c => c.id === id);
+      
+      if (index === -1) {
+        return { success: false, error: '找不到指定的配置' };
+      }
+      
+      // 检查是否删除的是默认配置
+      const wasDefault = configs[index].isDefault;
+      
+      // 删除配置
+      configs.splice(index, 1);
+      
+      // 如果删除的是默认配置且还有其他配置，设置第一个为默认
+      if (wasDefault && configs.length > 0) {
+        configs[0].isDefault = true;
+      }
+      
+      const success = saveAIConfigsToFile(configs);
+      return { success };
+    } catch (error) {
+      console.error('Error deleting AI config:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 测试AI配置
+  ipcMain.handle('test-ai-config', async (event, config) => {
+    try {
+      // 创建OpenAI客户端实例
+      const openai = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.apiUrl,
+        organization: config.organizationId || undefined,
+      });
+      
+      // 发送一个简单的测试消息，使用用户提供的模型名称
+      const response = await openai.chat.completions.create({
+        model: config.name, // 使用用户提供的模型名称
+        messages: [
+          { role: "system", content: "你是一个助手。" },
+          { role: "user", content: "测试连接，请回复'连接成功'。" }
+        ],
+        max_tokens: 20 // 限制token数量以提高速度
+      });
+      
+      // 如果能正常获得响应，则连接成功
+      if (response && response.choices && response.choices.length > 0) {
+        return {
+          success: true,
+          message: `连接成功！模型 ${config.name} 可用。`,
+        };
+      } else {
+        return {
+          success: false,
+          message: "API返回了空响应"
+        };
+      }
+    } catch (error) {
+      console.error('测试AI配置时出错:', error);
+      // 提取更有用的错误信息
+      let errorMessage = error.message;
+      if (error.response) {
+        try {
+          const errorData = error.response.data || {};
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch (_) {
+          // 解析错误时出错，使用原始错误信息
+        }
+      }
+      
+      return {
+        success: false,
+        message: `连接失败: ${errorMessage}`
+      };
+    }
+  });
+}; 
