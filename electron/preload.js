@@ -4,11 +4,19 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electron', {
   // 获取所有笔记
   getNotes: async () => {
-    const response = await ipcRenderer.invoke('get-notes');
-    return {
-      notes: response.notes || [],
-      emptyGroups: response.emptyGroups || []
-    };
+    try {
+      const response = await ipcRenderer.invoke('get-notes');
+      return {
+        notes: response.notes || [],
+        emptyGroups: response.emptyGroups || []
+      };
+    } catch (error) {
+      console.error('Error getting notes:', error);
+      return {
+        notes: [],
+        emptyGroups: []
+      };
+    }
   },
   
   // 获取笔记内容

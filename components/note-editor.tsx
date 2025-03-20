@@ -19,10 +19,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // 增强Cherry类型定义
+type EnhancedCherry = Cherry & {
+  getSelectedText?(): string;
+  replaceSelectedText?(text: string): boolean;
+};
+
 declare module 'cherry-markdown' {
   interface Cherry {
-    getSelectedText(): string;
-    replaceSelectedText(text: string): void;
     getValue(): string;
     setValue(text: string): void;
     setTheme?(theme: string): void;
@@ -32,8 +35,8 @@ declare module 'cherry-markdown' {
     replaceSelection?(text: string): void;
     editor?: {
       editor?: {
-    getSelection?(): string;
-    replaceSelection?(text: string): void;
+        getSelection?(): string;
+        replaceSelection?(text: string): void;
       }
     };
   }
@@ -83,7 +86,7 @@ function asActionType(action: string): ActionType {
 
 export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEditorProps) {
   const editorRef = React.useRef<HTMLDivElement>(null);
-  const cherryRef = React.useRef<Cherry | null>(null);
+  const cherryRef = React.useRef<EnhancedCherry | null>(null);
   const { theme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -199,7 +202,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
         posX = editorRect.left + (editorRect.width - responseWindowSize.width) / 2;
         posY = editorRect.top + (editorRect.height - Math.min(responseWindowSize.height, editorRect.height - 20)) / 2;
       }
-    } catch (e) {
+    } catch {
       // 出错时在编辑器中居中显示
       const editorRect = editorRef.current?.getBoundingClientRect() || {
         left: 0, right: window.innerWidth,
@@ -258,7 +261,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
           break;
         case 'continue':
           systemPrompt += "你能够根据已有文本的风格和内容，提供连贯的延续内容。不提供任何建议，仅输出续写的内容";
-          userPrompt = `请根据以下文本，继续写作至少200字，至多1000字，保持内容风格一致，不提供任何建议，仅输出续写的内容:\n\n${text}`;
+          userPrompt = `请根据以下文本，继续写作至少100字，至多500字，保持内容风格一致，不提供任何建议，仅输出续写的内容:\n\n${text}`;
           break;
         case 'check':
           systemPrompt += "你能够检查文本中的语法、表述和逻辑问题，并进行修改，不提供任何修改建议，仅输出修改之后的结果。";
@@ -373,8 +376,8 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
         defaultModel: "edit&preview",
       },
       toolbars: {
-        toolbar: ['bold', 'italic', 'strikethrough', '|', 'header', 'list', '|', 'quote', 'hr', 'code', 'table', '|', 'link', 'image'],
-        bubble: ['bold', 'italic', 'strikethrough', 'quote', 'code', 'link'],
+        toolbar: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', '|', 'header', 'ruby', 'list', 'checklist', 'justify', 'panel', '|', 'quote', 'hr', 'code', 'table', 'graph', 'drawIo', '|', 'link', 'image', 'file'],
+        bubble: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', 'quote', 'code', 'link'],
         float: ['h1', 'h2', 'h3', '|', 'checklist', 'quote', 'table', 'code']
       },
       callback: {
@@ -384,8 +387,9 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
         },
         afterInit: () => {
           // 实现获取选中文本的方法
-          if (!(cherry as any).getSelectedText) {
-            (cherry as any).getSelectedText = function() {
+          const enhancedCherry = cherry as EnhancedCherry;
+          if (!enhancedCherry.getSelectedText) {
+            enhancedCherry.getSelectedText = function() {
               // 获取编辑器实例
               const editor = this.editor?.editor;
               if (editor && editor.getSelection) {
@@ -396,8 +400,8 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
           }
           
           // 实现替换选中文本的方法
-          if (!(cherry as any).replaceSelectedText) {
-            (cherry as any).replaceSelectedText = function(text: string) {
+          if (!enhancedCherry.replaceSelectedText) {
+            enhancedCherry.replaceSelectedText = function(text: string) {
               // 获取编辑器实例
               const editor = this.editor?.editor;
               if (editor && editor.replaceSelection) {
@@ -576,10 +580,14 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
                           });
                         }
                         
-                        menu.appendChild(menuItem);
+                        if (menu) {
+                          menu.appendChild(menuItem);
+                        }
                       });
                       
-                      document.body.appendChild(menu);
+                      if (menu) {
+                        document.body.appendChild(menu);
+                      }
                       
                       // 点击外部关闭菜单
                       const closeMenu = (e: MouseEvent) => {
@@ -739,7 +747,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
     if (cherryRef.current) {
       try {
         // 尝试使用getSelectedText方法
-        const cherry = cherryRef.current as any;
+        const cherry = cherryRef.current as EnhancedCherry;
         if (typeof cherry.getSelectedText === 'function') {
           const selectedText = cherry.getSelectedText();
           if (selectedText && selectedText.trim()) {
@@ -770,7 +778,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
     
     try {
       // 使用类型断言来避免TypeScript错误
-      const cherry = cherryRef.current as any;
+      const cherry = cherryRef.current as EnhancedCherry;
       
       // 尝试直接使用replaceSelectedText方法
       if (typeof cherry.replaceSelectedText === 'function') {
@@ -856,9 +864,6 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
     });
     
     setIsDragging(true);
-    
-    // 获取编辑器范围，用于限制拖动范围
-    const editorRect = editorRef.current?.getBoundingClientRect();
     
     // 添加全局事件处理
     document.addEventListener('mousemove', handleDragMove);
@@ -1151,6 +1156,16 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
               </button>
             </div>
           </div>
+          
+          {/* 添加调整大小的手柄 */}
+          <div className="absolute top-0 right-0 w-2 h-2 cursor-ne-resize" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+          <div className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+          <div className="absolute bottom-0 left-0 w-2 h-2 cursor-sw-resize" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+          <div className="absolute top-0 left-0 w-2 h-2 cursor-nw-resize" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+          <div className="absolute top-0 left-2 right-2 h-1 cursor-n-resize" onMouseDown={(e) => handleResizeStart(e, 'n')} />
+          <div className="absolute bottom-0 left-2 right-2 h-1 cursor-s-resize" onMouseDown={(e) => handleResizeStart(e, 's')} />
+          <div className="absolute left-0 top-2 bottom-2 w-1 cursor-w-resize" onMouseDown={(e) => handleResizeStart(e, 'w')} />
+          <div className="absolute right-0 top-2 bottom-2 w-1 cursor-e-resize" onMouseDown={(e) => handleResizeStart(e, 'e')} />
           
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(70vh - 78px)' }}>
             <div className="p-3">

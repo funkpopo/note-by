@@ -2,7 +2,13 @@
   "name": "note-by",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "electron/main.js",
+  "exports": {
+    "./electron/preload.js": {
+      "require": "./electron/preload.js"
+    }
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

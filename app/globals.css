@@ -601,3 +601,7 @@
 .dark .note-metadata {
   @apply text-primary-foreground/60;
 }
+
+.note-item.active .note-metadata .inline-block {
+  background-color: rgba(26, 247, 107, 0.6); /* 使用绿色，透明度60% */
+}

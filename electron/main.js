@@ -1,9 +1,14 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const chokidar = require('chokidar');
-const isDev = require('electron-is-dev');
-const { OpenAI } = require('openai');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fs from 'fs';
+import chokidar from 'chokidar';
+import isDev from 'electron-is-dev';
+import { OpenAI } from 'openai';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let mainWindow;
 let watcher = null;
@@ -12,7 +17,7 @@ let watcher = null;
 const getMarkdownDir = () => {
   if (isDev) {
     // 开发环境：笔记保存在项目根目录的 markdown 文件夹中
-    return path.join(__dirname, '..', 'markdown');
+    return path.join(dirname(__dirname), 'markdown');
   } else {
     // 生产环境：笔记保存在应用程序同级目录的 markdown 文件夹中
     return path.join(path.dirname(app.getPath('exe')), 'markdown');
@@ -100,7 +105,6 @@ const setupWatcher = () => {
     })
     .on('ready', () => {
       console.log('Initial scan complete. Watching for changes...');
-      watcher.options.ignoreInitial = true;
     });
     
   console.log(`Watching for changes in ${markdownDir}`);
@@ -120,7 +124,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: fileURLToPath(new URL('./preload.js', import.meta.url))
     },
   });
   
@@ -243,7 +247,8 @@ ipcMain.handle('get-notes', async () => {
       }
     });
     
-    console.log("Empty groups:", emptyGroups); // 添加日志
+    console.log("Notes found:", notes.length);
+    console.log("Empty groups:", emptyGroups);
     
     return { notes, emptyGroups };
   } catch (err) {
@@ -801,7 +806,7 @@ const setupAIConfigHandlers = () => {
         try {
           const errorData = error.response.data || {};
           errorMessage = errorData.error?.message || errorMessage;
-        } catch (_) {
+        } catch {
           // 解析错误时出错，使用原始错误信息
         }
       }
@@ -861,7 +866,7 @@ const setupAIConfigHandlers = () => {
         try {
           const errorData = error.response.data || {};
           errorMessage = errorData.error?.message || errorMessage;
-        } catch (_) {
+        } catch {
           // 解析错误时出错，使用原始错误信息
         }
       }

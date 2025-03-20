@@ -120,6 +120,7 @@ export default function AppearanceSettings() {
       const settings = {
         fontFamily: customFont || font,
         fontSize: customFontSize || fontSize,
+        sidebarWidth: 250, // Default width
       };
       
       try {

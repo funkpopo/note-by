@@ -1,5 +1,5 @@
-const { spawn } = require('child_process');
-const { platform } = require('os');
+import { spawn } from 'child_process';
+import { platform } from 'os';
 
 // 检测操作系统
 const isWin = platform() === 'win32';
