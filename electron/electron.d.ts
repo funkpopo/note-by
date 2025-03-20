@@ -57,6 +57,31 @@ interface Electron {
     message: string;
     models?: string[];
   }>;
+  
+  // AI Assistant function
+  callAIAssistant: (params: {
+    config: AIConfig;
+    messages: Array<{
+      role: string;
+      content: string;
+    }>;
+  }) => Promise<{
+    success: boolean;
+    content?: string;
+    error?: string;
+  }>;
+  
+  // Streaming AI Assistant function
+  streamAIAssistant: (params: {
+    config: AIConfig;
+    messages: Array<{
+      role: string;
+      content: string;
+    }>;
+    onChunk: (chunk: string) => void;
+    onComplete: () => void;
+    onError: (error: string) => void;
+  }) => (() => void);
 }
 
 interface Note {
@@ -80,6 +105,13 @@ interface AIConfig {
 declare global {
   interface Window {
     electron: Electron;
+    cherry: {
+      // 获取选中的文本
+      getSelectedText: () => string;
+
+      // 替换选中的文本
+      replaceSelectedText: (text: string) => void;
+    };
   }
 }
 

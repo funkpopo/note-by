@@ -760,4 +760,191 @@ const setupAIConfigHandlers = () => {
       };
     }
   });
+  
+  // 调用AI助手
+  ipcMain.handle('call-ai-assistant', async (event, params) => {
+    try {
+      const { config, messages } = params;
+      
+      if (!config || !messages) {
+        return {
+          success: false,
+          error: "缺少必要参数"
+        };
+      }
+      
+      // 创建OpenAI客户端实例
+      const openai = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.apiUrl,
+        organization: config.organizationId || undefined,
+      });
+      
+      // 调用AI模型
+      const response = await openai.chat.completions.create({
+        model: config.name,
+        messages: messages,
+        temperature: config.temperature || 0.7,
+        max_tokens: 1500
+      });
+      
+      // 提取响应内容
+      if (response && response.choices && response.choices.length > 0) {
+        const content = response.choices[0].message.content;
+        return {
+          success: true,
+          content: content
+        };
+      } else {
+        return {
+          success: false,
+          error: "AI返回了空响应"
+        };
+      }
+    } catch (error) {
+      console.error('调用AI助手时出错:', error);
+      // 提取更有用的错误信息
+      let errorMessage = error.message;
+      if (error.response) {
+        try {
+          const errorData = error.response.data || {};
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch (_) {
+          // 解析错误时出错，使用原始错误信息
+        }
+      }
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  });
+
+  // 追踪当前活跃的流式请求
+  let activeStreamingRequest = null;
+
+  // 处理AI流式请求
+  ipcMain.on('stream-ai-assistant', async (event, { config, messages }) => {
+    try {
+      const { apiKey, apiUrl, organizationId } = config;
+      
+      // 详细记录请求配置（不包含API密钥）
+      console.log('准备AI流式请求:', {
+        model: config.name,
+        baseURL: config.apiUrl,
+        hasApiKey: Boolean(apiKey),
+        hasOrgId: Boolean(organizationId),
+        messagesCount: messages.length
+      });
+      
+      if (!apiKey) {
+        const error = "API密钥未设置";
+        console.error('AI流式请求错误:', error);
+        event.sender.send('ai-stream-error', error);
+        return;
+      }
+
+      if (!apiUrl) {
+        const error = "API地址未设置";
+        console.error('AI流式请求错误:', error);
+        event.sender.send('ai-stream-error', error);
+        return;
+      }
+      
+      if (!config.name) {
+        const error = "模型名称未设置";
+        console.error('AI流式请求错误:', error);
+        event.sender.send('ai-stream-error', error);
+        return;
+      }
+      
+      // 创建客户端，确保baseURL正确设置
+      const openai = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.apiUrl,
+        organization: config.organizationId,
+        timeout: 15000, // 超时时间
+        maxRetries: 3,  // 重试次数
+        dangerouslyAllowBrowser: false
+      });
+      
+      console.log(`开始流式请求，模型：${config.name}，API地址：${config.apiUrl}`);
+      
+      // 创建请求
+      const streamingRequest = await openai.chat.completions.create({
+        model: config.name,
+        messages,
+        temperature: config.temperature || 0.7,
+        stream: true,
+      });
+      
+      // 存储当前请求引用
+      activeStreamingRequest = streamingRequest;
+      
+      try {
+        // 处理流式响应
+        for await (const chunk of streamingRequest) {
+          if (chunk.choices[0]?.delta?.content) {
+            event.sender.send('ai-stream-chunk', chunk.choices[0].delta.content);
+          }
+        }
+        
+        // 流式处理结束
+        console.log('流式处理成功完成');
+        activeStreamingRequest = null;
+        event.sender.send('ai-stream-complete');
+      } catch (streamingError) {
+        console.error('流式处理过程中错误:', streamingError);
+        
+        // 构建详细的错误消息
+        let errorMsg = streamingError.message || '未知错误';
+        if (streamingError.cause) {
+          errorMsg += ` (原因: ${streamingError.cause.code || streamingError.cause.message || '未知'})`;
+        }
+        
+        event.sender.send('ai-stream-error', errorMsg);
+        activeStreamingRequest = null;
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        // 这是取消请求导致的错误，不需要发送错误消息
+        console.log('流式请求被取消');
+      } else {
+        console.error('AI流式请求错误:', error);
+        
+        // 构建详细的错误消息
+        let errorMsg = error.message || '未知错误';
+        
+        // 添加连接错误的详细信息
+        if (error.cause) {
+          const cause = error.cause;
+          errorMsg += ` (原因: ${cause.code || cause.message || '未知'})`;
+          
+          // 网络连接问题的提示
+          if (cause.code === 'ETIMEDOUT' || cause.code === 'ECONNREFUSED') {
+            errorMsg += ` - 请检查API地址是否正确，以及网络连接是否正常`;
+          }
+        }
+        
+        event.sender.send('ai-stream-error', errorMsg);
+      }
+      
+      activeStreamingRequest = null;
+    }
+  });
+
+  // 处理取消流式请求
+  ipcMain.on('cancel-ai-stream', () => {
+    if (activeStreamingRequest) {
+      if (typeof activeStreamingRequest.abort === 'function') {
+        activeStreamingRequest.abort();
+      } else if (typeof activeStreamingRequest.controller?.abort === 'function') {
+        activeStreamingRequest.controller.abort();
+      }
+      
+      activeStreamingRequest = null;
+      console.log('流式请求已取消');
+    }
+  });
 }; 

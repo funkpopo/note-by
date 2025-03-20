@@ -60,5 +60,34 @@ contextBridge.exposeInMainWorld('electron', {
   deleteAIConfig: (id) => ipcRenderer.invoke('delete-ai-config', id),
   
   // 测试AI配置
-  testAIConfig: (config) => ipcRenderer.invoke('test-ai-config', config)
+  testAIConfig: (config) => ipcRenderer.invoke('test-ai-config', config),
+  
+  // 调用AI助手
+  callAIAssistant: (params) => ipcRenderer.invoke('call-ai-assistant', params),
+  
+  // 流式调用AI助手
+  streamAIAssistant: ({ config, messages, onChunk, onComplete, onError }) => {
+    // Setup event listeners for streaming
+    const chunkListener = (_, chunk) => onChunk(chunk);
+    const completeListener = () => onComplete();
+    const errorListener = (_, error) => onError(error);
+    
+    ipcRenderer.on('ai-stream-chunk', chunkListener);
+    ipcRenderer.on('ai-stream-complete', completeListener);
+    ipcRenderer.on('ai-stream-error', errorListener);
+    
+    // Send the request to the main process
+    ipcRenderer.send('stream-ai-assistant', { config, messages });
+    
+    // Return a function to cancel the stream
+    return () => {
+      // Clean up event listeners
+      ipcRenderer.removeListener('ai-stream-chunk', chunkListener);
+      ipcRenderer.removeListener('ai-stream-complete', completeListener);
+      ipcRenderer.removeListener('ai-stream-error', errorListener);
+      
+      // Send cancel signal to main process
+      ipcRenderer.send('cancel-ai-stream');
+    };
+  }
 }); 
