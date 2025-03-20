@@ -158,6 +158,7 @@ app.whenReady().then(() => {
   });
 
   setupAIConfigHandlers();
+  setupAppearanceConfigHandlers();
 });
 
 // 当所有窗口关闭时退出应用
@@ -585,6 +586,57 @@ const getAIConfigPath = () => {
   }
 };
 
+// 获取外观设置文件路径
+const getAppearanceConfigPath = () => {
+  if (isDev) {
+    // 开发环境：配置保存在项目根目录
+    return path.join(__dirname, '..', 'appearanceconfig.json');
+  } else {
+    // 生产环境：配置保存在应用程序同级目录
+    return path.join(path.dirname(app.getPath('exe')), 'appearanceconfig.json');
+  }
+};
+
+// 读取外观设置文件
+const readAppearanceSettings = () => {
+  const configPath = getAppearanceConfigPath();
+  
+  try {
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf8');
+      const settings = JSON.parse(configData);
+      // 确保有默认值
+      return {
+        fontFamily: settings.fontFamily || "system-ui, sans-serif",
+        fontSize: settings.fontSize || "16px",
+        sidebarWidth: settings.sidebarWidth || 288, // 默认宽度 72 * 4 = 288px
+      };
+    }
+  } catch (error) {
+    console.error('Error reading appearance config file:', error);
+  }
+  
+  // 如果文件不存在或读取出错，返回默认值
+  return {
+    fontFamily: "system-ui, sans-serif",
+    fontSize: "16px",
+    sidebarWidth: 288, // 默认宽度 72 * 4 = 288px
+  };
+};
+
+// 保存外观设置到文件
+const saveAppearanceSettingsToFile = (settings) => {
+  const configPath = getAppearanceConfigPath();
+  
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving appearance config file:', error);
+    return false;
+  }
+};
+
 // 读取AI配置文件
 const readAIConfigs = () => {
   const configPath = getAIConfigPath();
@@ -945,6 +997,25 @@ const setupAIConfigHandlers = () => {
       
       activeStreamingRequest = null;
       console.log('流式请求已取消');
+    }
+  });
+};
+
+// 添加外观设置相关的IPC处理程序
+const setupAppearanceConfigHandlers = () => {
+  // 获取外观设置
+  ipcMain.handle('get-appearance-settings', async () => {
+    return readAppearanceSettings();
+  });
+  
+  // 保存外观设置
+  ipcMain.handle('save-appearance-settings', async (event, settings) => {
+    try {
+      const success = saveAppearanceSettingsToFile(settings);
+      return { success };
+    } catch (error) {
+      console.error('Error saving appearance settings:', error);
+      return { success: false, error: error.message };
     }
   });
 }; 

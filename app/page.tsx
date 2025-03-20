@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, PlusIcon, Settings } from "lucide-react";
 import Link from "next/link";
+import { ResizableSidebar } from "@/components/resizable-sidebar";
 
 // Dynamically import NoteEditor to prevent server-side rendering issues with Cherry Markdown
 const NoteEditor = dynamic(() => import("@/components/note-editor").then(mod => mod.NoteEditor), {
@@ -438,7 +439,7 @@ export default function Home() {
       </header>
       
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-72 border-r border-r-border bg-muted/30 overflow-y-auto p-3">
+        <ResizableSidebar className="p-3">
           <NoteList
             notes={notes}
             currentNote={currentNote}
@@ -451,7 +452,7 @@ export default function Home() {
             isLoading={isLoading}
             emptyGroups={emptyGroups}
           />
-        </aside>
+        </ResizableSidebar>
         
         <main className="flex-1 overflow-hidden">
           {currentNote ? (

@@ -89,5 +89,11 @@ contextBridge.exposeInMainWorld('electron', {
       // Send cancel signal to main process
       ipcRenderer.send('cancel-ai-stream');
     };
-  }
+  },
+  
+  // 获取外观设置
+  getAppearanceSettings: () => ipcRenderer.invoke('get-appearance-settings'),
+  
+  // 保存外观设置
+  saveAppearanceSettings: (settings) => ipcRenderer.invoke('save-appearance-settings', settings),
 }); 

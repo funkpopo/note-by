@@ -82,6 +82,13 @@ interface Electron {
     onComplete: () => void;
     onError: (error: string) => void;
   }) => (() => void);
+  
+  // Appearance settings functions
+  getAppearanceSettings: () => Promise<AppearanceSettings>;
+  saveAppearanceSettings: (settings: AppearanceSettings) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
 }
 
 interface Note {
@@ -100,6 +107,14 @@ interface AIConfig {
   organizationId?: string;
   isDefault?: boolean;
   lastTested?: Date;
+}
+
+// Appearance settings interface
+interface AppearanceSettings {
+  fontFamily: string;
+  fontSize: string;
+  sidebarWidth: number;
+  // Add other appearance settings as needed
 }
 
 declare global {

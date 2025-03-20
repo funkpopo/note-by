@@ -39,68 +39,140 @@ export default function AppearanceSettings() {
   const [customFont, setCustomFont] = useState("");
   const [customFontSize, setCustomFontSize] = useState("");
   const [previewText, setPreviewText] = useState("这是预览文本。The quick brown fox jumps over the lazy dog.");
-
-  // Apply font settings to document when they change
-  useEffect(() => {
-    const body = document.body;
-    
-    // Apply font family
-    body.style.fontFamily = customFont || font;
-    
-    // Apply font size
-    body.style.fontSize = customFontSize || fontSize;
-    
-    // Save settings to localStorage
-    const settings = {
-      fontFamily: customFont || font,
-      fontSize: customFontSize || fontSize,
-    };
-    
-    localStorage.setItem("appearance-settings", JSON.stringify(settings));
-    
-    // Clean up on component unmount
-    return () => {
-      // Restore the default values or do nothing
-    };
-  }, [font, fontSize, customFont, customFontSize]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   // Load saved settings on component mount
   useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem("appearance-settings");
-      
-      if (savedSettings) {
-        const { fontFamily, fontSize: savedFontSize } = JSON.parse(savedSettings);
-        
-        // Check if font is in our predefined list
-        const matchedFont = fontOptions.find(option => option.value === fontFamily);
-        if (matchedFont) {
-          setFont(fontFamily);
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true);
+        // 使用Electron API获取设置
+        if (window.electron) {
+          const savedSettings = await window.electron.getAppearanceSettings();
+          
+          if (savedSettings) {
+            const { fontFamily, fontSize: savedFontSize } = savedSettings;
+            
+            // Check if font is in our predefined list
+            const matchedFont = fontOptions.find(option => option.value === fontFamily);
+            if (matchedFont) {
+              setFont(fontFamily);
+            } else {
+              setCustomFont(fontFamily);
+            }
+            
+            // Check if font size is in our predefined list
+            const matchedFontSize = fontSizeOptions.find(option => option.value === savedFontSize);
+            if (matchedFontSize) {
+              setFontSize(savedFontSize);
+            } else {
+              setCustomFontSize(savedFontSize);
+            }
+          }
         } else {
-          setCustomFont(fontFamily);
+          // 回退到localStorage (用于开发时在浏览器中直接预览)
+          const localSettings = localStorage.getItem("appearance-settings");
+          if (localSettings) {
+            const { fontFamily, fontSize: savedFontSize } = JSON.parse(localSettings);
+            
+            // Check if font is in our predefined list
+            const matchedFont = fontOptions.find(option => option.value === fontFamily);
+            if (matchedFont) {
+              setFont(fontFamily);
+            } else {
+              setCustomFont(fontFamily);
+            }
+            
+            // Check if font size is in our predefined list
+            const matchedFontSize = fontSizeOptions.find(option => option.value === savedFontSize);
+            if (matchedFontSize) {
+              setFontSize(savedFontSize);
+            } else {
+              setCustomFontSize(savedFontSize);
+            }
+          }
         }
-        
-        // Check if font size is in our predefined list
-        const matchedFontSize = fontSizeOptions.find(option => option.value === savedFontSize);
-        if (matchedFontSize) {
-          setFontSize(savedFontSize);
-        } else {
-          setCustomFontSize(savedFontSize);
-        }
+      } catch (error) {
+        console.error("Error loading appearance settings:", error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading appearance settings:", error);
-    }
+    };
+    
+    loadSettings();
   }, []);
+
+  // Apply font settings to document and save when they change
+  useEffect(() => {
+    if (isLoading) return;
+    
+    const saveSettings = async () => {
+      const body = document.body;
+      
+      // Apply font family
+      body.style.fontFamily = customFont || font;
+      
+      // Apply font size
+      body.style.fontSize = customFontSize || fontSize;
+      
+      // Save settings
+      const settings = {
+        fontFamily: customFont || font,
+        fontSize: customFontSize || fontSize,
+      };
+      
+      try {
+        // 使用Electron API保存设置
+        if (window.electron) {
+          const result = await window.electron.saveAppearanceSettings(settings);
+          if (result.success) {
+            setSaveStatus("已保存");
+            // 清除保存状态提示
+            setTimeout(() => setSaveStatus(null), 2000);
+          } else {
+            setSaveStatus("保存失败");
+            // 清除保存状态提示
+            setTimeout(() => setSaveStatus(null), 2000);
+          }
+        } else {
+          // 回退到localStorage (用于开发时在浏览器中直接预览)
+          localStorage.setItem("appearance-settings", JSON.stringify(settings));
+          setSaveStatus("已保存");
+          // 清除保存状态提示
+          setTimeout(() => setSaveStatus(null), 2000);
+        }
+      } catch (error) {
+        console.error("Error saving appearance settings:", error);
+        setSaveStatus("保存失败");
+        // 清除保存状态提示
+        setTimeout(() => setSaveStatus(null), 2000);
+      }
+    };
+    
+    // 使用防抖保存设置，避免频繁写入
+    const debounceTimer = setTimeout(() => {
+      saveSettings();
+    }, 500);
+    
+    return () => {
+      clearTimeout(debounceTimer);
+    };
+  }, [font, fontSize, customFont, customFontSize, isLoading]);
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex justify-between items-center">
         <h2 className="text-xl font-medium mb-4">界面设置</h2>
-        <p className="text-muted-foreground mb-6">
-          自定义应用程序的外观，包括字体和文本大小等设置。
-        </p>
+        {saveStatus && (
+          <div className="text-sm px-2 py-1 rounded-md bg-primary/10 text-primary">
+            {saveStatus}
+          </div>
+        )}
       </div>
+      <p className="text-muted-foreground mb-6">
+        自定义应用程序的外观，包括字体和文本大小等设置。
+      </p>
       
       <div className="space-y-4">
         <div className="space-y-2">
