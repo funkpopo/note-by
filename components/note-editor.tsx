@@ -376,7 +376,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
         defaultModel: "edit&preview",
       },
       toolbars: {
-        toolbar: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', '|', 'header', 'ruby', 'list', 'checklist', 'justify', 'panel', '|', 'quote', 'hr', 'code', 'table', 'graph', 'drawIo', '|', 'link', 'image', 'file'],
+        toolbar: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', '|', 'header', 'ruby', 'list', 'checklist', 'justify', 'panel', '|', 'quote', 'hr', 'code', 'table', 'graph', '|', 'link', 'image', 'file', '|', 'undo', 'redo', '|', 'export'],
         bubble: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', 'quote', 'code', 'link'],
         float: ['h1', 'h2', 'h3', '|', 'checklist', 'quote', 'table', 'code']
       },
