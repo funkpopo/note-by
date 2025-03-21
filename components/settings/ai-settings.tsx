@@ -472,7 +472,7 @@ export default function AISettings() {
               <Label htmlFor="name">模型名称</Label>
               <Input
                 id="name"
-                placeholder="例如: claude-3-opus-20240229, deepseek-v3-241226"
+                placeholder="例如: claude-3.7, deepseek-R1"
                 {...form.register("name")}
               />
               {form.formState.errors.name && (

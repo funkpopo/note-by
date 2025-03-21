@@ -95,6 +95,22 @@ interface Electron {
   
   // Appearance settings change notification
   onAppearanceSettingsChanged: (callback: (settings: AppearanceSettings) => void) => (() => void);
+
+  // WebDAV sync functions
+  getSyncConfig: () => Promise<WebDAVConfig>;
+  saveSyncConfig: (config: WebDAVConfig) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  testWebDAVConnection: (config: WebDAVConnectionConfig) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  syncNotes: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  onSyncStatusChanged: (callback: (status: SyncStatus) => void) => (() => void);
 }
 
 interface Note {
@@ -122,6 +138,32 @@ interface AppearanceSettings {
   sidebarWidth: number;
   theme?: string;
   // Add other appearance settings as needed
+}
+
+// WebDAV configuration interface
+interface WebDAVConfig {
+  enabled: boolean;
+  serverUrl: string;
+  username?: string;
+  password?: string;
+  syncInterval: number;
+  autoSync: boolean;
+  lastSync?: Date;
+}
+
+// WebDAV connection test config
+interface WebDAVConnectionConfig {
+  serverUrl: string;
+  username?: string;
+  password?: string;
+}
+
+// Sync status interface
+interface SyncStatus {
+  syncing: boolean;
+  lastSync?: Date;
+  lastError?: string;
+  message?: string;
 }
 
 declare global {

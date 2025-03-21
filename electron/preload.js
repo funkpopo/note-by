@@ -126,4 +126,28 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeListener('appearance-settings-changed', settingsChangedHandler);
     };
   },
+
+  // WebDAV同步相关功能
+  // 获取同步配置
+  getSyncConfig: () => ipcRenderer.invoke('get-sync-config'),
+  
+  // 保存同步配置
+  saveSyncConfig: (config) => ipcRenderer.invoke('save-sync-config', config),
+  
+  // 测试WebDAV连接
+  testWebDAVConnection: (config) => ipcRenderer.invoke('test-webdav-connection', config),
+  
+  // 手动触发同步
+  syncNotes: () => ipcRenderer.invoke('sync-notes'),
+  
+  // 监听同步状态变化
+  onSyncStatusChanged: (callback) => {
+    const statusChangedHandler = (_, status) => callback(status);
+    ipcRenderer.on('sync-status-changed', statusChangedHandler);
+    
+    // 返回清理函数
+    return () => {
+      ipcRenderer.removeListener('sync-status-changed', statusChangedHandler);
+    };
+  },
 }); 

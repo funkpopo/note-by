@@ -43,6 +43,7 @@ next-env.d.ts
 # configs
 aiconfig.json
 apperanceconf.json
+settings.json
 
 # markdown
 /markdown/

@@ -6,6 +6,7 @@ import fs from 'fs';
 import chokidar from 'chokidar';
 import isDev from 'electron-is-dev';
 import { OpenAI } from 'openai';
+import { createClient } from 'webdav';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -153,6 +154,9 @@ app.whenReady().then(() => {
   // 确保markdown目录存在
   ensureMarkdownDirExists();
   
+  // 迁移旧的配置文件
+  migrateOldConfigs();
+  
   createWindow();
 
   app.on('activate', () => {
@@ -163,6 +167,13 @@ app.whenReady().then(() => {
 
   setupAIConfigHandlers();
   setupAppearanceConfigHandlers();
+  setupWebDAVHandlers();
+  
+  // 加载初始配置并设置定时器
+  const syncConfig = readSyncConfig();
+  if (syncConfig.enabled && syncConfig.autoSync) {
+    setupSyncTimer(syncConfig);
+  }
 });
 
 // 当所有窗口关闭时退出应用
@@ -580,129 +591,167 @@ ipcMain.handle('delete-group', async (event, groupName) => {
   }
 });
 
-// 获取AI配置文件路径
-const getAIConfigPath = () => {
-  if (isDev) {
-    // 开发环境：配置保存在项目根目录
-    return path.join(__dirname, '..', 'aiconfig.json');
+// 获取设置文件路径
+const getSettingsPath = () => {
+  const isPackaged = !process.env.ELECTRON_DEV;
+  if (isPackaged) {
+    const appPath = path.dirname(app.getPath('exe'));
+    return path.join(appPath, 'settings.json');
   } else {
-    // 生产环境：配置保存在应用程序同级目录
-    return path.join(path.dirname(app.getPath('exe')), 'aiconfig.json');
+    return path.join(__dirname, '..', 'settings.json');
   }
 };
 
-// 获取外观设置文件路径
-const getAppearanceConfigPath = () => {
-  if (isDev) {
-    // 开发环境：配置保存在项目根目录
-    return path.join(__dirname, '..', 'appearanceconfig.json');
-  } else {
-    // 生产环境：配置保存在应用程序同级目录
-    return path.join(path.dirname(app.getPath('exe')), 'appearanceconfig.json');
+// 读取整个设置文件
+const readSettings = () => {
+  const settingsPath = getSettingsPath();
+  
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settings = JSON.parse(settingsData);
+      
+      // 如果存在同步配置的lastSync字段，转换为Date对象
+      if (settings.sync?.lastSync) {
+        settings.sync.lastSync = new Date(settings.sync.lastSync);
+      }
+      
+      return settings;
+    }
+  } catch (error) {
+    console.error('Error reading settings file:', error);
+  }
+  
+  // 如果文件不存在或读取出错，返回默认设置
+  return {
+    ai: [],
+    appearance: {
+      fontFamily: "system-ui, sans-serif",
+      fontSize: "16px",
+      sidebarWidth: 288, // 默认宽度 72 * 4 = 288px
+    },
+    sync: {
+      enabled: false,
+      serverUrl: '',
+      username: '',
+      password: '',
+      syncInterval: 60,
+      autoSync: false
+    }
+  };
+};
+
+// 保存设置到文件
+const saveSettings = (settings) => {
+  const settingsPath = getSettingsPath();
+  
+  try {
+    const settingsToSave = { ...settings };
+    
+    // 如果存在lastSync字段，确保它是ISO字符串格式
+    if (settingsToSave.sync?.lastSync instanceof Date) {
+      settingsToSave.sync.lastSync = settingsToSave.sync.lastSync.toISOString();
+    }
+    
+    // 确保目录存在
+    const configDir = path.dirname(settingsPath);
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    // 格式化JSON，确保易于阅读
+    const jsonData = JSON.stringify(settingsToSave, null, 2);
+    
+    // 写入文件
+    fs.writeFileSync(settingsPath, jsonData, 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving settings file:', error);
+    return false;
   }
 };
 
 // 读取外观设置文件
 const readAppearanceSettings = () => {
-  const configPath = getAppearanceConfigPath();
-  
-  try {
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, 'utf8');
-      const settings = JSON.parse(configData);
-      // 确保有默认值
-      return {
-        fontFamily: settings.fontFamily || "system-ui, sans-serif",
-        fontSize: settings.fontSize || "16px",
-        sidebarWidth: settings.sidebarWidth || 288, // 默认宽度 72 * 4 = 288px
-      };
-    }
-  } catch (error) {
-    console.error('Error reading appearance config file:', error);
-  }
-  
-  // 如果文件不存在或读取出错，返回默认值
-  return {
+  const settings = readSettings();
+  return settings.appearance || {
     fontFamily: "system-ui, sans-serif",
     fontSize: "16px",
-    sidebarWidth: 288, // 默认宽度 72 * 4 = 288px
+    sidebarWidth: 288 // 默认宽度 72 * 4 = 288px
   };
 };
 
 // 保存外观设置到文件
-const saveAppearanceSettingsToFile = (settings) => {
-  const configPath = getAppearanceConfigPath();
-  
+const saveAppearanceSettingsToFile = (appearanceSettings) => {
   try {
     // 验证settings对象，确保数据格式正确
     const validSettings = {
-      fontFamily: typeof settings.fontFamily === 'string' ? settings.fontFamily : "system-ui, sans-serif",
-      fontSize: typeof settings.fontSize === 'string' ? settings.fontSize : "16px",
-      sidebarWidth: typeof settings.sidebarWidth === 'number' ? settings.sidebarWidth : 288,
-      theme: ['light', 'dark', 'system', undefined].includes(settings.theme) ? settings.theme : undefined
+      fontFamily: typeof appearanceSettings.fontFamily === 'string' ? appearanceSettings.fontFamily : "system-ui, sans-serif",
+      fontSize: typeof appearanceSettings.fontSize === 'string' ? appearanceSettings.fontSize : "16px",
+      sidebarWidth: typeof appearanceSettings.sidebarWidth === 'number' ? appearanceSettings.sidebarWidth : 288,
+      theme: ['light', 'dark', 'system', undefined].includes(appearanceSettings.theme) ? appearanceSettings.theme : undefined
     };
     
-    // 格式化JSON，确保易于阅读
-    const jsonData = JSON.stringify(validSettings, null, 2);
+    // 读取当前所有设置
+    const settings = readSettings();
     
-    // 确保目录存在
-    const configDir = path.dirname(configPath);
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
-    }
+    // 更新外观设置部分
+    settings.appearance = validSettings;
     
-    // 写入文件
-    fs.writeFileSync(configPath, jsonData, 'utf8');
-    console.log(`外观设置已保存到: ${configPath}`);
+    // 保存整个设置文件
+    const success = saveSettings(settings);
     
-    // 通知渲染进程设置已更改
-    try {
-      const mainWindow = BrowserWindow.getAllWindows()[0];
-      if (mainWindow) {
-        if (settings.theme) {
-          mainWindow.webContents.send('theme-changed', settings.theme);
+    if (success) {
+      console.log('外观设置已保存');
+      
+      // 通知渲染进程设置已更改
+      try {
+        const mainWindow = BrowserWindow.getAllWindows()[0];
+        if (mainWindow) {
+          if (appearanceSettings.theme) {
+            mainWindow.webContents.send('theme-changed', appearanceSettings.theme);
+          }
+          
+          // 发送所有外观设置变更事件
+          mainWindow.webContents.send('appearance-settings-changed', validSettings);
         }
-        
-        // 发送所有外观设置变更事件
-        mainWindow.webContents.send('appearance-settings-changed', validSettings);
+      } catch (err) {
+        console.error('通知渲染进程设置变更失败:', err);
       }
-    } catch (err) {
-      console.error('通知渲染进程设置变更失败:', err);
     }
     
-    return true;
+    return success;
   } catch (error) {
-    console.error('保存外观设置文件失败:', error);
+    console.error('保存外观设置失败:', error);
     return false;
   }
 };
 
-// 读取AI配置文件
+// 读取AI配置
 const readAIConfigs = () => {
-  const configPath = getAIConfigPath();
-  
-  try {
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, 'utf8');
-      return JSON.parse(configData);
-    }
-  } catch (error) {
-    console.error('Error reading AI config file:', error);
-  }
-  
-  // 如果文件不存在或读取出错，返回空数组
-  return [];
+  const settings = readSettings();
+  return settings.ai || [];
 };
 
-// 保存AI配置到文件
+// 保存AI配置
 const saveAIConfigsToFile = (configs) => {
-  const configPath = getAIConfigPath();
-  
   try {
-    fs.writeFileSync(configPath, JSON.stringify(configs, null, 2), 'utf8');
-    return true;
+    // 读取当前所有设置
+    const settings = readSettings();
+    
+    // 更新AI配置部分
+    settings.ai = configs;
+    
+    // 保存整个设置文件
+    const success = saveSettings(settings);
+    
+    if (success) {
+      console.log('AI配置已保存');
+    }
+    
+    return success;
   } catch (error) {
-    console.error('Error saving AI config file:', error);
+    console.error('保存AI配置失败:', error);
     return false;
   }
 };
@@ -1058,4 +1107,386 @@ const setupAppearanceConfigHandlers = () => {
       return { success: false, error: error.message };
     }
   });
+};
+
+// 读取同步配置
+const readSyncConfig = () => {
+  const settings = readSettings();
+  return settings.sync || {
+    enabled: false,
+    serverUrl: '',
+    username: '',
+    password: '',
+    syncInterval: 60,
+    autoSync: false
+  };
+};
+
+// 保存同步配置到文件
+const saveSyncConfigToFile = (syncConfig) => {
+  try {
+    // 读取当前所有设置
+    const settings = readSettings();
+    
+    // 更新同步配置部分
+    settings.sync = syncConfig;
+    
+    // 保存整个设置文件
+    const success = saveSettings(settings);
+    
+    if (success) {
+      console.log('同步配置已保存');
+    }
+    
+    return { success };
+  } catch (error) {
+    console.error('保存同步配置失败:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// 设置WebDAV同步处理器
+const setupWebDAVHandlers = () => {
+  // 获取同步配置
+  ipcMain.handle('get-sync-config', async () => {
+    return readSyncConfig();
+  });
+  
+  // 保存同步配置
+  ipcMain.handle('save-sync-config', async (event, config) => {
+    const syncInterval = config.syncInterval;
+    
+    // 验证syncInterval是合理的值
+    if (isNaN(syncInterval) || syncInterval < 1 || syncInterval > 1440) {
+      return { 
+        success: false, 
+        error: '同步间隔必须是1到1440分钟之间的数字' 
+      };
+    }
+    
+    // 如果启用了自动同步，设置定时器
+    if (config.enabled && config.autoSync) {
+      setupSyncTimer(config);
+    } else {
+      clearSyncTimer();
+    }
+    
+    return saveSyncConfigToFile(config);
+  });
+  
+  // 测试WebDAV连接
+  ipcMain.handle('test-webdav-connection', async (event, config) => {
+    try {
+      // 创建WebDAV客户端
+      const client = createClient(config.serverUrl, {
+        username: config.username || '',
+        password: config.password || ''
+      });
+      
+      // 检查连接是否可用 (获取根目录内容)
+      await client.getDirectoryContents('/');
+      
+      return { success: true };
+    } catch (error) {
+      console.error('WebDAV connection test failed:', error);
+      return { 
+        success: false, 
+        error: error.message || '无法连接到WebDAV服务器' 
+      };
+    }
+  });
+  
+  // 手动触发同步
+  ipcMain.handle('sync-notes', async () => {
+    try {
+      return await syncWithWebDAV();
+    } catch (error) {
+      console.error('Manual sync failed:', error);
+      return { 
+        success: false, 
+        error: error.message || '同步失败' 
+      };
+    }
+  });
+};
+
+// 设置自动同步定时器
+let syncTimer = null;
+const setupSyncTimer = (config) => {
+  // 清除现有定时器
+  clearSyncTimer();
+  
+  // 如果启用了自动同步，创建新的定时器
+  if (config.enabled && config.autoSync) {
+    const intervalMinutes = config.syncInterval || 60;
+    const intervalMs = intervalMinutes * 60 * 1000;
+    
+    console.log(`Setting up automatic sync timer: ${intervalMinutes} minutes`);
+    
+    syncTimer = setInterval(async () => {
+      console.log('Auto sync triggered');
+      try {
+        await syncWithWebDAV();
+      } catch (error) {
+        console.error('Auto sync failed:', error);
+        // 通知前端同步失败
+        if (mainWindow) {
+          mainWindow.webContents.send('sync-status-changed', {
+            syncing: false,
+            lastError: error.message,
+            message: '自动同步失败'
+          });
+        }
+      }
+    }, intervalMs);
+  }
+};
+
+// 清除同步定时器
+const clearSyncTimer = () => {
+  if (syncTimer) {
+    clearInterval(syncTimer);
+    syncTimer = null;
+  }
+};
+
+// 与WebDAV同步
+const syncWithWebDAV = async () => {
+  const config = readSyncConfig();
+  
+  // 如果同步未启用，返回错误
+  if (!config.enabled) {
+    return { 
+      success: false, 
+      error: '同步未启用' 
+    };
+  }
+  
+  // 如果没有设置服务器URL，返回错误
+  if (!config.serverUrl) {
+    return { 
+      success: false, 
+      error: '未设置WebDAV服务器地址' 
+    };
+  }
+  
+  // 通知前端开始同步
+  if (mainWindow) {
+    mainWindow.webContents.send('sync-status-changed', {
+      syncing: true,
+      message: '正在同步...'
+    });
+  }
+  
+  try {
+    // 创建WebDAV客户端
+    const client = createClient(config.serverUrl, {
+      username: config.username || '',
+      password: config.password || ''
+    });
+    
+    // 获取Markdown目录路径
+    const markdownDir = getMarkdownDir();
+    
+    // 确保远程根目录存在
+    const remoteDirExists = await client.exists('/note-by-sync');
+    if (!remoteDirExists) {
+      await client.createDirectory('/note-by-sync');
+    }
+    
+    // 同步本地文件到远程
+    await syncLocalToRemote(client, markdownDir, '/note-by-sync');
+    
+    // 同步远程文件到本地
+    await syncRemoteToLocal(client, '/note-by-sync', markdownDir);
+    
+    // 更新上次同步时间
+    config.lastSync = new Date();
+    saveSyncConfigToFile(config);
+    
+    // 通知前端同步完成
+    if (mainWindow) {
+      mainWindow.webContents.send('sync-status-changed', {
+        syncing: false,
+        lastSync: new Date(),
+        message: '同步完成'
+      });
+    }
+    
+    // 通知前端重新加载笔记列表
+    notifyClientOfChange();
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Sync failed:', error);
+    
+    // 通知前端同步失败
+    if (mainWindow) {
+      mainWindow.webContents.send('sync-status-changed', {
+        syncing: false,
+        lastError: error.message,
+        message: '同步失败'
+      });
+    }
+    
+    return { 
+      success: false, 
+      error: error.message || '同步失败' 
+    };
+  }
+};
+
+// 同步本地文件到远程
+const syncLocalToRemote = async (client, localDir, remoteDir) => {
+  // 获取本地文件和目录
+  const items = fs.readdirSync(localDir, { withFileTypes: true });
+  
+  for (const item of items) {
+    const localPath = path.join(localDir, item.name);
+    const remotePath = `${remoteDir}/${item.name}`;
+    
+    if (item.isDirectory()) {
+      // 确保远程目录存在
+      const remoteDirExists = await client.exists(remotePath);
+      if (!remoteDirExists) {
+        await client.createDirectory(remotePath);
+      }
+      
+      // 递归同步子目录
+      await syncLocalToRemote(client, localPath, remotePath);
+    } else if (item.isFile()) {
+      // 检查文件是否需要更新
+      let needsUpdate = true;
+      
+      try {
+        if (await client.exists(remotePath)) {
+          const remoteStats = await client.stat(remotePath);
+          const localStats = fs.statSync(localPath);
+          
+          // 比较修改时间，如果本地文件更新，则上传
+          const remoteTime = new Date(remoteStats.lastmod).getTime();
+          const localTime = new Date(localStats.mtime).getTime();
+          
+          needsUpdate = localTime > remoteTime;
+        }
+      } catch (error) {
+        console.error(`Error checking remote file ${remotePath}:`, error);
+        // 如果发生错误，尝试上传文件
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+        // 上传文件
+        const fileContent = fs.readFileSync(localPath);
+        await client.putFileContents(remotePath, fileContent);
+      }
+    }
+  }
+};
+
+// 同步远程文件到本地
+const syncRemoteToLocal = async (client, remoteDir, localDir) => {
+  // 获取远程目录内容
+  const items = await client.getDirectoryContents(remoteDir);
+  
+  for (const item of items) {
+    // 跳过当前目录和父目录
+    if (item.basename === '.' || item.basename === '..') continue;
+    
+    const remotePath = item.filename;
+    const localPath = path.join(localDir, path.basename(remotePath));
+    
+    if (item.type === 'directory') {
+      // 确保本地目录存在
+      if (!fs.existsSync(localPath)) {
+        fs.mkdirSync(localPath, { recursive: true });
+      }
+      
+      // 递归同步子目录
+      await syncRemoteToLocal(client, remotePath, localPath);
+    } else {
+      // 检查文件是否需要更新
+      let needsUpdate = true;
+      
+      if (fs.existsSync(localPath)) {
+        const localStats = fs.statSync(localPath);
+        
+        // 比较修改时间，如果远程文件更新，则下载
+        const remoteTime = new Date(item.lastmod).getTime();
+        const localTime = new Date(localStats.mtime).getTime();
+        
+        needsUpdate = remoteTime > localTime;
+      }
+      
+      if (needsUpdate) {
+        // 下载文件
+        const fileContent = await client.getFileContents(remotePath);
+        fs.writeFileSync(localPath, fileContent);
+        
+        // 设置文件修改时间与远程一致
+        const remoteTime = new Date(item.lastmod);
+        fs.utimesSync(localPath, remoteTime, remoteTime);
+      }
+    }
+  }
+};
+
+// 加载旧的配置并迁移到新的settings.json
+const migrateOldConfigs = () => {
+  const settings = readSettings();
+  let migrated = false;
+  
+  // 检查并迁移AI配置
+  const oldAIConfigPath = path.join(isDev ? path.dirname(__dirname) : path.dirname(app.getPath('exe')), 'ai-config.json');
+  if (fs.existsSync(oldAIConfigPath)) {
+    try {
+      const aiData = fs.readFileSync(oldAIConfigPath, 'utf8');
+      settings.ai = JSON.parse(aiData);
+      migrated = true;
+      console.log('已迁移AI配置');
+    } catch (e) {
+      console.error('迁移AI配置失败:', e);
+    }
+  }
+  
+  // 检查并迁移外观配置
+  const oldAppearancePath = path.join(isDev ? path.dirname(__dirname) : path.dirname(app.getPath('exe')), 'appearanceconfig.json');
+  if (fs.existsSync(oldAppearancePath)) {
+    try {
+      const appearanceData = fs.readFileSync(oldAppearancePath, 'utf8');
+      settings.appearance = JSON.parse(appearanceData);
+      migrated = true;
+      console.log('已迁移外观配置');
+    } catch (e) {
+      console.error('迁移外观配置失败:', e);
+    }
+  }
+  
+  // 检查并迁移同步配置
+  const oldSyncPath = path.join(isDev ? path.dirname(__dirname) : path.dirname(app.getPath('exe')), 'sync.json');
+  if (fs.existsSync(oldSyncPath)) {
+    try {
+      const syncData = fs.readFileSync(oldSyncPath, 'utf8');
+      const syncConfig = JSON.parse(syncData);
+      
+      // 如果存在lastSync字段，转换为Date对象
+      if (syncConfig.lastSync) {
+        syncConfig.lastSync = new Date(syncConfig.lastSync);
+      }
+      
+      settings.sync = syncConfig;
+      migrated = true;
+      console.log('已迁移同步配置');
+    } catch (e) {
+      console.error('迁移同步配置失败:', e);
+    }
+  }
+  
+  // 如果有配置被迁移，保存新的配置文件
+  if (migrated) {
+    saveSettings(settings);
+    console.log('配置迁移完成');
+  }
+  
+  return settings;
 }; 
