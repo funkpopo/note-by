@@ -104,4 +104,26 @@ contextBridge.exposeInMainWorld('electron', {
   
   // 保存外观设置
   saveAppearanceSettings: (settings) => ipcRenderer.invoke('save-appearance-settings', settings),
+  
+  // 监听主题变更通知
+  onThemeChanged: (callback) => {
+    const themeChangedHandler = (_, theme) => callback(theme);
+    ipcRenderer.on('theme-changed', themeChangedHandler);
+    
+    // 返回清理函数
+    return () => {
+      ipcRenderer.removeListener('theme-changed', themeChangedHandler);
+    };
+  },
+  
+  // 监听外观设置变更通知
+  onAppearanceSettingsChanged: (callback) => {
+    const settingsChangedHandler = (_, settings) => callback(settings);
+    ipcRenderer.on('appearance-settings-changed', settingsChangedHandler);
+    
+    // 返回清理函数
+    return () => {
+      ipcRenderer.removeListener('appearance-settings-changed', settingsChangedHandler);
+    };
+  },
 }); 

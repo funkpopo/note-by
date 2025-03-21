@@ -264,8 +264,8 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
           userPrompt = `请根据以下文本，继续写作至少100字，至多500字，保持内容风格一致，不提供任何建议，仅输出续写的内容:\n\n${text}`;
           break;
         case 'check':
-          systemPrompt += "你能够检查文本中的语法、表述和逻辑问题，并进行修改，不提供任何修改建议，仅输出修改之后的结果。";
-          userPrompt = `请检查以下文本中的语法和表述问题，并进行修改，不要提供任何修改建议，仅输出修改之后的结果:\n\n${text}`;
+          systemPrompt += "你能够检查文本中的语法、表述和逻辑问题，并进行修改，提供修改建议，并输出修改之后的结果。";
+          userPrompt = `请检查以下文本中的语法和表述问题，并进行修改，提供修改建议，并输出修改之后的结果:\n\n${text}`;
           break;
         case 'translate':
           systemPrompt += "你是一个精通多语言的翻译专家，能够保持原文的风格和语气，并正确地翻译专业术语。不提供任何建议，仅输出翻译之后的结果。";
@@ -376,7 +376,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
         defaultModel: "edit&preview",
       },
       toolbars: {
-        toolbar: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', '|', 'header', 'ruby', 'list', 'checklist', 'justify', 'panel', '|', 'quote', 'hr', 'code', 'table', 'graph', '|', 'link', 'image', 'file', '|', 'undo', 'redo', '|', 'export'],
+        toolbar: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', '|', 'header', 'list', 'checklist', 'justify', 'panel', '|', 'quote', 'hr', 'code', 'table', 'graph', '|', 'link', 'image', 'file', '|', 'undo', 'redo', '|', 'export', 'togglePreview', 'switchModel'],
         bubble: ['bold', 'italic', 'underline', 'strikethrough', 'size', 'color', 'quote', 'code', 'link'],
         float: ['h1', 'h2', 'h3', '|', 'checklist', 'quote', 'table', 'code']
       },
@@ -437,171 +437,202 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
                     
                     // 创建下拉菜单
                     let menu: HTMLDivElement | null = document.querySelector('.ai-assistant-menu');
-                    if (!menu) {
-                      menu = document.createElement('div');
-                      menu.className = 'ai-assistant-menu';
-                      const menuEl = menu as HTMLDivElement;
-                      menuEl.style.position = 'absolute';
-                      menuEl.style.zIndex = '1000';
-                      menuEl.style.backgroundColor = 'var(--background)';
-                      menuEl.style.border = '1px solid var(--border)';
-                      menuEl.style.borderRadius = '4px';
-                      menuEl.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
-                      menuEl.style.padding = '4px 0';
-                      menuEl.style.minWidth = '160px';
+                    
+                    // 清理已存在的菜单
+                    if (menu && document.body.contains(menu)) {
+                      // 触发移除事件
+                      const removeEvent = new CustomEvent('remove');
+                      menu.dispatchEvent(removeEvent);
+                      return;  // 如果菜单已经存在，则关闭菜单并返回，避免再次创建
+                    }
+                    
+                    menu = document.createElement('div');
+                    menu.className = 'ai-assistant-menu';
+                    const menuEl = menu as HTMLDivElement;
+                    menuEl.style.position = 'absolute';
+                    menuEl.style.zIndex = '1000';
+                    menuEl.style.backgroundColor = 'var(--background)';
+                    menuEl.style.border = '1px solid var(--border)';
+                    menuEl.style.borderRadius = '4px';
+                    menuEl.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+                    menuEl.style.padding = '4px 0';
+                    menuEl.style.minWidth = '160px';
+                    
+                    // 添加菜单项
+                    const menuItems = [
+                      { text: '风格改写', action: 'style' },
+                      { text: '继续写作', action: 'continue' },
+                      { text: '检查表述/语法', action: 'check' },
+                      { text: '翻译', action: 'translate', hasSubmenu: true }
+                    ];
+                    
+                    menuItems.forEach(item => {
+                      const menuItem = document.createElement('div');
+                      menuItem.className = 'ai-assistant-menu-item';
+                      menuItem.style.padding = '6px 8px';
+                      menuItem.style.cursor = 'pointer';
+                      menuItem.style.display = 'flex';
+                      menuItem.style.alignItems = 'center';
+                      menuItem.style.justifyContent = 'space-between';
+                      menuItem.style.transition = 'background-color 0.2s';
+                      menuItem.textContent = item.text;
                       
-                      // 添加菜单项
-                      const menuItems = [
-                        { text: '风格改写', action: 'style' },
-                        { text: '继续写作', action: 'continue' },
-                        { text: '检查表述/语法', action: 'check' },
-                        { text: '翻译', action: 'translate', hasSubmenu: true }
-                      ];
-                      
-                      menuItems.forEach(item => {
-                        const menuItem = document.createElement('div');
-                        menuItem.className = 'ai-assistant-menu-item';
-                        menuItem.style.padding = '6px 8px';
-                        menuItem.style.cursor = 'pointer';
-                        menuItem.style.display = 'flex';
-                        menuItem.style.alignItems = 'center';
-                        menuItem.style.justifyContent = 'space-between';
-                        menuItem.style.transition = 'background-color 0.2s';
-                        menuItem.textContent = item.text;
+                      if (item.hasSubmenu && item.action === 'translate') {
+                        const arrowIcon = document.createElement('div');
+                        arrowIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+                        arrowIcon.style.marginLeft = '8px';
+                        menuItem.appendChild(arrowIcon);
                         
-                        if (item.hasSubmenu && item.action === 'translate') {
-                          const arrowIcon = document.createElement('div');
-                          arrowIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-                          arrowIcon.style.marginLeft = '8px';
-                          menuItem.appendChild(arrowIcon);
-                          
-                          // 创建语言选择子菜单
-                          const submenu = document.createElement('div') as HTMLDivElement;
-                          submenu.className = 'translation-submenu';
-                          submenu.style.position = 'absolute';
-                          submenu.style.left = '100%';
-                          submenu.style.top = '0';
-                          submenu.style.backgroundColor = 'var(--background)';
-                          submenu.style.border = '1px solid var(--border)';
-                          submenu.style.borderRadius = '4px';
-                          submenu.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
-                          submenu.style.padding = '4px 0';
-                          submenu.style.minWidth = '120px';
-                          submenu.style.display = 'none';
-                          submenu.style.zIndex = '1001';
-                          
-                          const languages = LANGUAGE_OPTIONS;
-                          
-                          languages.forEach(lang => {
-                            const langItem = document.createElement('div');
-                            langItem.className = 'translation-language-item';
-                            langItem.style.padding = '6px 8px';
-                            langItem.style.cursor = 'pointer';
-                            langItem.style.transition = 'background-color 0.2s';
-                            langItem.textContent = lang.name;
-                            
-                            langItem.addEventListener('mouseover', () => {
-                              langItem.style.backgroundColor = 'var(--accent)';
-                            });
-                            
-                            langItem.addEventListener('mouseout', () => {
-                              langItem.style.backgroundColor = '';
-                            });
-                            
-                            langItem.addEventListener('click', (e) => {
-                              e.stopPropagation();
-                              const selectedText = safeGetSelectedText();
-                              
-                              if (selectedText) {
-                                handleAIAssistant('translate', lang.code);
-                              } else {
-                                toast.error("请先选择要翻译的文本");
-                              }
-                              // 关闭菜单
-                              if (menu && document.body.contains(menu)) {
-                                document.body.removeChild(menu);
-                              }
-                            });
-                            
-                            submenu.appendChild(langItem);
-                          });
-                          
-                          menuItem.appendChild(submenu);
-                          
-                          // 显示/隐藏子菜单
-                          menuItem.addEventListener('mouseover', () => {
-                            submenu.style.display = 'block';
-                            menuItem.style.backgroundColor = 'var(--accent)';
-                          });
-                          
-                          menuItem.addEventListener('mouseout', (e) => {
-                            const relatedTarget = e.relatedTarget as Node;
-                            if (!submenu.contains(relatedTarget) && relatedTarget !== submenu) {
-                              submenu.style.display = 'none';
-                              menuItem.style.backgroundColor = '';
+                        // 创建语言选择子菜单
+                        const submenu = document.createElement('div') as HTMLDivElement;
+                        submenu.className = 'translation-submenu';
+                        submenu.style.position = 'absolute';
+                        submenu.style.left = '100%';
+                        submenu.style.top = '0';
+                        submenu.style.backgroundColor = 'var(--background)';
+                        submenu.style.border = '1px solid var(--border)';
+                        submenu.style.borderRadius = '4px';
+                        submenu.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+                        submenu.style.padding = '4px 0';
+                        submenu.style.minWidth = '120px';
+                        submenu.style.display = 'none';
+                        submenu.style.zIndex = '1001';
+                        
+                        // 确保子菜单随着主菜单被清理
+                        if (menu) {
+                          menu.addEventListener('remove', () => {
+                            if (document.body.contains(submenu)) {
+                              document.body.removeChild(submenu);
                             }
                           });
+                        }
+                        
+                        const languages = LANGUAGE_OPTIONS;
+                        
+                        languages.forEach(lang => {
+                          const langItem = document.createElement('div');
+                          langItem.className = 'translation-language-item';
+                          langItem.style.padding = '6px 8px';
+                          langItem.style.cursor = 'pointer';
+                          langItem.style.transition = 'background-color 0.2s';
+                          langItem.textContent = lang.name;
                           
-                          submenu.addEventListener('mouseover', () => {
-                            submenu.style.display = 'block';
-                            menuItem.style.backgroundColor = 'var(--accent)';
+                          langItem.addEventListener('mouseover', () => {
+                            langItem.style.backgroundColor = 'var(--accent)';
                           });
                           
-                          submenu.addEventListener('mouseout', (e) => {
-                            const relatedTarget = e.relatedTarget as Node;
-                            if (!menuItem.contains(relatedTarget) && relatedTarget !== menuItem) {
-                              submenu.style.display = 'none';
-                              menuItem.style.backgroundColor = '';
-                            }
+                          langItem.addEventListener('mouseout', () => {
+                            langItem.style.backgroundColor = '';
                           });
-                        } else {
-                          // 非翻译选项的普通菜单项
-                        menuItem.addEventListener('mouseover', () => {
-                          menuItem.style.backgroundColor = 'var(--accent)';
-                        });
-                        
-                        menuItem.addEventListener('mouseout', () => {
-                            menuItem.style.backgroundColor = '';
-                        });
-                        
-                        menuItem.addEventListener('click', () => {
+                          
+                          langItem.addEventListener('click', (e) => {
+                            e.stopPropagation();
                             const selectedText = safeGetSelectedText();
                             
-                            if (item.action !== 'continue' && !selectedText) {
-                              // 显示提示：请先选择文本
-                              toast.error('请先选择文本');
+                            if (selectedText) {
+                              handleAIAssistant('translate', lang.code);
                             } else {
-                              handleAIAssistant(asActionType(item.action));
+                              toast.error("请先选择要翻译的文本");
                             }
                             // 关闭菜单
                             if (menu && document.body.contains(menu)) {
-                              document.body.removeChild(menu);
+                              removeMenu();
                             }
                           });
-                        }
+                          
+                          submenu.appendChild(langItem);
+                        });
                         
-                        if (menu) {
-                          menu.appendChild(menuItem);
-                        }
+                        menuItem.appendChild(submenu);
+                        
+                        // 显示/隐藏子菜单
+                        menuItem.addEventListener('mouseover', () => {
+                          submenu.style.display = 'block';
+                          menuItem.style.backgroundColor = 'var(--accent)';
+                        });
+                        
+                        menuItem.addEventListener('mouseout', (e) => {
+                          const relatedTarget = e.relatedTarget as Node;
+                          if (!submenu.contains(relatedTarget) && relatedTarget !== submenu) {
+                            submenu.style.display = 'none';
+                            menuItem.style.backgroundColor = '';
+                          }
+                        });
+                        
+                        submenu.addEventListener('mouseover', () => {
+                          submenu.style.display = 'block';
+                          menuItem.style.backgroundColor = 'var(--accent)';
+                        });
+                        
+                        submenu.addEventListener('mouseout', (e) => {
+                          const relatedTarget = e.relatedTarget as Node;
+                          if (!menuItem.contains(relatedTarget) && relatedTarget !== menuItem) {
+                            submenu.style.display = 'none';
+                            menuItem.style.backgroundColor = '';
+                          }
+                        });
+                      } else {
+                        // 非翻译选项的普通菜单项
+                      menuItem.addEventListener('mouseover', () => {
+                        menuItem.style.backgroundColor = 'var(--accent)';
                       });
                       
-                      if (menu) {
-                        document.body.appendChild(menu);
+                      menuItem.addEventListener('mouseout', () => {
+                          menuItem.style.backgroundColor = '';
+                      });
+                      
+                      menuItem.addEventListener('click', () => {
+                          const selectedText = safeGetSelectedText();
+                          
+                          if (item.action !== 'continue' && !selectedText) {
+                            // 显示提示：请先选择文本
+                            toast.error('请先选择文本');
+                          } else {
+                            handleAIAssistant(asActionType(item.action));
+                          }
+                          // 关闭菜单
+                          if (menu && document.body.contains(menu)) {
+                            removeMenu();
+                          }
+                        });
                       }
                       
-                      // 点击外部关闭菜单
-                      const closeMenu = (e: MouseEvent) => {
-                        if (!menu?.contains(e.target as Node) && !aiButton?.contains?.(e.target as Node)) {
-                          if (menu && document.body.contains(menu)) {
-                            document.body.removeChild(menu);
-                          }
-                          document.removeEventListener('click', closeMenu);
+                      if (menu) {
+                        menu.appendChild(menuItem);
+                      }
+                    });
+                    
+                    if (menu) {
+                      document.body.appendChild(menu);
+                    }
+                    
+                    // 点击外部关闭菜单
+                    const closeMenu = (e: MouseEvent) => {
+                      if (!menu?.contains(e.target as Node) && !aiButton?.contains?.(e.target as Node)) {
+                        if (menu && document.body.contains(menu)) {
+                          removeMenu();
                         }
-                      };
-                      
-                      setTimeout(() => {
-                        document.addEventListener('click', closeMenu);
-                      }, 0);
+                      }
+                    };
+                    
+                    // 使用一次性 timeout 注册事件监听器
+                    const timeoutId = setTimeout(() => {
+                      document.addEventListener('click', closeMenu);
+                    }, 0);
+                    
+                    // 确保菜单项也会移除事件监听器
+                    const removeMenu = () => {
+                      clearTimeout(timeoutId);
+                      document.removeEventListener('click', closeMenu);
+                      if (menu && document.body.contains(menu)) {
+                        document.body.removeChild(menu);
+                      }
+                    };
+                    
+                    // 添加数据属性用于标识
+                    if (menu) {
+                      menu.setAttribute('data-menu-id', Date.now().toString());
+                      menu.addEventListener('remove', removeMenu);
                     }
                     
                     // 设置菜单位置

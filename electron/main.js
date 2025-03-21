@@ -634,10 +634,45 @@ const saveAppearanceSettingsToFile = (settings) => {
   const configPath = getAppearanceConfigPath();
   
   try {
-    fs.writeFileSync(configPath, JSON.stringify(settings, null, 2), 'utf8');
+    // 验证settings对象，确保数据格式正确
+    const validSettings = {
+      fontFamily: typeof settings.fontFamily === 'string' ? settings.fontFamily : "system-ui, sans-serif",
+      fontSize: typeof settings.fontSize === 'string' ? settings.fontSize : "16px",
+      sidebarWidth: typeof settings.sidebarWidth === 'number' ? settings.sidebarWidth : 288,
+      theme: ['light', 'dark', 'system', undefined].includes(settings.theme) ? settings.theme : undefined
+    };
+    
+    // 格式化JSON，确保易于阅读
+    const jsonData = JSON.stringify(validSettings, null, 2);
+    
+    // 确保目录存在
+    const configDir = path.dirname(configPath);
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    // 写入文件
+    fs.writeFileSync(configPath, jsonData, 'utf8');
+    console.log(`外观设置已保存到: ${configPath}`);
+    
+    // 通知渲染进程设置已更改
+    try {
+      const mainWindow = BrowserWindow.getAllWindows()[0];
+      if (mainWindow) {
+        if (settings.theme) {
+          mainWindow.webContents.send('theme-changed', settings.theme);
+        }
+        
+        // 发送所有外观设置变更事件
+        mainWindow.webContents.send('appearance-settings-changed', validSettings);
+      }
+    } catch (err) {
+      console.error('通知渲染进程设置变更失败:', err);
+    }
+    
     return true;
   } catch (error) {
-    console.error('Error saving appearance config file:', error);
+    console.error('保存外观设置文件失败:', error);
     return false;
   }
 };

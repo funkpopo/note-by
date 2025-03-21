@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { 
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 // Font family options
 const fontOptions = [
@@ -32,9 +32,11 @@ const fontSizeOptions = [
   { label: "中", value: "16px" },
   { label: "大", value: "18px" },
   { label: "超大", value: "20px" },
+  { label: "特大", value: "22px" },
 ];
 
 export default function AppearanceSettings() {
+  const { theme, setTheme } = useTheme();
   const [font, setFont] = useState("system-ui, sans-serif");
   const [fontSize, setFontSize] = useState("16px");
   const [customFont, setCustomFont] = useState("");
@@ -162,6 +164,31 @@ export default function AppearanceSettings() {
     };
   }, [font, fontSize, customFont, customFontSize, isLoading]);
 
+  // 保存主题设置到外观设置中
+  const handleThemeChange = async (newTheme: string) => {
+    setTheme(newTheme);
+    
+    // 保存到设置
+    if (window.electron && !isLoading) {
+      try {
+        const settings = await window.electron.getAppearanceSettings();
+        if (settings) {
+          // 新主题合并到现有设置
+          await window.electron.saveAppearanceSettings({
+            ...settings,
+            theme: newTheme
+          });
+          setSaveStatus("已保存");
+          setTimeout(() => setSaveStatus(null), 2000);
+        }
+      } catch (error) {
+        console.error("保存主题设置失败:", error);
+        setSaveStatus("保存失败");
+        setTimeout(() => setSaveStatus(null), 2000);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -179,13 +206,25 @@ export default function AppearanceSettings() {
       {/* 主题设置 */}
       <div className="border rounded-md p-4">
         <h3 className="text-lg font-medium mb-3">主题设置</h3>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="space-y-4">          
+          <div className="space-y-2">
+            <Select
+              value={theme || "system"}
+              onValueChange={handleThemeChange}
+            >
+              <SelectTrigger id="theme-select" className="w-full">
+                <SelectValue placeholder="选择主题" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">浅色</SelectItem>
+                <SelectItem value="dark">深色</SelectItem>
+                <SelectItem value="system">跟随系统</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-sm text-muted-foreground">
-              切换深色模式和浅色模式
+              选择浅色或深色主题，或跟随系统设置
             </p>
           </div>
-          <ThemeToggle />
         </div>
       </div>
       

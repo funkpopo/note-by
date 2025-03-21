@@ -89,6 +89,12 @@ interface Electron {
     success: boolean;
     error?: string;
   }>;
+  
+  // Theme change notification
+  onThemeChanged: (callback: (theme: string) => void) => (() => void);
+  
+  // Appearance settings change notification
+  onAppearanceSettingsChanged: (callback: (settings: AppearanceSettings) => void) => (() => void);
 }
 
 interface Note {
@@ -114,6 +120,7 @@ interface AppearanceSettings {
   fontFamily: string;
   fontSize: string;
   sidebarWidth: number;
+  theme?: string;
   // Add other appearance settings as needed
 }
 
