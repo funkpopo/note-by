@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import AppearanceSettings from "@/components/settings/appearance-settings";
 import SyncSettings from "@/components/settings/sync-settings";
 import AISettings from "@/components/settings/ai-settings";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Settings page tabs
 type SettingsTab = "appearance" | "sync" | "ai";
@@ -28,6 +29,9 @@ export default function Settings() {
             <SettingsIcon className="h-5 w-5" />
             设置
           </h1>
+        </div>
+        <div>
+          <ThemeToggle />
         </div>
       </header>
 

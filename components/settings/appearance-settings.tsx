@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Font family options
 const fontOptions = [
@@ -175,7 +176,23 @@ export default function AppearanceSettings() {
         自定义应用程序的外观，包括字体和文本大小等设置。
       </p>
       
+      {/* 主题设置 */}
+      <div className="border rounded-md p-4">
+        <h3 className="text-lg font-medium mb-3">主题设置</h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              切换深色模式和浅色模式
+            </p>
+          </div>
+          <ThemeToggle />
+        </div>
+      </div>
+      
+      {/* 字体设置 */}
       <div className="space-y-4">
+        <h3 className="text-lg font-medium">字体设置</h3>
+        
         <div className="space-y-2">
           <Label htmlFor="font-family">字体</Label>
           <Select 
@@ -247,6 +264,7 @@ export default function AppearanceSettings() {
         </div>
       </div>
       
+      {/* 预览区域 */}
       <div className="mt-6 p-4 border rounded-md">
         <h3 className="text-sm font-medium mb-2">预览</h3>
         <div 
