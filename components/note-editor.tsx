@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Cherry from "cherry-markdown";
 import { Button } from "@/components/ui/button";
 import { Bookmark, CheckCircle, Edit2, Info, Loader2, Save } from "lucide-react";
@@ -109,14 +109,150 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const responseWindowRef = useRef<HTMLDivElement>(null);
   const cancelStreamingRef = useRef<(() => void) | null>(null);
+  const aiResponseMarkdownRef = useRef<EnhancedCherry | null>(null);
   
   // 新增：窗口大小调整相关状态
   const [responseWindowSize, setResponseWindowSize] = useState({ width: 250, height: 300 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
-  const resizeStartPosition = useRef({ x: 0, y: 0 });
+  const resizeStartPosition = useRef<{x: number; y: number; posX?: number; posY?: number}>({ x: 0, y: 0 });
   const resizeStartSize = useRef({ width: 0, height: 0 });
   
+  // 添加额外的引用对象来存储当前窗口位置和大小，避免在回调中使用状态依赖
+  const currentWindowState = useRef({
+    position: { x: 0, y: 0 },
+    size: { width: 250, height: 300 }
+  });
+
+  // 同步引用对象和状态
+  useEffect(() => {
+    currentWindowState.current.position = aiResponsePosition;
+    currentWindowState.current.size = responseWindowSize;
+  }, [aiResponsePosition, responseWindowSize]);
+
+  // 新增一个自定义的防抖setState函数
+  const debouncedSetState = useRef<{
+    setPosition: ((pos: {x: number, y: number}) => void) | null,
+    setSize: ((size: {width: number, height: number}) => void) | null,
+    positionTimeout: NodeJS.Timeout | null,
+    sizeTimeout: NodeJS.Timeout | null,
+  }>({
+    setPosition: null,
+    setSize: null,
+    positionTimeout: null,
+    sizeTimeout: null
+  });
+
+  // 初始化防抖函数
+  useEffect(() => {
+    debouncedSetState.current.setPosition = (pos: {x: number, y: number}) => {
+      currentWindowState.current.position = pos;
+      
+      // 清除之前的定时器
+      if (debouncedSetState.current.positionTimeout) {
+        clearTimeout(debouncedSetState.current.positionTimeout);
+      }
+      
+      // 设置新的定时器
+      debouncedSetState.current.positionTimeout = setTimeout(() => {
+        setAIResponsePosition(pos);
+      }, 0);
+    };
+    
+    debouncedSetState.current.setSize = (size: {width: number, height: number}) => {
+      currentWindowState.current.size = size;
+      
+      // 清除之前的定时器
+      if (debouncedSetState.current.sizeTimeout) {
+        clearTimeout(debouncedSetState.current.sizeTimeout);
+      }
+      
+      // 设置新的定时器
+      debouncedSetState.current.sizeTimeout = setTimeout(() => {
+        setResponseWindowSize(size);
+      }, 0);
+    };
+    
+    return () => {
+      // 清理定时器
+      if (debouncedSetState.current.positionTimeout) {
+        clearTimeout(debouncedSetState.current.positionTimeout);
+      }
+      if (debouncedSetState.current.sizeTimeout) {
+        clearTimeout(debouncedSetState.current.sizeTimeout);
+      }
+    };
+  }, []);
+
+  // 重写调整大小的处理函数
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !resizeDirection) return;
+    
+    e.preventDefault();
+    
+    // 使用当前的ref值计算新尺寸和位置
+    const deltaX = e.clientX - resizeStartPosition.current.x;
+    const deltaY = e.clientY - resizeStartPosition.current.y;
+    let newWidth = resizeStartSize.current.width;
+    let newHeight = resizeStartSize.current.height;
+    let newPositionX = resizeStartPosition.current.posX || currentWindowState.current.position.x;
+    let newPositionY = resizeStartPosition.current.posY || currentWindowState.current.position.y;
+    let positionChanged = false;
+    
+    // 根据调整方向修改尺寸
+    if (resizeDirection.includes('e')) {
+      newWidth = Math.max(300, resizeStartSize.current.width + deltaX);
+    }
+    if (resizeDirection.includes('s')) {
+      newHeight = Math.max(200, resizeStartSize.current.height + deltaY);
+    }
+    if (resizeDirection.includes('w')) {
+      const widthDelta = -deltaX;
+      newWidth = Math.max(300, resizeStartSize.current.width + widthDelta);
+      // 同时为西侧调整位置
+      newPositionX = Math.min(newPositionX + deltaX, window.innerWidth - 300);
+      positionChanged = true;
+    }
+    if (resizeDirection.includes('n')) {
+      const heightDelta = -deltaY;
+      newHeight = Math.max(200, resizeStartSize.current.height + heightDelta);
+      // 同时为北侧调整位置
+      newPositionY = Math.min(newPositionY + deltaY, window.innerHeight - 200);
+      positionChanged = true;
+    }
+    
+    // 应用新尺寸 - 使用防抖函数
+    if (debouncedSetState.current.setSize) {
+      debouncedSetState.current.setSize({ width: newWidth, height: newHeight });
+    }
+    
+    // 只在需要时更新位置 - 使用防抖函数
+    if (positionChanged && debouncedSetState.current.setPosition) {
+      debouncedSetState.current.setPosition({ x: newPositionX, y: newPositionY });
+    }
+  }, [isResizing, resizeDirection]);
+  
+  // 重写拖动处理函数
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !responseWindowRef.current || !editorRef.current) return;
+    
+    // 获取编辑器范围以限制窗口位置
+    const editorRect = editorRef.current.getBoundingClientRect();
+    
+    // 计算新位置
+    let newX = e.clientX - dragOffset.x;
+    let newY = e.clientY - dragOffset.y;
+    
+    // 限制窗口位置在编辑器区域内
+    newX = Math.max(editorRect.left, Math.min(newX, editorRect.right - currentWindowState.current.size.width));
+    newY = Math.max(editorRect.top, Math.min(newY, editorRect.bottom - 80)); // 留出底部操作按钮的空间
+    
+    // 更新窗口位置 - 使用防抖函数
+    if (debouncedSetState.current.setPosition) {
+      debouncedSetState.current.setPosition({ x: newX, y: newY });
+    }
+  }, [isDragging, dragOffset]);
+
   // 获取当前主题模式
   const currentTheme = theme === "dark" ? "dark" : "light";
 
@@ -214,8 +350,11 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
       posY = editorRect.top + (editorRect.height - Math.min(responseWindowSize.height, editorRect.height - 20)) / 2;
     }
     
-    // 设置窗口位置
+    // 设置窗口位置 - 使用直接赋值方式避免依赖其他状态
     setAIResponsePosition({ x: posX, y: posY });
+    
+    // 同步到当前窗口状态引用
+    currentWindowState.current.position = { x: posX, y: posY };
     
     // 获取最新的AI配置
     let config = getDefaultAIConfig();
@@ -306,6 +445,10 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
               setIsResponseStreaming(false);
               setAiMessage("处理完成");
               setIsProcessingAI(false);
+              
+              // 完成流式输出后，确保渲染为Markdown
+              renderAIResponseMarkdown(fullText);
+              
               setTimeout(() => setAiMessage(""), 3000);
             }
           }, typeSpeed);
@@ -314,6 +457,10 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
           cancelStreamingRef.current = () => {
             clearInterval(typewriterIntervalId);
             setAIResponse(fullText); // 取消时显示完整文本
+            setIsResponseStreaming(false);
+            
+            // 取消流式时，也渲染Markdown
+            renderAIResponseMarkdown(fullText);
           };
         } else {
           setAIResponse(`AI处理失败: ${response.error || '未知错误'}`);
@@ -683,6 +830,17 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
       if (typeof cherryRef.current.setCodeBlockTheme === 'function') {
         cherryRef.current.setCodeBlockTheme(currentTheme === "dark" ? "one-dark" : "default");
       }
+      
+      // 如果AI响应实例存在，也更新其主题
+      if (aiResponseMarkdownRef.current) {
+        if (typeof aiResponseMarkdownRef.current.setTheme === 'function') {
+          aiResponseMarkdownRef.current.setTheme(currentTheme);
+        }
+        
+        if (typeof aiResponseMarkdownRef.current.setCodeBlockTheme === 'function') {
+          aiResponseMarkdownRef.current.setCodeBlockTheme(currentTheme === "dark" ? "one-dark" : "default");
+        }
+      }
     } catch (error) {
       console.error("更新Cherry主题失败", error);
     }
@@ -850,6 +1008,12 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
     setAIResponseAction(null);
     setSelectedText("");
     setIsProcessingAI(false);
+    
+    // 清理AI响应markdown实例
+    if (aiResponseMarkdownRef.current) {
+      aiResponseMarkdownRef.current.destroy();
+      aiResponseMarkdownRef.current = null;
+    }
   };
   
   // 关闭AI响应对话框
@@ -865,7 +1029,86 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
     setSelectedText("");
     cancelStreamingRef.current = null;
     setIsProcessingAI(false);
+    
+    // 清理AI响应markdown实例
+    if (aiResponseMarkdownRef.current) {
+      aiResponseMarkdownRef.current.destroy();
+      aiResponseMarkdownRef.current = null;
+    }
   };
+
+  // 渲染AI响应Markdown
+  const renderAIResponseMarkdown = (content: string) => {
+    // 如果已有实例，先销毁
+    if (aiResponseMarkdownRef.current) {
+      aiResponseMarkdownRef.current.destroy();
+      aiResponseMarkdownRef.current = null;
+    }
+    
+    // 延迟创建新实例，确保DOM已经准备好
+    setTimeout(() => {
+      const container = document.getElementById('ai-response-markdown');
+      if (!container) return;
+      
+      try {
+        // 清空容器内容
+        container.innerHTML = '';
+        
+        // 创建新的Cherry实例用于渲染AI响应
+        const cherry = new Cherry({
+          id: 'ai-response-markdown',
+          value: content,
+          // 添加命名空间以便应用主题
+          nameSpace: "note-by-ai-response",
+          // 配置主题
+          themeSettings: {
+            // 主题列表
+            themeList: [
+              { className: "dark", label: "深色" },
+              { className: "light", label: "浅色" }
+            ],
+            // 应用当前系统主题
+            mainTheme: currentTheme,
+            // 设置代码块主题，dark模式下使用one-dark主题
+            codeBlockTheme: currentTheme === "dark" ? "one-dark" : "default",
+            // 内联代码主题颜色
+            inlineCodeTheme: currentTheme === "dark" ? "red" : "black",
+            // 工具栏主题
+            toolbarTheme: currentTheme as "dark" | "light"
+          },
+          editor: {
+            defaultModel: 'previewOnly',
+          },
+          toolbars: {
+            toolbar: [],  // 禁用工具栏
+            bubble: [],   // 禁用气泡工具栏
+            float: []     // 禁用浮动工具栏
+          },
+          callback: {
+            afterInit: () => {
+              // AI响应Cherry实例初始化完成后的回调
+              console.log("AI响应Markdown渲染完成");
+            }
+          },
+        });
+        
+        aiResponseMarkdownRef.current = cherry;
+      } catch (error) {
+        console.error("渲染AI响应Markdown失败:", error);
+        // 回退到纯文本渲染
+        if (container) {
+          container.innerHTML = `<div class="whitespace-pre-wrap break-words text-sm">${content}</div>`;
+        }
+      }
+    }, 0);
+  };
+
+  // 在AI响应不再流式输出且对话框显示时渲染Markdown
+  useEffect(() => {
+    if (!isResponseStreaming && showAIResponseDialog && aiResponse) {
+      renderAIResponseMarkdown(aiResponse);
+    }
+  }, [isResponseStreaming, showAIResponseDialog, aiResponse]);
 
   // 取消当前正在进行的打字机效果
   const handleCancelStreaming = () => {
@@ -894,36 +1137,17 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
       y: e.clientY - rect.top
     });
     
+    // 同步当前窗口状态到引用
+    currentWindowState.current.position = { ...aiResponsePosition };
+    currentWindowState.current.size = { ...responseWindowSize };
+    
     setIsDragging(true);
-    
-    // 添加全局事件处理
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('mouseup', handleDragEnd);
-  };
-  
-  // 处理窗口拖动中
-  const handleDragMove = (e: MouseEvent) => {
-    if (!isDragging || !responseWindowRef.current || !editorRef.current) return;
-    
-    // 获取编辑器范围以限制窗口位置
-    const editorRect = editorRef.current.getBoundingClientRect();
-    
-    // 计算新位置
-    let newX = e.clientX - dragOffset.x;
-    let newY = e.clientY - dragOffset.y;
-    
-    // 限制窗口位置在编辑器区域内
-    newX = Math.max(editorRect.left, Math.min(newX, editorRect.right - responseWindowSize.width));
-    newY = Math.max(editorRect.top, Math.min(newY, editorRect.bottom - 80)); // 留出底部操作按钮的空间
-    
-    // 更新窗口位置
-    setAIResponsePosition({ x: newX, y: newY });
   };
   
   // 处理拖动结束
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
   
   // 添加和移除全局鼠标事件监听
   useEffect(() => {
@@ -936,55 +1160,16 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
       window.removeEventListener('mousemove', handleDragMove);
       window.removeEventListener('mouseup', handleDragEnd);
     };
-  }, [isDragging, dragOffset]);
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  // 重新定义handleResizeEnd
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+    setResizeDirection(null);
+  }, []);
 
   // 添加和移除调整大小的事件监听
   useEffect(() => {
-    const handleResizeMove = (e: MouseEvent) => {
-      if (!isResizing || !resizeDirection) return;
-      
-      e.preventDefault();
-      
-      const deltaX = e.clientX - resizeStartPosition.current.x;
-      const deltaY = e.clientY - resizeStartPosition.current.y;
-      let newWidth = resizeStartSize.current.width;
-      let newHeight = resizeStartSize.current.height;
-      
-      // 根据调整方向修改尺寸
-      if (resizeDirection.includes('e')) {
-        newWidth = Math.max(300, resizeStartSize.current.width + deltaX);
-      }
-      if (resizeDirection.includes('s')) {
-        newHeight = Math.max(200, resizeStartSize.current.height + deltaY);
-      }
-      if (resizeDirection.includes('w')) {
-        const widthDelta = -deltaX;
-        newWidth = Math.max(300, resizeStartSize.current.width + widthDelta);
-        // 同时为西侧调整位置
-        setAIResponsePosition(prev => ({
-          x: Math.min(prev.x - widthDelta, window.innerWidth - 300),
-          y: prev.y
-        }));
-      }
-      if (resizeDirection.includes('n')) {
-        const heightDelta = -deltaY;
-        newHeight = Math.max(200, resizeStartSize.current.height + heightDelta);
-        // 同时为北侧调整位置
-        setAIResponsePosition(prev => ({
-          x: prev.x,
-          y: Math.min(prev.y - heightDelta, window.innerHeight - 200)
-        }));
-      }
-      
-      // 应用新尺寸
-      setResponseWindowSize({ width: newWidth, height: newHeight });
-    };
-    
-    const handleResizeEnd = () => {
-      setIsResizing(false);
-      setResizeDirection(null);
-    };
-    
     if (isResizing) {
       window.addEventListener('mousemove', handleResizeMove);
       window.addEventListener('mouseup', handleResizeEnd);
@@ -994,12 +1179,16 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
       window.removeEventListener('mousemove', handleResizeMove);
       window.removeEventListener('mouseup', handleResizeEnd);
     };
-  }, [isResizing, resizeDirection]);
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
 
   // 处理调整大小开始
   const handleResizeStart = (e: React.MouseEvent, direction: string) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // 同步当前窗口状态到引用
+    currentWindowState.current.position = { ...aiResponsePosition };
+    currentWindowState.current.size = { ...responseWindowSize };
     
     setIsResizing(true);
     setResizeDirection(direction);
@@ -1008,7 +1197,55 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
     resizeStartPosition.current = { x: e.clientX, y: e.clientY };
     // 存储初始窗口大小
     resizeStartSize.current = { ...responseWindowSize };
+    // 同时存储初始位置以供后续计算使用
+    resizeStartPosition.current.posX = aiResponsePosition.x;
+    resizeStartPosition.current.posY = aiResponsePosition.y;
   };
+
+  // 添加AI响应对话框的样式
+  useEffect(() => {
+    // 为AI响应窗口添加样式
+    const style = document.createElement('style');
+    style.textContent = `
+      .cherry-markdown-response .cherry-markdown {
+        height: auto !important;
+        min-height: 100px;
+      }
+      
+      .cherry-markdown-response .cherry-editor-toolbar,
+      .cherry-markdown-response .cherry-editor {
+        display: none !important;
+      }
+      
+      .cherry-markdown-response .cherry-previewer {
+        height: auto !important;
+        min-height: 100px;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      
+      /* 确保代码块正确换行 */
+      .cherry-markdown-response pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      
+      /* 确保表格适应容器宽度 */
+      .cherry-markdown-response table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // 清理函数
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -1159,14 +1396,14 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
           ref={responseWindowRef}
           className="absolute z-50 shadow-xl" 
           style={{
-            width: `${responseWindowSize.width}px`,
+            width: `${currentWindowState.current.size.width}px`,
             maxHeight: '70vh',
             backgroundColor: 'var(--background)',
             border: '1px solid var(--border)',
             borderRadius: '8px',
             overflow: 'hidden',
-            top: `${aiResponsePosition.y}px`,
-            left: `${aiResponsePosition.x}px`,
+            top: `${currentWindowState.current.position.y}px`,
+            left: `${currentWindowState.current.position.x}px`,
             position: 'absolute',
           }}
         >
@@ -1200,7 +1437,11 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
           
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(70vh - 78px)' }}>
             <div className="p-3">
-              <div className="whitespace-pre-wrap break-words text-sm">{aiResponse}</div>
+              {isResponseStreaming ? (
+                <div className="whitespace-pre-wrap break-words text-sm">{aiResponse}</div>
+              ) : (
+                <div id="ai-response-markdown" className="cherry-markdown-response"></div>
+              )}
             </div>
           </div>
           
@@ -1214,7 +1455,7 @@ export function NoteEditor({ content, onChange, onSave, note, onRename }: NoteEd
                 <Button variant="outline" size="sm" onClick={closeAIResponseDialog} className="h-7 text-xs">
                   取消
                 </Button>
-                <Button size="sm" onClick={handleApplyAIResponse} disabled={isResponseStreaming || !aiResponse} className="h-7 text-xs">
+                <Button size="sm" onClick={handleApplyAIResponse} disabled={isResponseStreaming || !aiResponse} className="h-7 text-xs bg-green-500/80 hover:bg-green-600 text-white">
                   应用到文档
                 </Button>
               </>
