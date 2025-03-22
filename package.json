@@ -72,12 +72,6 @@
     ],
     "directories": {
       "buildResources": "resources"
-    },
-    "extraResources": [
-      {
-        "from": "resources/markdown",
-        "to": "markdown"
-      }
-    ]
+    }
   }
 }
