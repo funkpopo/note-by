@@ -7,6 +7,7 @@ import chokidar from 'chokidar';
 import isDev from 'electron-is-dev';
 import { OpenAI } from 'openai';
 import { createClient } from 'webdav';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,11 +15,57 @@ const __dirname = dirname(__filename);
 let mainWindow;
 let watcher = null;
 
+// 用于加密的密钥和初始化向量，在生产环境中应该更安全地存储
+const ENCRYPTION_KEY = 'note-by-secure-encryption-key-32char'; // 32字节密钥
+const ENCRYPTION_IV = 'note-by-init-vec'; // 16字节初始化向量
+
+// 加密密码
+const encryptPassword = (password) => {
+  if (!password) return '';
+  
+  try {
+    console.log('加密前密码长度:', password.length);
+    // 确保密钥和IV长度正确
+    const key = Buffer.from(ENCRYPTION_KEY).slice(0, 32);
+    const iv = Buffer.from(ENCRYPTION_IV).slice(0, 16);
+    
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    let encrypted = cipher.update(password, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    console.log('加密后密码:', encrypted);
+    return encrypted;
+  } catch (error) {
+    console.error('密码加密失败:', error);
+    return '';
+  }
+};
+
+// 解密密码
+const decryptPassword = (encryptedPassword) => {
+  if (!encryptedPassword) return '';
+  
+  try {
+    console.log('解密前密码:', encryptedPassword);
+    // 确保密钥和IV长度正确
+    const key = Buffer.from(ENCRYPTION_KEY).slice(0, 32);
+    const iv = Buffer.from(ENCRYPTION_IV).slice(0, 16);
+    
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    let decrypted = decipher.update(encryptedPassword, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    console.log('解密后密码长度:', decrypted.length);
+    return decrypted;
+  } catch (error) {
+    console.error('密码解密失败:', error);
+    return '';
+  }
+};
+
 // 获取笔记存储路径
 const getMarkdownDir = () => {
   if (isDev) {
     // 开发环境：笔记保存在项目根目录的 markdown 文件夹中
-    return path.join(dirname(__dirname), 'markdown');
+    return path.join(path.dirname(__dirname), 'markdown');
   } else {
     // 生产环境：笔记保存在应用程序同级目录的 markdown 文件夹中
     return path.join(path.dirname(app.getPath('exe')), 'markdown');
@@ -1112,7 +1159,12 @@ const setupAppearanceConfigHandlers = () => {
 // 读取同步配置
 const readSyncConfig = () => {
   const settings = readSettings();
-  return settings.sync || {
+  console.log('读取到的原始同步配置:', JSON.stringify({
+    ...settings.sync,
+    password: settings.sync?.password ? '******' : ''
+  }));
+  
+  const syncConfig = settings.sync || {
     enabled: false,
     serverUrl: '',
     username: '',
@@ -1120,16 +1172,58 @@ const readSyncConfig = () => {
     syncInterval: 60,
     autoSync: false
   };
+  
+  // 如果存在加密的密码，尝试解密
+  if (syncConfig.password) {
+    try {
+      syncConfig.password = decryptPassword(syncConfig.password);
+      console.log('密码已成功解密');
+    } catch (error) {
+      console.error('解密WebDAV密码失败:', error);
+      syncConfig.password = '';
+    }
+  } else {
+    console.log('没有找到加密的密码');
+  }
+  
+  console.log('返回的解密后配置:', JSON.stringify({
+    ...syncConfig,
+    password: syncConfig.password ? '******' : ''
+  }));
+  
+  return syncConfig;
 };
 
 // 保存同步配置到文件
 const saveSyncConfigToFile = (syncConfig) => {
   try {
+    console.log('保存同步配置请求:', JSON.stringify({
+      ...syncConfig,
+      password: syncConfig.password ? '******' : ''
+    }));
+    
     // 读取当前所有设置
     const settings = readSettings();
     
+    // 创建一个配置副本，避免修改原始对象
+    const configToSave = { ...syncConfig };
+    
+    // 如果有密码，加密后再保存
+    if (configToSave.password) {
+      console.log('即将加密密码...');
+      configToSave.password = encryptPassword(configToSave.password);
+      console.log('密码已加密完成');
+    } else {
+      console.log('未提供密码，不进行加密');
+    }
+    
     // 更新同步配置部分
-    settings.sync = syncConfig;
+    settings.sync = configToSave;
+    
+    console.log('即将写入文件的同步配置:', JSON.stringify({
+      ...configToSave,
+      password: configToSave.password ? '******' : ''
+    }));
     
     // 保存整个设置文件
     const success = saveSettings(settings);

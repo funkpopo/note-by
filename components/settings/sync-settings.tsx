@@ -77,9 +77,16 @@ export default function SyncSettings() {
     setSaveStatus('idle');
     
     try {
+      console.log('提交表单数据:', JSON.stringify({ 
+        ...values, 
+        password: values.password ? '******' : '' 
+      }));
+      
       const result = await window.electron.saveSyncConfig(values);
       if (result.success) {
         setSaveStatus('success');
+        // 保存成功后重置表单的脏状态，但保留当前值
+        form.reset(values);
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
         setSaveStatus('error');
@@ -289,7 +296,7 @@ export default function SyncSettings() {
             
             <Button 
               type="submit" 
-              disabled={isSaving || !form.formState.isDirty}
+              disabled={isSaving}
             >
               {isSaving ? "保存中..." : "保存设置"}
             </Button>
