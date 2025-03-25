@@ -1,0 +1,167 @@
+/* 自定义Semi Design主题变量 */
+
+/* 浅色模式 */
+body[theme-mode='light'] {
+  /* 基础颜色 */
+  --semi-color-primary: #1890ff;
+  --semi-color-primary-hover: #40a9ff;
+  --semi-color-primary-active: #096dd9;
+  --semi-color-primary-light-default: rgba(24, 144, 255, 0.1);
+  --semi-color-primary-light-hover: rgba(24, 144, 255, 0.2);
+  --semi-color-primary-light-active: rgba(24, 144, 255, 0.3);
+  --semi-color-focus-border: rgba(24, 144, 255, 0.4); /* 聚焦状态边框颜色 */
+
+  /* 链接颜色 */
+  --semi-color-link: #1890ff;
+  --semi-color-link-hover: #40a9ff;
+  --semi-color-link-active: #096dd9;
+  --semi-color-link-visited: #1890ff;
+
+  /* 成功状态颜色 */
+  --semi-color-success: #52c41a;
+  --semi-color-success-hover: #73d13d;
+  --semi-color-success-active: #389e0d;
+  --semi-color-success-light-default: rgba(82, 196, 26, 0.1);
+  --semi-color-success-light-hover: rgba(82, 196, 26, 0.2);
+  --semi-color-success-light-active: rgba(82, 196, 26, 0.3);
+
+  /* 警告状态颜色 */
+  --semi-color-warning: #faad14;
+  --semi-color-warning-hover: #ffc53d;
+  --semi-color-warning-active: #d48806;
+  --semi-color-warning-light-default: rgba(250, 173, 20, 0.1);
+  --semi-color-warning-light-hover: rgba(250, 173, 20, 0.2);
+  --semi-color-warning-light-active: rgba(250, 173, 20, 0.3);
+
+  /* 错误状态颜色 */
+  --semi-color-danger: #ff4d4f;
+  --semi-color-danger-hover: #ff7875;
+  --semi-color-danger-active: #d9363e;
+  --semi-color-danger-light-default: rgba(255, 77, 79, 0.1);
+  --semi-color-danger-light-hover: rgba(255, 77, 79, 0.2);
+  --semi-color-danger-light-active: rgba(255, 77, 79, 0.3);
+
+  /* 信息状态颜色 */
+  --semi-color-info: #909399;
+  --semi-color-info-hover: #a6a9ad;
+  --semi-color-info-active: #82848a;
+  --semi-color-info-light-default: rgba(144, 147, 153, 0.1);
+  --semi-color-info-light-hover: rgba(144, 147, 153, 0.2);
+  --semi-color-info-light-active: rgba(144, 147, 153, 0.3);
+
+  /* 文本颜色 */
+  --semi-color-text-0: rgba(0, 0, 0, 0.9); /* 标题/正文 */
+  --semi-color-text-1: rgba(0, 0, 0, 0.65); /* 次要文本 */
+  --semi-color-text-2: rgba(0, 0, 0, 0.45); /* 辅助/说明文本 */
+  --semi-color-text-3: rgba(0, 0, 0, 0.25); /* 禁用文本 */
+
+  /* 背景颜色 */
+  --semi-color-bg-0: #ffffff; /* 组件、区域背景 */
+  --semi-color-bg-1: #f5f5f5; /* 页面背景 */
+  --semi-color-bg-2: #fafafa; /* 悬浮、禁用背景 */
+  --semi-color-bg-3: #f2f3f5; /* 表头、分割线背景 */
+  --semi-color-fill-0: rgba(0, 0, 0, 0.04); /* 容器填充色 */
+  --semi-color-fill-1: rgba(0, 0, 0, 0.08); /* 容器悬浮填充色 */
+  --semi-color-fill-2: rgba(0, 0, 0, 0.12); /* 容器点击填充色 */
+
+  /* 边框颜色 */
+  --semi-color-border: rgba(0, 0, 0, 0.15); /* 边框色 */
+  --semi-color-disabled: rgba(0, 0, 0, 0.2); /* 禁用态 */
+  --semi-color-disabled-bg: rgba(0, 0, 0, 0.04); /* 禁用背景 */
+  --semi-color-disabled-text: rgba(0, 0, 0, 0.25); /* 禁用文本 */
+
+  /* 组件特殊颜色 */
+  --semi-color-nav-bg: #001529; /* 导航背景 */
+  --semi-color-tertiary: #722ed1; /* 第三色 */
+  --semi-color-tertiary-hover: #9254de; /* 第三色悬浮 */
+  --semi-color-tertiary-active: #531dab; /* 第三色点击 */
+
+  /* 阴影 */
+  --semi-shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.1); /* 浮层阴影 */
+  --semi-shadow-card:
+    0 1px 2px -2px rgba(0, 0, 0, 0.04), 0 3px 6px 0 rgba(0, 0, 0, 0.06),
+    0 5px 12px 4px rgba(0, 0, 0, 0.04); /* 卡片阴影 */
+}
+
+/* 深色模式 */
+body[theme-mode='dark'] {
+  /* 基础颜色 */
+  --semi-color-primary: #177ddc;
+  --semi-color-primary-hover: #4096ff;
+  --semi-color-primary-active: #0958d9;
+  --semi-color-primary-light-default: rgba(23, 125, 220, 0.2);
+  --semi-color-primary-light-hover: rgba(23, 125, 220, 0.3);
+  --semi-color-primary-light-active: rgba(23, 125, 220, 0.4);
+  --semi-color-focus-border: rgba(23, 125, 220, 0.5); /* 聚焦状态边框颜色 */
+
+  /* 链接颜色 */
+  --semi-color-link: #177ddc;
+  --semi-color-link-hover: #4096ff;
+  --semi-color-link-active: #0958d9;
+  --semi-color-link-visited: #177ddc;
+
+  /* 成功状态颜色 */
+  --semi-color-success: #49aa19;
+  --semi-color-success-hover: #6abe39;
+  --semi-color-success-active: #3c8618;
+  --semi-color-success-light-default: rgba(73, 170, 25, 0.2);
+  --semi-color-success-light-hover: rgba(73, 170, 25, 0.3);
+  --semi-color-success-light-active: rgba(73, 170, 25, 0.4);
+
+  /* 警告状态颜色 */
+  --semi-color-warning: #d89614;
+  --semi-color-warning-hover: #e8b339;
+  --semi-color-warning-active: #aa7714;
+  --semi-color-warning-light-default: rgba(216, 150, 20, 0.2);
+  --semi-color-warning-light-hover: rgba(216, 150, 20, 0.3);
+  --semi-color-warning-light-active: rgba(216, 150, 20, 0.4);
+
+  /* 错误状态颜色 */
+  --semi-color-danger: #d32029;
+  --semi-color-danger-hover: #e84749;
+  --semi-color-danger-active: #a8161e;
+  --semi-color-danger-light-default: rgba(211, 32, 41, 0.2);
+  --semi-color-danger-light-hover: rgba(211, 32, 41, 0.3);
+  --semi-color-danger-light-active: rgba(211, 32, 41, 0.4);
+
+  /* 信息状态颜色 */
+  --semi-color-info: #8c8c8c;
+  --semi-color-info-hover: #a6a6a6;
+  --semi-color-info-active: #737373;
+  --semi-color-info-light-default: rgba(140, 140, 140, 0.2);
+  --semi-color-info-light-hover: rgba(140, 140, 140, 0.3);
+  --semi-color-info-light-active: rgba(140, 140, 140, 0.4);
+
+  /* 文本颜色 */
+  --semi-color-text-0: rgba(255, 255, 255, 0.85); /* 标题/正文 */
+  --semi-color-text-1: rgba(255, 255, 255, 0.65); /* 次要文本 */
+  --semi-color-text-2: rgba(255, 255, 255, 0.45); /* 辅助/说明文本 */
+  --semi-color-text-3: rgba(255, 255, 255, 0.25); /* 禁用文本 */
+
+  /* 背景颜色 */
+  --semi-color-bg-0: #2a2a2a; /* 组件、区域背景 */
+  --semi-color-bg-1: #1f1f1f; /* 页面背景 */
+  --semi-color-bg-2: #1f1f1f; /* 悬浮、禁用背景 */
+  --semi-color-bg-3: #303030; /* 表头、分割线背景 */
+  --semi-color-fill-0: rgba(255, 255, 255, 0.04); /* 容器填充色 */
+  --semi-color-fill-1: rgba(255, 255, 255, 0.08); /* 容器悬浮填充色 */
+  --semi-color-fill-2: rgba(255, 255, 255, 0.12); /* 容器点击填充色 */
+
+  /* 边框颜色 */
+  --semi-color-border: rgba(255, 255, 255, 0.15); /* 边框色 */
+  --semi-color-disabled: rgba(255, 255, 255, 0.2); /* 禁用态 */
+  --semi-color-disabled-bg: rgba(255, 255, 255, 0.04); /* 禁用背景 */
+  --semi-color-disabled-text: rgba(255, 255, 255, 0.25); /* 禁用文本 */
+
+  /* 组件特殊颜色 */
+  --semi-color-nav-bg: #141414; /* 导航背景 */
+  --semi-color-tertiary: #9b59b6; /* 第三色 */
+  --semi-color-tertiary-hover: #b37eca; /* 第三色悬浮 */
+  --semi-color-tertiary-active: #7d4d93; /* 第三色点击 */
+
+  /* 阴影 */
+  --semi-shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.85); /* 浮层阴影 */
+  --semi-shadow-card:
+    0 1px 2px -2px rgba(0, 0, 0, 0.48), 0 3px 6px 0 rgba(0, 0, 0, 0.72),
+    0 5px 12px 4px rgba(0, 0, 0, 0.48); /* 卡片阴影 */
+}

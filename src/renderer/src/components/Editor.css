@@ -1,0 +1,109 @@
+.editor-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--semi-color-bg-0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  z-index: 10;
+  height: auto;
+  min-height: 20px;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.editor-title-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 5px;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+}
+
+.editor-actions .semi-button {
+  margin-left: 8px;
+}
+
+/* 美化编辑器内部样式 */
+#cherry-markdown {
+  background-color: var(--semi-color-bg-1);
+  overflow: hidden !important; /* 强制禁用滚动条 */
+}
+
+/* 针对Cherry Markdown编辑器的样式修复 */
+.cherry-editor {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+
+.cherry-toolbar {
+  flex-wrap: wrap !important;
+  height: auto !important;
+  min-height: 40px !important;
+  overflow: visible !important;
+}
+
+.cherry-toolbar .cherry-toolbar-content {
+  flex-wrap: wrap !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.cherry-toolbar .cherry-toolbar-content .cherry-toolbar-item {
+  margin-bottom: 5px !important;
+}
+
+/* 防止cherry编辑器内部元素溢出 */
+.cherry * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 在暗色模式下调整样式 - 使用theme-mode属性 */
+body[theme-mode='dark'] .editor-header {
+  background-color: var(--semi-color-bg-1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+body[theme-mode='dark'] #cherry-markdown {
+  background-color: var(--semi-color-bg-2);
+}
+
+/* 为Cherry编辑器添加暗色主题增强样式 */
+body[theme-mode='dark'] .cherry-editor {
+  color: var(--semi-color-text-0);
+}
+
+body[theme-mode='dark'] .cherry-toolbar {
+  background-color: var(--semi-color-bg-2);
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+body[theme-mode='dark'] .cherry-toolbar .cherry-toolbar-item {
+  color: var(--semi-color-text-0);
+}
+
+body[theme-mode='dark'] .cherry-editor .cherry-editor-previewWrap {
+  background-color: var(--semi-color-bg-2);
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .editor-header {
+    padding: 12px 16px;
+  }
+
+  .editor-title-container {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .editor-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
