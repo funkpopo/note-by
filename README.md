@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="/resources/icon.png" style="width:100px"/>
+</p>
+
 # Note-By - Electron + React 笔记应用
 
 这是一个使用 Electron 和 React 构建的笔记应用，结合了 Electron 的桌面应用能力和 React 的现代 Web 开发体验。
@@ -50,7 +54,7 @@ npm run electron:build
 应用支持通过 WebDAV 协议同步笔记：
 
 1. 在设置中启用 WebDAV 同步
-2. 配置 WebDAV 服务器地址（例如：https://nextcloud.example.com/remote.php/dav/files/username/）
+2. 配置 WebDAV 服务器地址（例如：https://nextcloud.example.com/remote.php/dav/files/username/ ）
 3. 输入用户名和密码（可选）
 4. 测试连接以确保配置正确
 5. 选择是否启用自动同步，并设置同步间隔
