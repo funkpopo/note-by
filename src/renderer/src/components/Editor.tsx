@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useContext } from 'react'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
 import { Button, Typography, Space, Tooltip } from '@douyinfe/semi-ui'
-import { IconSave, IconCopy } from '@douyinfe/semi-icons'
+import { IconSave, IconCopy, IconEdit } from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
 import './Editor.css'
 
@@ -145,6 +145,9 @@ const Editor: React.FC = () => {
           <Tooltip content="复制全文">
             <Button icon={<IconCopy />} type="tertiary" />
           </Tooltip>
+          <Button icon={<IconEdit />} type="secondary">
+            AI助手
+          </Button>
           <Button icon={<IconSave />} type="primary">
             保存
           </Button>

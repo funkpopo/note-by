@@ -61,6 +61,7 @@ npm run electron:build
 6. 保存设置
 
 同步配置存储在：
+
 - 开发环境：项目根目录的 `settings.json` 文件
 - 生产环境：应用程序同级目录的 `settings.json` 文件
 
