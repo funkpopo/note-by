@@ -10,6 +10,7 @@ interface CreateDialogProps {
   onCancel: () => void
   placeholder?: string
   validateMessage?: string
+  defaultFolder?: string
 }
 
 const CreateDialog: React.FC<CreateDialogProps> = ({
@@ -20,7 +21,8 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
   onConfirm,
   onCancel,
   placeholder = '请输入名称',
-  validateMessage = '名称不能为空'
+  validateMessage = '名称不能为空',
+  defaultFolder
 }) => {
   const [value, setValue] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('')
@@ -33,12 +35,16 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
       setValue('')
       setError('')
 
-      // 如果有文件夹，默认选择第一个
-      if (type === 'note' && folders.length > 0) {
-        setSelectedFolder(folders[0])
+      // 如果有默认文件夹，使用默认文件夹，否则如果有文件夹列表，使用第一个
+      if (type === 'note') {
+        if (defaultFolder) {
+          setSelectedFolder(defaultFolder)
+        } else if (folders.length > 0) {
+          setSelectedFolder(folders[0])
+        }
       }
     }
-  }, [visible, type, folders])
+  }, [visible, type, folders, defaultFolder])
 
   // 重置表单状态
   const resetForm = (): void => {
@@ -79,7 +85,9 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
   }
 
   // 处理文件夹选择变化
-  const handleFolderChange = (val: string | number | any[] | Record<string, any>): void => {
+  const handleFolderChange = (
+    val: string | number | Array<string | number> | Record<string, unknown>
+  ): void => {
     setSelectedFolder(val as string)
   }
 
@@ -119,12 +127,21 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
             initValue={folders.length > 0 ? folders[0] : undefined}
             onChange={handleFolderChange}
             style={{ width: '100%', marginBottom: '16px' }}
+            showClear={false}
+            filter
           >
-            {folders.map((folder) => (
-              <Select.Option key={folder} value={folder}>
-                {folder}
-              </Select.Option>
-            ))}
+            {folders.map((folder) => {
+              // 优化展示名称，对嵌套路径显示最后一级文件夹名称并加上完整路径提示
+              const displayName = folder.includes('/')
+                ? `${folder.split('/').pop()} (${folder})`
+                : folder
+
+              return (
+                <Select.Option key={folder} value={folder}>
+                  {displayName}
+                </Select.Option>
+              )
+            })}
           </Form.Select>
         )}
 

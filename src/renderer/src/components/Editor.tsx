@@ -271,12 +271,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
     >
       <div className="editor-header">
         <div className="editor-title-container">
-          <Typography.Title heading={4} style={{ margin: 0 }}>
-            笔记编辑器
+          <Typography.Title style={{ margin: 0, fontSize: 20 }}>
+            {currentFile ? `${currentFile}` : '新文档'}
           </Typography.Title>
-          <Typography.Text type="tertiary" style={{ marginLeft: '12px' }}>
-            {currentFile ? `编辑: ${currentFile}` : '新文档'}
-          </Typography.Text>
         </div>
         <Space className="editor-actions">
           <Tooltip content="复制全文">

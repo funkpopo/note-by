@@ -212,9 +212,32 @@ app.whenReady().then(() => {
       // 确保根目录存在
       await ensureMarkdownFolders(markdownRoot)
 
-      const entries = await fsPromises.readdir(markdownRoot, { withFileTypes: true })
-      const folders = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+      // 递归获取所有子文件夹
+      const getAllFolders = async (dir: string, basePath: string = ''): Promise<string[]> => {
+        const folders: string[] = []
 
+        try {
+          const entries = await fsPromises.readdir(dir, { withFileTypes: true })
+
+          // 先添加当前目录下的直接子文件夹
+          for (const entry of entries) {
+            if (entry.isDirectory()) {
+              const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name
+              folders.push(relativePath)
+
+              // 递归获取子文件夹中的文件夹
+              const subFolders = await getAllFolders(resolve(dir, entry.name), relativePath)
+              folders.push(...subFolders)
+            }
+          }
+        } catch (error) {
+          console.error(`读取目录 ${dir} 失败:`, error)
+        }
+
+        return folders
+      }
+
+      const folders = await getAllFolders(markdownRoot)
       return { success: true, folders }
     } catch (error) {
       console.error('获取Markdown文件夹列表失败:', error)
@@ -230,6 +253,13 @@ app.whenReady().then(() => {
 
       // 确保文件夹存在
       await ensureMarkdownFolders(folderPath)
+
+      // 检查文件夹是否存在
+      try {
+        await fsPromises.access(folderPath)
+      } catch {
+        console.log(`文件夹 ${folderName} 不存在，已创建`)
+      }
 
       const entries = await fsPromises.readdir(folderPath, { withFileTypes: true })
       const files = entries
@@ -278,13 +308,21 @@ app.whenReady().then(() => {
         return { success: false, error: '文件夹名称不能为空' }
       }
 
-      // 过滤掉路径中的非法字符
-      const sanitizedFolderName = folderName.replace(/[\\/:*?"<>|]/g, '_')
+      const markdownRoot = getMarkdownFolderPath()
+
+      // 处理嵌套路径，先分割成路径部分
+      const pathParts = folderName.split('/')
+
+      // 过滤每个部分中的非法字符，保留路径结构
+      const sanitizedParts = pathParts.map((part) => part.replace(/[\\:*?"<>|]/g, '_'))
+
+      // 重新组合路径
+      const sanitizedFolderName = sanitizedParts.join('/')
+
       if (sanitizedFolderName !== folderName) {
         console.log(`文件夹名称包含非法字符，已净化: ${folderName} -> ${sanitizedFolderName}`)
       }
 
-      const markdownRoot = getMarkdownFolderPath()
       const fullPath = resolve(markdownRoot, sanitizedFolderName)
 
       console.log('将要创建的文件夹完整路径:', fullPath)
@@ -305,7 +343,7 @@ app.whenReady().then(() => {
           console.error('路径存在但不是文件夹')
           return { success: false, error: '该名称已被文件占用' }
         }
-      } catch (error) {
+      } catch {
         // 错误表示路径不存在，可以创建
         console.log('开始创建文件夹')
       }

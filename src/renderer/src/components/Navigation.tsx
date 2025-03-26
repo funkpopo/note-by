@@ -82,6 +82,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
     title: string
     type: 'folder' | 'note'
     targetFolder?: string
+    defaultFolder?: string
   }>({
     visible: false,
     title: '',
@@ -97,34 +98,115 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
     try {
       // 获取文件夹列表
       const foldersResult = await window.api.markdown.getFolders()
+      console.log('获取到的所有文件夹:', foldersResult.folders)
 
       if (foldersResult.success && foldersResult.folders) {
         const folderItems: NavItem[] = []
+        const folderMap: Record<string, NavItem> = {}
 
-        // 处理每个文件夹
+        // 处理每个文件夹，构建文件夹树
         for (const folder of foldersResult.folders) {
           // 获取文件夹中的文件
           const filesResult = await window.api.markdown.getFiles(folder)
+          console.log(`文件夹[${folder}]中的文件:`, filesResult.files)
 
-          const folderItem: NavItem = {
-            itemKey: `folder:${folder}`,
-            text: folder,
-            icon: <IconFolder />,
-            isFolder: true,
-            items: []
+          // 检查是否为嵌套文件夹路径（包含斜杠）
+          if (folder.includes('/')) {
+            console.log('处理嵌套路径文件夹:', folder)
+            // 处理嵌套文件夹路径，例如 "parent/child"
+            const pathParts = folder.split('/')
+            let currentPath = ''
+            let parentFolder: NavItem | null = null
+
+            // 迭代路径部分，构建或查找每一级文件夹
+            for (let i = 0; i < pathParts.length; i++) {
+              const part = pathParts[i]
+              const isLastPart = i === pathParts.length - 1
+
+              // 构建当前路径
+              currentPath = currentPath ? `${currentPath}/${part}` : part
+              const folderKey = `folder:${currentPath}`
+
+              // 检查此文件夹是否已存在于映射中
+              if (!folderMap[folderKey]) {
+                // 创建新的文件夹项
+                const newFolder: NavItem = {
+                  itemKey: folderKey,
+                  text: part,
+                  icon: <IconFolder />,
+                  isFolder: true,
+                  items: []
+                }
+
+                folderMap[folderKey] = newFolder
+
+                // 如果是第一级文件夹，添加到根数组
+                if (i === 0) {
+                  if (!folderItems.some((item) => item.itemKey === folderKey)) {
+                    folderItems.push(newFolder)
+                  }
+                }
+                // 否则添加到父文件夹的子项中
+                else if (parentFolder) {
+                  if (!parentFolder.items) {
+                    parentFolder.items = []
+                  }
+                  if (!parentFolder.items.some((item) => item.itemKey === folderKey)) {
+                    parentFolder.items.push(newFolder)
+                  }
+                }
+              }
+
+              // 更新当前父文件夹引用
+              parentFolder = folderMap[folderKey]
+
+              // 如果是最后一部分，且有文件，添加文件
+              if (
+                isLastPart &&
+                filesResult.success &&
+                filesResult.files &&
+                filesResult.files.length > 0
+              ) {
+                // 确保文件夹有items数组
+                if (!parentFolder.items) {
+                  parentFolder.items = []
+                }
+
+                // 添加文件到当前文件夹
+                for (const file of filesResult.files) {
+                  const fileKey = `file:${folder}:${file}`
+                  parentFolder.items.push({
+                    itemKey: fileKey,
+                    text: file.replace('.md', ''),
+                    icon: <IconFile />,
+                    isFolder: false
+                  })
+                }
+              }
+            }
+          } else {
+            // 处理普通文件夹（顶级文件夹）
+            const folderItem: NavItem = {
+              itemKey: `folder:${folder}`,
+              text: folder,
+              icon: <IconFolder />,
+              isFolder: true,
+              items: []
+            }
+
+            // 如果有文件，添加到文件夹的子项中
+            if (filesResult.success && filesResult.files && filesResult.files.length > 0) {
+              folderItem.items = filesResult.files.map((file) => ({
+                itemKey: `file:${folder}:${file}`,
+                text: file.replace('.md', ''),
+                icon: <IconFile />,
+                isFolder: false
+              }))
+            }
+
+            folderItems.push(folderItem)
+            folderMap[folderItem.itemKey] = folderItem
           }
-
-          // 如果有文件，添加到文件夹的子项中
-          if (filesResult.success && filesResult.files && filesResult.files.length > 0) {
-            folderItem.items = filesResult.files.map((file) => ({
-              itemKey: `file:${folder}:${file}`,
-              text: file.replace('.md', ''),
-              icon: <IconFile />,
-              isFolder: false
-            }))
-          }
-
-          folderItems.push(folderItem)
         }
 
         setNavItems(folderItems)
@@ -163,6 +245,12 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
     e.preventDefault()
     e.stopPropagation()
 
+    console.log('处理右键菜单', {
+      itemKey,
+      isFolder,
+      position: { x: e.clientX, y: e.clientY }
+    })
+
     // 设置右键菜单位置和信息
     setContextMenu({
       visible: true,
@@ -177,6 +265,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
   // 处理空白区域右键菜单
   const handleEmptyAreaContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
+
+    console.log('处理空白区域右键菜单')
 
     // 确保点击的是空白区域，而非Tree中的节点
     const target = e.target as HTMLElement
@@ -363,7 +453,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
   const openCreateDialog = (
     title: string,
     type: 'folder' | 'note',
-    targetFolder?: string
+    targetFolder?: string,
+    defaultFolder?: string
   ): void => {
     // 先关闭可能存在的对话框，确保状态重置
     setCreateDialogConfig((prev) => ({
@@ -377,7 +468,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
         visible: true,
         title,
         type,
-        targetFolder
+        targetFolder,
+        defaultFolder
       })
     }, 50)
   }
@@ -389,8 +481,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
 
   // 处理创建确认
   const handleCreateConfirm = async (name: string, folder?: string): Promise<void> => {
-    const { type, targetFolder } = createDialogConfig
-    const finalFolder = folder || targetFolder
+    const { type, targetFolder, defaultFolder } = createDialogConfig
+    const finalFolder = folder || targetFolder || defaultFolder
 
     try {
       if (type === 'folder') {
@@ -404,7 +496,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
           return
         }
 
-        const result = await window.api.markdown.createFolder(name)
+        // 处理子文件夹情况：如果有父文件夹，则创建"父文件夹/新文件夹"格式的路径
+        const folderPath = finalFolder ? `${finalFolder}/${name}` : name
+        console.log('创建文件夹路径:', folderPath)
+
+        const result = await window.api.markdown.createFolder(folderPath)
         console.log('创建文件夹结果:', result)
 
         if (result.success) {
@@ -447,14 +543,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
           console.error('创建笔记失败:', result.error)
         }
       }
-
-      // 创建测试文件夹来验证权限
-      try {
-        const testResult = await window.api.markdown.createFolder('_test_folder_' + Date.now())
-        console.log('测试文件夹创建结果:', testResult)
-      } catch (error) {
-        console.error('测试文件夹创建失败:', error)
-      }
     } catch (error) {
       Toast.error(`创建${type === 'folder' ? '文件夹' : '笔记'}失败`)
       console.error('创建失败详细信息:', error)
@@ -495,14 +583,6 @@ Markdown目录内容: ${
         console.log('系统诊断信息:')
         console.log(message)
         console.log('完整诊断对象:', info)
-
-        // 创建测试文件夹来验证权限
-        try {
-          const testResult = await window.api.markdown.createFolder('_test_folder_' + Date.now())
-          console.log('测试文件夹创建结果:', testResult)
-        } catch (error) {
-          console.error('测试文件夹创建失败:', error)
-        }
       } else {
         Toast.error('获取诊断信息失败: ' + (result.error || '未知错误'))
       }
@@ -531,8 +611,24 @@ Markdown目录内容: ${
     // 从itemKey中提取文件夹名
     if (itemKey.startsWith('folder:')) {
       const folderName = itemKey.split(':')[1]
-      handleCreateNote(folderName)
+      // 先关闭右键菜单
+      setContextMenu({ visible: false, x: 0, y: 0, itemKey: '', isFolder: false, isEmpty: false })
+      // 然后打开创建对话框
+      openCreateDialog('新建笔记', 'note', undefined, folderName)
     }
+  }
+
+  // 在特定文件夹下创建子文件夹
+  const handleCreateSubFolder = (): void => {
+    const { itemKey } = contextMenu
+
+    // 从itemKey中提取父文件夹名
+    if (itemKey.startsWith('folder:')) {
+      const parentFolder = itemKey.split(':')[1]
+      openCreateDialog(`在 '${parentFolder}' 中新建子文件夹`, 'folder', parentFolder)
+    }
+
+    hideContextMenu()
   }
 
   // 将NavItem数组转换为Tree需要的数据格式
@@ -615,6 +711,32 @@ Markdown目录内容: ${
   // 关闭确认对话框
   const closeConfirmDialog = (): void => {
     setDialogConfig((prev) => ({ ...prev, visible: false }))
+  }
+
+  // 递归获取所有文件夹路径（包括子文件夹）
+  const getAllFolderPaths = (items: NavItem[]): string[] => {
+    const paths: string[] = []
+
+    const traverse = (items: NavItem[]): void => {
+      for (const item of items) {
+        if (item.isFolder) {
+          // 从itemKey中提取实际文件夹路径，格式为 folder:路径
+          const folderPath = item.itemKey.split(':')[1]
+          paths.push(folderPath)
+
+          // 递归处理子文件夹
+          if (item.items) {
+            const subFolders = item.items.filter((subItem) => subItem.isFolder)
+            if (subFolders.length > 0) {
+              traverse(subFolders)
+            }
+          }
+        }
+      }
+    }
+
+    traverse(items)
+    return paths
   }
 
   return (
@@ -713,6 +835,14 @@ Markdown目录内容: ${
                 // 通过节点的key判断是文件夹还是文件
                 const nodeKey = node.key?.toString() || ''
                 const isFolder = nodeKey.startsWith('folder:')
+
+                // 添加额外的调试信息
+                console.log('Tree节点右键菜单:', {
+                  nodeKey,
+                  isFolder,
+                  node: node
+                })
+
                 // 先转换成unknown再转成React.MouseEvent类型
                 const mouseEvent = e.nativeEvent as unknown as React.MouseEvent
                 handleContextMenu(mouseEvent, nodeKey, isFolder)
@@ -766,6 +896,20 @@ Markdown目录内容: ${
                   >
                     <IconPlus style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
                     <Typography.Text>新建笔记</Typography.Text>
+                  </div>
+                  <div
+                    className="context-menu-item"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={handleCreateSubFolder}
+                  >
+                    <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                    <Typography.Text>新建子文件夹</Typography.Text>
                   </div>
                   <div className="context-menu-divider" />
                   <div
@@ -964,10 +1108,11 @@ Markdown目录内容: ${
         visible={createDialogConfig.visible}
         title={createDialogConfig.title}
         type={createDialogConfig.type}
-        folders={navItems.map((item) => item.text)}
+        folders={getAllFolderPaths(navItems)}
         onConfirm={handleCreateConfirm}
         onCancel={closeCreateDialog}
         placeholder={createDialogConfig.type === 'folder' ? '请输入文件夹名称' : '请输入笔记名称'}
+        defaultFolder={createDialogConfig.defaultFolder}
       />
     </>
   )
