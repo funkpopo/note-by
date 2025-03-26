@@ -99,6 +99,47 @@
   margin-bottom: 8px;
 }
 
+/* AI内容展示区域 */
+.floating-toolbox-ai-content {
+  max-height: 400px;
+  overflow-y: auto;
+  word-break: break-word;
+  font-size: 14px;
+  padding: 4px 0;
+  margin-bottom: 8px;
+  user-select: text; /* 允许选择AI生成的内容 */
+}
+
+/* AI内容样式增强 */
+.floating-toolbox-ai-content .cherry {
+  height: auto !important;
+  min-height: 50px;
+}
+
+.floating-toolbox-ai-content .cherry-markdown {
+  height: auto !important;
+}
+
+.floating-toolbox-ai-content .cherry-editor {
+  height: auto !important;
+}
+
+.floating-toolbox-ai-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.floating-toolbox-ai-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.floating-toolbox-ai-content table {
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
 /* 空状态窗口样式调整 */
 .floating-toolbox-empty {
   min-width: 160px;

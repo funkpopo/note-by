@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Card, Button, Spin, Typography } from '@douyinfe/semi-ui'
 import { IconClose } from '@douyinfe/semi-icons'
 import './FloatingToolbox.css'
+import Cherry from 'cherry-markdown'
+import 'cherry-markdown/dist/cherry-markdown.css'
 
 interface FloatingToolboxProps {
   visible: boolean
@@ -11,6 +13,8 @@ interface FloatingToolboxProps {
   position?: { x: number; y: number }
   onClose: () => void
   children?: React.ReactNode
+  aiContent?: string
+  isAiResponse?: boolean
 }
 
 type ResizeDirection = 'right' | 'bottom' | 'bottom-right' | null
@@ -22,23 +26,29 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   loading = false,
   position,
   onClose,
-  children
+  children,
+  aiContent = '',
+  isAiResponse = false
 }) => {
   const toolboxRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  const cherryContainerRef = useRef<HTMLDivElement>(null)
   const [toolboxPosition, setToolboxPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [cherryInstance, setCherryInstance] = useState<Cherry | null>(null)
+  const [currentWordIndex, setCurrentWordIndex] = useState(0)
+  const [isPrinting, setIsPrinting] = useState(false)
 
   // 调整大小相关状态
   const [isResizing, setIsResizing] = useState(false)
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null)
   const [toolboxSize, setToolboxSize] = useState<{ width: number; height: number | 'auto' }>({
-    width: 180,
+    width: 280, // 增加默认宽度以适应Markdown内容
     height: 'auto'
   })
   const [startSize, setStartSize] = useState<{ width: number; height: number }>({
-    width: 180,
+    width: 280,
     height: 0
   })
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
@@ -46,12 +56,74 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   // 自动计算宽度（根据内容状态）
   const getCardWidth = (): number => {
     // 当没有内容且没有子元素时，使用较小的宽度
-    if (!content && !children && !loading && title === 'AI助手') {
+    if (!content && !children && !loading && !isAiResponse && title === 'AI助手') {
       return 160
     }
     // 当有内容或加载中或自定义调整过大小时使用自定义大小
     return toolboxSize.width
   }
+
+  // 初始化Cherry Markdown实例
+  useEffect((): (() => void) => {
+    if (visible && isAiResponse && cherryContainerRef.current && !cherryInstance) {
+      try {
+        const instance = new Cherry({
+          id: 'cherry-ai-response',
+          value: '',
+          editor: {
+            defaultModel: 'previewOnly',
+            height: '100%'
+          },
+          toolbars: {
+            toolbar: false,
+            sidebar: false,
+            bubble: false,
+            float: false
+          },
+          engine: {
+            global: {
+              flowSessionContext: true // 开启流式适配
+            }
+          }
+        })
+
+        setCherryInstance(instance)
+      } catch (err) {
+        console.error('初始化Cherry Markdown失败:', err)
+      }
+    }
+
+    return (): void => {
+      if (cherryInstance) {
+        cherryInstance.destroy()
+        setCherryInstance(null)
+      }
+    }
+  }, [visible, isAiResponse])
+
+  // 处理AI内容流式展示
+  useEffect((): void => {
+    if (visible && isAiResponse && cherryInstance && aiContent && !isPrinting) {
+      setIsPrinting(true)
+      setCurrentWordIndex(0)
+
+      const printContent = (): void => {
+        if (currentWordIndex <= aiContent.length) {
+          const currentText = aiContent.substring(0, currentWordIndex)
+          cherryInstance.setMarkdown(currentText)
+          setCurrentWordIndex((prev) => prev + 1)
+
+          if (currentWordIndex < aiContent.length) {
+            setTimeout(printContent, 30)
+          } else {
+            setIsPrinting(false)
+          }
+        }
+      }
+
+      printContent()
+    }
+  }, [visible, isAiResponse, cherryInstance, aiContent, currentWordIndex, isPrinting])
 
   // 计算并更新浮动窗口位置，确保在视口内
   useEffect(() => {
@@ -319,10 +391,17 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
           </div>
         ) : (
           <>
-            {content && title !== 'AI助手' && (
+            {content && title !== 'AI助手' && !isAiResponse && (
               <div className="floating-toolbox-content">
                 <Typography.Paragraph>{content}</Typography.Paragraph>
               </div>
+            )}
+            {isAiResponse && (
+              <div
+                ref={cherryContainerRef}
+                className="floating-toolbox-ai-content"
+                style={{ width: '100%', minHeight: '100px' }}
+              />
             )}
             {children}
           </>
