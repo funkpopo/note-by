@@ -28,7 +28,8 @@
     "@electron-toolkit/utils": "^4.0.0",
     "cherry-markdown": "^0.8.58",
     "openai": "^4.89.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "webdav": "^5.8.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
