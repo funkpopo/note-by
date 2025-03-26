@@ -9,8 +9,8 @@ import { promises as fsPromises } from 'fs'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
-  GET_SETTINGS: 'settings:get',
-  SET_SETTINGS: 'settings:set',
+  GET_SETTINGS: 'setting:get-all',
+  SET_SETTINGS: 'setting:set-all',
   GET_SETTING: 'setting:get',
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
@@ -26,7 +26,9 @@ const IPC_CHANNELS = {
   CREATE_MARKDOWN_NOTE: 'markdown:create-note',
   DELETE_MARKDOWN_FILE: 'markdown:delete-file',
   RENAME_MARKDOWN_FILE: 'markdown:rename-file',
-  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment'
+  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
+  GET_ALL_SETTINGS: 'settings:getAll',
+  CHECK_FILE_EXISTS: 'markdown:checkFileExists'
 }
 
 // 获取markdown文件夹路径
@@ -119,6 +121,10 @@ app.whenReady().then(() => {
     return readSettings()
   })
 
+  ipcMain.handle(IPC_CHANNELS.GET_ALL_SETTINGS, () => {
+    return readSettings()
+  })
+
   ipcMain.handle(IPC_CHANNELS.SET_SETTINGS, (_, settings) => {
     writeSettings(settings)
     return true
@@ -200,6 +206,26 @@ app.whenReady().then(() => {
     } catch (error) {
       console.error('保存Markdown文件失败:', error)
       return { success: false, error: String(error) }
+    }
+  })
+
+  // 检查文件是否存在
+  ipcMain.handle(IPC_CHANNELS.CHECK_FILE_EXISTS, async (_, filePath) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPath = resolve(markdownRoot, filePath)
+
+      // 检查文件是否存在
+      try {
+        const stat = await fsPromises.stat(fullPath)
+        return { success: true, exists: stat.isFile() }
+      } catch {
+        // 文件不存在
+        return { success: true, exists: false }
+      }
+    } catch (error) {
+      console.error(`检查文件 ${filePath} 是否存在失败:`, error)
+      return { success: false, error: String(error), exists: false }
     }
   })
 

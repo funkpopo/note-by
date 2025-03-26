@@ -31,6 +31,9 @@ interface Window {
         filePath: string,
         content: string
       ) => Promise<{ success: boolean; path?: string; error?: string }>
+      checkFileExists: (
+        filePath: string
+      ) => Promise<{ success: boolean; exists: boolean; error?: string }>
       getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
       getFiles: (
         folderName: string

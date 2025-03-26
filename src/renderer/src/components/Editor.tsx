@@ -9,6 +9,7 @@ import './Editor.css'
 interface EditorProps {
   currentFolder?: string
   currentFile?: string
+  onFileChanged?: () => void
 }
 
 // AI助手模型接口
@@ -24,7 +25,7 @@ interface TranslationOption {
   targetLang: string
 }
 
-const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
+const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChanged }) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const cherryRef = useRef<Cherry | null>(null)
   const { isDarkMode } = useContext(ThemeContext) || { isDarkMode: false }
@@ -39,6 +40,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
   const [loading, setLoading] = useState<boolean>(false)
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
+  const [confirmOverwriteVisible, setConfirmOverwriteVisible] = useState<boolean>(false)
   const translationOptions = [
     { id: 'en-zh', name: '英译中', targetLang: 'zh' },
     { id: 'zh-en', name: '中译英', targetLang: 'en' },
@@ -158,9 +160,70 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
       // 构建相对路径
       const filePath = `${folder}/${filename}`
 
-      const result = await window.api.markdown.save(filePath, content)
+      // 检查文件是否已存在
+      const checkResult = await window.api.markdown.checkFileExists(filePath)
+      
+      if (checkResult.success && checkResult.exists) {
+        // 如果是当前已打开的文件，直接覆盖
+        if (currentFile === filename && currentFolder === folder) {
+          const result = await window.api.markdown.save(filePath, content)
+          if (result.success) {
+            Toast.success('文档保存成功')
+            // 通知文件列表更新
+            if (onFileChanged) {
+              onFileChanged()
+            }
+          } else {
+            Toast.error(`保存失败: ${result.error}`)
+          }
+          setSaving(false)
+          setSaveModalVisible(false)
+        } else {
+          // 显示确认对话框
+          setConfirmOverwriteVisible(true)
+          setSaving(false)
+          // 不关闭保存对话框，等待用户确认
+        }
+      } else {
+        // 文件不存在，直接保存
+        const result = await window.api.markdown.save(filePath, content)
+        if (result.success) {
+          Toast.success('文档保存成功')
+          // 通知文件列表更新
+          if (onFileChanged) {
+            onFileChanged()
+          }
+        } else {
+          Toast.error(`保存失败: ${result.error}`)
+        }
+        setSaving(false)
+        setSaveModalVisible(false)
+      }
+    } catch (error) {
+      console.error('保存文档失败:', error)
+      Toast.error('保存文档失败')
+      setSaving(false)
+      setSaveModalVisible(false)
+    }
+  }
+
+  // 处理覆盖保存
+  const handleOverwriteConfirm = async (): Promise<void> => {
+    setConfirmOverwriteVisible(false)
+    setSaving(true)
+    try {
+      // 文件名添加.md后缀（如果没有）
+      const filename = fileName.endsWith('.md') ? fileName : `${fileName}.md`
+      // 构建相对路径
+      const filePath = `${selectedFolder}/${filename}`
+
+      const result = await window.api.markdown.save(filePath, fileContent)
       if (result.success) {
-        Toast.success('文档保存成功')
+        Toast.success('文档覆盖保存成功')
+        // 通知文件列表更新
+        if (onFileChanged) {
+          onFileChanged()
+        }
       } else {
         Toast.error(`保存失败: ${result.error}`)
       }
@@ -171,6 +234,55 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
       setSaving(false)
       setSaveModalVisible(false)
     }
+  }
+
+  // 处理创建副本
+  const handleCreateCopy = async (): Promise<void> => {
+    setConfirmOverwriteVisible(false)
+    setSaving(true)
+    try {
+      // 生成副本文件名（添加(1), (2)等后缀）
+      let copyIndex = 1
+      let copyFileName = fileName
+      let filename = ''
+      let filePath = ''
+      let checkResult = { success: true, exists: true }
+      
+      // 循环查找可用的文件名
+      while (checkResult.exists) {
+        copyFileName = `${fileName}(${copyIndex})`
+        filename = copyFileName.endsWith('.md') ? copyFileName : `${copyFileName}.md`
+        filePath = `${selectedFolder}/${filename}`
+        checkResult = await window.api.markdown.checkFileExists(filePath)
+        if (checkResult.exists) {
+          copyIndex++
+        }
+      }
+
+      // 保存副本
+      const result = await window.api.markdown.save(filePath, fileContent)
+      if (result.success) {
+        Toast.success(`文档已保存为 ${filename}`)
+        // 通知文件列表更新
+        if (onFileChanged) {
+          onFileChanged()
+        }
+      } else {
+        Toast.error(`保存失败: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('保存文档副本失败:', error)
+      Toast.error('保存文档副本失败')
+    } finally {
+      setSaving(false)
+      setSaveModalVisible(false)
+    }
+  }
+
+  // 处理取消保存
+  const handleCancelSave = (): void => {
+    setConfirmOverwriteVisible(false)
+    // 保持保存对话框打开，允许用户重命名
   }
 
   // 处理保存对话框的确认
@@ -536,6 +648,32 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
             新文件夹将自动创建
           </Typography.Text>
         </Form>
+      </Modal>
+
+      {/* 文件覆盖确认对话框 */}
+      <Modal
+        title="文件已存在"
+        visible={confirmOverwriteVisible}
+        footer={null}
+        onCancel={() => setConfirmOverwriteVisible(false)}
+        maskClosable={false}
+      >
+        <div>
+          <Typography.Text>
+            文件 <Typography.Text strong>{fileName}.md</Typography.Text> 在 <Typography.Text strong>{selectedFolder}</Typography.Text> 中已存在。
+          </Typography.Text>
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={handleCancelSave}>
+              取消
+            </Button>
+            <Button onClick={handleCreateCopy} type="secondary">
+              创建副本
+            </Button>
+            <Button onClick={handleOverwriteConfirm} type="danger">
+              覆盖
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

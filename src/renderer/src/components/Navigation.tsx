@@ -26,9 +26,10 @@ interface NavItem {
 interface NavigationProps {
   onNavChange: (key: string) => void
   onFileSelect?: (folder: string, file: string) => void
+  fileListVersion?: number
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) => {
+const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, fileListVersion }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
@@ -225,6 +226,13 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
       loadMarkdownFolders()
     }
   }, [showSecondaryNav])
+
+  // 当fileListVersion变化时重新加载文件列表
+  useEffect(() => {
+    if (showSecondaryNav && fileListVersion !== undefined) {
+      loadMarkdownFolders()
+    }
+  }, [fileListVersion])
 
   const handleCollapseChange = (status: boolean): void => {
     setCollapsed(status)

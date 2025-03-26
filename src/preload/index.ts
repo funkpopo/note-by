@@ -12,8 +12,8 @@ interface ApiConfig {
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
-  GET_SETTINGS: 'settings:get',
-  SET_SETTINGS: 'settings:set',
+  GET_SETTINGS: 'setting:get-all',
+  SET_SETTINGS: 'setting:set-all',
   GET_SETTING: 'setting:get',
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
@@ -29,7 +29,9 @@ const IPC_CHANNELS = {
   CREATE_MARKDOWN_NOTE: 'markdown:create-note',
   DELETE_MARKDOWN_FILE: 'markdown:delete-file',
   RENAME_MARKDOWN_FILE: 'markdown:rename-file',
-  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment'
+  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
+  GET_ALL_SETTINGS: 'settings:getAll',
+  CHECK_FILE_EXISTS: 'markdown:checkFileExists'
 }
 
 // Custom APIs for renderer
@@ -37,7 +39,7 @@ const api = {
   // 设置相关API
   settings: {
     // 获取所有设置
-    getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke(IPC_CHANNELS.GET_SETTINGS),
+    getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke(IPC_CHANNELS.GET_ALL_SETTINGS),
     // 保存所有设置
     setAll: (settings: Record<string, unknown>): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.SET_SETTINGS, settings),
@@ -71,6 +73,12 @@ const api = {
       content: string
     ): Promise<{ success: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SAVE_MARKDOWN, filePath, content),
+
+    // 检查文件是否存在
+    checkFileExists: (
+      filePath: string
+    ): Promise<{ success: boolean; exists: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHECK_FILE_EXISTS, filePath),
 
     // 获取文件夹列表
     getFolders: (): Promise<{ success: boolean; folders?: string[]; error?: string }> =>
