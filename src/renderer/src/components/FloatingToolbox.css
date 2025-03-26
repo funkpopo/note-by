@@ -97,6 +97,25 @@
   font-size: 14px;
   padding: 4px 0;
   margin-bottom: 8px;
+  user-select: text !important; /* 允许选择内容 */
+  -webkit-user-select: text !important;
+}
+
+.floating-toolbox-content * {
+  user-select: text !important; /* 允许选择内容的所有子元素 */
+  -webkit-user-select: text !important;
+}
+
+/* Cherry Markdown 内容可选 */
+.cherry-markdown .cherry-markdown-content {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.cherry-markdown .cherry-markdown-content * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
 }
 
 /* AI内容展示区域 */
@@ -107,7 +126,8 @@
   font-size: 14px;
   padding: 4px 0;
   margin-bottom: 8px;
-  user-select: text; /* 允许选择AI生成的内容 */
+  user-select: text !important; /* 允许选择AI生成的内容 */
+  -webkit-user-select: text !important;
 }
 
 /* AI内容样式增强 */

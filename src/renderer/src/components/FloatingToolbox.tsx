@@ -5,6 +5,18 @@ import './FloatingToolbox.css'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
 
+// 添加选中相关的CSS样式
+const selectableContentStyle = `
+.cherry-markdown .cherry-markdown-content * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+.floating-toolbox-content * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+`
+
 interface FloatingToolboxProps {
   visible: boolean
   title: string
@@ -33,10 +45,12 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   const toolboxRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const cherryContainerRef = useRef<HTMLDivElement>(null)
+  const contentContainerRef = useRef<HTMLDivElement>(null)
   const [toolboxPosition, setToolboxPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [cherryInstance, setCherryInstance] = useState<Cherry | null>(null)
+  const [contentCherryInstance, setContentCherryInstance] = useState<Cherry | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [isPrinting, setIsPrinting] = useState(false)
 
@@ -65,6 +79,15 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
   // 初始化Cherry Markdown实例
   useEffect((): (() => void) => {
+    // 确保允许文本选择的样式已添加
+    if (!document.getElementById('cherry-selectable-style')) {
+      const styleEl = document.createElement('style')
+      styleEl.id = 'cherry-selectable-style'
+      styleEl.innerHTML = selectableContentStyle
+      document.head.appendChild(styleEl)
+    }
+
+    // 为AI响应内容初始化Cherry实例
     if (visible && isAiResponse && cherryContainerRef.current && !cherryInstance) {
       try {
         const instance = new Cherry({
@@ -93,13 +116,119 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       }
     }
 
+    // 为普通内容初始化Cherry实例
+    if (
+      visible &&
+      content &&
+      !isAiResponse &&
+      contentContainerRef.current &&
+      !contentCherryInstance
+    ) {
+      try {
+        const instance = new Cherry({
+          id: 'cherry-content',
+          value: content,
+          editor: {
+            defaultModel: 'previewOnly',
+            height: '100%'
+          },
+          toolbars: {
+            toolbar: false,
+            sidebar: false,
+            bubble: false,
+            float: false
+          }
+        })
+
+        setContentCherryInstance(instance)
+      } catch (err) {
+        console.error('初始化内容Cherry Markdown失败:', err)
+      }
+    }
+
     return (): void => {
       if (cherryInstance) {
         cherryInstance.destroy()
         setCherryInstance(null)
       }
+      if (contentCherryInstance) {
+        contentCherryInstance.destroy()
+        setContentCherryInstance(null)
+      }
     }
-  }, [visible, isAiResponse])
+  }, [visible, isAiResponse, content])
+
+  // 添加选择事件处理和DOM修改
+  useEffect(() => {
+    // 处理AI内容的DOM，使其可选
+    if (cherryContainerRef.current) {
+      const contentElements = cherryContainerRef.current.querySelectorAll(
+        '.cherry-markdown-content, .cherry-markdown-content *'
+      )
+      contentElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.userSelect = 'text'
+          el.style.webkitUserSelect = 'text'
+          el.style.cursor = 'text'
+        }
+      })
+    }
+
+    // 处理普通内容的DOM，使其可选
+    if (contentContainerRef.current) {
+      const contentElements = contentContainerRef.current.querySelectorAll(
+        '.cherry-markdown-content, .cherry-markdown-content *'
+      )
+      contentElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.userSelect = 'text'
+          el.style.webkitUserSelect = 'text'
+          el.style.cursor = 'text'
+        }
+      })
+    }
+  }, [cherryInstance, contentCherryInstance, visible, aiContent, content])
+
+  // 当content变化时更新内容
+  useEffect(() => {
+    if (contentCherryInstance && content) {
+      contentCherryInstance.setMarkdown(content)
+    }
+  }, [content, contentCherryInstance])
+
+  // 添加MutationObserver监听DOM变化
+  useEffect(() => {
+    if (!visible) return
+
+    // 创建MutationObserver实例监听DOM变化
+    const observer = new MutationObserver(() => {
+      // 每当DOM变化时，确保Cherry Markdown内容可选
+      document
+        .querySelectorAll(
+          '.cherry-markdown .cherry-markdown-content, .cherry-markdown .cherry-markdown-content *'
+        )
+        .forEach((el) => {
+          if (el instanceof HTMLElement) {
+            el.style.userSelect = 'text'
+            el.style.webkitUserSelect = 'text'
+            el.style.cursor = 'text'
+          }
+        })
+    })
+
+    // 观察整个浮动工具箱
+    if (toolboxRef.current) {
+      observer.observe(toolboxRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: false
+      })
+    }
+
+    return (): void => {
+      observer.disconnect()
+    }
+  }, [visible])
 
   // 处理AI内容流式展示
   useEffect((): void => {
@@ -181,6 +310,12 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
     // 只有点击标题栏才能拖动
     if (!headerRef.current.contains(e.target as Node)) return
+
+    // 如果用户正在选择文本，不启动拖动
+    const selection = window.getSelection()
+    if (selection && selection.toString().length > 0) {
+      return
+    }
 
     // 计算鼠标相对于toolbox的偏移
     const rect = toolboxRef.current.getBoundingClientRect()
@@ -392,9 +527,11 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         ) : (
           <>
             {content && title !== 'AI助手' && !isAiResponse && (
-              <div className="floating-toolbox-content">
-                <Typography.Paragraph>{content}</Typography.Paragraph>
-              </div>
+              <div
+                ref={contentContainerRef}
+                className="floating-toolbox-content"
+                id="cherry-content"
+              />
             )}
             {isAiResponse && (
               <div
