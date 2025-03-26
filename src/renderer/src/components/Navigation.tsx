@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { Nav, Input, Typography, Tree } from '@douyinfe/semi-ui'
-import { IconFolder, IconSetting, IconSearch, IconDelete } from '@douyinfe/semi-icons'
+import React, { useState, useEffect } from 'react'
+import { Nav, Input, Typography, Tree, Toast } from '@douyinfe/semi-ui'
+import { IconFolder, IconSetting, IconSearch, IconDelete, IconFile } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 
 // 定义导航项类型
@@ -9,13 +9,15 @@ interface NavItem {
   text: string
   icon?: React.ReactNode
   items?: NavItem[]
+  isFolder?: boolean
 }
 
 interface NavigationProps {
   onNavChange: (key: string) => void
+  onFileSelect?: (folder: string, file: string) => void
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onNavChange }) => {
+const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
@@ -34,36 +36,63 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange }) => {
     itemKey: '',
     isFolder: false
   })
-  const [navItems, setNavItems] = useState<NavItem[]>([
-    {
-      itemKey: 'group1',
-      text: '个人笔记',
-      icon: <IconFolder />,
-      items: [
-        { itemKey: 'note1', text: '日常记录' },
-        { itemKey: 'note2', text: '学习笔记' }
-      ]
-    },
-    {
-      itemKey: 'group2',
-      text: '工作文档',
-      icon: <IconFolder />,
-      items: [
-        { itemKey: 'doc1', text: '项目计划' },
-        { itemKey: 'doc2', text: '会议纪要' }
-      ]
-    },
-    {
-      itemKey: 'group3',
-      text: '收藏夹',
-      icon: <IconFolder />,
-      items: [
-        { itemKey: 'fav1', text: '重要资料' },
-        { itemKey: 'fav2', text: '参考链接' }
-      ]
-    }
-  ])
+  const [navItems, setNavItems] = useState<NavItem[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
   const navWidth = '180px' // 定义固定宽度常量
+
+  // 加载markdown文件夹和文件
+  const loadMarkdownFolders = async (): Promise<void> => {
+    setIsLoading(true)
+    try {
+      // 获取文件夹列表
+      const foldersResult = await window.api.markdown.getFolders()
+
+      if (foldersResult.success && foldersResult.folders) {
+        const folderItems: NavItem[] = []
+
+        // 处理每个文件夹
+        for (const folder of foldersResult.folders) {
+          // 获取文件夹中的文件
+          const filesResult = await window.api.markdown.getFiles(folder)
+
+          const folderItem: NavItem = {
+            itemKey: `folder:${folder}`,
+            text: folder,
+            icon: <IconFolder />,
+            isFolder: true,
+            items: []
+          }
+
+          // 如果有文件，添加到文件夹的子项中
+          if (filesResult.success && filesResult.files && filesResult.files.length > 0) {
+            folderItem.items = filesResult.files.map((file) => ({
+              itemKey: `file:${folder}:${file}`,
+              text: file.replace('.md', ''),
+              icon: <IconFile />,
+              isFolder: false
+            }))
+          }
+
+          folderItems.push(folderItem)
+        }
+
+        setNavItems(folderItems)
+      }
+    } catch (error) {
+      console.error('加载Markdown文件夹失败:', error)
+      Toast.error('加载文件列表失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // 组件挂载时加载文件夹和文件
+    if (showSecondaryNav) {
+      loadMarkdownFolders()
+    }
+  }, [showSecondaryNav])
 
   const handleCollapseChange = (status: boolean): void => {
     setCollapsed(status)
@@ -120,6 +149,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange }) => {
 
     setNavItems(removeItem([...navItems]))
     hideContextMenu()
+
+    // TODO: 实现从实际文件系统中删除文件/文件夹的功能
   }
 
   // 将NavItem数组转换为Tree需要的数据格式
@@ -132,10 +163,22 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange }) => {
     }))
   }
 
-  // 处理点击事件
+  // 处理树节点点击事件
   const handleTreeSelect = (selectedKey: string): void => {
-    console.log('Selected item:', selectedKey)
-    // 可以在这里添加选中项的处理逻辑
+    // 检查是否为文件项
+    if (selectedKey.startsWith('file:')) {
+      // 解析文件路径: file:文件夹:文件名
+      const parts = selectedKey.split(':')
+      if (parts.length === 3) {
+        const folder = parts[1]
+        const file = parts[2]
+
+        // 通知父组件选中了文件
+        if (onFileSelect) {
+          onFileSelect(folder, file)
+        }
+      }
+    }
   }
 
   // 过滤树数据
@@ -250,21 +293,29 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange }) => {
           >
             <Tree
               treeData={getFilteredTreeData()}
-              directory
-              defaultExpandAll={false}
-              blockNode
-              onSelect={(selectedKeys): void => {
-                if (selectedKeys.length > 0) {
-                  handleTreeSelect(selectedKeys[0] as string)
-                }
-              }}
+              onSelect={handleTreeSelect}
               onContextMenu={(e, node): void => {
-                // node包含了被右键点击的节点信息
-                const isFolder = Boolean(node.children && node.children.length > 0)
+                // 通过节点的key判断是文件夹还是文件
+                const nodeKey = node.key?.toString() || ''
+                const isFolder = nodeKey.startsWith('folder:')
                 // 先转换成unknown再转成React.MouseEvent类型
                 const mouseEvent = e.nativeEvent as unknown as React.MouseEvent
-                handleContextMenu(mouseEvent, node.key as string, isFolder)
+                handleContextMenu(mouseEvent, nodeKey, isFolder)
               }}
+              emptyContent={
+                isLoading ? (
+                  <Typography.Text>加载中...</Typography.Text>
+                ) : (
+                  <Typography.Text type="tertiary">
+                    {searchValue ? '没有找到匹配的项目' : '暂无笔记'}
+                  </Typography.Text>
+                )
+              }
+              style={{
+                width: '100%',
+                borderRadius: '3px'
+              }}
+              expandAll
             />
           </div>
 

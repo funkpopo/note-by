@@ -33,6 +33,17 @@ interface API {
   settings: SettingsAPI
   openai: OpenAIAPI
   api: ApiConfigAPI
+  markdown: {
+    save: (
+      filePath: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
+    getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
+    getFiles: (
+      folderName: string
+    ) => Promise<{ success: boolean; files?: string[]; error?: string }>
+    readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
+  }
 }
 
 declare global {

@@ -7,9 +7,18 @@ import EditorComponent from './components/Editor'
 const App: React.FC = () => {
   const { Content } = Layout
   const [currentView, setCurrentView] = useState('Editor')
+  const [currentFolder, setCurrentFolder] = useState<string | undefined>(undefined)
+  const [currentFile, setCurrentFile] = useState<string | undefined>(undefined)
 
   const handleNavChange = (key: string): void => {
     setCurrentView(key)
+  }
+
+  // 处理文件选择事件
+  const handleFileSelect = (folder: string, file: string): void => {
+    setCurrentFolder(folder)
+    setCurrentFile(file)
+    setCurrentView('Editor') // 确保切换到编辑器视图
   }
 
   const renderContent = (): React.ReactNode => {
@@ -17,7 +26,7 @@ const App: React.FC = () => {
       case 'Settings':
         return <Settings />
       case 'Editor':
-        return <EditorComponent />
+        return <EditorComponent currentFolder={currentFolder} currentFile={currentFile} />
       default:
         return <div>分组管理内容</div>
     }
@@ -27,7 +36,7 @@ const App: React.FC = () => {
     <Layout className="components-layout-demo" style={{ height: '100%', overflow: 'hidden' }}>
       <Layout style={{ flexDirection: 'row', height: '100%' }}>
         <div style={{ display: 'flex', flexShrink: 0 }}>
-          <Navigation onNavChange={handleNavChange} />
+          <Navigation onNavChange={handleNavChange} onFileSelect={handleFileSelect} />
         </div>
         <Layout style={{ flex: 1, minWidth: 0, height: '100%', overflow: 'hidden' }}>
           <Content

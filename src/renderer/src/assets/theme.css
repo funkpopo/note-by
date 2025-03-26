@@ -1,5 +1,15 @@
 /* 自定义Semi Design主题变量 */
 
+/* 全局变量设置 */
+:root {
+  /* 按钮圆角大小 */
+  --semi-border-radius-small: 10px;
+  /* 组件圆角大小 */
+  --semi-border-radius-medium: 12px;
+  /* modal组件圆角大小 */
+  --semi-border-radius-large: 14px;
+}
+
 /* 浅色模式 */
 body[theme-mode='light'] {
   /* 基础颜色 */

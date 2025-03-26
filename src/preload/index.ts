@@ -18,7 +18,11 @@ const IPC_CHANNELS = {
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   SAVE_API_CONFIG: 'api:save-config',
-  DELETE_API_CONFIG: 'api:delete-config'
+  DELETE_API_CONFIG: 'api:delete-config',
+  SAVE_MARKDOWN: 'markdown:save',
+  GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
+  GET_MARKDOWN_FILES: 'markdown:get-files',
+  READ_MARKDOWN_FILE: 'markdown:read-file'
 }
 
 // Custom APIs for renderer
@@ -51,6 +55,29 @@ const api = {
     // 删除配置
     deleteConfig: (configId: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.DELETE_API_CONFIG, configId)
+  },
+  // Markdown文件管理
+  markdown: {
+    // 保存Markdown文件
+    save: (
+      filePath: string,
+      content: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAVE_MARKDOWN, filePath, content),
+
+    // 获取文件夹列表
+    getFolders: (): Promise<{ success: boolean; folders?: string[]; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GET_MARKDOWN_FOLDERS),
+
+    // 获取特定文件夹中的文件列表
+    getFiles: (
+      folderName: string
+    ): Promise<{ success: boolean; files?: string[]; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GET_MARKDOWN_FILES, folderName),
+
+    // 读取Markdown文件内容
+    readFile: (filePath: string): Promise<{ success: boolean; content?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.READ_MARKDOWN_FILE, filePath)
   }
 }
 

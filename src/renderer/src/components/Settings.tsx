@@ -10,7 +10,8 @@ import {
   Modal,
   Empty,
   Popconfirm,
-  Spin
+  Spin,
+  ButtonGroup
 } from '@douyinfe/semi-ui'
 import { IconMoon, IconSun, IconPulse, IconPlus, IconDelete, IconEdit } from '@douyinfe/semi-icons'
 import { useTheme } from '../context/theme/useTheme'
@@ -250,7 +251,7 @@ const Settings: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center' }}>{/* 从标题中移除名称 */}</div>
             }
             headerExtraContent={
-              <div>
+              <ButtonGroup>
                 <Button
                   icon={<IconPulse />}
                   onClick={() => handleTestConnection(config)}
@@ -258,7 +259,6 @@ const Settings: React.FC = () => {
                   theme="borderless"
                   type="primary"
                   size="small"
-                  style={{ marginRight: 8 }}
                 >
                   测试连接
                 </Button>
@@ -268,7 +268,6 @@ const Settings: React.FC = () => {
                   theme="borderless"
                   type="tertiary"
                   size="small"
-                  style={{ marginRight: 8 }}
                 >
                   编辑
                 </Button>
@@ -281,7 +280,7 @@ const Settings: React.FC = () => {
                     删除
                   </Button>
                 </Popconfirm>
-              </div>
+              </ButtonGroup>
             }
           >
             <div style={{ padding: '0 4px' }}>
@@ -387,15 +386,17 @@ const Settings: React.FC = () => {
         }}
       >
         <Title heading={5}>AI API配置</Title>
-        <Button
-          icon={<IconPlus />}
-          onClick={handleAddConfig}
-          theme="solid"
-          type="primary"
-          size="small"
-        >
-          添加API配置
-        </Button>
+        <ButtonGroup>
+          <Button
+            icon={<IconPlus />}
+            onClick={handleAddConfig}
+            theme="solid"
+            type="primary"
+            size="small"
+          >
+            添加API配置
+          </Button>
+        </ButtonGroup>
       </div>
 
       {isLoading ? (
@@ -410,10 +411,19 @@ const Settings: React.FC = () => {
       <Modal
         title={isEditMode ? '编辑API配置' : '添加API配置'}
         visible={isModalOpen}
-        onOk={handleSaveConfig}
         onCancel={() => setIsModalOpen(false)}
-        okText="保存"
-        cancelText="取消"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <ButtonGroup>
+              <Button type="tertiary" onClick={() => setIsModalOpen(false)}>
+                取消
+              </Button>
+              <Button type="primary" onClick={handleSaveConfig}>
+                保存
+              </Button>
+            </ButtonGroup>
+          </div>
+        }
       >
         <Form labelPosition="left" labelWidth={100}>
           <Form.Input

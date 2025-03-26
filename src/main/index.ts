@@ -1,9 +1,10 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { readSettings, writeSettings, updateSetting, getSetting, ApiConfig } from './settings'
 import { testOpenAIConnection } from './openai'
+import { promises as fs } from 'fs'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -13,7 +14,32 @@ const IPC_CHANNELS = {
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   SAVE_API_CONFIG: 'api:save-config',
-  DELETE_API_CONFIG: 'api:delete-config'
+  DELETE_API_CONFIG: 'api:delete-config',
+  SAVE_MARKDOWN: 'markdown:save',
+  GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
+  GET_MARKDOWN_FILES: 'markdown:get-files',
+  READ_MARKDOWN_FILE: 'markdown:read-file'
+}
+
+// 获取markdown文件夹路径
+function getMarkdownFolderPath(): string {
+  // 在开发环境中，markdown文件夹在项目根目录下
+  // 在生产环境中，markdown文件夹在应用程序可执行文件的同级目录下
+  if (is.dev) {
+    return resolve(app.getAppPath(), 'markdown')
+  } else {
+    return resolve(app.getPath('exe'), '..', 'markdown')
+  }
+}
+
+// 确保markdown文件夹和子文件夹存在
+async function ensureMarkdownFolders(folderPath: string): Promise<void> {
+  try {
+    await fs.mkdir(folderPath, { recursive: true })
+  } catch (error) {
+    console.error(`创建文件夹失败: ${folderPath}`, error)
+    throw error
+  }
 }
 
 function createWindow(): void {
@@ -131,6 +157,89 @@ app.whenReady().then(() => {
     } catch (error) {
       console.error('删除API配置失败:', error)
       return { success: false, error: String(error) }
+    }
+  })
+
+  // 保存Markdown文件
+  ipcMain.handle(IPC_CHANNELS.SAVE_MARKDOWN, async (_, filePath, content) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPath = resolve(markdownRoot, filePath)
+
+      // 确保路径中的文件夹存在
+      const folderPath = fullPath.substring(0, fullPath.lastIndexOf('\\'))
+      await ensureMarkdownFolders(folderPath)
+
+      // 写入文件
+      await fs.writeFile(fullPath, content, 'utf-8')
+
+      return { success: true, path: fullPath }
+    } catch (error) {
+      console.error('保存Markdown文件失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取Markdown文件夹列表
+  ipcMain.handle(IPC_CHANNELS.GET_MARKDOWN_FOLDERS, async () => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+
+      // 确保根目录存在
+      await ensureMarkdownFolders(markdownRoot)
+
+      const entries = await fs.readdir(markdownRoot, { withFileTypes: true })
+      const folders = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+
+      return { success: true, folders }
+    } catch (error) {
+      console.error('获取Markdown文件夹列表失败:', error)
+      return { success: false, error: String(error), folders: [] }
+    }
+  })
+
+  // 获取特定文件夹中的Markdown文件
+  ipcMain.handle(IPC_CHANNELS.GET_MARKDOWN_FILES, async (_, folderName) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const folderPath = resolve(markdownRoot, folderName)
+
+      // 确保文件夹存在
+      await ensureMarkdownFolders(folderPath)
+
+      const entries = await fs.readdir(folderPath, { withFileTypes: true })
+      const files = entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+        .map((entry) => entry.name)
+
+      return { success: true, files }
+    } catch (error) {
+      console.error(`获取文件夹 ${folderName} 中的Markdown文件列表失败:`, error)
+      return { success: false, error: String(error), files: [] }
+    }
+  })
+
+  // 读取Markdown文件内容
+  ipcMain.handle(IPC_CHANNELS.READ_MARKDOWN_FILE, async (_, filePath) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPath = resolve(markdownRoot, filePath)
+
+      // 检查文件是否存在
+      try {
+        await fs.access(fullPath)
+      } catch {
+        // 文件不存在，返回空内容
+        return { success: false, error: '文件不存在', content: '' }
+      }
+
+      // 读取文件内容
+      const content = await fs.readFile(fullPath, 'utf-8')
+
+      return { success: true, content }
+    } catch (error) {
+      console.error(`读取文件 ${filePath} 失败:`, error)
+      return { success: false, error: String(error), content: '' }
     }
   })
 
