@@ -17,6 +17,7 @@ const IPC_CHANNELS = {
   GET_SETTING: 'setting:get',
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
+  GENERATE_CONTENT: 'openai:generate-content',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
@@ -34,12 +35,22 @@ const IPC_CHANNELS = {
   CHECK_FILE_EXISTS: 'markdown:checkFileExists'
 }
 
+// 内容生成请求接口
+interface ContentGenerationRequest {
+  apiKey: string
+  apiUrl: string
+  modelName: string
+  prompt: string
+  maxTokens?: number
+}
+
 // Custom APIs for renderer
 const api = {
   // 设置相关API
   settings: {
     // 获取所有设置
-    getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke(IPC_CHANNELS.GET_ALL_SETTINGS),
+    getAll: (): Promise<Record<string, unknown>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GET_ALL_SETTINGS),
     // 保存所有设置
     setAll: (settings: Record<string, unknown>): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.SET_SETTINGS, settings),
@@ -54,7 +65,13 @@ const api = {
   openai: {
     // 测试连接
     testConnection: (apiConfig: ApiConfig): Promise<{ success: boolean; message: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.TEST_OPENAI_CONNECTION, apiConfig)
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_OPENAI_CONNECTION, apiConfig),
+
+    // 生成内容
+    generateContent: (
+      request: ContentGenerationRequest
+    ): Promise<{ success: boolean; content?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_CONTENT, request)
   },
   // API配置管理
   api: {

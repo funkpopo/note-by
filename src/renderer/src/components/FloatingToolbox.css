@@ -1,0 +1,178 @@
+.floating-toolbox {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  max-width: 500px; /* 设置最大宽度 */
+  animation: fadeIn 0.2s ease-in-out;
+  z-index: 10000; /* 确保浮动在最上层 */
+  user-select: none; /* 防止拖动时选中文本 */
+  position: relative; /* 用于绝对定位调整大小的手柄 */
+}
+
+.floating-toolbox.dragging {
+  opacity: 0.8;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transition:
+    opacity 0.2s,
+    box-shadow 0.2s;
+}
+
+.floating-toolbox.resizing {
+  opacity: 0.85;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  transition: none; /* 调整大小时禁用过渡效果，保持响应流畅 */
+}
+
+/* 调整大小的触发区域 */
+.resize-handle {
+  position: absolute;
+  background-color: transparent;
+  z-index: 10001;
+}
+
+.resize-right {
+  cursor: ew-resize;
+  width: 8px;
+  height: calc(100% - 8px);
+  top: 4px;
+  right: 0;
+}
+
+.resize-bottom {
+  cursor: ns-resize;
+  height: 8px;
+  width: calc(100% - 8px);
+  bottom: 0;
+  left: 4px;
+}
+
+.resize-bottom-right {
+  cursor: nwse-resize;
+  width: 12px;
+  height: 12px;
+  bottom: 0;
+  right: 0;
+}
+
+/* 悬停时显示调整手柄 */
+.resize-handle:hover::after,
+.floating-toolbox.resizing .resize-handle::after {
+  content: '';
+  position: absolute;
+  background-color: rgba(var(--semi-blue-5), 0.5);
+}
+
+.resize-right:hover::after,
+.floating-toolbox.resizing .resize-right::after {
+  top: 0;
+  right: 3px;
+  height: 100%;
+  width: 2px;
+}
+
+.resize-bottom:hover::after,
+.floating-toolbox.resizing .resize-bottom::after {
+  bottom: 3px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+}
+
+.resize-bottom-right:hover::after,
+.floating-toolbox.resizing .resize-bottom-right::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(var(--semi-blue-5), 0.7);
+}
+
+/* 调整内容展示区域 */
+.floating-toolbox-content {
+  max-height: 300px;
+  overflow-y: auto;
+  word-break: break-word;
+  font-size: 14px;
+  padding: 4px 0;
+  margin-bottom: 8px;
+}
+
+/* 空状态窗口样式调整 */
+.floating-toolbox-empty {
+  min-width: 160px;
+  padding: 4px;
+}
+
+/* 暗色模式调整大小手柄 */
+body[theme-mode='dark'] .resize-handle:hover::after,
+body[theme-mode='dark'] .floating-toolbox.resizing .resize-handle::after {
+  background-color: rgba(var(--semi-blue-3), 0.5);
+}
+
+body[theme-mode='dark'] .resize-bottom-right:hover::after,
+body[theme-mode='dark'] .floating-toolbox.resizing .resize-bottom-right::after {
+  background-color: rgba(var(--semi-blue-3), 0.7);
+}
+
+/* 上下文菜单样式 */
+.floating-toolbox .semi-button {
+  transition: all 0.2s;
+}
+
+.floating-toolbox .semi-button:hover {
+  transform: translateY(-1px);
+}
+
+/* 工具箱按钮样式调整 */
+.floating-toolbox-actions-btn {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  margin-bottom: 4px;
+}
+
+/* 暗色模式适配 */
+body[theme-mode='dark'] .floating-toolbox {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body[theme-mode='dark'] .floating-toolbox-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+body[theme-mode='dark'] .floating-toolbox-header:active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 出现动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.floating-toolbox-header {
+  position: relative;
+  padding: 4px 8px;
+  cursor: move;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.floating-toolbox-header:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.floating-toolbox-header:active {
+  cursor: grabbing;
+  background-color: rgba(0, 0, 0, 0.05);
+}

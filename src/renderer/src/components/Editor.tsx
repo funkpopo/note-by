@@ -4,6 +4,7 @@ import 'cherry-markdown/dist/cherry-markdown.css'
 import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from '@douyinfe/semi-ui'
 import { IconSave, IconCopy, IconEdit, IconMore } from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
+import FloatingToolbox from './FloatingToolbox'
 import './Editor.css'
 
 interface EditorProps {
@@ -18,11 +19,32 @@ interface AIModel {
   name: string
 }
 
-// 翻译选项接口
-interface TranslationOption {
-  id: string
-  name: string
-  targetLang: string
+// 浮动窗口状态接口
+interface FloatingToolboxState {
+  visible: boolean
+  title: string
+  content?: string
+  loading: boolean
+  position?: { x: number; y: number }
+  action: 'rewrite' | 'continue' | 'translate' | null
+}
+
+// 在文件顶部添加一个接口定义
+interface OpenAIAPI {
+  testConnection: (apiConfig: {
+    id: string
+    name: string
+    apiKey: string
+    apiUrl: string
+    modelName: string
+  }) => Promise<{ success: boolean; message: string }>
+  generateContent: (request: {
+    apiKey: string
+    apiUrl: string
+    modelName: string
+    prompt: string
+    maxTokens?: number
+  }) => Promise<{ success: boolean; content?: string; error?: string }>
 }
 
 const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChanged }) => {
@@ -41,12 +63,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [confirmOverwriteVisible, setConfirmOverwriteVisible] = useState<boolean>(false)
-  const translationOptions = [
-    { id: 'en-zh', name: '英译中', targetLang: 'zh' },
-    { id: 'zh-en', name: '中译英', targetLang: 'en' },
-    { id: 'ja-zh', name: '日译中', targetLang: 'zh' },
-    { id: 'zh-ja', name: '中译日', targetLang: 'ja' }
-  ]
+
+  // 添加浮动窗口状态
+  const [toolboxState, setToolboxState] = useState<FloatingToolboxState>({
+    visible: false,
+    title: '',
+    content: '',
+    loading: false,
+    position: undefined,
+    action: null
+  })
 
   // 加载文件夹列表
   const loadFolders = async (): Promise<void> => {
@@ -162,7 +188,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       // 检查文件是否已存在
       const checkResult = await window.api.markdown.checkFileExists(filePath)
-      
+
       if (checkResult.success && checkResult.exists) {
         // 如果是当前已打开的文件，直接覆盖
         if (currentFile === filename && currentFolder === folder) {
@@ -247,7 +273,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       let filename = ''
       let filePath = ''
       let checkResult = { success: true, exists: true }
-      
+
       // 循环查找可用的文件名
       while (checkResult.exists) {
         copyFileName = `${fileName}(${copyIndex})`
@@ -356,65 +382,124 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
-  // 内容风格改写
-  const rewriteContent = (): void => {
-    if (!cherryRef.current || !selectedModel) {
-      Toast.warning('请先选择AI模型')
-      return
-    }
-
-    // 获取当前编辑器内容
-    const currentContent = cherryRef.current.getMarkdown()
-    if (!currentContent) {
-      Toast.warning('请先输入一些内容')
-      return
-    }
-
-    // 提示用户选择文本
-    const selection = window.getSelection()?.toString()
-    if (!selection || selection.trim() === '') {
-      Toast.warning('请先选择要改写的文本')
-      return
-    }
-
-    Toast.info('正在改写内容...')
-    // 这里实现实际的AI调用逻辑
+  // 关闭浮动窗口
+  const closeToolbox = (): void => {
+    setToolboxState((prev) => ({
+      ...prev,
+      visible: false,
+      action: null
+    }))
   }
 
-  // 内容续写
-  const continueContent = (): void => {
-    if (!cherryRef.current || !selectedModel) {
-      Toast.warning('请先选择AI模型')
-      return
+  // 处理键盘事件，按ESC键关闭浮动窗口
+  const handleKeyDown = (e: KeyboardEvent): void => {
+    // 如果按了ESC键且浮动窗口可见，则关闭浮动窗口
+    if (e.key === 'Escape' && toolboxState.visible) {
+      // 立即阻止事件传播，确保其他组件不会处理这个事件
+      e.stopPropagation()
+      e.preventDefault()
+      closeToolbox()
     }
-
-    // 获取当前编辑器内容和位置用于续写
-    const content = cherryRef.current.getMarkdown()
-    if (!content) {
-      Toast.warning('请先输入一些内容')
-      return
-    }
-
-    Toast.info('正在续写内容...')
-    // 这里实现实际的AI调用逻辑
   }
 
-  // 内容翻译
-  const translateContent = (option: TranslationOption): void => {
-    if (!cherryRef.current || !selectedModel) {
-      Toast.warning('请先选择AI模型')
+  // 应用AI生成的内容
+  const applyAIContent = (aiContent: string): void => {
+    if (!cherryRef.current) return
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) {
+      Toast.warning('无法确定应用位置')
       return
     }
 
-    // 获取选中的文本
+    // 获取选中文本
+    const selectedText = selection.toString()
+    if (!selectedText) {
+      Toast.warning('请选择要替换的文本')
+      return
+    }
+
+    try {
+      // 获取当前编辑器内容
+      const currentContent = cherryRef.current.getMarkdown()
+
+      // 直接替换编辑器中的内容
+      const newContent = currentContent.replace(selectedText, aiContent)
+      cherryRef.current.setValue(newContent)
+
+      // 通知用户
+      Toast.success('内容已替换')
+    } catch (error) {
+      console.error('替换内容失败:', error)
+      // 降级为剪贴板复制
+      navigator.clipboard.writeText(aiContent).then(() => {
+        Toast.info('替换失败，内容已复制到剪贴板')
+      })
+    }
+
+    // 关闭浮动窗口
+    closeToolbox()
+  }
+
+  // 添加右键菜单事件监听
+  const handleContextMenu = (e: MouseEvent): void => {
+    // 阻止默认右键菜单
+    e.preventDefault()
+
+    // 检查是否有文本被选中
     const selection = window.getSelection()?.toString()
-    if (!selection || selection.trim() === '') {
-      Toast.warning('请先选择要翻译的文本')
-      return
+    if (!selection || selection.trim() === '') return
+
+    // 检查点击是否在编辑器内
+    let isClickInEditor = false
+    let currentElement = e.target as HTMLElement | null
+
+    while (currentElement) {
+      if (
+        currentElement.classList &&
+        (currentElement.classList.contains('cherry-editor') ||
+          currentElement.id === 'cherry-markdown')
+      ) {
+        isClickInEditor = true
+        break
+      }
+      currentElement = currentElement.parentElement
     }
 
-    Toast.info(`正在翻译至${option.name}...`)
-    // 这里实现实际的AI调用逻辑
+    if (!isClickInEditor) return
+
+    // 显示浮动工具箱在鼠标位置
+    setToolboxState({
+      visible: true,
+      title: 'AI助手',
+      content: selection,
+      loading: false,
+      position: { x: e.clientX, y: e.clientY },
+      action: null
+    })
+  }
+
+  // 处理点击事件，关闭浮动窗口
+  const handleDocumentClick = (e: MouseEvent): void => {
+    // 如果浮动窗口不可见，不处理
+    if (!toolboxState.visible) return
+
+    // 检查点击是否在浮动窗口内
+    let isClickInToolbox = false
+    let currentElement = e.target as HTMLElement | null
+
+    while (currentElement) {
+      if (currentElement.classList && currentElement.classList.contains('floating-toolbox')) {
+        isClickInToolbox = true
+        break
+      }
+      currentElement = currentElement.parentElement
+    }
+
+    // 如果点击在浮动窗口外，关闭浮动窗口
+    if (!isClickInToolbox) {
+      closeToolbox()
+    }
   }
 
   useEffect((): (() => void) => {
@@ -455,7 +540,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             'togglePreview',
             'switchModel'
           ],
-          sidebar: ['undo', 'redo', 'toc', 'export']
+          sidebar: ['undo', 'redo', 'toc', 'export'],
+          // 禁用悬浮工具栏
+          bubble: false, // 禁用悬浮工具栏
+          float: false // 禁用悬浮按钮
         },
         editor: {
           defaultModel: 'edit&preview',
@@ -476,6 +564,26 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       // 添加窗口大小变化监听，确保编辑器布局自适应
       window.addEventListener('resize', fixEditorLayout)
+
+      // 捕获当前的DOM引用，避免清理函数中引用可能变化的值
+      const currentEditorRef = editorRef.current
+
+      // 给编辑器容器添加右键菜单事件，给文档添加点击事件
+      currentEditorRef.addEventListener('contextmenu', handleContextMenu)
+      document.addEventListener('click', handleDocumentClick)
+      // 添加键盘事件监听，用于ESC键关闭浮动窗口，使用捕获阶段
+      document.addEventListener('keydown', handleKeyDown, true) // true启用捕获阶段
+
+      return () => {
+        // 清理资源
+        cherryRef.current = null
+        window.removeEventListener('resize', fixEditorLayout)
+        if (currentEditorRef) {
+          currentEditorRef.removeEventListener('contextmenu', handleContextMenu)
+        }
+        document.removeEventListener('click', handleDocumentClick)
+        document.removeEventListener('keydown', handleKeyDown, true) // 确保使用相同的捕获标志
+      }
     }
 
     return () => {
@@ -558,31 +666,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     </div>
                   </Dropdown>
                 </Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Item onClick={rewriteContent}>风格改写</Dropdown.Item>
-                <Dropdown.Item onClick={continueContent}>内容续写</Dropdown.Item>
-                <Dropdown.Item>
-                  <Dropdown
-                    trigger="hover"
-                    position="rightTop"
-                    render={
-                      <Dropdown.Menu>
-                        {translationOptions.map((option) => (
-                          <Dropdown.Item key={option.id} onClick={() => translateContent(option)}>
-                            {option.name}
-                          </Dropdown.Item>
-                        ))}
-                      </Dropdown.Menu>
-                    }
-                  >
-                    <div
-                      style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}
-                    >
-                      <span>内容翻译</span>
-                      <IconMore style={{ marginLeft: 8 }} />
-                    </div>
-                  </Dropdown>
-                </Dropdown.Item>
               </Dropdown.Menu>
             }
           >
@@ -601,6 +684,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           </Button>
         </Space>
       </div>
+
+      {/* Cherry Markdown编辑器容器 */}
       <div
         id="cherry-markdown"
         ref={editorRef}
@@ -610,6 +695,306 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           borderTop: '1px solid var(--semi-color-border)'
         }}
       />
+
+      {/* 浮动工具箱 */}
+      <FloatingToolbox
+        visible={toolboxState.visible}
+        title={toolboxState.title}
+        content={toolboxState.content}
+        loading={toolboxState.loading}
+        position={toolboxState.position}
+        onClose={closeToolbox}
+      >
+        {!toolboxState.loading && toolboxState.action === null && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={async () => {
+                // 显示风格改写加载状态
+                setToolboxState((prev) => ({
+                  ...prev,
+                  loading: true,
+                  title: '风格改写',
+                  action: 'rewrite'
+                }))
+
+                try {
+                  // 查找当前选中的模型配置
+                  const settings = await window.api.settings.getAll()
+                  const apiConfigs = settings.apiConfigs as Array<{
+                    id: string
+                    name: string
+                    apiKey: string
+                    apiUrl: string
+                    modelName: string
+                  }>
+
+                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+                  if (!modelConfig) {
+                    throw new Error('未找到选中的模型配置')
+                  }
+
+                  // 构建请求参数
+                  const prompt = `请改写以下文本，保持原意但使用更优美的表达：\n\n${toolboxState.content}`
+
+                  // 调用AI接口
+                  const result = await (window.api.openai as OpenAIAPI).generateContent({
+                    apiKey: modelConfig.apiKey,
+                    apiUrl: modelConfig.apiUrl,
+                    modelName: modelConfig.modelName,
+                    prompt
+                  })
+
+                  if (result.success && result.content) {
+                    setToolboxState((prev) => ({
+                      ...prev,
+                      loading: false,
+                      content: result.content
+                    }))
+                  } else {
+                    throw new Error(result.error || '生成内容失败')
+                  }
+                } catch (error) {
+                  console.error('AI处理失败:', error)
+                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+                  setToolboxState((prev) => ({
+                    ...prev,
+                    loading: false,
+                    content: '处理失败，请重试'
+                  }))
+                }
+              }}
+              className="floating-toolbox-actions-btn"
+            >
+              风格改写
+            </Button>
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={async () => {
+                // 显示内容续写加载状态
+                setToolboxState((prev) => ({
+                  ...prev,
+                  loading: true,
+                  title: '内容续写',
+                  action: 'continue'
+                }))
+
+                try {
+                  // 查找当前选中的模型配置
+                  const settings = await window.api.settings.getAll()
+                  const apiConfigs = settings.apiConfigs as Array<{
+                    id: string
+                    name: string
+                    apiKey: string
+                    apiUrl: string
+                    modelName: string
+                  }>
+
+                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+                  if (!modelConfig) {
+                    throw new Error('未找到选中的模型配置')
+                  }
+
+                  // 构建请求参数
+                  const prompt = `请继续编写以下内容：\n\n${toolboxState.content}\n\n请直接续写，不要重复已有内容。`
+
+                  // 调用AI接口
+                  const result = await (window.api.openai as OpenAIAPI).generateContent({
+                    apiKey: modelConfig.apiKey,
+                    apiUrl: modelConfig.apiUrl,
+                    modelName: modelConfig.modelName,
+                    prompt
+                  })
+
+                  if (result.success && result.content) {
+                    setToolboxState((prev) => ({
+                      ...prev,
+                      loading: false,
+                      content: `${toolboxState.content}${result.content}`
+                    }))
+                  } else {
+                    throw new Error(result.error || '生成内容失败')
+                  }
+                } catch (error) {
+                  console.error('AI处理失败:', error)
+                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+                  setToolboxState((prev) => ({
+                    ...prev,
+                    loading: false,
+                    content: '处理失败，请重试'
+                  }))
+                }
+              }}
+              className="floating-toolbox-actions-btn"
+            >
+              内容续写
+            </Button>
+            <div style={{ height: 1, background: 'var(--semi-color-border)', margin: '4px 0' }} />
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={async () => {
+                // 显示翻译加载状态
+                setToolboxState((prev) => ({
+                  ...prev,
+                  loading: true,
+                  title: '英译中翻译',
+                  action: 'translate'
+                }))
+
+                try {
+                  // 查找当前选中的模型配置
+                  const settings = await window.api.settings.getAll()
+                  const apiConfigs = settings.apiConfigs as Array<{
+                    id: string
+                    name: string
+                    apiKey: string
+                    apiUrl: string
+                    modelName: string
+                  }>
+
+                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+                  if (!modelConfig) {
+                    throw new Error('未找到选中的模型配置')
+                  }
+
+                  // 构建请求参数
+                  const prompt = `请将以下文本翻译成中文：\n\n${toolboxState.content}`
+
+                  // 调用AI接口
+                  const result = await (window.api.openai as OpenAIAPI).generateContent({
+                    apiKey: modelConfig.apiKey,
+                    apiUrl: modelConfig.apiUrl,
+                    modelName: modelConfig.modelName,
+                    prompt
+                  })
+
+                  if (result.success && result.content) {
+                    setToolboxState((prev) => ({
+                      ...prev,
+                      loading: false,
+                      content: result.content
+                    }))
+                  } else {
+                    throw new Error(result.error || '生成内容失败')
+                  }
+                } catch (error) {
+                  console.error('AI处理失败:', error)
+                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+                  setToolboxState((prev) => ({
+                    ...prev,
+                    loading: false,
+                    content: '处理失败，请重试'
+                  }))
+                }
+              }}
+              className="floating-toolbox-actions-btn"
+            >
+              英译中
+            </Button>
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={async () => {
+                // 显示翻译加载状态
+                setToolboxState((prev) => ({
+                  ...prev,
+                  loading: true,
+                  title: '中译英翻译',
+                  action: 'translate'
+                }))
+
+                try {
+                  // 查找当前选中的模型配置
+                  const settings = await window.api.settings.getAll()
+                  const apiConfigs = settings.apiConfigs as Array<{
+                    id: string
+                    name: string
+                    apiKey: string
+                    apiUrl: string
+                    modelName: string
+                  }>
+
+                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+                  if (!modelConfig) {
+                    throw new Error('未找到选中的模型配置')
+                  }
+
+                  // 构建请求参数
+                  const prompt = `请将以下文本翻译成英文：\n\n${toolboxState.content}`
+
+                  // 调用AI接口
+                  const result = await (window.api.openai as OpenAIAPI).generateContent({
+                    apiKey: modelConfig.apiKey,
+                    apiUrl: modelConfig.apiUrl,
+                    modelName: modelConfig.modelName,
+                    prompt
+                  })
+
+                  if (result.success && result.content) {
+                    setToolboxState((prev) => ({
+                      ...prev,
+                      loading: false,
+                      content: result.content
+                    }))
+                  } else {
+                    throw new Error(result.error || '生成内容失败')
+                  }
+                } catch (error) {
+                  console.error('AI处理失败:', error)
+                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+                  setToolboxState((prev) => ({
+                    ...prev,
+                    loading: false,
+                    content: '处理失败，请重试'
+                  }))
+                }
+              }}
+              className="floating-toolbox-actions-btn"
+            >
+              中译英
+            </Button>
+          </div>
+        )}
+
+        {/* 添加应用按钮区域 */}
+        {!toolboxState.loading && toolboxState.action && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={() => {
+                // 返回主菜单
+                setToolboxState((prev) => ({
+                  ...prev,
+                  action: null,
+                  title: 'AI助手',
+                  content: prev.content?.split(':')[1]?.trim() || prev.content || ''
+                }))
+              }}
+            >
+              返回
+            </Button>
+            <Button
+              size="small"
+              type="primary"
+              onClick={() => {
+                if (toolboxState.content) {
+                  applyAIContent(toolboxState.content)
+                }
+              }}
+            >
+              应用
+            </Button>
+          </div>
+        )}
+      </FloatingToolbox>
 
       {/* 保存文件对话框 */}
       <Modal
@@ -660,12 +1045,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       >
         <div>
           <Typography.Text>
-            文件 <Typography.Text strong>{fileName}.md</Typography.Text> 在 <Typography.Text strong>{selectedFolder}</Typography.Text> 中已存在。
+            文件 <Typography.Text strong>{fileName}.md</Typography.Text> 在{' '}
+            <Typography.Text strong>{selectedFolder}</Typography.Text> 中已存在。
           </Typography.Text>
           <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={handleCancelSave}>
-              取消
-            </Button>
+            <Button onClick={handleCancelSave}>取消</Button>
             <Button onClick={handleCreateCopy} type="secondary">
               创建副本
             </Button>

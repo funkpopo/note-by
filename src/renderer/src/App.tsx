@@ -24,7 +24,7 @@ const App: React.FC = () => {
 
   // 文件内容变更后触发刷新
   const handleFileChanged = (): void => {
-    setFileListVersion(prev => prev + 1)
+    setFileListVersion((prev) => prev + 1)
   }
 
   const renderContent = (): React.ReactNode => {
@@ -32,11 +32,13 @@ const App: React.FC = () => {
       case 'Settings':
         return <Settings />
       case 'Editor':
-        return <EditorComponent 
-          currentFolder={currentFolder} 
-          currentFile={currentFile} 
-          onFileChanged={handleFileChanged}
-        />
+        return (
+          <EditorComponent
+            currentFolder={currentFolder}
+            currentFile={currentFile}
+            onFileChanged={handleFileChanged}
+          />
+        )
       default:
         return <div>分组管理内容</div>
     }
@@ -46,9 +48,9 @@ const App: React.FC = () => {
     <Layout className="components-layout-demo" style={{ height: '100%', overflow: 'hidden' }}>
       <Layout style={{ flexDirection: 'row', height: '100%' }}>
         <div style={{ display: 'flex', flexShrink: 0 }}>
-          <Navigation 
-            onNavChange={handleNavChange} 
-            onFileSelect={handleFileSelect} 
+          <Navigation
+            onNavChange={handleNavChange}
+            onFileSelect={handleFileSelect}
             fileListVersion={fileListVersion}
           />
         </div>

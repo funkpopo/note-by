@@ -4,7 +4,7 @@ import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { readSettings, writeSettings, updateSetting, getSetting, ApiConfig } from './settings'
-import { testOpenAIConnection } from './openai'
+import { testOpenAIConnection, generateContent } from './openai'
 import { promises as fsPromises } from 'fs'
 
 // 设置的IPC通信频道
@@ -14,6 +14,7 @@ const IPC_CHANNELS = {
   GET_SETTING: 'setting:get',
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
+  GENERATE_CONTENT: 'openai:generate-content',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
@@ -142,6 +143,11 @@ app.whenReady().then(() => {
   // OpenAI连接测试
   ipcMain.handle(IPC_CHANNELS.TEST_OPENAI_CONNECTION, async (_, apiConfig) => {
     return await testOpenAIConnection(apiConfig)
+  })
+
+  // 内容生成
+  ipcMain.handle(IPC_CHANNELS.GENERATE_CONTENT, async (_, request) => {
+    return await generateContent(request)
   })
 
   // 保存API配置
