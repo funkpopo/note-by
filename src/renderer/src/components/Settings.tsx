@@ -44,10 +44,22 @@ const Settings: React.FC = () => {
   const [testResults, setTestResults] = useState<
     Record<string, { success: boolean; message: string }>
   >({})
+  // 添加一个ref来存储定时器ID
+  const testResultTimersRef = React.useRef<Record<string, NodeJS.Timeout>>({})
 
   // 加载所有设置
   useEffect(() => {
     loadSettings()
+
+    // 捕获当前的ref值
+    const timers = testResultTimersRef.current
+
+    // 组件卸载时清除所有定时器
+    return (): void => {
+      Object.values(timers).forEach((timerId) => {
+        clearTimeout(timerId)
+      })
+    }
   }, [])
 
   // 加载设置函数
@@ -164,6 +176,11 @@ const Settings: React.FC = () => {
       delete newResults[config.id]
       setTestResults(newResults)
 
+      // 清除该配置可能存在的定时器
+      if (testResultTimersRef.current[config.id]) {
+        clearTimeout(testResultTimersRef.current[config.id])
+      }
+
       // 调用API测试连接
       const result = await window.api.openai.testConnection(config)
 
@@ -179,6 +196,16 @@ const Settings: React.FC = () => {
       } else {
         Toast.error('连接测试失败')
       }
+
+      // 设置5秒后自动消失
+      testResultTimersRef.current[config.id] = setTimeout(() => {
+        setTestResults((prev) => {
+          const newResults = { ...prev }
+          delete newResults[config.id]
+          return newResults
+        })
+        delete testResultTimersRef.current[config.id]
+      }, 5000)
     } catch (error) {
       console.error('连接测试出错:', error)
       setTestResults({
@@ -186,6 +213,16 @@ const Settings: React.FC = () => {
         [config.id]: { success: false, message: '测试过程出错' }
       })
       Toast.error('连接测试出错')
+
+      // 错误情况下也设置5秒后自动消失
+      testResultTimersRef.current[config.id] = setTimeout(() => {
+        setTestResults((prev) => {
+          const newResults = { ...prev }
+          delete newResults[config.id]
+          return newResults
+        })
+        delete testResultTimersRef.current[config.id]
+      }, 5000)
     } finally {
       setTestingId(null)
     }
@@ -203,112 +240,118 @@ const Settings: React.FC = () => {
       )
     }
 
-    return apiConfigs.map((config) => (
-      <Card
-        key={config.id}
-        style={{ marginBottom: 16 }}
-        headerLine={true}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Text strong>{config.name}</Text>
-          </div>
-        }
-        headerExtraContent={
-          <div>
-            <Button
-              icon={<IconPulse />}
-              onClick={() => handleTestConnection(config)}
-              loading={testingId === config.id}
-              theme="borderless"
-              type="primary"
-              size="small"
-              style={{ marginRight: 8 }}
-            >
-              测试连接
-            </Button>
-            <Button
-              icon={<IconEdit />}
-              onClick={() => handleEditConfig(config)}
-              theme="borderless"
-              type="tertiary"
-              size="small"
-              style={{ marginRight: 8 }}
-            >
-              编辑
-            </Button>
-            <Popconfirm
-              title="确定要删除这个API配置吗？"
-              content="删除后无法恢复"
-              onConfirm={() => handleDeleteConfig(config.id)}
-            >
-              <Button icon={<IconDelete />} theme="borderless" type="danger" size="small">
-                删除
-              </Button>
-            </Popconfirm>
-          </div>
-        }
-      >
-        <div style={{ padding: '0 4px' }}>
-          <div style={{ marginBottom: 8 }}>
-            <Text type="tertiary" style={{ marginRight: 6 }}>
-              API URL:
-            </Text>
-            <Text>{config.apiUrl || '未设置'}</Text>
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <Text type="tertiary" style={{ marginRight: 6 }}>
-              API Key:
-            </Text>
-            <Text>{config.apiKey ? '******' : '未设置'}</Text>
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <Text type="tertiary" style={{ marginRight: 6 }}>
-              模型:
-            </Text>
-            <Text>{config.modelName || '未设置'}</Text>
-          </div>
-
-          {/* 测试结果显示区域 */}
-          {testResults[config.id] && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                borderRadius: 6,
-                backgroundColor: testResults[config.id].success
-                  ? 'rgba(0, 180, 42, 0.1)'
-                  : 'rgba(253, 77, 77, 0.1)',
-                border: `1px solid ${
-                  testResults[config.id].success
-                    ? 'rgba(0, 180, 42, 0.2)'
-                    : 'rgba(253, 77, 77, 0.2)'
-                }`
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <Text
-                  strong
-                  style={{ color: testResults[config.id].success ? '#00b42a' : '#fd4d4d' }}
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+        {apiConfigs.map((config) => (
+          <Card
+            key={config.id}
+            headerLine={true}
+            title={
+              <div style={{ display: 'flex', alignItems: 'center' }}>{/* 从标题中移除名称 */}</div>
+            }
+            headerExtraContent={
+              <div>
+                <Button
+                  icon={<IconPulse />}
+                  onClick={() => handleTestConnection(config)}
+                  loading={testingId === config.id}
+                  theme="borderless"
+                  type="primary"
+                  size="small"
+                  style={{ marginRight: 8 }}
                 >
-                  {testResults[config.id].success ? '✓ 连接成功' : '✗ 连接失败'}
+                  测试连接
+                </Button>
+                <Button
+                  icon={<IconEdit />}
+                  onClick={() => handleEditConfig(config)}
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  style={{ marginRight: 8 }}
+                >
+                  编辑
+                </Button>
+                <Popconfirm
+                  title="确定要删除这个API配置吗？"
+                  content="删除后无法恢复"
+                  onConfirm={() => handleDeleteConfig(config.id)}
+                >
+                  <Button icon={<IconDelete />} theme="borderless" type="danger" size="small">
+                    删除
+                  </Button>
+                </Popconfirm>
+              </div>
+            }
+          >
+            <div style={{ padding: '0 4px' }}>
+              {/* 将名称添加到卡片内容区域 */}
+              <div style={{ marginBottom: 12 }}>
+                <Text strong style={{ fontSize: '16px' }}>
+                  {config.name}
                 </Text>
               </div>
-              <Text style={{ marginTop: 4, fontSize: '13px' }}>
-                {testResults[config.id].message}
-              </Text>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="tertiary" style={{ marginRight: 6 }}>
+                  API URL:
+                </Text>
+                <Text>{config.apiUrl || '未设置'}</Text>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="tertiary" style={{ marginRight: 6 }}>
+                  API Key:
+                </Text>
+                <Text>{config.apiKey ? '******' : '未设置'}</Text>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="tertiary" style={{ marginRight: 6 }}>
+                  模型:
+                </Text>
+                <Text>{config.modelName || '未设置'}</Text>
+              </div>
+
+              {/* 测试结果显示区域 */}
+              {testResults[config.id] && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 6,
+                    backgroundColor: testResults[config.id].success
+                      ? 'rgba(0, 180, 42, 0.1)'
+                      : 'rgba(253, 77, 77, 0.1)',
+                    border: `1px solid ${
+                      testResults[config.id].success
+                        ? 'rgba(0, 180, 42, 0.2)'
+                        : 'rgba(253, 77, 77, 0.2)'
+                    }`
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Text
+                      strong
+                      style={{ color: testResults[config.id].success ? '#00b42a' : '#fd4d4d' }}
+                    >
+                      {testResults[config.id].success ? '✓ 连接成功' : '✗ 连接失败'}
+                    </Text>
+                  </div>
+                  <Text style={{ marginTop: 4, fontSize: '13px' }}>
+                    {testResults[config.id].message}
+                  </Text>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </Card>
-    ))
+          </Card>
+        ))}
+      </div>
+    )
   }
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title heading={5}>设置</Title>
+        <Title heading={5}>主题设置</Title>
       </div>
-
       {/* 主题设置卡片 */}
       <Card style={{ marginTop: 20, marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
