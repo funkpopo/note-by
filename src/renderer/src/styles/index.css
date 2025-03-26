@@ -42,6 +42,50 @@ code {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* 右键菜单样式 */
+.context-menu-item {
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: var(--semi-color-primary-light-default);
+}
+
+.context-menu-item:hover svg {
+  color: var(--semi-color-primary) !important;
+}
+
+.context-menu-item:hover .semi-typography {
+  color: var(--semi-color-text-0) !important;
+}
+
+/* 删除按钮悬停时保持警告色 */
+.context-menu-item:hover svg[data-icon='delete'] {
+  color: var(--semi-color-danger) !important;
+}
+
+.context-menu-item:hover .semi-typography[style*='color: var(--semi-color-danger)'] {
+  color: var(--semi-color-danger) !important;
+}
+
+/* 菜单分隔线 */
+.context-menu-divider {
+  height: 1px;
+  background-color: var(--semi-color-border);
+  margin: 4px 0;
+}
+
+/* 菜单危险操作项 */
+.context-menu-item-danger:hover {
+  background-color: var(--semi-color-danger-light-default) !important;
+}
+
+.context-menu {
+  user-select: none;
+}
+
 /* 主题切换过渡效果 */
 * {
   transition:

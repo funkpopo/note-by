@@ -22,7 +22,14 @@ const IPC_CHANNELS = {
   SAVE_MARKDOWN: 'markdown:save',
   GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
   GET_MARKDOWN_FILES: 'markdown:get-files',
-  READ_MARKDOWN_FILE: 'markdown:read-file'
+  READ_MARKDOWN_FILE: 'markdown:read-file',
+  CREATE_MARKDOWN_FOLDER: 'markdown:create-folder',
+  DELETE_MARKDOWN_FOLDER: 'markdown:delete-folder',
+  RENAME_MARKDOWN_FOLDER: 'markdown:rename-folder',
+  CREATE_MARKDOWN_NOTE: 'markdown:create-note',
+  DELETE_MARKDOWN_FILE: 'markdown:delete-file',
+  RENAME_MARKDOWN_FILE: 'markdown:rename-file',
+  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment'
 }
 
 // Custom APIs for renderer
@@ -77,7 +84,61 @@ const api = {
 
     // 读取Markdown文件内容
     readFile: (filePath: string): Promise<{ success: boolean; content?: string; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.READ_MARKDOWN_FILE, filePath)
+      ipcRenderer.invoke(IPC_CHANNELS.READ_MARKDOWN_FILE, filePath),
+
+    // 创建新文件夹
+    createFolder: (
+      folderName: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CREATE_MARKDOWN_FOLDER, folderName),
+
+    // 删除文件夹
+    deleteFolder: (folderName: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DELETE_MARKDOWN_FOLDER, folderName),
+
+    // 重命名文件夹
+    renameFolder: (
+      oldFolderName: string,
+      newFolderName: string
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.RENAME_MARKDOWN_FOLDER, oldFolderName, newFolderName),
+
+    // 创建新笔记
+    createNote: (
+      folderName: string,
+      fileName: string,
+      content: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CREATE_MARKDOWN_NOTE, folderName, fileName, content),
+
+    // 删除笔记文件
+    deleteFile: (filePath: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DELETE_MARKDOWN_FILE, filePath),
+
+    // 重命名笔记文件
+    renameFile: (
+      oldFilePath: string,
+      newFilePath: string
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.RENAME_MARKDOWN_FILE, oldFilePath, newFilePath)
+  },
+
+  // 系统诊断API
+  system: {
+    // 诊断环境
+    diagnoseEnvironment: (): Promise<{
+      success: boolean
+      info?: {
+        appPath: string
+        userData: string
+        exePath: string
+        platform: string
+        markdownPath?: string
+        markdownExists?: boolean
+        markdownDirectories?: string[]
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.DIAGNOSE_ENVIRONMENT)
   }
 }
 

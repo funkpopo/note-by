@@ -1,10 +1,12 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join, resolve } from 'path'
+import fs from 'fs/promises'
+import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { readSettings, writeSettings, updateSetting, getSetting, ApiConfig } from './settings'
 import { testOpenAIConnection } from './openai'
-import { promises as fs } from 'fs'
+import { promises as fsPromises } from 'fs'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -18,24 +20,46 @@ const IPC_CHANNELS = {
   SAVE_MARKDOWN: 'markdown:save',
   GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
   GET_MARKDOWN_FILES: 'markdown:get-files',
-  READ_MARKDOWN_FILE: 'markdown:read-file'
+  READ_MARKDOWN_FILE: 'markdown:read-file',
+  CREATE_MARKDOWN_FOLDER: 'markdown:create-folder',
+  DELETE_MARKDOWN_FOLDER: 'markdown:delete-folder',
+  RENAME_MARKDOWN_FOLDER: 'markdown:rename-folder',
+  CREATE_MARKDOWN_NOTE: 'markdown:create-note',
+  DELETE_MARKDOWN_FILE: 'markdown:delete-file',
+  RENAME_MARKDOWN_FILE: 'markdown:rename-file',
+  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment'
 }
 
 // 获取markdown文件夹路径
 function getMarkdownFolderPath(): string {
   // 在开发环境中，markdown文件夹在项目根目录下
   // 在生产环境中，markdown文件夹在应用程序可执行文件的同级目录下
+  let markdownPath
   if (is.dev) {
-    return resolve(app.getAppPath(), 'markdown')
+    markdownPath = resolve(app.getAppPath(), 'markdown')
   } else {
-    return resolve(app.getPath('exe'), '..', 'markdown')
+    markdownPath = resolve(app.getPath('exe'), '..', 'markdown')
   }
+
+  console.log('Markdown文件夹路径:', markdownPath)
+
+  // 确保markdown根目录存在
+  try {
+    if (!fsSync.existsSync(markdownPath)) {
+      console.log('创建markdown根目录:', markdownPath)
+      fsSync.mkdirSync(markdownPath, { recursive: true })
+    }
+  } catch (error) {
+    console.error('创建markdown根目录失败:', error)
+  }
+
+  return markdownPath
 }
 
 // 确保markdown文件夹和子文件夹存在
 async function ensureMarkdownFolders(folderPath: string): Promise<void> {
   try {
-    await fs.mkdir(folderPath, { recursive: true })
+    await fsPromises.mkdir(folderPath, { recursive: true })
   } catch (error) {
     console.error(`创建文件夹失败: ${folderPath}`, error)
     throw error
@@ -171,7 +195,7 @@ app.whenReady().then(() => {
       await ensureMarkdownFolders(folderPath)
 
       // 写入文件
-      await fs.writeFile(fullPath, content, 'utf-8')
+      await fsPromises.writeFile(fullPath, content, 'utf-8')
 
       return { success: true, path: fullPath }
     } catch (error) {
@@ -188,7 +212,7 @@ app.whenReady().then(() => {
       // 确保根目录存在
       await ensureMarkdownFolders(markdownRoot)
 
-      const entries = await fs.readdir(markdownRoot, { withFileTypes: true })
+      const entries = await fsPromises.readdir(markdownRoot, { withFileTypes: true })
       const folders = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
 
       return { success: true, folders }
@@ -207,7 +231,7 @@ app.whenReady().then(() => {
       // 确保文件夹存在
       await ensureMarkdownFolders(folderPath)
 
-      const entries = await fs.readdir(folderPath, { withFileTypes: true })
+      const entries = await fsPromises.readdir(folderPath, { withFileTypes: true })
       const files = entries
         .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
         .map((entry) => entry.name)
@@ -227,19 +251,253 @@ app.whenReady().then(() => {
 
       // 检查文件是否存在
       try {
-        await fs.access(fullPath)
+        await fsPromises.access(fullPath)
       } catch {
         // 文件不存在，返回空内容
         return { success: false, error: '文件不存在', content: '' }
       }
 
       // 读取文件内容
-      const content = await fs.readFile(fullPath, 'utf-8')
+      const content = await fsPromises.readFile(fullPath, 'utf-8')
 
       return { success: true, content }
     } catch (error) {
       console.error(`读取文件 ${filePath} 失败:`, error)
       return { success: false, error: String(error), content: '' }
+    }
+  })
+
+  // 创建新文件夹
+  ipcMain.handle(IPC_CHANNELS.CREATE_MARKDOWN_FOLDER, async (_, folderName) => {
+    console.log('接收到创建文件夹请求:', folderName)
+
+    try {
+      // 验证文件夹名称
+      if (!folderName || folderName.trim() === '') {
+        console.error('文件夹名称无效')
+        return { success: false, error: '文件夹名称不能为空' }
+      }
+
+      // 过滤掉路径中的非法字符
+      const sanitizedFolderName = folderName.replace(/[\\/:*?"<>|]/g, '_')
+      if (sanitizedFolderName !== folderName) {
+        console.log(`文件夹名称包含非法字符，已净化: ${folderName} -> ${sanitizedFolderName}`)
+      }
+
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPath = resolve(markdownRoot, sanitizedFolderName)
+
+      console.log('将要创建的文件夹完整路径:', fullPath)
+
+      // 检查markdown根目录是否存在，如果不存在则创建
+      if (!fsSync.existsSync(markdownRoot)) {
+        console.log('创建主markdown目录')
+        await fsPromises.mkdir(markdownRoot, { recursive: true })
+      }
+
+      // 检查文件夹是否已存在
+      try {
+        const stat = await fsPromises.stat(fullPath)
+        if (stat.isDirectory()) {
+          console.log('文件夹已存在')
+          return { success: false, error: '文件夹已存在' }
+        } else {
+          console.error('路径存在但不是文件夹')
+          return { success: false, error: '该名称已被文件占用' }
+        }
+      } catch (error) {
+        // 错误表示路径不存在，可以创建
+        console.log('开始创建文件夹')
+      }
+
+      // 创建文件夹
+      await fsPromises.mkdir(fullPath, { recursive: true })
+      console.log('文件夹创建成功:', fullPath)
+
+      return { success: true, path: fullPath }
+    } catch (error) {
+      console.error(`创建文件夹 ${folderName} 失败:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 删除文件夹
+  ipcMain.handle(IPC_CHANNELS.DELETE_MARKDOWN_FOLDER, async (_, folderName) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPath = resolve(markdownRoot, folderName)
+
+      // 检查文件夹是否存在
+      try {
+        await fsPromises.access(fullPath)
+      } catch {
+        return { success: false, error: '文件夹不存在' }
+      }
+
+      // 递归删除文件夹及其内容
+      await fsPromises.rm(fullPath, { recursive: true, force: true })
+
+      return { success: true }
+    } catch (error) {
+      console.error(`删除文件夹 ${folderName} 失败:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 重命名文件夹
+  ipcMain.handle(IPC_CHANNELS.RENAME_MARKDOWN_FOLDER, async (_, oldFolderName, newFolderName) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const oldPath = resolve(markdownRoot, oldFolderName)
+      const newPath = resolve(markdownRoot, newFolderName)
+
+      // 检查源文件夹是否存在
+      try {
+        await fsPromises.access(oldPath)
+      } catch {
+        return { success: false, error: '源文件夹不存在' }
+      }
+
+      // 检查目标文件夹是否已存在
+      try {
+        await fsPromises.access(newPath)
+        return { success: false, error: '目标文件夹已存在' }
+      } catch {
+        // 目标文件夹不存在，可以重命名
+      }
+
+      // 重命名文件夹
+      await fsPromises.rename(oldPath, newPath)
+
+      return { success: true }
+    } catch (error) {
+      console.error(`重命名文件夹从 ${oldFolderName} 到 ${newFolderName} 失败:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 创建新笔记
+  ipcMain.handle(IPC_CHANNELS.CREATE_MARKDOWN_NOTE, async (_, folderName, fileName, content) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const folderPath = resolve(markdownRoot, folderName)
+
+      // 确保文件夹存在
+      await ensureMarkdownFolders(folderPath)
+
+      const filePath = resolve(folderPath, fileName)
+
+      // 检查文件是否已存在
+      try {
+        await fsPromises.access(filePath)
+        return { success: false, error: '文件已存在' }
+      } catch {
+        // 文件不存在，可以创建
+      }
+
+      // 写入文件
+      await fsPromises.writeFile(filePath, content || '', 'utf-8')
+
+      return { success: true, path: filePath }
+    } catch (error) {
+      console.error(`创建笔记 ${folderName}/${fileName} 失败:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 删除笔记文件
+  ipcMain.handle(IPC_CHANNELS.DELETE_MARKDOWN_FILE, async (_, filePath) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPath = resolve(markdownRoot, filePath)
+
+      // 检查文件是否存在
+      try {
+        await fsPromises.access(fullPath)
+      } catch {
+        return { success: false, error: '文件不存在' }
+      }
+
+      // 删除文件
+      await fsPromises.unlink(fullPath)
+
+      return { success: true }
+    } catch (error) {
+      console.error(`删除文件 ${filePath} 失败:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 重命名笔记文件
+  ipcMain.handle(IPC_CHANNELS.RENAME_MARKDOWN_FILE, async (_, oldFilePath, newFilePath) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const oldPath = resolve(markdownRoot, oldFilePath)
+      const newPath = resolve(markdownRoot, newFilePath)
+
+      // 检查源文件是否存在
+      try {
+        await fsPromises.access(oldPath)
+      } catch {
+        return { success: false, error: '源文件不存在' }
+      }
+
+      // 检查目标文件是否已存在
+      try {
+        await fsPromises.access(newPath)
+        return { success: false, error: '目标文件已存在' }
+      } catch {
+        // 目标文件不存在，可以重命名
+      }
+
+      // 确保目标文件的文件夹存在
+      const newFolderPath = newPath.substring(0, newPath.lastIndexOf('\\'))
+      await ensureMarkdownFolders(newFolderPath)
+
+      // 重命名文件
+      await fsPromises.rename(oldPath, newPath)
+
+      return { success: true }
+    } catch (error) {
+      console.error(`重命名文件从 ${oldFilePath} 到 ${newFilePath} 失败:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 系统诊断
+  ipcMain.handle(IPC_CHANNELS.DIAGNOSE_ENVIRONMENT, async () => {
+    try {
+      const markdownPath = getMarkdownFolderPath()
+      let markdownExists = false
+      let markdownDirectories = []
+
+      try {
+        markdownExists = fsSync.existsSync(markdownPath)
+        if (markdownExists) {
+          const entries = await fs.readdir(markdownPath, { withFileTypes: true })
+          markdownDirectories = entries
+            .filter((entry) => entry.isDirectory())
+            .map((entry) => entry.name)
+        }
+      } catch (error) {
+        console.error('读取markdown目录失败:', error)
+      }
+
+      return {
+        success: true,
+        info: {
+          appPath: app.getAppPath(),
+          userData: app.getPath('userData'),
+          exePath: app.getPath('exe'),
+          platform: process.platform,
+          markdownPath,
+          markdownExists,
+          markdownDirectories
+        }
+      }
+    } catch (error) {
+      console.error('系统诊断失败:', error)
+      return { success: false, error: String(error) }
     }
   })
 
