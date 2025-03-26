@@ -5,12 +5,15 @@ import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 
 const { Text } = Typography
 
-// 由于我们初始化时只提供了部分字段，使用Partial类型
+// 完整的WebDAV配置接口
 interface WebDAVConfig {
   url: string
   username: string
   password: string
   remotePath: string
+  enabled: boolean
+  syncOnStartup: boolean
+  syncDirection: 'localToRemote' | 'remoteToLocal' | 'bidirectional'
 }
 
 interface WebDAVSettingsProps {
@@ -32,23 +35,31 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     message: string
   } | null>(null)
 
-  // 从本地存储加载WebDAV配置
+  // 从设置加载WebDAV配置
   useEffect(() => {
-    const savedConfig = localStorage.getItem('webdav-config')
-    if (savedConfig && formApi) {
-      try {
-        const config = JSON.parse(savedConfig)
-        formApi.setValues(config)
-      } catch (error) {
-        console.error('加载WebDAV配置失败:', error)
-      }
-    }
+    loadConfig()
   }, [formApi])
 
-  // 保存WebDAV配置到本地存储
-  const saveConfig = (values: Partial<WebDAVConfig>): void => {
+  // 加载WebDAV配置
+  const loadConfig = async (): Promise<void> => {
+    if (!formApi) return
+
     try {
-      localStorage.setItem('webdav-config', JSON.stringify(values))
+      // 从主进程加载设置
+      const settings = await window.api.settings.getAll()
+      if (settings && settings.webdav) {
+        formApi.setValues(settings.webdav)
+      }
+    } catch (error) {
+      console.error('加载WebDAV配置失败:', error)
+    }
+  }
+
+  // 保存WebDAV配置到设置
+  const saveConfig = async (values: Partial<WebDAVConfig>): Promise<void> => {
+    try {
+      // 保存到主进程设置
+      await window.api.settings.set('webdav', values)
     } catch (error) {
       console.error('保存WebDAV配置失败:', error)
       Toast.error('保存WebDAV配置失败')
@@ -62,7 +73,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       setTestLoading(true)
       const values = (await formApi.validate()) as WebDAVConfig
-      saveConfig(values)
+      await saveConfig(values)
 
       const result = await window.api.webdav.testConnection(values)
       if (result.success) {
@@ -100,7 +111,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       setLoading(true)
       const values = (await formApi.validate()) as WebDAVConfig
-      saveConfig(values)
+      await saveConfig(values)
 
       const result = await window.api.webdav.syncLocalToRemote(values)
       if (result.success) {
@@ -163,7 +174,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       setLoading(true)
       const values = (await formApi.validate()) as WebDAVConfig
-      saveConfig(values)
+      await saveConfig(values)
 
       const result = await window.api.webdav.syncRemoteToLocal(values)
       if (result.success) {
@@ -226,7 +237,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       setLoading(true)
       const values = (await formApi.validate()) as WebDAVConfig
-      saveConfig(values)
+      await saveConfig(values)
 
       const result = await window.api.webdav.syncBidirectional(values)
       if (result.success) {
@@ -282,13 +293,48 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     }
   }
 
+  // 处理配置变更
+  const handleConfigChange = async (): Promise<void> => {
+    if (!formApi) return
+
+    // 获取当前所有值
+    const allValues = formApi.getValues()
+    // 确保remotePath始终为/markdown
+    allValues.remotePath = '/markdown'
+    // 保存更新的配置
+    await saveConfig(allValues)
+  }
+
+  // 显式保存配置
+  const handleSaveConfig = async (): Promise<void> => {
+    if (!formApi) return
+
+    try {
+      const values = await formApi.validate()
+      // 确保remotePath始终为/markdown
+      values.remotePath = '/markdown'
+      await saveConfig(values)
+      Toast.success('WebDAV配置已保存')
+    } catch (error) {
+      console.error('保存配置失败:', error)
+      Toast.error('保存配置失败，请检查表单填写是否正确')
+    }
+  }
+
   // 获取Form实例
   const getFormApi = (api: FormApi<Partial<WebDAVConfig>>): void => {
     setFormApi(api)
   }
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div
+      className="semi-scrollable"
+      style={{
+        padding: '20px',
+        height: 'calc(100vh - 120px)',
+        overflowY: 'auto'
+      }}
+    >
       <h2>WebDAV同步设置</h2>
 
       {syncStatus && syncStatus.show && (
@@ -304,36 +350,64 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       <Form<Partial<WebDAVConfig>>
         layout="vertical"
         getFormApi={getFormApi}
-        initValues={{ remotePath: '/markdown' }}
+        onValueChange={handleConfigChange}
+        initValues={{
+          remotePath: '/markdown',
+          enabled: false,
+          syncOnStartup: false,
+          syncDirection: 'bidirectional'
+        }}
       >
-        <Form.Input
-          field="url"
-          label="WebDAV服务器地址"
-          placeholder="例如: https://dav.example.com/remote.php/dav/files/username/"
-          rules={[{ required: true, message: '请输入WebDAV服务器地址' }]}
-        />
+        <Form.Section text="服务器信息">
+          <Form.Input
+            field="url"
+            label="WebDAV服务器地址"
+            placeholder="例如: https://dav.example.com/remote.php/dav/files/username/"
+            rules={[{ required: true, message: '请输入WebDAV服务器地址' }]}
+          />
 
-        <Form.Input
-          field="username"
-          label="用户名"
-          placeholder="WebDAV用户名"
-          rules={[{ required: true, message: '请输入用户名' }]}
-        />
+          <Form.Input
+            field="username"
+            label="用户名"
+            placeholder="WebDAV用户名"
+            rules={[{ required: true, message: '请输入用户名' }]}
+          />
 
-        <Form.Input
-          field="password"
-          label="密码"
-          placeholder="WebDAV密码"
-          type="password"
-          rules={[{ required: true, message: '请输入密码' }]}
-        />
+          <Form.Input
+            field="password"
+            label="密码"
+            placeholder="WebDAV密码"
+            type="password"
+            rules={[{ required: true, message: '请输入密码' }]}
+          />
+        </Form.Section>
 
-        <Form.Input
-          field="remotePath"
-          label="远程路径"
-          placeholder="例如: /markdown 或 /notes"
-          rules={[{ required: true, message: '请输入远程路径' }]}
-        />
+        <Form.Section text="同步设置">
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+            <Form.Switch field="enabled" label="启用WebDAV同步" noLabel />
+            <Text style={{ marginLeft: '16px' }}>启用WebDAV同步功能</Text>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+            <Form.Switch
+              field="syncOnStartup"
+              label="应用启动时自动同步"
+              noLabel
+              disabled={!formApi?.getValues()?.enabled}
+            />
+            <Text style={{ marginLeft: '16px' }}>应用启动时自动同步文件</Text>
+          </div>
+
+          <Form.RadioGroup
+            field="syncDirection"
+            label="同步方向"
+            disabled={!formApi?.getValues()?.enabled}
+          >
+            <Form.Radio value="localToRemote">本地 → 远程 (上传)</Form.Radio>
+            <Form.Radio value="remoteToLocal">远程 → 本地 (下载)</Form.Radio>
+            <Form.Radio value="bidirectional">双向同步</Form.Radio>
+          </Form.RadioGroup>
+        </Form.Section>
 
         <div style={{ marginTop: '24px' }}>
           <Space>
@@ -346,6 +420,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               loading={loading}
               onClick={handleSyncToRemote}
               theme="solid"
+              disabled={!formApi?.getValues()?.enabled}
             >
               上传到云端
             </Button>
@@ -355,6 +430,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               loading={loading}
               onClick={handleSyncFromRemote}
               theme="solid"
+              disabled={!formApi?.getValues()?.enabled}
             >
               从云端下载
             </Button>
@@ -365,8 +441,13 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               onClick={handleSyncBidirectional}
               theme="solid"
               type="primary"
+              disabled={!formApi?.getValues()?.enabled}
             >
               双向同步
+            </Button>
+
+            <Button type="secondary" onClick={handleSaveConfig}>
+              保存配置
             </Button>
           </Space>
         </div>

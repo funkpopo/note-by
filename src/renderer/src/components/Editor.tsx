@@ -635,7 +635,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             position="bottomRight"
             render={
               <Dropdown.Menu>
-                <Dropdown.Title>AI助手功能</Dropdown.Title>
+                <Dropdown.Title>AI助手模型</Dropdown.Title>
                 <Dropdown.Item type="secondary" onClick={() => {}}>
                   <Dropdown
                     trigger="hover"

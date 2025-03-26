@@ -3,7 +3,14 @@ import { join, resolve } from 'path'
 import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { readSettings, writeSettings, updateSetting, getSetting, ApiConfig } from './settings'
+import {
+  readSettings,
+  writeSettings,
+  updateSetting,
+  getSetting,
+  ApiConfig,
+  getWebDAVConfig
+} from './settings'
 import { testOpenAIConnection, generateContent } from './openai'
 import { promises as fsPromises } from 'fs'
 import {
@@ -108,6 +115,55 @@ function createWindow(): void {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+// 执行WebDAV自动同步
+async function performAutoSync(): Promise<void> {
+  try {
+    console.log('检查WebDAV自动同步设置...')
+    const webdavConfig = getWebDAVConfig()
+
+    // 检查是否启用了自动同步
+    if (!webdavConfig.enabled || !webdavConfig.syncOnStartup) {
+      console.log('WebDAV自动同步未启用')
+      return
+    }
+
+    console.log('开始WebDAV自动同步，方向:', webdavConfig.syncDirection)
+
+    // 设置本地路径
+    const markdownPath = getMarkdownFolderPath()
+
+    // 根据配置的同步方向执行同步
+    let result
+
+    switch (webdavConfig.syncDirection) {
+      case 'localToRemote':
+        result = await syncLocalToRemote({
+          ...webdavConfig,
+          localPath: markdownPath
+        })
+        console.log('自动同步本地到远程完成:', result.message)
+        break
+      case 'remoteToLocal':
+        result = await syncRemoteToLocal({
+          ...webdavConfig,
+          localPath: markdownPath
+        })
+        console.log('自动同步远程到本地完成:', result.message)
+        break
+      case 'bidirectional':
+      default:
+        result = await syncBidirectional({
+          ...webdavConfig,
+          localPath: markdownPath
+        })
+        console.log('自动双向同步完成:', result.message)
+        break
+    }
+  } catch (error) {
+    console.error('WebDAV自动同步失败:', error)
   }
 }
 
@@ -620,6 +676,9 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // 应用启动时执行自动同步
+  performAutoSync()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

@@ -18,7 +18,7 @@ function getSettingsPath(): string {
 }
 
 // 需要加密的设置项键名列表
-const ENCRYPTED_KEYS = ['apiKey']
+const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword']
 
 // API配置接口
 export interface ApiConfig {
@@ -29,11 +29,33 @@ export interface ApiConfig {
   modelName: string
 }
 
+// WebDAV配置接口
+export interface WebDAVConfig {
+  url: string
+  username: string
+  password: string
+  remotePath: string
+  enabled: boolean // 是否启用自动同步
+  syncOnStartup: boolean // 是否在应用启动时自动同步
+  syncDirection: 'localToRemote' | 'remoteToLocal' | 'bidirectional' // 同步方向
+  localPath?: string // 本地路径，在运行时由主进程提供
+}
+
 // 默认设置
 const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
-  apiConfigs: [] as ApiConfig[]
+  apiConfigs: [] as ApiConfig[],
+  // 默认WebDAV配置
+  webdav: {
+    url: '',
+    username: '',
+    password: '',
+    remotePath: '/markdown',
+    enabled: false,
+    syncOnStartup: false,
+    syncDirection: 'bidirectional'
+  } as WebDAVConfig
 }
 
 // 读取设置
@@ -55,6 +77,11 @@ export function readSettings(): Record<string, unknown> {
       } else {
         // 如果不是数组或不存在，初始化为空数组
         settings.apiConfigs = []
+      }
+
+      // 解密WebDAV密码
+      if (settings.webdav && settings.webdav.password) {
+        settings.webdav.password = decrypt(settings.webdav.password)
       }
 
       return settings
@@ -89,6 +116,13 @@ export function writeSettings(settings: Record<string, unknown>): void {
       })
     }
 
+    // 加密WebDAV密码
+    if (settingsToSave.webdav && (settingsToSave.webdav as WebDAVConfig).password) {
+      const webdavConfig = { ...(settingsToSave.webdav as WebDAVConfig) }
+      webdavConfig.password = encrypt(webdavConfig.password)
+      settingsToSave.webdav = webdavConfig
+    }
+
     fs.writeFileSync(settingsPath, JSON.stringify(settingsToSave, null, 2), 'utf8')
   } catch (error) {
     console.error('写入设置文件失败:', error)
@@ -108,4 +142,17 @@ export function updateSetting(key: string, value: unknown): void {
 export function getSetting<T>(key: string, defaultValue?: T): T | unknown {
   const settings = readSettings()
   return settings[key] !== undefined ? settings[key] : defaultValue
+}
+
+// 获取WebDAV配置
+export function getWebDAVConfig(): WebDAVConfig {
+  const settings = readSettings()
+  return (settings.webdav as WebDAVConfig) || defaultSettings.webdav
+}
+
+// 更新WebDAV配置
+export function updateWebDAVConfig(config: WebDAVConfig): void {
+  const settings = readSettings()
+  settings.webdav = config
+  writeSettings(settings)
 }

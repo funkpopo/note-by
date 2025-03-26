@@ -2,12 +2,16 @@ import { createClient, WebDAVClient, FileStat } from 'webdav'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 
-interface WebDAVConfig {
+// 更新WebDAV配置接口，使其与settings.ts中的兼容
+export interface WebDAVConfig {
   url: string
   username: string
   password: string
   remotePath: string
-  localPath: string
+  enabled?: boolean
+  syncOnStartup?: boolean
+  syncDirection?: 'localToRemote' | 'remoteToLocal' | 'bidirectional'
+  localPath: string // 本地路径，由调用代码指定
 }
 
 let webdavClient: WebDAVClient | null = null
@@ -81,25 +85,13 @@ async function downloadFile(remoteFilePath: string, localFilePath: string): Prom
     const localDir = path.dirname(localFilePath)
     await fs.mkdir(localDir, { recursive: true })
 
-    // 下载文件
-    const content = await webdavClient.getFileContents(remoteFilePath)
+    // 下载文件，直接以字符串形式获取
+    const content = (await webdavClient.getFileContents(remoteFilePath, {
+      format: 'text'
+    })) as string
 
-    // 将内容写入本地文件
-    if (content instanceof ArrayBuffer) {
-      await fs.writeFile(localFilePath, Buffer.from(content))
-    } else if (typeof content === 'string') {
-      await fs.writeFile(localFilePath, content)
-    } else if (content && typeof content === 'object' && 'data' in content) {
-      // 处理ResponseDataDetailed类型
-      const data = content.data
-      if (data instanceof ArrayBuffer) {
-        await fs.writeFile(localFilePath, Buffer.from(data))
-      } else {
-        await fs.writeFile(localFilePath, data as string)
-      }
-    } else {
-      throw new Error(`不支持的内容类型: ${typeof content}`)
-    }
+    // 写入文件
+    await fs.writeFile(localFilePath, content)
 
     return true
   } catch (error) {
