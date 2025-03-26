@@ -63,6 +63,16 @@
   box-sizing: border-box;
 }
 
+/* 增强Cherry编辑器的文本选择样式 */
+.cherry-editor ::selection {
+  background-color: var(--semi-color-primary-light-hover) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
+.cherry-editor .CodeMirror-selected {
+  background-color: var(--semi-color-primary-light-hover) !important;
+}
+
 /* 在暗色模式下调整样式 - 使用theme-mode属性 */
 body[theme-mode='dark'] .editor-header {
   background-color: var(--semi-color-bg-1);

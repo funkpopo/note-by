@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, Button, Spin, Typography } from '@douyinfe/semi-ui'
 import { IconClose } from '@douyinfe/semi-icons'
 import './FloatingToolbox.css'
@@ -67,15 +67,15 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   })
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
 
-  // 自动计算宽度（根据内容状态）
-  const getCardWidth = (): number => {
+  // 自动计算宽度（根据内容状态）- 用useCallback包装
+  const getCardWidth = useCallback((): number => {
     // 当没有内容且没有子元素时，使用较小的宽度
     if (!content && !children && !loading && !isAiResponse && title === 'AI助手') {
       return 160
     }
     // 当有内容或加载中或自定义调整过大小时使用自定义大小
     return toolboxSize.width
-  }
+  }, [content, children, loading, isAiResponse, title, toolboxSize.width])
 
   // 初始化Cherry Markdown实例
   useEffect((): (() => void) => {
@@ -156,7 +156,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         setContentCherryInstance(null)
       }
     }
-  }, [visible, isAiResponse, content])
+  }, [visible, isAiResponse, content, cherryInstance, contentCherryInstance])
 
   // 添加选择事件处理和DOM修改
   useEffect(() => {
@@ -280,7 +280,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
 
     setToolboxPosition({ x, y })
-  }, [visible, position, toolboxRef])
+  }, [visible, position, toolboxRef, getCardWidth])
 
   // 添加ESC键事件处理，关闭浮动窗口
   useEffect(() => {
@@ -333,36 +333,39 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   }
 
   // 处理拖动过程
-  const handleDrag = (e: MouseEvent): void => {
-    if (!isDragging || !toolboxRef.current) return
+  const handleDrag = useCallback(
+    (e: MouseEvent): void => {
+      if (!isDragging || !toolboxRef.current) return
 
-    // 计算新位置
-    let newX = e.clientX - dragOffset.x
-    let newY = e.clientY - dragOffset.y
+      // 计算新位置
+      let newX = e.clientX - dragOffset.x
+      let newY = e.clientY - dragOffset.y
 
-    // 获取编辑器边界
-    const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
-    if (editorElement) {
-      const editorRect = editorElement.getBoundingClientRect()
-      const toolboxRect = toolboxRef.current.getBoundingClientRect()
+      // 获取编辑器边界
+      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+      if (editorElement) {
+        const editorRect = editorElement.getBoundingClientRect()
+        const toolboxRect = toolboxRef.current.getBoundingClientRect()
 
-      // 限制在编辑器内
-      newX = Math.max(editorRect.left, Math.min(newX, editorRect.right - toolboxRect.width))
-      newY = Math.max(editorRect.top, Math.min(newY, editorRect.bottom - toolboxRect.height))
-    } else {
-      // 如果找不到编辑器，则限制在窗口内
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
-      const toolboxWidth = toolboxRef.current.offsetWidth
-      const toolboxHeight = toolboxRef.current.offsetHeight
+        // 限制在编辑器内
+        newX = Math.max(editorRect.left, Math.min(newX, editorRect.right - toolboxRect.width))
+        newY = Math.max(editorRect.top, Math.min(newY, editorRect.bottom - toolboxRect.height))
+      } else {
+        // 如果找不到编辑器，则限制在窗口内
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+        const toolboxWidth = toolboxRef.current.offsetWidth
+        const toolboxHeight = toolboxRef.current.offsetHeight
 
-      newX = Math.max(0, Math.min(newX, viewportWidth - toolboxWidth))
-      newY = Math.max(0, Math.min(newY, viewportHeight - toolboxHeight))
-    }
+        newX = Math.max(0, Math.min(newX, viewportWidth - toolboxWidth))
+        newY = Math.max(0, Math.min(newY, viewportHeight - toolboxHeight))
+      }
 
-    // 更新位置
-    setToolboxPosition({ x: newX, y: newY })
-  }
+      // 更新位置
+      setToolboxPosition({ x: newX, y: newY })
+    },
+    [isDragging, toolboxRef, dragOffset]
+  )
 
   // 处理拖动结束
   const handleDragEnd = (): void => {
@@ -408,34 +411,37 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   }
 
   // 调整大小过程
-  const handleResize = (e: MouseEvent): void => {
-    if (!isResizing || !resizeDirection) return
+  const handleResize = useCallback(
+    (e: MouseEvent): void => {
+      if (!isResizing || !resizeDirection) return
 
-    const deltaX = e.clientX - startPosition.x
-    const deltaY = e.clientY - startPosition.y
+      const deltaX = e.clientX - startPosition.x
+      const deltaY = e.clientY - startPosition.y
 
-    let newWidth = startSize.width
-    let newHeight = startSize.height
+      let newWidth = startSize.width
+      let newHeight = startSize.height
 
-    // 根据调整方向更新尺寸
-    if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
-      newWidth = Math.max(160, startSize.width + deltaX) // 最小宽度160px
-    }
+      // 根据调整方向更新尺寸
+      if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
+        newWidth = Math.max(160, startSize.width + deltaX) // 最小宽度160px
+      }
 
-    if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
-      newHeight = Math.max(100, startSize.height + deltaY) // 最小高度100px
-    }
+      if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
+        newHeight = Math.max(100, startSize.height + deltaY) // 最小高度100px
+      }
 
-    // 限制在合理范围内
-    newWidth = Math.min(newWidth, 500) // 最大宽度500px
-    newHeight = Math.min(newHeight, 600) // 最大高度600px
+      // 限制在合理范围内
+      newWidth = Math.min(newWidth, 500) // 最大宽度500px
+      newHeight = Math.min(newHeight, 600) // 最大高度600px
 
-    // 更新尺寸
-    setToolboxSize({
-      width: newWidth,
-      height: resizeDirection.includes('bottom') ? newHeight : 'auto'
-    })
-  }
+      // 更新尺寸
+      setToolboxSize({
+        width: newWidth,
+        height: resizeDirection.includes('bottom') ? newHeight : 'auto'
+      })
+    },
+    [isResizing, resizeDirection, startPosition, startSize]
+  )
 
   // 调整大小结束
   const handleResizeEnd = (): void => {
@@ -465,7 +471,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       document.removeEventListener('mousemove', handleResize)
       document.removeEventListener('mouseup', handleResizeEnd)
     }
-  }, [isDragging, isResizing])
+  }, [isDragging, isResizing, handleDrag, handleResize])
 
   if (!visible) return null
 

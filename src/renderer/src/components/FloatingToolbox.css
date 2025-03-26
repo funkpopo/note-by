@@ -118,6 +118,17 @@
   cursor: text !important;
 }
 
+/* 增强Cherry Markdown的文本选择样式 */
+.cherry-markdown .cherry-markdown-content ::selection {
+  background-color: var(--semi-color-primary-light-hover) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
+body[theme-mode='dark'] .cherry-markdown .cherry-markdown-content ::selection {
+  background-color: var(--semi-color-primary-light-active) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
 /* AI内容展示区域 */
 .floating-toolbox-ai-content {
   max-height: 400px;

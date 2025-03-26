@@ -1029,9 +1029,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               </div>
             }
           />
-          <Typography.Text type="tertiary" style={{ display: 'block', marginTop: 12 }}>
-            新文件夹将自动创建
-          </Typography.Text>
         </Form>
       </Modal>
 
