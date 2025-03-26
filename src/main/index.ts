@@ -1,6 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join, resolve } from 'path'
-import fs from 'fs/promises'
 import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'

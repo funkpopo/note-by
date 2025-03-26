@@ -1,14 +1,27 @@
 import React, { useEffect, useRef, useContext, useState } from 'react'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
-import { Button, Typography, Space, Tooltip, Toast, Modal, Form } from '@douyinfe/semi-ui'
-import { IconSave, IconCopy, IconEdit } from '@douyinfe/semi-icons'
+import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from '@douyinfe/semi-ui'
+import { IconSave, IconCopy, IconEdit, IconMore } from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
 import './Editor.css'
 
 interface EditorProps {
   currentFolder?: string
   currentFile?: string
+}
+
+// AI助手模型接口
+interface AIModel {
+  id: string
+  name: string
+}
+
+// 翻译选项接口
+interface TranslationOption {
+  id: string
+  name: string
+  targetLang: string
 }
 
 const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
@@ -24,6 +37,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
     '# 欢迎使用 Cherry Markdown 编辑器\n\n开始写作吧！'
   )
   const [loading, setLoading] = useState<boolean>(false)
+  const [models, setModels] = useState<AIModel[]>([])
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const translationOptions = [
+    { id: 'en-zh', name: '英译中', targetLang: 'zh' },
+    { id: 'zh-en', name: '中译英', targetLang: 'en' },
+    { id: 'ja-zh', name: '日译中', targetLang: 'zh' },
+    { id: 'zh-ja', name: '中译日', targetLang: 'ja' }
+  ]
 
   // 加载文件夹列表
   const loadFolders = async (): Promise<void> => {
@@ -178,9 +199,118 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
       .catch(() => Toast.error('复制失败'))
   }
 
+  // 加载AI模型列表
+  const loadAIModels = async (): Promise<void> => {
+    try {
+      const settings = await window.api.settings.getAll()
+      if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
+        const apiConfigs = settings.apiConfigs as Array<{
+          id: string
+          name: string
+          apiKey: string
+          apiUrl: string
+          modelName: string
+        }>
+
+        const models = apiConfigs.map((config) => ({
+          id: config.id,
+          name: config.name
+        }))
+
+        setModels(models)
+
+        // 设置当前选中的模型
+        if (settings.selectedModelId) {
+          setSelectedModel(settings.selectedModelId as string)
+        } else if (models.length > 0) {
+          setSelectedModel(models[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('加载AI模型列表失败:', error)
+      Toast.error('加载AI模型列表失败')
+    }
+  }
+
+  // 设置默认AI模型
+  const setDefaultModel = async (modelId: string): Promise<void> => {
+    try {
+      await window.api.settings.set('selectedModelId', modelId)
+      setSelectedModel(modelId)
+      Toast.success('默认模型已设置')
+    } catch (error) {
+      console.error('设置默认模型失败:', error)
+      Toast.error('设置默认模型失败')
+    }
+  }
+
+  // 内容风格改写
+  const rewriteContent = (): void => {
+    if (!cherryRef.current || !selectedModel) {
+      Toast.warning('请先选择AI模型')
+      return
+    }
+
+    // 获取当前编辑器内容
+    const currentContent = cherryRef.current.getMarkdown()
+    if (!currentContent) {
+      Toast.warning('请先输入一些内容')
+      return
+    }
+
+    // 提示用户选择文本
+    const selection = window.getSelection()?.toString()
+    if (!selection || selection.trim() === '') {
+      Toast.warning('请先选择要改写的文本')
+      return
+    }
+
+    Toast.info('正在改写内容...')
+    // 这里实现实际的AI调用逻辑
+  }
+
+  // 内容续写
+  const continueContent = (): void => {
+    if (!cherryRef.current || !selectedModel) {
+      Toast.warning('请先选择AI模型')
+      return
+    }
+
+    // 获取当前编辑器内容和位置用于续写
+    const content = cherryRef.current.getMarkdown()
+    if (!content) {
+      Toast.warning('请先输入一些内容')
+      return
+    }
+
+    Toast.info('正在续写内容...')
+    // 这里实现实际的AI调用逻辑
+  }
+
+  // 内容翻译
+  const translateContent = (option: TranslationOption): void => {
+    if (!cherryRef.current || !selectedModel) {
+      Toast.warning('请先选择AI模型')
+      return
+    }
+
+    // 获取选中的文本
+    const selection = window.getSelection()?.toString()
+    if (!selection || selection.trim() === '') {
+      Toast.warning('请先选择要翻译的文本')
+      return
+    }
+
+    Toast.info(`正在翻译至${option.name}...`)
+    // 这里实现实际的AI调用逻辑
+  }
+
   useEffect((): (() => void) => {
     // 加载文件夹列表
     loadFolders()
+
+    // 加载AI模型列表
+    loadAIModels()
 
     if (editorRef.current && !cherryRef.current) {
       cherryRef.current = new Cherry({
@@ -279,9 +409,76 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile }) => {
           <Tooltip content="复制全文">
             <Button icon={<IconCopy />} type="tertiary" onClick={handleCopyContent} />
           </Tooltip>
-          <Button icon={<IconEdit />} type="secondary">
-            AI助手
-          </Button>
+
+          <Dropdown
+            trigger="click"
+            position="bottomRight"
+            render={
+              <Dropdown.Menu>
+                <Dropdown.Title>AI助手功能</Dropdown.Title>
+                <Dropdown.Item type="secondary" onClick={() => {}}>
+                  <Dropdown
+                    trigger="hover"
+                    position="rightTop"
+                    render={
+                      <Dropdown.Menu>
+                        {models.length > 0 ? (
+                          models.map((model) => (
+                            <Dropdown.Item
+                              key={model.id}
+                              onClick={() => setDefaultModel(model.id)}
+                              type={selectedModel === model.id ? 'primary' : 'secondary'}
+                            >
+                              {model.name} {selectedModel === model.id ? '✓' : ''}
+                            </Dropdown.Item>
+                          ))
+                        ) : (
+                          <Dropdown.Item type="tertiary">尚未配置模型</Dropdown.Item>
+                        )}
+                      </Dropdown.Menu>
+                    }
+                  >
+                    <div
+                      style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}
+                    >
+                      <span>选择模型</span>
+                      <IconMore style={{ marginLeft: 8 }} />
+                    </div>
+                  </Dropdown>
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={rewriteContent}>风格改写</Dropdown.Item>
+                <Dropdown.Item onClick={continueContent}>内容续写</Dropdown.Item>
+                <Dropdown.Item>
+                  <Dropdown
+                    trigger="hover"
+                    position="rightTop"
+                    render={
+                      <Dropdown.Menu>
+                        {translationOptions.map((option) => (
+                          <Dropdown.Item key={option.id} onClick={() => translateContent(option)}>
+                            {option.name}
+                          </Dropdown.Item>
+                        ))}
+                      </Dropdown.Menu>
+                    }
+                  >
+                    <div
+                      style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}
+                    >
+                      <span>内容翻译</span>
+                      <IconMore style={{ marginLeft: 8 }} />
+                    </div>
+                  </Dropdown>
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            }
+          >
+            <Button icon={<IconEdit />} type="secondary">
+              AI助手
+            </Button>
+          </Dropdown>
+
           <Button
             icon={<IconSave />}
             type="primary"
