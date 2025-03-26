@@ -100,5 +100,58 @@ interface Window {
         newFilePath: string
       ) => Promise<{ success: boolean; error?: string }>
     }
+    // WebDAV同步相关API
+    webdav: {
+      // 测试WebDAV连接
+      testConnection: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+      }) => Promise<{ success: boolean; message: string }>
+
+      // 同步本地到远程
+      syncLocalToRemote: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+        localPath?: string
+      }) => Promise<{
+        success: boolean
+        message: string
+        uploaded: number
+        failed: number
+      }>
+
+      // 同步远程到本地
+      syncRemoteToLocal: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+        localPath?: string
+      }) => Promise<{
+        success: boolean
+        message: string
+        downloaded: number
+        failed: number
+      }>
+
+      // 双向同步
+      syncBidirectional: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+        localPath?: string
+      }) => Promise<{
+        success: boolean
+        message: string
+        uploaded: number
+        downloaded: number
+        failed: number
+      }>
+    }
   }
 }

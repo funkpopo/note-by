@@ -32,7 +32,11 @@ const IPC_CHANNELS = {
   RENAME_MARKDOWN_FILE: 'markdown:rename-file',
   DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
   GET_ALL_SETTINGS: 'settings:getAll',
-  CHECK_FILE_EXISTS: 'markdown:checkFileExists'
+  CHECK_FILE_EXISTS: 'markdown:checkFileExists',
+  TEST_WEBDAV_CONNECTION: 'webdav:test-connection',
+  SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
+  SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
+  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional'
 }
 
 // 内容生成请求接口
@@ -146,6 +150,60 @@ const api = {
       newFilePath: string
     ): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.RENAME_MARKDOWN_FILE, oldFilePath, newFilePath)
+  },
+  // WebDAV同步相关API
+  webdav: {
+    // 测试WebDAV连接
+    testConnection: (config: {
+      url: string
+      username: string
+      password: string
+      remotePath: string
+    }): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WEBDAV_CONNECTION, config),
+
+    // 同步本地到远程
+    syncLocalToRemote: (config: {
+      url: string
+      username: string
+      password: string
+      remotePath: string
+      localPath?: string
+    }): Promise<{
+      success: boolean
+      message: string
+      uploaded: number
+      failed: number
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SYNC_LOCAL_TO_REMOTE, config),
+
+    // 同步远程到本地
+    syncRemoteToLocal: (config: {
+      url: string
+      username: string
+      password: string
+      remotePath: string
+      localPath?: string
+    }): Promise<{
+      success: boolean
+      message: string
+      downloaded: number
+      failed: number
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SYNC_REMOTE_TO_LOCAL, config),
+
+    // 双向同步
+    syncBidirectional: (config: {
+      url: string
+      username: string
+      password: string
+      remotePath: string
+      localPath?: string
+    }): Promise<{
+      success: boolean
+      message: string
+      uploaded: number
+      downloaded: number
+      failed: number
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SYNC_BIDIRECTIONAL, config)
   }
 }
 

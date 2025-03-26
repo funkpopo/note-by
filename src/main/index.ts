@@ -6,6 +6,12 @@ import icon from '../../resources/icon.png?asset'
 import { readSettings, writeSettings, updateSetting, getSetting, ApiConfig } from './settings'
 import { testOpenAIConnection, generateContent } from './openai'
 import { promises as fsPromises } from 'fs'
+import {
+  testWebDAVConnection,
+  syncLocalToRemote,
+  syncRemoteToLocal,
+  syncBidirectional
+} from './webdav'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -29,7 +35,12 @@ const IPC_CHANNELS = {
   RENAME_MARKDOWN_FILE: 'markdown:rename-file',
   DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
   GET_ALL_SETTINGS: 'settings:getAll',
-  CHECK_FILE_EXISTS: 'markdown:checkFileExists'
+  CHECK_FILE_EXISTS: 'markdown:checkFileExists',
+  // 添加WebDAV相关IPC通道
+  TEST_WEBDAV_CONNECTION: 'webdav:test-connection',
+  SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
+  SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
+  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional'
 }
 
 // 获取markdown文件夹路径
@@ -530,6 +541,81 @@ app.whenReady().then(() => {
     } catch (error) {
       console.error(`重命名文件从 ${oldFilePath} 到 ${newFilePath} 失败:`, error)
       return { success: false, error: String(error) }
+    }
+  })
+
+  // 测试WebDAV连接
+  ipcMain.handle(IPC_CHANNELS.TEST_WEBDAV_CONNECTION, async (_, config) => {
+    try {
+      const result = await testWebDAVConnection(config)
+      return result
+    } catch (error) {
+      console.error('测试WebDAV连接失败:', error)
+      return { success: false, message: `测试连接失败: ${error}` }
+    }
+  })
+
+  // 同步本地到远程
+  ipcMain.handle(IPC_CHANNELS.SYNC_LOCAL_TO_REMOTE, async (_, config) => {
+    try {
+      if (!config.localPath) {
+        // 如果未指定本地路径，使用默认的markdown文件夹
+        config.localPath = getMarkdownFolderPath()
+      }
+
+      const result = await syncLocalToRemote(config)
+      return result
+    } catch (error) {
+      console.error('同步本地到远程失败:', error)
+      return {
+        success: false,
+        message: `同步失败: ${error}`,
+        uploaded: 0,
+        failed: 0
+      }
+    }
+  })
+
+  // 同步远程到本地
+  ipcMain.handle(IPC_CHANNELS.SYNC_REMOTE_TO_LOCAL, async (_, config) => {
+    try {
+      if (!config.localPath) {
+        // 如果未指定本地路径，使用默认的markdown文件夹
+        config.localPath = getMarkdownFolderPath()
+      }
+
+      const result = await syncRemoteToLocal(config)
+      return result
+    } catch (error) {
+      console.error('同步远程到本地失败:', error)
+      return {
+        success: false,
+        message: `同步失败: ${error}`,
+        downloaded: 0,
+        failed: 0
+      }
+    }
+  })
+
+  // 双向同步
+  ipcMain.handle(IPC_CHANNELS.SYNC_BIDIRECTIONAL, async (_, config) => {
+    try {
+      if (!config.localPath) {
+        // 如果未指定本地路径，使用默认的markdown文件夹
+        config.localPath = getMarkdownFolderPath()
+      }
+
+      const result = await syncBidirectional(config)
+      return result
+    } catch (error) {
+      console.error('双向同步失败:', error)
+      return {
+        success: false,
+        message: `同步失败: ${error}`,
+        uploaded: 0,
+        downloaded: 0,
+        failed: 0
+      }
     }
   })
 
