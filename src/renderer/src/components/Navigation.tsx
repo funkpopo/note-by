@@ -551,47 +551,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect }) =>
     closeCreateDialog()
   }
 
-  // 诊断系统
-  const handleDiagnose = async (): Promise<void> => {
-    try {
-      // 获取系统诊断信息
-      // @ts-ignore - API类型定义问题
-      const result = await window.api.system.diagnoseEnvironment()
-
-      if (result.success && result.info) {
-        // 显示诊断信息
-        const info = result.info
-        const message = `
-应用路径: ${info.appPath}
-用户数据: ${info.userData}
-可执行文件: ${info.exePath}
-平台: ${info.platform}
-Markdown路径: ${info.markdownPath || '未知'}
-Markdown目录存在: ${info.markdownExists ? '是' : '否'}
-Markdown目录内容: ${
-          info.markdownDirectories && info.markdownDirectories.length > 0
-            ? info.markdownDirectories.join(', ')
-            : '空'
-        }
-        `
-
-        Toast.info({
-          content: '诊断信息已记录到控制台',
-          duration: 3
-        })
-
-        console.log('系统诊断信息:')
-        console.log(message)
-        console.log('完整诊断对象:', info)
-      } else {
-        Toast.error('获取诊断信息失败: ' + (result.error || '未知错误'))
-      }
-    } catch (error) {
-      console.error('执行诊断失败:', error)
-      Toast.error('执行诊断失败')
-    }
-  }
-
   // 新建文件夹
   const handleCreateFolder = (): void => {
     openCreateDialog('新建文件夹', 'folder')
@@ -808,13 +767,6 @@ Markdown目录内容: ${
                 onChange={(value) => setSearchValue(value)}
                 style={{ flex: 1 }}
               />
-              <Typography.Text
-                link
-                style={{ marginLeft: '8px', fontSize: '12px' }}
-                onClick={handleDiagnose}
-              >
-                诊断
-              </Typography.Text>
             </div>
           </div>
 

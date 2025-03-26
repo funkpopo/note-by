@@ -121,24 +121,6 @@ const api = {
       newFilePath: string
     ): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.RENAME_MARKDOWN_FILE, oldFilePath, newFilePath)
-  },
-
-  // 系统诊断API
-  system: {
-    // 诊断环境
-    diagnoseEnvironment: (): Promise<{
-      success: boolean
-      info?: {
-        appPath: string
-        userData: string
-        exePath: string
-        platform: string
-        markdownPath?: string
-        markdownExists?: boolean
-        markdownDirectories?: string[]
-      }
-      error?: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.DIAGNOSE_ENVIRONMENT)
   }
 }
 

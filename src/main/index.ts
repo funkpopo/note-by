@@ -502,43 +502,6 @@ app.whenReady().then(() => {
     }
   })
 
-  // 系统诊断
-  ipcMain.handle(IPC_CHANNELS.DIAGNOSE_ENVIRONMENT, async () => {
-    try {
-      const markdownPath = getMarkdownFolderPath()
-      let markdownExists = false
-      let markdownDirectories = []
-
-      try {
-        markdownExists = fsSync.existsSync(markdownPath)
-        if (markdownExists) {
-          const entries = await fs.readdir(markdownPath, { withFileTypes: true })
-          markdownDirectories = entries
-            .filter((entry) => entry.isDirectory())
-            .map((entry) => entry.name)
-        }
-      } catch (error) {
-        console.error('读取markdown目录失败:', error)
-      }
-
-      return {
-        success: true,
-        info: {
-          appPath: app.getAppPath(),
-          userData: app.getPath('userData'),
-          exePath: app.getPath('exe'),
-          platform: process.platform,
-          markdownPath,
-          markdownExists,
-          markdownDirectories
-        }
-      }
-    } catch (error) {
-      console.error('系统诊断失败:', error)
-      return { success: false, error: String(error) }
-    }
-  })
-
   createWindow()
 
   app.on('activate', function () {
