@@ -17,11 +17,9 @@ function normalizeApiUrl(url: string): string {
   // 移除URL末尾的斜杠
   let normalizedUrl = url.trim().replace(/\/+$/, '')
 
-  // 移除末尾的 /v1 路径，因为 OpenAI SDK 会自动添加
-  if (normalizedUrl.endsWith('/v1')) {
-    normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 3)
-  }
-
+  // 不再自动移除 /v1 路径，保留用户输入的完整URL
+  // 用户需要自行确保URL格式正确
+  
   return normalizedUrl
 }
 
@@ -46,7 +44,6 @@ export async function testOpenAIConnection(
 
     // 处理并规范化API URL
     const normalizedApiUrl = normalizeApiUrl(apiUrl)
-    console.log('使用API URL:', normalizedApiUrl) // 调试用
 
     // 创建 AI 客户端
     const openai = new OpenAI({
@@ -61,16 +58,36 @@ export async function testOpenAIConnection(
       max_tokens: 20
     })
 
-    // 检查是否有响应内容
-    if (response && response.choices && response.choices.length > 0) {
-      const content = response.choices[0].message.content
-      return {
-        success: true,
-        message: `连接成功! 响应: ${content}`
+    // 增强检查响应格式
+    console.log('API响应数据:', JSON.stringify(response, null, 2)) // 调试用
+    
+    // 尝试提取内容
+    let content = '';
+    
+    try {
+      // 标准OpenAI格式
+      if (response?.choices?.[0]?.message?.content) {
+        content = response.choices[0].message.content;
+      } 
+      // 兼容其他可能的返回格式
+      else if (response && typeof response === 'object') {
+        if ('text' in response && typeof response.text === 'string') {
+          content = response.text;
+        } else if ('content' in response && typeof response.content === 'string') {
+          content = response.content;
+        } else {
+          content = '已收到响应 (非标准格式)';
+        }
       }
-    } else {
-      return { success: false, message: '连接成功但返回数据格式异常' }
+    } catch (err) {
+      console.error('解析响应内容时出错:', err);
+      content = '解析响应内容时出错';
     }
+    
+    return {
+      success: true,
+      message: content ? `连接成功! 响应: ${content}` : '连接成功!'
+    };
   } catch (error: unknown) {
     console.error('AI API连接测试失败:', error)
 
@@ -127,7 +144,6 @@ export async function generateContent(
 
     // 处理并规范化API URL
     const normalizedApiUrl = normalizeApiUrl(apiUrl)
-    console.log('使用API URL:', normalizedApiUrl) // 调试用
 
     // 创建 AI 客户端
     const openai = new OpenAI({
@@ -142,19 +158,39 @@ export async function generateContent(
       max_tokens: maxTokens
     })
 
-    // 检查是否有响应内容
-    if (response && response.choices && response.choices.length > 0) {
-      const content = response.choices[0].message.content
-      if (content) {
-        return {
-          success: true,
-          content
+    // 记录响应信息，用于调试
+    console.log('生成内容API响应:', JSON.stringify(response, null, 2))
+
+    // 尝试提取内容
+    let content = '';
+    
+    try {
+      // 标准OpenAI格式
+      if (response?.choices?.[0]?.message?.content) {
+        content = response.choices[0].message.content;
+      } 
+      // 兼容其他可能的返回格式
+      else if (response && typeof response === 'object') {
+        if ('text' in response && typeof response.text === 'string') {
+          content = response.text;
+        } else if ('content' in response && typeof response.content === 'string') {
+          content = response.content;
+        } else {
+          const jsonContent = JSON.stringify(response);
+          if (jsonContent && jsonContent.length > 2) {
+            content = '返回数据格式异常，无法提取文本内容';
+          }
         }
-      } else {
-        return { success: false, error: '生成内容为空' }
       }
+    } catch (err) {
+      console.error('解析响应内容时出错:', err);
+      return { success: false, error: '解析响应内容时出错' };
+    }
+    
+    if (content) {
+      return { success: true, content };
     } else {
-      return { success: false, error: '返回数据格式异常' }
+      return { success: false, error: '生成内容为空' };
     }
   } catch (error: unknown) {
     console.error('内容生成失败:', error)
