@@ -46,6 +46,13 @@ const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
   apiConfigs: [] as ApiConfig[],
+  // 默认AI提示设置
+  aiPrompts: {
+    rewrite: '请改写以下文本，保持文本原意但使用更优美的表达：\n\n${content}',
+    continue: '请继续编写以下内容：\n\n${content}\n\n请直接续写，不要重复已有内容。',
+    translateToZh: '请将以下文本翻译成中文：\n\n${content}',
+    translateToEn: '请将以下文本翻译成英文：\n\n${content}'
+  },
   // 默认WebDAV配置
   webdav: {
     url: '',

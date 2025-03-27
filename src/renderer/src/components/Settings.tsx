@@ -31,6 +31,14 @@ interface ApiConfig {
   modelName: string
 }
 
+// AI提示配置接口
+interface AIPrompts {
+  rewrite: string
+  continue: string
+  translateToZh: string
+  translateToEn: string
+}
+
 const Settings: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
@@ -50,6 +58,15 @@ const Settings: React.FC = () => {
   >({})
   // 添加一个ref来存储定时器ID
   const testResultTimersRef = React.useRef<Record<string, NodeJS.Timeout>>({})
+  const [aiPrompts, setAiPrompts] = useState<AIPrompts>({
+    rewrite: '',
+    continue: '',
+    translateToZh: '',
+    translateToEn: ''
+  })
+  const [formApi, setFormApi] = useState<{
+    setValues: (values: Record<string, string>) => void
+  } | null>(null)
 
   // 加载所有设置
   useEffect(() => {
@@ -66,6 +83,18 @@ const Settings: React.FC = () => {
     }
   }, [])
 
+  // 监听formApi变化，确保表单值正确设置
+  useEffect(() => {
+    if (formApi && aiPrompts) {
+      formApi.setValues({
+        rewrite: aiPrompts.rewrite || '',
+        continue: aiPrompts.continue || '',
+        translateToZh: aiPrompts.translateToZh || '',
+        translateToEn: aiPrompts.translateToEn || ''
+      })
+    }
+  }, [formApi, aiPrompts])
+
   // 加载设置函数
   const loadSettings = async (): Promise<void> => {
     try {
@@ -75,6 +104,21 @@ const Settings: React.FC = () => {
       // 设置API配置
       if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
         setApiConfigs(settings.apiConfigs as ApiConfig[])
+      }
+
+      // 设置AI提示配置
+      if (settings.aiPrompts) {
+        setAiPrompts(settings.aiPrompts as AIPrompts)
+
+        // 如果表单API已经初始化，设置表单值
+        if (formApi) {
+          formApi.setValues({
+            rewrite: (settings.aiPrompts as AIPrompts).rewrite || '',
+            continue: (settings.aiPrompts as AIPrompts).continue || '',
+            translateToZh: (settings.aiPrompts as AIPrompts).translateToZh || '',
+            translateToEn: (settings.aiPrompts as AIPrompts).translateToEn || ''
+          })
+        }
       }
     } catch (error) {
       console.error('加载设置失败:', error)
@@ -362,6 +406,41 @@ const Settings: React.FC = () => {
     }
   }
 
+  // 保存AI提示设置
+  const saveAIPrompts = async (): Promise<void> => {
+    try {
+      setIsLoading(true)
+      const settings = await window.api.settings.getAll()
+
+      // 更新AI提示设置
+      const updatedSettings = {
+        ...settings,
+        aiPrompts
+      }
+
+      const success = await window.api.settings.setAll(updatedSettings)
+
+      if (success) {
+        Toast.success('AI提示设置已保存')
+      } else {
+        Toast.error('保存AI提示设置失败')
+      }
+    } catch (error) {
+      console.error('保存AI提示设置失败:', error)
+      Toast.error('保存AI提示设置失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 处理AI提示变化
+  const handleAIPromptChange = (key: keyof AIPrompts, value: string): void => {
+    setAiPrompts((prev) => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
   return (
     <div>
       <Tabs type="line" defaultActiveKey="theme">
@@ -424,6 +503,87 @@ const Settings: React.FC = () => {
             ) : (
               renderApiConfigCards()
             )}
+          </div>
+        </TabPane>
+
+        <TabPane tab="AI提示设置" itemKey="ai-prompts">
+          <div className="settings-scroll-container">
+            <Card style={{ marginTop: 20, marginBottom: 20 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 16
+                }}
+              >
+                <Title heading={5}>AI提示模板设置</Title>
+                <Button
+                  type="primary"
+                  theme="solid"
+                  size="small"
+                  onClick={saveAIPrompts}
+                  loading={isLoading}
+                >
+                  保存设置
+                </Button>
+              </div>
+              <Divider />
+              <Paragraph style={{ marginBottom: 16 }}>
+                在下面设置各种AI操作的提示模板，使用 ${'{content}'} 表示要处理的文本内容。
+              </Paragraph>
+
+              <Form
+                labelPosition="top"
+                getFormApi={(api) => setFormApi(api)}
+                initValues={aiPrompts}
+              >
+                <Form.TextArea
+                  field="rewrite"
+                  label="风格改写提示"
+                  placeholder="请设置风格改写的提示模板"
+                  onChange={(value) => handleAIPromptChange('rewrite', value)}
+                  rows={3}
+                  showClear
+                  style={{ marginBottom: 16 }}
+                />
+
+                <Form.TextArea
+                  field="continue"
+                  label="内容续写提示"
+                  placeholder="请设置内容续写的提示模板"
+                  onChange={(value) => handleAIPromptChange('continue', value)}
+                  rows={3}
+                  showClear
+                  style={{ marginBottom: 16 }}
+                />
+
+                <Form.TextArea
+                  field="translateToZh"
+                  label="英译中提示"
+                  placeholder="请设置英译中的提示模板"
+                  onChange={(value) => handleAIPromptChange('translateToZh', value)}
+                  rows={3}
+                  showClear
+                  style={{ marginBottom: 16 }}
+                />
+
+                <Form.TextArea
+                  field="translateToEn"
+                  label="中译英提示"
+                  placeholder="请设置中译英的提示模板"
+                  onChange={(value) => handleAIPromptChange('translateToEn', value)}
+                  rows={3}
+                  showClear
+                  style={{ marginBottom: 16 }}
+                />
+              </Form>
+
+              <Divider />
+              <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
+                AI提示设置会保存在settings.json文件中，应用启动时会自动载入
+              </Paragraph>
+            </Card>
           </div>
         </TabPane>
 

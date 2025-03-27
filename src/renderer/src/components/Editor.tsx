@@ -19,6 +19,14 @@ interface AIModel {
   name: string
 }
 
+// 添加AI提示配置接口，与Settings.tsx保持一致
+interface AIPrompts {
+  rewrite: string
+  continue: string
+  translateToZh: string
+  translateToEn: string
+}
+
 // 浮动窗口状态接口
 interface FloatingToolboxState {
   visible: boolean
@@ -735,7 +743,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   }
 
                   // 构建请求参数
-                  const prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${toolboxState.content}`
+                  let prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${toolboxState.content}`
+
+                  // 如果存在自定义提示，则使用自定义提示
+                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+                    const aiPrompts = settings.aiPrompts as AIPrompts
+                    if (aiPrompts.rewrite && typeof aiPrompts.rewrite === 'string') {
+                      prompt = aiPrompts.rewrite.replace(/\${content}/g, toolboxState.content || '')
+                    }
+                  }
 
                   // 调用AI接口
                   const result = await (window.api.openai as OpenAIAPI).generateContent({
@@ -798,7 +814,18 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   }
 
                   // 构建请求参数
-                  const prompt = `请继续编写以下内容：\n\n${toolboxState.content}\n\n请直接续写，不要重复已有内容。`
+                  let prompt = `请继续编写以下内容：\n\n${toolboxState.content}\n\n请直接续写，不要重复已有内容。`
+
+                  // 如果存在自定义提示，则使用自定义提示
+                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+                    const aiPrompts = settings.aiPrompts as AIPrompts
+                    if (aiPrompts.continue && typeof aiPrompts.continue === 'string') {
+                      prompt = aiPrompts.continue.replace(
+                        /\${content}/g,
+                        toolboxState.content || ''
+                      )
+                    }
+                  }
 
                   // 调用AI接口
                   const result = await (window.api.openai as OpenAIAPI).generateContent({
@@ -862,7 +889,18 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   }
 
                   // 构建请求参数
-                  const prompt = `请将以下文本翻译成中文：\n\n${toolboxState.content}`
+                  let prompt = `请将以下文本翻译成中文：\n\n${toolboxState.content}`
+
+                  // 如果存在自定义提示，则使用自定义提示
+                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+                    const aiPrompts = settings.aiPrompts as AIPrompts
+                    if (aiPrompts.translateToZh && typeof aiPrompts.translateToZh === 'string') {
+                      prompt = aiPrompts.translateToZh.replace(
+                        /\${content}/g,
+                        toolboxState.content || ''
+                      )
+                    }
+                  }
 
                   // 调用AI接口
                   const result = await (window.api.openai as OpenAIAPI).generateContent({
@@ -925,7 +963,18 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   }
 
                   // 构建请求参数
-                  const prompt = `请将以下文本翻译成英文：\n\n${toolboxState.content}`
+                  let prompt = `请将以下文本翻译成英文：\n\n${toolboxState.content}`
+
+                  // 如果存在自定义提示，则使用自定义提示
+                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+                    const aiPrompts = settings.aiPrompts as AIPrompts
+                    if (aiPrompts.translateToEn && typeof aiPrompts.translateToEn === 'string') {
+                      prompt = aiPrompts.translateToEn.replace(
+                        /\${content}/g,
+                        toolboxState.content || ''
+                      )
+                    }
+                  }
 
                   // 调用AI接口
                   const result = await (window.api.openai as OpenAIAPI).generateContent({
