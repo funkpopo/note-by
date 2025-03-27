@@ -69,6 +69,7 @@ npm run electron:build
 
 - [Electron](https://www.electronjs.org/) - 跨平台桌面应用框架
 - [semi design](https://semi.design/) - 组件库
+- [Cherry-Markdown](https://github.com/Tencent/cherry-markdown/) - Markdown支持
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全的 JavaScript
 - [WebDAV](https://github.com/perry-mitchell/webdav-client) - WebDAV 客户端
 
