@@ -1,0 +1,68 @@
+/* 自定义滚动条样式 */
+
+/* 浅色主题滚动条 */
+body[theme-mode='light'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body[theme-mode='light'] ::-webkit-scrollbar-track {
+  background: var(--semi-color-fill-0);
+  border-radius: 4px;
+}
+
+body[theme-mode='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+body[theme-mode='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* 深色主题滚动条 */
+body[theme-mode='dark'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body[theme-mode='dark'] ::-webkit-scrollbar-track {
+  background: var(--semi-color-fill-0);
+  border-radius: 4px;
+}
+
+body[theme-mode='dark'] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+body[theme-mode='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* 设置页面滚动容器样式 */
+.settings-scroll-container {
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 8px; /* 给滚动条预留空间 */
+  margin-bottom: 20px; /* 底部边距 */
+}
+
+/* WebDAV设置特殊处理 */
+.settings-scroll-container .webdav-settings {
+  padding-right: 0; /* 移除右内边距，避免与父容器的padding-right重叠 */
+}
+
+/* 确保嵌套容器不产生额外滚动条 */
+.settings-scroll-container .semi-tabs-content {
+  overflow: visible;
+}
+
+/* 编辑器相关容器滚动条保持一致样式 */
+#cherry-markdown,
+.cherry-editor,
+.cherry-content {
+  /* 样式保持跟全局一致 */
+}

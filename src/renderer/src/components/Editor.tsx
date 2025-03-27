@@ -56,9 +56,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [saveModalVisible, setSaveModalVisible] = useState<boolean>(false)
   const [fileName, setFileName] = useState<string>('')
   const [selectedFolder, setSelectedFolder] = useState<string>('')
-  const [fileContent, setFileContent] = useState<string>(
-    '# 欢迎使用 Cherry Markdown 编辑器\n\n开始写作吧！'
-  )
+  const [fileContent, setFileContent] = useState<string>('# 欢迎使用 Note-By \n\n开始写作吧！')
   const [loading, setLoading] = useState<boolean>(false)
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
@@ -737,7 +735,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   }
 
                   // 构建请求参数
-                  const prompt = `请改写以下文本，保持原意但使用更优美的表达：\n\n${toolboxState.content}`
+                  const prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${toolboxState.content}`
 
                   // 调用AI接口
                   const result = await (window.api.openai as OpenAIAPI).generateContent({

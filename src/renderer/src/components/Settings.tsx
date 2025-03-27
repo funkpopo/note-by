@@ -366,64 +366,65 @@ const Settings: React.FC = () => {
     <div>
       <Tabs type="line" defaultActiveKey="theme">
         <TabPane tab="基本设置" itemKey="theme">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Title heading={5}>主题设置</Title>
-          </div>
-          {/* 主题设置卡片 */}
-          <Card style={{ marginTop: 20, marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <Text strong>主题模式</Text>
-                <Paragraph spacing="normal" type="tertiary">
-                  {isDarkMode ? '当前使用深色主题' : '当前使用浅色主题'}
-                </Paragraph>
-              </div>
-              <Switch
-                onChange={toggleTheme}
-                checked={isDarkMode}
-                checkedText={<IconMoon style={{ fontSize: '16px' }} />}
-                uncheckedText={<IconSun style={{ fontSize: '16px' }} />}
-                size="large"
-                style={{ marginLeft: '16px' }}
-                loading={isLoading}
-              />
-            </div>
-            <Divider />
-            <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
-              主题设置会保存在settings.json文件中，应用启动时会自动载入
-            </Paragraph>
-          </Card>
-
-          {/* API配置部分 */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 16
-            }}
-          >
-            <Title heading={5}>AI API配置</Title>
-            <ButtonGroup>
-              <Button
-                icon={<IconPlus />}
-                onClick={handleAddConfig}
-                theme="solid"
-                type="primary"
-                size="small"
+          <div className="settings-scroll-container">
+            {/* 主题设置卡片 */}
+            <Card style={{ marginTop: 20, marginBottom: 20 }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
               >
-                添加API配置
-              </Button>
-            </ButtonGroup>
-          </div>
+                <div>
+                  <Text strong>主题模式</Text>
+                  <Paragraph spacing="normal" type="tertiary">
+                    {isDarkMode ? '当前使用深色主题' : '当前使用浅色主题'}
+                  </Paragraph>
+                </div>
+                <Switch
+                  onChange={toggleTheme}
+                  checked={isDarkMode}
+                  checkedText={<IconMoon style={{ fontSize: '16px' }} />}
+                  uncheckedText={<IconSun style={{ fontSize: '16px' }} />}
+                  size="large"
+                  style={{ marginLeft: '16px' }}
+                  loading={isLoading}
+                />
+              </div>
+              <Divider />
+              <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
+                主题设置会保存在settings.json文件中，应用启动时会自动载入
+              </Paragraph>
+            </Card>
 
-          {isLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
-              <Spin size="large" />
+            {/* API配置部分 */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 16
+              }}
+            >
+              <Title heading={5}>AI API配置</Title>
+              <ButtonGroup>
+                <Button
+                  icon={<IconPlus />}
+                  onClick={handleAddConfig}
+                  theme="solid"
+                  type="primary"
+                  size="small"
+                >
+                  添加API配置
+                </Button>
+              </ButtonGroup>
             </div>
-          ) : (
-            renderApiConfigCards()
-          )}
+
+            {isLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                <Spin size="large" />
+              </div>
+            ) : (
+              renderApiConfigCards()
+            )}
+          </div>
         </TabPane>
 
         <TabPane tab="WebDAV同步" itemKey="webdav">
