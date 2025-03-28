@@ -34,7 +34,7 @@ interface FloatingToolboxState {
   content?: string
   loading: boolean
   position?: { x: number; y: number }
-  action: 'rewrite' | 'continue' | 'translate' | null
+  action: 'rewrite' | 'continue' | 'translate' | 'analyze' | null
 }
 
 // 在文件顶部添加一个接口定义
@@ -1007,6 +1007,72 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             >
               中译英
             </Button>
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={async () => {
+                // 显示内容分析加载状态
+                setToolboxState((prev) => ({
+                  ...prev,
+                  loading: true,
+                  title: '内容分析',
+                  action: 'analyze'
+                }))
+
+                try {
+                  // 获取当前编辑器内容进行全文分析
+                  const editorContent = cherryRef.current?.getMarkdown() || ''
+
+                  // 查找当前选中的模型配置
+                  const settings = await window.api.settings.getAll()
+                  const apiConfigs = settings.apiConfigs as Array<{
+                    id: string
+                    name: string
+                    apiKey: string
+                    apiUrl: string
+                    modelName: string
+                  }>
+
+                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+                  if (!modelConfig) {
+                    throw new Error('未找到选中的模型配置')
+                  }
+
+                  // 构建请求参数
+                  const prompt = `请分析以下文本内容，提供主题概述、关键点、结构分析和改进建议：\n\n${editorContent}`
+
+                  // 调用AI接口
+                  const result = await (window.api.openai as OpenAIAPI).generateContent({
+                    apiKey: modelConfig.apiKey,
+                    apiUrl: modelConfig.apiUrl,
+                    modelName: modelConfig.modelName,
+                    prompt
+                  })
+
+                  if (result.success && result.content) {
+                    setToolboxState((prev) => ({
+                      ...prev,
+                      loading: false,
+                      content: result.content
+                    }))
+                  } else {
+                    throw new Error(result.error || '生成内容失败')
+                  }
+                } catch (error) {
+                  console.error('AI处理失败:', error)
+                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+                  setToolboxState((prev) => ({
+                    ...prev,
+                    loading: false,
+                    content: '处理失败，请重试'
+                  }))
+                }
+              }}
+              className="floating-toolbox-actions-btn"
+            >
+              内容分析
+            </Button>
           </div>
         )}
 
@@ -1028,17 +1094,19 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             >
               返回
             </Button>
-            <Button
-              size="small"
-              type="primary"
-              onClick={() => {
-                if (toolboxState.content) {
-                  applyAIContent(toolboxState.content)
-                }
-              }}
-            >
-              应用
-            </Button>
+            {toolboxState.action !== 'analyze' && (
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => {
+                  if (toolboxState.content) {
+                    applyAIContent(toolboxState.content)
+                  }
+                }}
+              >
+                应用
+              </Button>
+            )}
           </div>
         )}
       </FloatingToolbox>
