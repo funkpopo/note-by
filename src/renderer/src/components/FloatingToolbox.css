@@ -160,19 +160,31 @@ body[theme-mode='dark'] .cherry-markdown .cherry-markdown-content ::selection {
 .floating-toolbox-ai-content .cherry {
   height: auto !important;
   min-height: 50px;
+  width: 100% !important;
+  flex: 1 !important;
 }
 
 .floating-toolbox-ai-content .cherry-markdown {
   height: auto !important;
+  width: 100% !important;
 }
 
 .floating-toolbox-ai-content .cherry-editor {
   height: auto !important;
+  width: 100% !important;
+}
+
+.floating-toolbox-ai-content #cherry-ai-response {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex;
+  flex-direction: column;
 }
 
 .floating-toolbox-ai-content pre {
   max-width: 100%;
   overflow-x: auto;
+  white-space: pre-wrap;
 }
 
 .floating-toolbox-ai-content img {

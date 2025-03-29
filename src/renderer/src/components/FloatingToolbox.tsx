@@ -80,6 +80,14 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     return toolboxSize.width
   }, [content, children, loading, isAiResponse, title, toolboxSize.width])
 
+  // 添加判断窗口是否可调整大小的计算函数
+  const isResizable = useCallback((): boolean => {
+    // 只有以下情况才能调整窗口大小：
+    // 1. 窗口显示AI回复内容 (isAiResponse为true)
+    // 2. 窗口显示翻译或分析等处理后的内容 (title不是'AI助手')
+    return isAiResponse || title !== 'AI助手'
+  }, [title, isAiResponse])
+
   // 初始化Cherry Markdown实例
   useEffect((): (() => void) => {
     // 确保允许文本选择的样式已添加
@@ -93,9 +101,19 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     // 为AI响应内容初始化Cherry实例
     if (visible && isAiResponse && cherryContainerRef.current && !cherryInstance) {
       try {
+        // 清除之前可能的内容
+        if (cherryContainerRef.current.innerHTML) {
+          cherryContainerRef.current.innerHTML = ''
+        }
+        
+        // 创建一个div元素作为Cherry的挂载点
+        const mountDiv = document.createElement('div')
+        mountDiv.id = 'cherry-ai-response'
+        cherryContainerRef.current.appendChild(mountDiv)
+        
         const instance = new Cherry({
           id: 'cherry-ai-response',
-          value: '',
+          value: content || '',
           editor: {
             defaultModel: 'previewOnly',
             height: '100%'
@@ -128,6 +146,16 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       !contentCherryInstance
     ) {
       try {
+        // 清除之前可能的内容
+        if (contentContainerRef.current.innerHTML) {
+          contentContainerRef.current.innerHTML = ''
+        }
+        
+        // 创建一个div元素作为Cherry的挂载点
+        const mountDiv = document.createElement('div')
+        mountDiv.id = 'cherry-content'
+        contentContainerRef.current.appendChild(mountDiv)
+        
         const instance = new Cherry({
           id: 'cherry-content',
           value: content,
@@ -194,10 +222,14 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
   // 当content变化时更新内容
   useEffect(() => {
-    if (contentCherryInstance && content) {
+    if (contentCherryInstance && content && !isAiResponse) {
       contentCherryInstance.setMarkdown(content)
     }
-  }, [content, contentCherryInstance])
+    
+    if (cherryInstance && content && isAiResponse && !aiContent) {
+      cherryInstance.setMarkdown(content)
+    }
+  }, [content, contentCherryInstance, cherryInstance, isAiResponse, aiContent])
 
   // 添加MutationObserver监听DOM变化
   useEffect(() => {
@@ -235,27 +267,34 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
   // 处理AI内容流式展示
   useEffect((): void => {
-    if (visible && isAiResponse && cherryInstance && aiContent && !isPrinting) {
-      setIsPrinting(true)
-      setCurrentWordIndex(0)
+    if (visible && isAiResponse && cherryInstance) {
+      // 如果有aiContent，进行流式打印
+      if (aiContent && !isPrinting) {
+        setIsPrinting(true)
+        setCurrentWordIndex(0)
 
-      const printContent = (): void => {
-        if (currentWordIndex <= aiContent.length) {
-          const currentText = aiContent.substring(0, currentWordIndex)
-          cherryInstance.setMarkdown(currentText)
-          setCurrentWordIndex((prev) => prev + 1)
+        const printContent = (): void => {
+          if (currentWordIndex <= aiContent.length) {
+            const currentText = aiContent.substring(0, currentWordIndex)
+            cherryInstance.setMarkdown(currentText)
+            setCurrentWordIndex((prev) => prev + 1)
 
-          if (currentWordIndex < aiContent.length) {
-            setTimeout(printContent, 30)
-          } else {
-            setIsPrinting(false)
+            if (currentWordIndex < aiContent.length) {
+              setTimeout(printContent, 30)
+            } else {
+              setIsPrinting(false)
+            }
           }
         }
-      }
 
-      printContent()
+        printContent()
+      } 
+      // 如果没有aiContent但有content，直接显示content
+      else if (content && !aiContent && !isPrinting) {
+        cherryInstance.setMarkdown(content)
+      }
     }
-  }, [visible, isAiResponse, cherryInstance, aiContent, currentWordIndex, isPrinting])
+  }, [visible, isAiResponse, cherryInstance, aiContent, content, currentWordIndex, isPrinting])
 
   // 修改 useEffect 使窗口位置仅在首次显示时初始化
   useEffect(() => {
@@ -267,6 +306,17 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       setHasSetInitialPosition(false)
     }
   }, [visible, position, hasSetInitialPosition])
+
+  // 当标题变为AI助手且isAiResponse为false时，重置窗口大小
+  useEffect(() => {
+    if (title === 'AI助手' && !isAiResponse) {
+      // 重置窗口尺寸为默认值
+      setToolboxSize({
+        width: 160,
+        height: 'auto'
+      })
+    }
+  }, [title, isAiResponse])
 
   // 添加ESC键事件处理，关闭浮动窗口
   useEffect(() => {
@@ -289,6 +339,54 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       document.removeEventListener('keydown', handleEscape, true)
     }
   }, [visible, onClose])
+
+  // 监听isAiResponse变化，确保Cherry实例正确更新
+  useEffect(() => {
+    // 当isAiResponse状态变化时，销毁旧的实例
+    if (!isAiResponse && cherryInstance) {
+      cherryInstance.destroy();
+      setCherryInstance(null);
+    }
+    
+    if (isAiResponse && !cherryInstance && visible && content && cherryContainerRef.current) {
+      // 清除容器内容
+      if (cherryContainerRef.current.innerHTML) {
+        cherryContainerRef.current.innerHTML = '';
+      }
+      
+      // 创建挂载点
+      const mountDiv = document.createElement('div');
+      mountDiv.id = 'cherry-ai-response';
+      cherryContainerRef.current.appendChild(mountDiv);
+      
+      // 创建新实例
+      try {
+        const instance = new Cherry({
+          id: 'cherry-ai-response',
+          value: content || '',
+          editor: {
+            defaultModel: 'previewOnly',
+            height: '100%'
+          },
+          toolbars: {
+            toolbar: false,
+            sidebar: false,
+            bubble: false,
+            float: false
+          },
+          engine: {
+            global: {
+              flowSessionContext: true
+            }
+          }
+        });
+        
+        setCherryInstance(instance);
+      } catch (err) {
+        console.error('重新初始化Cherry Markdown失败:', err);
+      }
+    }
+  }, [isAiResponse, visible, content, cherryInstance]);
 
   // 处理拖动开始
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement>): void => {
@@ -359,12 +457,68 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     document.body.style.cursor = ''
   }
 
-  // 调整大小开始
+  // 修改调整大小的处理函数，限制在编辑器区域内
+  const handleResize = useCallback(
+    (e: MouseEvent): void => {
+      if (!isResizing || !toolboxRef.current || !isResizable()) return
+
+      let newWidth = toolboxSize.width
+      let newHeight = toolboxSize.height === 'auto' ? startSize.height : toolboxSize.height
+
+      // 获取编辑器边界
+      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+      const editorRect = editorElement ? editorElement.getBoundingClientRect() : null
+
+      if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
+        // 计算新宽度
+        newWidth = Math.max(160, startSize.width + (e.clientX - startPosition.x))
+
+        // 确保不超出编辑器右边界
+        if (editorRect) {
+          const rightLimit = editorRect.right - toolboxPosition.x
+          newWidth = Math.min(newWidth, rightLimit)
+        } else {
+          // 如果找不到编辑器，则使用窗口宽度
+          newWidth = Math.min(newWidth, window.innerWidth - toolboxPosition.x - 10)
+        }
+      }
+
+      if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
+        // 计算新高度
+        newHeight = Math.max(100, startSize.height + (e.clientY - startPosition.y))
+
+        // 确保不超出编辑器底部边界
+        if (editorRect) {
+          const bottomLimit = editorRect.bottom - toolboxPosition.y
+          newHeight = Math.min(newHeight, bottomLimit)
+        } else {
+          // 如果找不到编辑器，则使用窗口高度
+          newHeight = Math.min(newHeight, window.innerHeight - toolboxPosition.y - 10)
+        }
+      }
+
+      setToolboxSize({
+        width: newWidth,
+        height: newHeight
+      })
+    },
+    [
+      isResizing,
+      resizeDirection,
+      startPosition,
+      startSize,
+      toolboxSize,
+      toolboxPosition,
+      isResizable
+    ]
+  )
+
+  // 修改调整大小开始函数，根据可调整状态决定是否响应
   const handleResizeStart = (
     e: React.MouseEvent<HTMLDivElement>,
     direction: ResizeDirection
   ): void => {
-    if (!toolboxRef.current) return
+    if (!toolboxRef.current || !isResizable()) return
 
     const rect = toolboxRef.current.getBoundingClientRect()
     setStartSize({
@@ -396,41 +550,20 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     e.stopPropagation()
   }
 
-  // 修改调整大小的处理函数，确保位置不重置
+  // 修改调整大小结束函数，确保位置不重置
   const handleResizeEnd = (): void => {
     if (!toolboxRef.current) return
 
     setIsResizing(false)
     setResizeDirection(null)
 
+    // 恢复光标样式
+    document.body.style.cursor = ''
+
     // 不重置窗口位置
     document.removeEventListener('mousemove', handleResize)
     document.removeEventListener('mouseup', handleResizeEnd)
   }
-
-  // 调整大小时的处理函数
-  const handleResize = useCallback(
-    (e: MouseEvent): void => {
-      if (!isResizing || !toolboxRef.current) return
-
-      let newWidth = toolboxSize.width
-      let newHeight = toolboxSize.height === 'auto' ? startSize.height : toolboxSize.height
-
-      if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
-        newWidth = Math.max(160, startSize.width + (e.clientX - startPosition.x))
-      }
-
-      if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
-        newHeight = Math.max(100, startSize.height + (e.clientY - startPosition.y))
-      }
-
-      setToolboxSize({
-        width: newWidth,
-        height: newHeight
-      })
-    },
-    [isResizing, resizeDirection, startPosition, startSize, toolboxSize]
-  )
 
   // 添加和移除拖动/调整大小事件监听器
   useEffect(() => {
@@ -520,7 +653,15 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
               <div
                 ref={cherryContainerRef}
                 className="floating-toolbox-ai-content"
-                style={{ width: '100%', minHeight: '100px' }}
+                style={{ 
+                  width: '100%', 
+                  minHeight: '100px',
+                  height: toolboxSize.height !== 'auto' ? 'calc(100% - 30px)' : 'auto',
+                  maxHeight: toolboxSize.height !== 'auto' ? 'calc(100% - 30px)' : '400px',
+                  overflow: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
               />
             )}
             {children}
@@ -528,19 +669,23 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         )}
       </Card>
 
-      {/* 调整大小的触发区域 */}
-      <div
-        className="resize-handle resize-right"
-        onMouseDown={(e) => handleResizeStart(e, 'right')}
-      />
-      <div
-        className="resize-handle resize-bottom"
-        onMouseDown={(e) => handleResizeStart(e, 'bottom')}
-      />
-      <div
-        className="resize-handle resize-bottom-right"
-        onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
-      />
+      {/* 调整大小的触发区域 - 仅在可调整大小时显示 */}
+      {isResizable() && (
+        <>
+          <div
+            className="resize-handle resize-right"
+            onMouseDown={(e) => handleResizeStart(e, 'right')}
+          />
+          <div
+            className="resize-handle resize-bottom"
+            onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+          />
+          <div
+            className="resize-handle resize-bottom-right"
+            onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
+          />
+        </>
+      )}
     </div>
   )
 }

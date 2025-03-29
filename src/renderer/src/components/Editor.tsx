@@ -2,7 +2,16 @@ import React, { useEffect, useRef, useContext, useState } from 'react'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
 import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from '@douyinfe/semi-ui'
-import { IconSave, IconCopy, IconEdit, IconMore, IconLanguage } from '@douyinfe/semi-icons'
+import {
+  IconSave,
+  IconCopy,
+  IconEdit,
+  IconMore,
+  IconLanguage,
+  IconRefresh,
+  IconDoubleChevronRight,
+  IconSearch
+} from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
 import FloatingToolbox from './FloatingToolbox'
 import './Editor.css'
@@ -35,6 +44,7 @@ interface FloatingToolboxState {
   loading: boolean
   position?: { x: number; y: number }
   action: 'rewrite' | 'continue' | 'translate' | 'analyze' | null
+  isAiResponse?: boolean
 }
 
 // 在文件顶部添加一个接口定义
@@ -85,7 +95,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     content: '',
     loading: false,
     position: undefined,
-    action: null
+    action: null,
+    isAiResponse: false
   })
 
   // 添加翻译语言选项
@@ -618,7 +629,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         setToolboxState((prev) => ({
           ...prev,
           loading: false,
-          content: result.content
+          content: result.content,
+          isAiResponse: true
         }))
       } else {
         throw new Error(result.error || '生成内容失败')
@@ -629,7 +641,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       setToolboxState((prev) => ({
         ...prev,
         loading: false,
-        content: '处理失败，请重试'
+        content: '处理失败，请重试',
+        isAiResponse: false
       }))
     }
   }
@@ -836,12 +849,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         loading={toolboxState.loading}
         position={toolboxState.position}
         onClose={closeToolbox}
+        isAiResponse={toolboxState.isAiResponse}
       >
         {!toolboxState.loading && toolboxState.action === null && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Button
               size="small"
               type="tertiary"
+              icon={<IconRefresh />}
               onClick={async () => {
                 // 显示风格改写加载状态
                 setToolboxState((prev) => ({
@@ -891,7 +906,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     setToolboxState((prev) => ({
                       ...prev,
                       loading: false,
-                      content: result.content
+                      content: result.content,
+                      isAiResponse: true
                     }))
                   } else {
                     throw new Error(result.error || '生成内容失败')
@@ -902,7 +918,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   setToolboxState((prev) => ({
                     ...prev,
                     loading: false,
-                    content: '处理失败，请重试'
+                    content: '处理失败，请重试',
+                    isAiResponse: false
                   }))
                 }
               }}
@@ -913,6 +930,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             <Button
               size="small"
               type="tertiary"
+              icon={<IconDoubleChevronRight />}
               onClick={async () => {
                 // 显示内容续写加载状态
                 setToolboxState((prev) => ({
@@ -965,7 +983,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     setToolboxState((prev) => ({
                       ...prev,
                       loading: false,
-                      content: `${toolboxState.content}${result.content}`
+                      content: `${toolboxState.content}${result.content}`,
+                      isAiResponse: true
                     }))
                   } else {
                     throw new Error(result.error || '生成内容失败')
@@ -976,7 +995,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   setToolboxState((prev) => ({
                     ...prev,
                     loading: false,
-                    content: '处理失败，请重试'
+                    content: '处理失败，请重试',
+                    isAiResponse: false
                   }))
                 }
               }}
@@ -1016,6 +1036,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             <Button
               size="small"
               type="tertiary"
+              icon={<IconSearch />}
               onClick={async () => {
                 // 显示内容分析加载状态
                 setToolboxState((prev) => ({
@@ -1060,7 +1081,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     setToolboxState((prev) => ({
                       ...prev,
                       loading: false,
-                      content: result.content
+                      content: result.content,
+                      isAiResponse: true
                     }))
                   } else {
                     throw new Error(result.error || '生成内容失败')
@@ -1071,7 +1093,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   setToolboxState((prev) => ({
                     ...prev,
                     loading: false,
-                    content: '处理失败，请重试'
+                    content: '处理失败，请重试',
+                    isAiResponse: false
                   }))
                 }
               }}
@@ -1094,7 +1117,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   ...prev,
                   action: null,
                   title: 'AI助手',
-                  content: prev.content?.split(':')[1]?.trim() || prev.content || ''
+                  content: prev.content?.split(':')[1]?.trim() || prev.content || '',
+                  isAiResponse: false
                 }))
               }}
             >
