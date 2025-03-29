@@ -533,7 +533,7 @@ const Settings: React.FC = () => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: 16
+                  marginBottom: 5
                 }}
               >
                 <Title heading={5}>AI提示模板设置</Title>
@@ -548,10 +548,8 @@ const Settings: React.FC = () => {
                 </Button>
               </div>
               <Divider />
-              <Paragraph style={{ marginBottom: 16 }}>
+              <Paragraph style={{ marginBottom: 5 }}>
                 在下面设置各种AI操作的提示模板，使用 ${'{content}'} 表示要处理的文本内容。
-                翻译提示中可以使用 ${'{sourceLanguage}'} 表示源语言，${'{targetLanguage}'}{' '}
-                表示目标语言。
               </Paragraph>
 
               <Form
@@ -566,7 +564,7 @@ const Settings: React.FC = () => {
                   onChange={(value) => handleAIPromptChange('rewrite', value)}
                   rows={3}
                   showClear
-                  style={{ marginBottom: 16 }}
+                  style={{ marginBottom: 0 }}
                 />
 
                 <Form.TextArea
@@ -576,17 +574,17 @@ const Settings: React.FC = () => {
                   onChange={(value) => handleAIPromptChange('continue', value)}
                   rows={3}
                   showClear
-                  style={{ marginBottom: 16 }}
+                  style={{ marginBottom: 0 }}
                 />
 
                 <Form.TextArea
                   field="translate"
-                  label="翻译提示"
-                  placeholder="请设置翻译的提示模板，例如：请将以下${sourceLanguage}文本翻译成${targetLanguage}：${content}"
+                  label="翻译提示: 使用 ${sourceLanguage} 表示原语言，${targetLanguage} 表示目标语言。"
+                  placeholder="请设置翻译的提示模板，例如：请将以下${sourceLanguage}文本翻译成${targetLanguage}: ${content}"
                   onChange={(value) => handleAIPromptChange('translate', value)}
                   rows={3}
                   showClear
-                  style={{ marginBottom: 16 }}
+                  style={{ marginBottom: 0 }}
                 />
               </Form>
 
