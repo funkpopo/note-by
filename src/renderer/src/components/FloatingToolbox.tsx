@@ -31,6 +31,13 @@ interface FloatingToolboxProps {
 
 type ResizeDirection = 'right' | 'bottom' | 'bottom-right' | null
 
+// 添加新的类型定义
+interface StartPosition {
+  x: number
+  y: number
+  editorRect?: DOMRect | null
+}
+
 const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   visible,
   title,
@@ -65,9 +72,8 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     width: 280,
     height: 0
   })
-  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
-
-  // 保持窗口位置的状态，防止位置重置
+  // 更新startPosition类型
+  const [startPosition, setStartPosition] = useState<StartPosition>({ x: 0, y: 0 })
   const [hasSetInitialPosition, setHasSetInitialPosition] = useState(false)
 
   // 自动计算宽度（根据内容状态）- 用useCallback包装
@@ -105,12 +111,12 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         if (cherryContainerRef.current.innerHTML) {
           cherryContainerRef.current.innerHTML = ''
         }
-        
+
         // 创建一个div元素作为Cherry的挂载点
         const mountDiv = document.createElement('div')
         mountDiv.id = 'cherry-ai-response'
         cherryContainerRef.current.appendChild(mountDiv)
-        
+
         const instance = new Cherry({
           id: 'cherry-ai-response',
           value: content || '',
@@ -127,6 +133,23 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
           engine: {
             global: {
               flowSessionContext: true // 开启流式适配
+            }
+          },
+          callback: {
+            afterInit: (): void => {
+              // 强制使用预览模式
+              instance.switchModel('previewOnly')
+
+              // 处理横向滚动问题
+              const contentElement = document.querySelector(
+                '#cherry-ai-response .cherry-markdown-content'
+              )
+              if (contentElement instanceof HTMLElement) {
+                contentElement.style.overflow = 'hidden'
+                contentElement.style.wordWrap = 'break-word'
+                contentElement.style.overflowWrap = 'break-word'
+                contentElement.style.whiteSpace = 'pre-wrap'
+              }
             }
           }
         })
@@ -150,12 +173,12 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         if (contentContainerRef.current.innerHTML) {
           contentContainerRef.current.innerHTML = ''
         }
-        
+
         // 创建一个div元素作为Cherry的挂载点
         const mountDiv = document.createElement('div')
         mountDiv.id = 'cherry-content'
         contentContainerRef.current.appendChild(mountDiv)
-        
+
         const instance = new Cherry({
           id: 'cherry-content',
           value: content,
@@ -220,23 +243,12 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
   }, [cherryInstance, contentCherryInstance, visible, aiContent, content])
 
-  // 当content变化时更新内容
-  useEffect(() => {
-    if (contentCherryInstance && content && !isAiResponse) {
-      contentCherryInstance.setMarkdown(content)
-    }
-    
-    if (cherryInstance && content && isAiResponse && !aiContent) {
-      cherryInstance.setMarkdown(content)
-    }
-  }, [content, contentCherryInstance, cherryInstance, isAiResponse, aiContent])
-
-  // 添加MutationObserver监听DOM变化
+  // 添加MutationObserver监听DOM变化，专门确保文本可选择
   useEffect(() => {
     if (!visible) return
 
     // 创建MutationObserver实例监听DOM变化
-    const observer = new MutationObserver(() => {
+    const selectObserver = new MutationObserver(() => {
       // 每当DOM变化时，确保Cherry Markdown内容可选
       document
         .querySelectorAll(
@@ -253,7 +265,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
     // 观察整个浮动工具箱
     if (toolboxRef.current) {
-      observer.observe(toolboxRef.current, {
+      selectObserver.observe(toolboxRef.current, {
         childList: true,
         subtree: true,
         attributes: false
@@ -261,9 +273,114 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
 
     return (): void => {
-      observer.disconnect()
+      selectObserver.disconnect()
     }
   }, [visible])
+
+  // 修改处理横向滚动问题的代码，增强内容处理
+  const handleContentRender = (content: HTMLElement): void => {
+    if (!content) return;
+    
+    // 设置主容器样式
+    content.style.overflow = 'hidden';
+    content.style.overflowX = 'hidden';
+    content.style.wordWrap = 'break-word';
+    content.style.overflowWrap = 'break-word';
+    content.style.wordBreak = 'break-word';
+    content.style.maxWidth = '100%';
+    content.style.width = '100%';
+    content.style.boxSizing = 'border-box';
+    
+    // 处理所有可能导致溢出的元素
+    const elementsToHandle = content.querySelectorAll(
+      'pre, code, table, img, iframe, svg, div, p, ul, ol, blockquote'
+    );
+    
+    elementsToHandle.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.maxWidth = '100%';
+        el.style.boxSizing = 'border-box';
+        
+        // 针对不同元素类型应用特定样式
+        if (el.tagName === 'PRE' || el.tagName === 'CODE') {
+          el.style.whiteSpace = 'pre-wrap';
+          el.style.wordBreak = 'break-word';
+          el.style.paddingRight = '20px';
+        } else if (el.tagName === 'TABLE') {
+          el.style.tableLayout = 'fixed';
+          el.style.width = 'fit-content';
+          el.style.maxWidth = '100%';
+          el.style.display = 'block';
+          
+          // 处理表格内的单元格
+          el.querySelectorAll('td, th').forEach((cell) => {
+            if (cell instanceof HTMLElement) {
+              cell.style.wordBreak = 'break-word';
+              cell.style.maxWidth = '200px';
+              cell.style.overflow = 'hidden';
+              cell.style.textOverflow = 'ellipsis';
+            }
+          });
+        } else if (el.tagName === 'IMG') {
+          el.style.maxWidth = '100%';
+          el.style.height = 'auto';
+        } else if (el.tagName === 'BLOCKQUOTE') {
+          el.style.paddingRight = '10px';
+          el.style.margin = '8px 0';
+        }
+      }
+    });
+  };
+
+  // 当content变化时更新内容
+  useEffect(() => {
+    if (contentCherryInstance && content && !isAiResponse) {
+      contentCherryInstance.setMarkdown(content)
+    }
+
+    if (cherryInstance && content && isAiResponse && !aiContent) {
+      cherryInstance.setMarkdown(content)
+
+      // 在每次内容更新后应用样式以隐藏横向滚动条
+      setTimeout(() => {
+        const contentElement = document.querySelector(
+          '#cherry-ai-response .cherry-markdown-content'
+        )
+        if (contentElement instanceof HTMLElement) {
+          handleContentRender(contentElement)
+        }
+      }, 0)
+    }
+  }, [content, contentCherryInstance, cherryInstance, isAiResponse, aiContent])
+
+  // 添加MutationObserver监听DOM变化，专门处理横向滚动问题
+  useEffect(() => {
+    if (!visible || !isAiResponse) return
+
+    // 创建MutationObserver实例监听DOM变化
+    const scrollObserver = new MutationObserver(() => {
+      // 每当DOM变化时，确保所有内容元素都不会产生横向滚动
+      const contentElement = document.querySelector('#cherry-ai-response .cherry-markdown-content')
+      if (contentElement instanceof HTMLElement) {
+        handleContentRender(contentElement)
+      }
+    })
+
+    // 观察markdown内容区域
+    const targetNode = document.querySelector('#cherry-ai-response')
+    if (targetNode) {
+      scrollObserver.observe(targetNode, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+      })
+    }
+
+    return (): void => {
+      scrollObserver.disconnect()
+    }
+  }, [visible, isAiResponse])
 
   // 处理AI内容流式展示
   useEffect((): void => {
@@ -279,16 +396,58 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
             cherryInstance.setMarkdown(currentText)
             setCurrentWordIndex((prev) => prev + 1)
 
+            // 即使在流式输出过程中也确保不显示横向滚动条
+            const contentElement = document.querySelector(
+              '#cherry-ai-response .cherry-markdown-content'
+            )
+            if (contentElement instanceof HTMLElement) {
+              contentElement.style.overflow = 'hidden'
+              contentElement.style.wordWrap = 'break-word'
+              contentElement.style.overflowWrap = 'break-word'
+              contentElement.style.whiteSpace = 'pre-wrap'
+            }
+
             if (currentWordIndex < aiContent.length) {
               setTimeout(printContent, 30)
             } else {
               setIsPrinting(false)
+
+              // 流式输出完成后，确保所有元素都应用了样式
+              setTimeout(() => {
+                const contentElement = document.querySelector(
+                  '#cherry-ai-response .cherry-markdown-content'
+                )
+                if (contentElement instanceof HTMLElement) {
+                  // 应用主容器样式
+                  contentElement.style.overflow = 'hidden'
+                  contentElement.style.wordWrap = 'break-word'
+                  contentElement.style.overflowWrap = 'break-word'
+                  contentElement.style.whiteSpace = 'pre-wrap'
+
+                  // 处理所有代码块和表格
+                  contentElement.querySelectorAll('pre, code').forEach((el) => {
+                    if (el instanceof HTMLElement) {
+                      el.style.whiteSpace = 'pre-wrap'
+                      el.style.wordBreak = 'break-word'
+                      el.style.overflowX = 'hidden'
+                    }
+                  })
+
+                  contentElement.querySelectorAll('table').forEach((el) => {
+                    if (el instanceof HTMLElement) {
+                      el.style.maxWidth = '100%'
+                      el.style.tableLayout = 'fixed'
+                      el.style.wordBreak = 'break-word'
+                    }
+                  })
+                }
+              }, 50)
             }
           }
         }
 
         printContent()
-      } 
+      }
       // 如果没有aiContent但有content，直接显示content
       else if (content && !aiContent && !isPrinting) {
         cherryInstance.setMarkdown(content)
@@ -344,21 +503,21 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   useEffect(() => {
     // 当isAiResponse状态变化时，销毁旧的实例
     if (!isAiResponse && cherryInstance) {
-      cherryInstance.destroy();
-      setCherryInstance(null);
+      cherryInstance.destroy()
+      setCherryInstance(null)
     }
-    
+
     if (isAiResponse && !cherryInstance && visible && content && cherryContainerRef.current) {
       // 清除容器内容
       if (cherryContainerRef.current.innerHTML) {
-        cherryContainerRef.current.innerHTML = '';
+        cherryContainerRef.current.innerHTML = ''
       }
-      
+
       // 创建挂载点
-      const mountDiv = document.createElement('div');
-      mountDiv.id = 'cherry-ai-response';
-      cherryContainerRef.current.appendChild(mountDiv);
-      
+      const mountDiv = document.createElement('div')
+      mountDiv.id = 'cherry-ai-response'
+      cherryContainerRef.current.appendChild(mountDiv)
+
       // 创建新实例
       try {
         const instance = new Cherry({
@@ -378,15 +537,83 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
             global: {
               flowSessionContext: true
             }
+          },
+          callback: {
+            afterInit: (): void => {
+              // 强制使用预览模式
+              instance.switchModel('previewOnly')
+
+              // 处理横向滚动问题
+              const contentElement = document.querySelector(
+                '#cherry-ai-response .cherry-markdown-content'
+              )
+              if (contentElement instanceof HTMLElement) {
+                contentElement.style.overflow = 'hidden'
+                contentElement.style.wordWrap = 'break-word'
+                contentElement.style.overflowWrap = 'break-word'
+                contentElement.style.whiteSpace = 'pre-wrap'
+              }
+            }
           }
-        });
-        
-        setCherryInstance(instance);
+        })
+
+        setCherryInstance(instance)
       } catch (err) {
-        console.error('重新初始化Cherry Markdown失败:', err);
+        console.error('重新初始化Cherry Markdown失败:', err)
       }
     }
-  }, [isAiResponse, visible, content, cherryInstance]);
+  }, [isAiResponse, visible, content, cherryInstance])
+
+  // 添加一个专门监听isAiResponse变化的useEffect，处理窗口尺寸优化
+  useEffect(() => {
+    if (visible) {
+      if (isAiResponse) {
+        // 当切换到AI响应时，设置合适的尺寸
+        const contentLength = content?.length || 0
+
+        // 基础尺寸
+        const baseWidth = Math.max(320, toolboxSize.width)
+        const baseHeight = 250
+
+        // 预估内容中的代码块和表格
+        const hasCodeBlock = content?.includes('```') || false
+        const hasTable = content?.includes('|') || false
+
+        // 计算适合的宽度
+        let newWidth = baseWidth
+        if (hasCodeBlock) newWidth = Math.max(newWidth, 400) // 代码块需要更宽
+        if (hasTable) newWidth = Math.max(newWidth, 450) // 表格需要更宽
+
+        // 根据内容长度动态调整高度
+        let newHeight = baseHeight
+        if (contentLength > 500) newHeight += 100
+        if (contentLength > 1000) newHeight += 100
+
+        // 计算新的尺寸
+        const calculatedWidth = Math.min(newWidth, 550)
+        const calculatedHeight = Math.min(newHeight, 500)
+        
+        // 仅当尺寸发生实际变化时才更新状态
+        if (calculatedWidth !== toolboxSize.width || 
+            (toolboxSize.height !== 'auto' && calculatedHeight !== toolboxSize.height)) {
+          // 设置新尺寸，同时确保不会太大
+          setToolboxSize({
+            width: calculatedWidth,
+            height: calculatedHeight
+          })
+        }
+      } else {
+        // 当切换回普通菜单时，仅当菜单比较小时恢复默认尺寸
+        if (title === 'AI助手' && toolboxSize.width > 180) {
+          setToolboxSize({
+            width: 160,
+            height: 'auto'
+          })
+        }
+      }
+    }
+  // 从依赖数组中移除toolboxSize，防止无限循环
+  }, [isAiResponse, visible, content, title])
 
   // 处理拖动开始
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement>): void => {
@@ -462,44 +689,46 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     (e: MouseEvent): void => {
       if (!isResizing || !toolboxRef.current || !isResizable()) return
 
-      let newWidth = toolboxSize.width
-      let newHeight = toolboxSize.height === 'auto' ? startSize.height : toolboxSize.height
+      // 使用 requestAnimationFrame 优化性能
+      requestAnimationFrame(() => {
+        let newWidth = toolboxSize.width
+        let newHeight = toolboxSize.height === 'auto' ? startSize.height : toolboxSize.height
 
-      // 获取编辑器边界
-      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
-      const editorRect = editorElement ? editorElement.getBoundingClientRect() : null
+        // 获取编辑器边界 - 仅在调整开始时计算一次边界，避免不必要的DOM访问
+        const editorRect = startPosition.editorRect
 
-      if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
-        // 计算新宽度
-        newWidth = Math.max(160, startSize.width + (e.clientX - startPosition.x))
+        if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
+          // 计算新宽度
+          newWidth = Math.max(160, startSize.width + (e.clientX - startPosition.x))
 
-        // 确保不超出编辑器右边界
-        if (editorRect) {
-          const rightLimit = editorRect.right - toolboxPosition.x
-          newWidth = Math.min(newWidth, rightLimit)
-        } else {
-          // 如果找不到编辑器，则使用窗口宽度
-          newWidth = Math.min(newWidth, window.innerWidth - toolboxPosition.x - 10)
+          // 确保不超出编辑器右边界
+          if (editorRect) {
+            const rightLimit = editorRect.right - toolboxPosition.x
+            newWidth = Math.min(newWidth, rightLimit)
+          } else {
+            // 如果找不到编辑器，则使用窗口宽度
+            newWidth = Math.min(newWidth, window.innerWidth - toolboxPosition.x - 10)
+          }
         }
-      }
 
-      if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
-        // 计算新高度
-        newHeight = Math.max(100, startSize.height + (e.clientY - startPosition.y))
+        if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
+          // 计算新高度
+          newHeight = Math.max(100, startSize.height + (e.clientY - startPosition.y))
 
-        // 确保不超出编辑器底部边界
-        if (editorRect) {
-          const bottomLimit = editorRect.bottom - toolboxPosition.y
-          newHeight = Math.min(newHeight, bottomLimit)
-        } else {
-          // 如果找不到编辑器，则使用窗口高度
-          newHeight = Math.min(newHeight, window.innerHeight - toolboxPosition.y - 10)
+          // 确保不超出编辑器底部边界
+          if (editorRect) {
+            const bottomLimit = editorRect.bottom - toolboxPosition.y
+            newHeight = Math.min(newHeight, bottomLimit)
+          } else {
+            // 如果找不到编辑器，则使用窗口高度
+            newHeight = Math.min(newHeight, window.innerHeight - toolboxPosition.y - 10)
+          }
         }
-      }
 
-      setToolboxSize({
-        width: newWidth,
-        height: newHeight
+        setToolboxSize({
+          width: newWidth,
+          height: newHeight
+        })
       })
     },
     [
@@ -525,9 +754,15 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       width: rect.width,
       height: rect.height
     })
+    
+    // 预先计算并缓存编辑器边界，避免调整过程中重复计算
+    const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+    const editorRect = editorElement ? editorElement.getBoundingClientRect() : null
+    
     setStartPosition({
       x: e.clientX,
-      y: e.clientY
+      y: e.clientY,
+      editorRect // 在开始位置中保存编辑器矩形信息
     })
 
     setIsResizing(true)
@@ -627,6 +862,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
           padding: title === 'AI助手' ? '6px' : '12px',
           height: toolboxSize.height !== 'auto' ? 'calc(100% - 40px)' : 'auto',
           overflow: 'auto',
+          overflowX: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           flex: '1 1 auto'
@@ -653,14 +889,17 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
               <div
                 ref={cherryContainerRef}
                 className="floating-toolbox-ai-content"
-                style={{ 
-                  width: '100%', 
+                style={{
+                  width: '100%',
                   minHeight: '100px',
                   height: toolboxSize.height !== 'auto' ? 'calc(100% - 30px)' : 'auto',
                   maxHeight: toolboxSize.height !== 'auto' ? 'calc(100% - 30px)' : '400px',
                   overflow: 'auto',
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  overflowX: 'hidden',
+                  overflowWrap: 'break-word',
+                  wordWrap: 'break-word'
                 }}
               />
             )}

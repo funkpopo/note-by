@@ -35,8 +35,7 @@ interface ApiConfig {
 interface AIPrompts {
   rewrite: string
   continue: string
-  translateToZh: string
-  translateToEn: string
+  translate: string
 }
 
 const Settings: React.FC = () => {
@@ -61,8 +60,7 @@ const Settings: React.FC = () => {
   const [aiPrompts, setAiPrompts] = useState<AIPrompts>({
     rewrite: '',
     continue: '',
-    translateToZh: '',
-    translateToEn: ''
+    translate: ''
   })
   const [formApi, setFormApi] = useState<{
     setValues: (values: Record<string, string>) => void
@@ -89,8 +87,7 @@ const Settings: React.FC = () => {
       formApi.setValues({
         rewrite: aiPrompts.rewrite || '',
         continue: aiPrompts.continue || '',
-        translateToZh: aiPrompts.translateToZh || '',
-        translateToEn: aiPrompts.translateToEn || ''
+        translate: aiPrompts.translate || ''
       })
     }
   }, [formApi, aiPrompts])
@@ -108,16 +105,38 @@ const Settings: React.FC = () => {
 
       // 设置AI提示配置
       if (settings.aiPrompts) {
-        setAiPrompts(settings.aiPrompts as AIPrompts)
+        const loadedPrompts = settings.aiPrompts as AIPrompts
+
+        // 如果没有translate字段，但有旧的翻译字段，进行迁移
+        const oldPrompts = loadedPrompts as unknown as Record<string, string>
+        if (!loadedPrompts.translate && oldPrompts.translateToZh) {
+          loadedPrompts.translate =
+            '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
+        }
+
+        setAiPrompts(loadedPrompts)
 
         // 如果表单API已经初始化，设置表单值
         if (formApi) {
           formApi.setValues({
-            rewrite: (settings.aiPrompts as AIPrompts).rewrite || '',
-            continue: (settings.aiPrompts as AIPrompts).continue || '',
-            translateToZh: (settings.aiPrompts as AIPrompts).translateToZh || '',
-            translateToEn: (settings.aiPrompts as AIPrompts).translateToEn || ''
+            rewrite: loadedPrompts.rewrite || '',
+            continue: loadedPrompts.continue || '',
+            translate:
+              loadedPrompts.translate ||
+              '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
           })
+        }
+      } else {
+        // 如果没有任何AI提示设置，设置默认值
+        const defaultPrompts = {
+          rewrite: '',
+          continue: '',
+          translate: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
+        }
+        setAiPrompts(defaultPrompts)
+
+        if (formApi) {
+          formApi.setValues(defaultPrompts)
         }
       }
     } catch (error) {
@@ -531,6 +550,8 @@ const Settings: React.FC = () => {
               <Divider />
               <Paragraph style={{ marginBottom: 16 }}>
                 在下面设置各种AI操作的提示模板，使用 ${'{content}'} 表示要处理的文本内容。
+                翻译提示中可以使用 ${'{sourceLanguage}'} 表示源语言，${'{targetLanguage}'}{' '}
+                表示目标语言。
               </Paragraph>
 
               <Form
@@ -559,20 +580,10 @@ const Settings: React.FC = () => {
                 />
 
                 <Form.TextArea
-                  field="translateToZh"
-                  label="英译中提示"
-                  placeholder="请设置英译中的提示模板"
-                  onChange={(value) => handleAIPromptChange('translateToZh', value)}
-                  rows={3}
-                  showClear
-                  style={{ marginBottom: 16 }}
-                />
-
-                <Form.TextArea
-                  field="translateToEn"
-                  label="中译英提示"
-                  placeholder="请设置中译英的提示模板"
-                  onChange={(value) => handleAIPromptChange('translateToEn', value)}
+                  field="translate"
+                  label="翻译提示"
+                  placeholder="请设置翻译的提示模板，例如：请将以下${sourceLanguage}文本翻译成${targetLanguage}：${content}"
+                  onChange={(value) => handleAIPromptChange('translate', value)}
                   rows={3}
                   showClear
                   style={{ marginBottom: 16 }}

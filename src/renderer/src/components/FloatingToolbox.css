@@ -97,12 +97,15 @@
 
 /* 调整内容展示区域 */
 .floating-toolbox-content-wrapper {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
   max-height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-tertiary-light-default) transparent;
 }
 
 .floating-toolbox-content {
@@ -123,14 +126,50 @@
 
 /* Cherry Markdown 内容可选 */
 .cherry-markdown .cherry-markdown-content {
-  user-select: text !important;
-  -webkit-user-select: text !important;
+  overflow-x: hidden !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
 }
 
+/* 确保所有常见元素都不会溢出 */
+.cherry-markdown .cherry-markdown-content pre,
+.cherry-markdown .cherry-markdown-content code,
+.cherry-markdown .cherry-markdown-content table,
+.cherry-markdown .cherry-markdown-content img,
+.cherry-markdown .cherry-markdown-content iframe,
+.cherry-markdown .cherry-markdown-content svg,
+.cherry-markdown .cherry-markdown-content div {
+  max-width: 100% !important;
+  overflow-x: auto !important; /* 修改为auto而不是hidden，允许在元素内部滚动 */
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  box-sizing: border-box !important; /* 确保内边距计入宽度 */
+}
+
+/* 代码块特殊处理 */
+.cherry-markdown .cherry-markdown-content pre {
+  white-space: pre-wrap !important;
+  padding-right: 20px !important; /* 增加右侧内边距，防止文本顶到边缘 */
+}
+
+/* 表格特殊处理 */
+.cherry-markdown .cherry-markdown-content table {
+  table-layout: fixed !important;
+  display: block !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+}
+
+.cherry-markdown .cherry-markdown-content td,
+.cherry-markdown .cherry-markdown-content th {
+  word-break: break-word !important;
+}
+
+/* 确保长单词能够换行 */
 .cherry-markdown .cherry-markdown-content * {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  cursor: text !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
 /* 增强Cherry Markdown的文本选择样式 */
@@ -146,14 +185,135 @@ body[theme-mode='dark'] .cherry-markdown .cherry-markdown-content ::selection {
 
 /* AI内容展示区域 */
 .floating-toolbox-ai-content {
-  max-height: 400px;
+  max-height: 500px;
+  overflow-x: hidden !important; /* 强制隐藏横向滚动条 */
   overflow-y: auto;
   word-break: break-word;
   font-size: 14px;
-  padding: 4px 0;
+  line-height: 1.6;
+  padding: 8px 12px 8px 16px; /* 增加左侧内边距，为滚动条留出空间 */
   margin-bottom: 8px;
   user-select: text !important; /* 允许选择AI生成的内容 */
   -webkit-user-select: text !important;
+  /* 自定义滚动条样式 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-tertiary-light-default) transparent;
+  width: 100% !important; /* 确保宽度不超过父容器 */
+  box-sizing: border-box; /* 确保padding不会导致宽度溢出 */
+}
+
+/* 自定义webkit滚动条样式 */
+.floating-toolbox-ai-content::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  display: block; /* 始终显示，但透明度低 */
+}
+
+.floating-toolbox-ai-content:hover::-webkit-scrollbar {
+  display: block; /* 悬停时显示 */
+}
+
+.floating-toolbox-ai-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+  margin: 4px 0; /* 上下留出边距，滚动条不会触及顶部和底部边缘 */
+}
+
+/* 代码块和表格滚动条样式 */
+.floating-toolbox-ai-content pre::-webkit-scrollbar,
+.floating-toolbox-ai-content table::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  display: none; /* 初始隐藏 */
+}
+
+.floating-toolbox-ai-content pre:hover::-webkit-scrollbar,
+.floating-toolbox-ai-content table:hover::-webkit-scrollbar {
+  display: block; /* 悬停时显示 */
+}
+
+.floating-toolbox-ai-content pre::-webkit-scrollbar-track,
+.floating-toolbox-ai-content table::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+  margin: 2px 0;
+}
+
+.floating-toolbox-ai-content::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-tertiary-light-default);
+  border-radius: 10px; /* 增加圆角 */
+  transition: background-color 0.2s ease; /* 平滑过渡效果 */
+}
+
+.floating-toolbox-ai-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--semi-color-tertiary);
+}
+
+/* 当鼠标悬停在内容区域时，让滚动条更明显 */
+.floating-toolbox-ai-content:hover::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-tertiary);
+}
+
+/* 暗色模式下的滚动条样式 */
+body[theme-mode='dark'] .floating-toolbox-ai-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+body[theme-mode='dark'] .floating-toolbox-ai-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+body[theme-mode='dark'] .floating-toolbox-ai-content:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* 确保代码块内的滚动条样式与主滚动条一致 */
+.floating-toolbox-ai-content pre::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-tertiary-light-default);
+  border-radius: 10px;
+}
+
+.floating-toolbox-ai-content pre::-webkit-scrollbar-thumb:hover {
+  background-color: var(--semi-color-tertiary);
+}
+
+/* 优化表格滚动条样式 */
+.floating-toolbox-ai-content table::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-tertiary-light-default);
+  border-radius: 10px;
+}
+
+.floating-toolbox-ai-content table::-webkit-scrollbar-thumb:hover {
+  background-color: var(--semi-color-tertiary);
+}
+
+/* 确保内容过少时不显示滚动条 */
+.floating-toolbox-ai-content::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  display: block; /* 始终显示，但透明度低 */
+}
+
+.floating-toolbox-ai-content:hover::-webkit-scrollbar {
+  display: block; /* 悬停时显示 */
+}
+
+/* 为暗色模式添加Firefox滚动条样式 */
+body[theme-mode='dark'] .floating-toolbox-ai-content {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* 为代码块和表格内容设置一致的滚动条样式 */
+.floating-toolbox-ai-content pre,
+.floating-toolbox-ai-content table {
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-tertiary-light-default) transparent;
+}
+
+body[theme-mode='dark'] .floating-toolbox-ai-content pre,
+body[theme-mode='dark'] .floating-toolbox-ai-content table {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
 /* AI内容样式增强 */
@@ -181,21 +341,61 @@ body[theme-mode='dark'] .cherry-markdown .cherry-markdown-content ::selection {
   flex-direction: column;
 }
 
-.floating-toolbox-ai-content pre {
-  max-width: 100%;
-  overflow-x: auto;
-  white-space: pre-wrap;
+.floating-toolbox-ai-content code {
+  font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  padding: 2px 4px;
+  background-color: var(--semi-color-fill-0);
+  border-radius: 3px;
 }
 
 .floating-toolbox-ai-content img {
   max-width: 100%;
   height: auto;
+  border-radius: 6px;
+  margin: 8px 0;
 }
 
 .floating-toolbox-ai-content table {
   max-width: 100%;
   display: block;
   overflow-x: auto;
+  border-collapse: collapse;
+  margin: 8px 0;
+  /* 为表格添加自定义滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-tertiary-light-default) transparent;
+}
+
+/* 改善表格边框显示 */
+.floating-toolbox-ai-content table th,
+.floating-toolbox-ai-content table td {
+  border: 1px solid var(--semi-color-border);
+  padding: 6px 8px;
+  min-width: 60px; /* 设置最小宽度，避免单元格过窄 */
+  white-space: normal; /* 允许单元格内容换行 */
+  word-break: break-word;
+}
+
+.floating-toolbox-ai-content table th {
+  background-color: var(--semi-color-fill-1);
+}
+
+.floating-toolbox-ai-content p {
+  margin: 0.8em 0;
+}
+
+.floating-toolbox-ai-content ul,
+.floating-toolbox-ai-content ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.floating-toolbox-ai-content blockquote {
+  margin: 8px 0;
+  padding: 0 12px;
+  color: var(--semi-color-text-1);
+  border-left: 4px solid var(--semi-color-primary-light-default);
 }
 
 /* 空状态窗口样式调整 */
@@ -284,4 +484,88 @@ body[theme-mode='dark'] .floating-toolbox-header:active {
 
 .floating-toolbox .translation-dropdown .semi-dropdown-item:hover {
   background-color: var(--semi-color-primary-light-default);
+}
+
+/* 当尺寸变化时保持动画平滑 */
+.floating-toolbox .semi-card {
+  transition: none; /* 移除过渡效果，防止调整大小时的延迟 */
+}
+
+/* 应用自定义滚动条到内容容器 */
+.floating-toolbox-content-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.floating-toolbox-content-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.floating-toolbox-content-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-tertiary-light-default);
+  border-radius: 3px;
+}
+
+/* 确保AI内容区域内的所有元素不会导致横向溢出 */
+.floating-toolbox-ai-content .cherry,
+.floating-toolbox-ai-content .cherry-markdown,
+.floating-toolbox-ai-content .cherry-editor,
+.floating-toolbox-ai-content .cherry-markdown-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* 确保代码块不会导致横向滚动条 */
+.floating-toolbox-ai-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word; /* 确保长单词也会换行 */
+  background-color: var(--semi-color-fill-0);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid var(--semi-color-border);
+}
+
+.floating-toolbox-ai-content code {
+  font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  padding: 2px 4px;
+  background-color: var(--semi-color-fill-0);
+  border-radius: 3px;
+}
+
+.floating-toolbox-ai-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 8px 0;
+}
+
+.floating-toolbox-ai-content table {
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 8px 0;
+  /* 为表格添加自定义滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-tertiary-light-default) transparent;
+}
+
+/* 改善表格边框显示 */
+.floating-toolbox-ai-content table th,
+.floating-toolbox-ai-content table td {
+  border: 1px solid var(--semi-color-border);
+  padding: 6px 8px;
+  min-width: 60px; /* 设置最小宽度，避免单元格过窄 */
+  white-space: normal; /* 允许单元格内容换行 */
+  word-break: break-word;
+}
+
+.floating-toolbox-ai-content table th {
+  background-color: var(--semi-color-fill-1);
 }

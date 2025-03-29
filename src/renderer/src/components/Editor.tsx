@@ -32,8 +32,7 @@ interface AIModel {
 interface AIPrompts {
   rewrite: string
   continue: string
-  translateToZh: string
-  translateToEn: string
+  translate: string
 }
 
 // 浮动窗口状态接口
@@ -63,6 +62,14 @@ interface OpenAIAPI {
     prompt: string
     maxTokens?: number
   }) => Promise<{ success: boolean; content?: string; error?: string }>
+}
+
+// 语言代码到语言名称的映射
+const languageNameMap: Record<string, string> = {
+  zh: '中文',
+  en: '英文',
+  ja: '日语',
+  fr: '法语'
 }
 
 // 语言翻译选项接口
@@ -105,37 +112,37 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       sourceLanguage: 'en',
       targetLanguage: 'zh',
       label: '英译中',
-      prompt: '请将以下文本翻译成中文：\n\n'
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     },
     {
       sourceLanguage: 'zh',
       targetLanguage: 'en',
       label: '中译英',
-      prompt: '请将以下文本翻译成英文：\n\n'
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     },
     {
       sourceLanguage: 'ja',
       targetLanguage: 'zh',
       label: '日译中',
-      prompt: '请将以下日语文本翻译成中文：\n\n'
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     },
     {
       sourceLanguage: 'zh',
       targetLanguage: 'ja',
       label: '中译日',
-      prompt: '请将以下中文文本翻译成日语：\n\n'
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     },
     {
       sourceLanguage: 'fr',
       targetLanguage: 'zh',
       label: '法译中',
-      prompt: '请将以下法语文本翻译成中文：\n\n'
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     },
     {
       sourceLanguage: 'zh',
       targetLanguage: 'fr',
       label: '中译法',
-      prompt: '请将以下中文文本翻译成法语：\n\n'
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     }
   ]
 
@@ -595,25 +602,22 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       }
 
       // 构建请求参数
-      let prompt = `${option.prompt}${toolboxState.content}`
+      const sourceLanguageName = languageNameMap[option.sourceLanguage] || option.sourceLanguage
+      const targetLanguageName = languageNameMap[option.targetLanguage] || option.targetLanguage
+
+      let prompt = option.prompt
+        .replace(/\${sourceLanguage}/g, sourceLanguageName)
+        .replace(/\${targetLanguage}/g, targetLanguageName)
+        .replace(/\${content}/g, toolboxState.content || '')
 
       // 如果存在自定义提示，则使用自定义提示
       if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
         const aiPrompts = settings.aiPrompts as AIPrompts
-        if (
-          option.sourceLanguage === 'en' &&
-          option.targetLanguage === 'zh' &&
-          aiPrompts.translateToZh &&
-          typeof aiPrompts.translateToZh === 'string'
-        ) {
-          prompt = aiPrompts.translateToZh.replace(/\${content}/g, toolboxState.content || '')
-        } else if (
-          option.sourceLanguage === 'zh' &&
-          option.targetLanguage === 'en' &&
-          aiPrompts.translateToEn &&
-          typeof aiPrompts.translateToEn === 'string'
-        ) {
-          prompt = aiPrompts.translateToEn.replace(/\${content}/g, toolboxState.content || '')
+        if (aiPrompts.translate && typeof aiPrompts.translate === 'string') {
+          prompt = aiPrompts.translate
+            .replace(/\${content}/g, toolboxState.content || '')
+            .replace(/\${sourceLanguage}/g, sourceLanguageName)
+            .replace(/\${targetLanguage}/g, targetLanguageName)
         }
       }
 
