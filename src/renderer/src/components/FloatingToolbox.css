@@ -1,11 +1,17 @@
 .floating-toolbox {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  max-width: 500px; /* 设置最大宽度 */
+  position: fixed;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 8px;
+  overflow: hidden;
   animation: fadeIn 0.2s ease-in-out;
-  z-index: 10000; /* 确保浮动在最上层 */
-  user-select: none; /* 防止拖动时选中文本 */
-  position: relative; /* 用于绝对定位调整大小的手柄 */
+  backdrop-filter: blur(10px);
+  transition: box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
 .floating-toolbox.dragging {
@@ -90,6 +96,15 @@
 }
 
 /* 调整内容展示区域 */
+.floating-toolbox-content-wrapper {
+  overflow: auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+}
+
 .floating-toolbox-content {
   max-height: 300px;
   overflow-y: auto;
@@ -247,4 +262,14 @@ body[theme-mode='dark'] .floating-toolbox-header:active {
 .floating-toolbox-header:active {
   cursor: grabbing;
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 添加样式优化翻译下拉菜单 */
+.floating-toolbox .translation-dropdown .semi-dropdown-item {
+  padding: 8px 12px;
+  transition: all 0.2s;
+}
+
+.floating-toolbox .translation-dropdown .semi-dropdown-item:hover {
+  background-color: var(--semi-color-primary-light-default);
 }

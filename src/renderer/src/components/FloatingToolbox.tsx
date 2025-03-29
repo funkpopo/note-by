@@ -67,6 +67,9 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   })
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
 
+  // 保持窗口位置的状态，防止位置重置
+  const [hasSetInitialPosition, setHasSetInitialPosition] = useState(false)
+
   // 自动计算宽度（根据内容状态）- 用useCallback包装
   const getCardWidth = useCallback((): number => {
     // 当没有内容且没有子元素时，使用较小的宽度
@@ -254,33 +257,16 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
   }, [visible, isAiResponse, cherryInstance, aiContent, currentWordIndex, isPrinting])
 
-  // 计算并更新浮动窗口位置，确保在视口内
+  // 修改 useEffect 使窗口位置仅在首次显示时初始化
   useEffect(() => {
-    if (!visible || !position || !toolboxRef.current) return
-
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    const toolboxWidth = getCardWidth()
-    const toolboxHeight = toolboxRef.current.offsetHeight
-
-    // 初始位置：鼠标点击位置
-    let x = position.x
-    let y = position.y
-
-    // 确保窗口不超出视口右侧
-    if (x + toolboxWidth > viewportWidth - 10) {
-      // 如果右侧放不下，尝试放在左侧
-      x = Math.max(10, position.x - toolboxWidth)
+    if (visible && position && !hasSetInitialPosition) {
+      setToolboxPosition(position)
+      setHasSetInitialPosition(true)
+    } else if (!visible) {
+      // 重置标记，使窗口下次显示时可以设置新位置
+      setHasSetInitialPosition(false)
     }
-
-    // 确保窗口不超出视口底部
-    if (y + toolboxHeight > viewportHeight - 10) {
-      // 如果底部放不下，调整y坐标，确保窗口完全在视口内
-      y = Math.max(10, viewportHeight - toolboxHeight - 10)
-    }
-
-    setToolboxPosition({ x, y })
-  }, [visible, position, toolboxRef, getCardWidth])
+  }, [visible, position, hasSetInitialPosition])
 
   // 添加ESC键事件处理，关闭浮动窗口
   useEffect(() => {
@@ -410,45 +396,41 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     e.stopPropagation()
   }
 
-  // 调整大小过程
+  // 修改调整大小的处理函数，确保位置不重置
+  const handleResizeEnd = (): void => {
+    if (!toolboxRef.current) return
+
+    setIsResizing(false)
+    setResizeDirection(null)
+
+    // 不重置窗口位置
+    document.removeEventListener('mousemove', handleResize)
+    document.removeEventListener('mouseup', handleResizeEnd)
+  }
+
+  // 调整大小时的处理函数
   const handleResize = useCallback(
     (e: MouseEvent): void => {
-      if (!isResizing || !resizeDirection) return
+      if (!isResizing || !toolboxRef.current) return
 
-      const deltaX = e.clientX - startPosition.x
-      const deltaY = e.clientY - startPosition.y
+      let newWidth = toolboxSize.width
+      let newHeight = toolboxSize.height === 'auto' ? startSize.height : toolboxSize.height
 
-      let newWidth = startSize.width
-      let newHeight = startSize.height
-
-      // 根据调整方向更新尺寸
       if (resizeDirection === 'right' || resizeDirection === 'bottom-right') {
-        newWidth = Math.max(160, startSize.width + deltaX) // 最小宽度160px
+        newWidth = Math.max(160, startSize.width + (e.clientX - startPosition.x))
       }
 
       if (resizeDirection === 'bottom' || resizeDirection === 'bottom-right') {
-        newHeight = Math.max(100, startSize.height + deltaY) // 最小高度100px
+        newHeight = Math.max(100, startSize.height + (e.clientY - startPosition.y))
       }
 
-      // 限制在合理范围内
-      newWidth = Math.min(newWidth, 500) // 最大宽度500px
-      newHeight = Math.min(newHeight, 600) // 最大高度600px
-
-      // 更新尺寸
       setToolboxSize({
         width: newWidth,
-        height: resizeDirection.includes('bottom') ? newHeight : 'auto'
+        height: newHeight
       })
     },
-    [isResizing, resizeDirection, startPosition, startSize]
+    [isResizing, resizeDirection, startPosition, startSize, toolboxSize]
   )
-
-  // 调整大小结束
-  const handleResizeEnd = (): void => {
-    setIsResizing(false)
-    setResizeDirection(null)
-    document.body.style.cursor = ''
-  }
 
   // 添加和移除拖动/调整大小事件监听器
   useEffect(() => {
@@ -491,38 +473,30 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         shadows="hover"
         style={{
           width: getCardWidth(),
-          height: toolboxSize.height !== 'auto' ? `${toolboxSize.height}px` : 'auto'
+          height: toolboxSize.height !== 'auto' ? `${toolboxSize.height}px` : 'auto',
+          display: 'flex',
+          flexDirection: 'column'
         }}
         headerLine={false}
         header={
-          title !== 'AI助手' ? (
-            <div ref={headerRef} className="floating-toolbox-header" onMouseDown={handleDragStart}>
-              <Typography.Text strong>{title}</Typography.Text>
-              <Button
-                type="tertiary"
-                icon={<IconClose />}
-                size="small"
-                onClick={onClose}
-                style={{ marginLeft: 'auto' }}
-              />
-            </div>
-          ) : (
-            <div ref={headerRef} className="floating-toolbox-header" onMouseDown={handleDragStart}>
-              <Typography.Text strong>AI助手</Typography.Text>
-              <Button
-                type="tertiary"
-                icon={<IconClose />}
-                size="small"
-                onClick={onClose}
-                style={{ marginLeft: 'auto' }}
-              />
-            </div>
-          )
+          <div ref={headerRef} className="floating-toolbox-header" onMouseDown={handleDragStart}>
+            <Typography.Text strong>{title}</Typography.Text>
+            <Button
+              type="tertiary"
+              icon={<IconClose />}
+              size="small"
+              onClick={onClose}
+              style={{ marginLeft: 'auto' }}
+            />
+          </div>
         }
         bodyStyle={{
           padding: title === 'AI助手' ? '6px' : '12px',
           height: toolboxSize.height !== 'auto' ? 'calc(100% - 40px)' : 'auto',
-          overflow: 'auto'
+          overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: '1 1 auto'
         }}
       >
         {loading ? (
@@ -531,7 +505,10 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
             <div style={{ marginTop: 8 }}>处理中...</div>
           </div>
         ) : (
-          <>
+          <div
+            className="floating-toolbox-content-wrapper"
+            style={{ overflow: 'auto', flex: '1 1 auto' }}
+          >
             {content && title !== 'AI助手' && !isAiResponse && (
               <div
                 ref={contentContainerRef}
@@ -547,7 +524,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
               />
             )}
             {children}
-          </>
+          </div>
         )}
       </Card>
 

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useContext, useState } from 'react'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
 import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from '@douyinfe/semi-ui'
-import { IconSave, IconCopy, IconEdit, IconMore } from '@douyinfe/semi-icons'
+import { IconSave, IconCopy, IconEdit, IconMore, IconLanguage } from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
 import FloatingToolbox from './FloatingToolbox'
 import './Editor.css'
@@ -55,6 +55,14 @@ interface OpenAIAPI {
   }) => Promise<{ success: boolean; content?: string; error?: string }>
 }
 
+// 语言翻译选项接口
+interface TranslationOption {
+  sourceLanguage: string
+  targetLanguage: string
+  label: string
+  prompt: string
+}
+
 const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChanged }) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const cherryRef = useRef<Cherry | null>(null)
@@ -79,6 +87,46 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     position: undefined,
     action: null
   })
+
+  // 添加翻译语言选项
+  const translationOptions: TranslationOption[] = [
+    {
+      sourceLanguage: 'en',
+      targetLanguage: 'zh',
+      label: '英译中',
+      prompt: '请将以下文本翻译成中文：\n\n'
+    },
+    {
+      sourceLanguage: 'zh',
+      targetLanguage: 'en',
+      label: '中译英',
+      prompt: '请将以下文本翻译成英文：\n\n'
+    },
+    {
+      sourceLanguage: 'ja',
+      targetLanguage: 'zh',
+      label: '日译中',
+      prompt: '请将以下日语文本翻译成中文：\n\n'
+    },
+    {
+      sourceLanguage: 'zh',
+      targetLanguage: 'ja',
+      label: '中译日',
+      prompt: '请将以下中文文本翻译成日语：\n\n'
+    },
+    {
+      sourceLanguage: 'fr',
+      targetLanguage: 'zh',
+      label: '法译中',
+      prompt: '请将以下法语文本翻译成中文：\n\n'
+    },
+    {
+      sourceLanguage: 'zh',
+      targetLanguage: 'fr',
+      label: '中译法',
+      prompt: '请将以下中文文本翻译成法语：\n\n'
+    }
+  ]
 
   // 加载文件夹列表
   const loadFolders = async (): Promise<void> => {
@@ -508,6 +556,84 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
+  // 处理翻译请求
+  const handleTranslate = async (option: TranslationOption): Promise<void> => {
+    // 显示翻译加载状态
+    setToolboxState((prev) => ({
+      ...prev,
+      loading: true,
+      title: `${option.label}翻译`,
+      action: 'translate'
+    }))
+
+    try {
+      // 查找当前选中的模型配置
+      const settings = await window.api.settings.getAll()
+      const apiConfigs = settings.apiConfigs as Array<{
+        id: string
+        name: string
+        apiKey: string
+        apiUrl: string
+        modelName: string
+      }>
+
+      const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+      if (!modelConfig) {
+        throw new Error('未找到选中的模型配置')
+      }
+
+      // 构建请求参数
+      let prompt = `${option.prompt}${toolboxState.content}`
+
+      // 如果存在自定义提示，则使用自定义提示
+      if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+        const aiPrompts = settings.aiPrompts as AIPrompts
+        if (
+          option.sourceLanguage === 'en' &&
+          option.targetLanguage === 'zh' &&
+          aiPrompts.translateToZh &&
+          typeof aiPrompts.translateToZh === 'string'
+        ) {
+          prompt = aiPrompts.translateToZh.replace(/\${content}/g, toolboxState.content || '')
+        } else if (
+          option.sourceLanguage === 'zh' &&
+          option.targetLanguage === 'en' &&
+          aiPrompts.translateToEn &&
+          typeof aiPrompts.translateToEn === 'string'
+        ) {
+          prompt = aiPrompts.translateToEn.replace(/\${content}/g, toolboxState.content || '')
+        }
+      }
+
+      // 调用AI接口
+      const result = await (window.api.openai as OpenAIAPI).generateContent({
+        apiKey: modelConfig.apiKey,
+        apiUrl: modelConfig.apiUrl,
+        modelName: modelConfig.modelName,
+        prompt
+      })
+
+      if (result.success && result.content) {
+        setToolboxState((prev) => ({
+          ...prev,
+          loading: false,
+          content: result.content
+        }))
+      } else {
+        throw new Error(result.error || '生成内容失败')
+      }
+    } catch (error) {
+      console.error('AI处理失败:', error)
+      Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      setToolboxState((prev) => ({
+        ...prev,
+        loading: false,
+        content: '处理失败，请重试'
+      }))
+    }
+  }
+
   useEffect((): (() => void) => {
     // 加载文件夹列表
     loadFolders()
@@ -858,155 +984,35 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             >
               内容续写
             </Button>
-            <div style={{ height: 1, background: 'var(--semi-color-border)', margin: '4px 0' }} />
-            <Button
-              size="small"
-              type="tertiary"
-              onClick={async () => {
-                // 显示翻译加载状态
-                setToolboxState((prev) => ({
-                  ...prev,
-                  loading: true,
-                  title: '英译中翻译',
-                  action: 'translate'
-                }))
 
-                try {
-                  // 查找当前选中的模型配置
-                  const settings = await window.api.settings.getAll()
-                  const apiConfigs = settings.apiConfigs as Array<{
-                    id: string
-                    name: string
-                    apiKey: string
-                    apiUrl: string
-                    modelName: string
-                  }>
-
-                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
-
-                  if (!modelConfig) {
-                    throw new Error('未找到选中的模型配置')
-                  }
-
-                  // 构建请求参数
-                  let prompt = `请将以下文本翻译成中文：\n\n${toolboxState.content}`
-
-                  // 如果存在自定义提示，则使用自定义提示
-                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
-                    const aiPrompts = settings.aiPrompts as AIPrompts
-                    if (aiPrompts.translateToZh && typeof aiPrompts.translateToZh === 'string') {
-                      prompt = aiPrompts.translateToZh.replace(
-                        /\${content}/g,
-                        toolboxState.content || ''
-                      )
-                    }
-                  }
-
-                  // 调用AI接口
-                  const result = await (window.api.openai as OpenAIAPI).generateContent({
-                    apiKey: modelConfig.apiKey,
-                    apiUrl: modelConfig.apiUrl,
-                    modelName: modelConfig.modelName,
-                    prompt
-                  })
-
-                  if (result.success && result.content) {
-                    setToolboxState((prev) => ({
-                      ...prev,
-                      loading: false,
-                      content: result.content
-                    }))
-                  } else {
-                    throw new Error(result.error || '生成内容失败')
-                  }
-                } catch (error) {
-                  console.error('AI处理失败:', error)
-                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
-                  setToolboxState((prev) => ({
-                    ...prev,
-                    loading: false,
-                    content: '处理失败，请重试'
-                  }))
-                }
-              }}
-              className="floating-toolbox-actions-btn"
+            {/* 整合的翻译下拉菜单按钮 */}
+            <Dropdown
+              trigger="click"
+              position="rightTop"
+              render={
+                <Dropdown.Menu className="translation-dropdown">
+                  <Dropdown.Title>选择翻译语言</Dropdown.Title>
+                  {translationOptions.map((option) => (
+                    <Dropdown.Item
+                      key={`${option.sourceLanguage}-${option.targetLanguage}`}
+                      onClick={() => handleTranslate(option)}
+                    >
+                      {option.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              }
             >
-              英译中
-            </Button>
-            <Button
-              size="small"
-              type="tertiary"
-              onClick={async () => {
-                // 显示翻译加载状态
-                setToolboxState((prev) => ({
-                  ...prev,
-                  loading: true,
-                  title: '中译英翻译',
-                  action: 'translate'
-                }))
+              <Button
+                size="small"
+                type="tertiary"
+                icon={<IconLanguage />}
+                className="floating-toolbox-actions-btn"
+              >
+                翻译功能
+              </Button>
+            </Dropdown>
 
-                try {
-                  // 查找当前选中的模型配置
-                  const settings = await window.api.settings.getAll()
-                  const apiConfigs = settings.apiConfigs as Array<{
-                    id: string
-                    name: string
-                    apiKey: string
-                    apiUrl: string
-                    modelName: string
-                  }>
-
-                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
-
-                  if (!modelConfig) {
-                    throw new Error('未找到选中的模型配置')
-                  }
-
-                  // 构建请求参数
-                  let prompt = `请将以下文本翻译成英文：\n\n${toolboxState.content}`
-
-                  // 如果存在自定义提示，则使用自定义提示
-                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
-                    const aiPrompts = settings.aiPrompts as AIPrompts
-                    if (aiPrompts.translateToEn && typeof aiPrompts.translateToEn === 'string') {
-                      prompt = aiPrompts.translateToEn.replace(
-                        /\${content}/g,
-                        toolboxState.content || ''
-                      )
-                    }
-                  }
-
-                  // 调用AI接口
-                  const result = await (window.api.openai as OpenAIAPI).generateContent({
-                    apiKey: modelConfig.apiKey,
-                    apiUrl: modelConfig.apiUrl,
-                    modelName: modelConfig.modelName,
-                    prompt
-                  })
-
-                  if (result.success && result.content) {
-                    setToolboxState((prev) => ({
-                      ...prev,
-                      loading: false,
-                      content: result.content
-                    }))
-                  } else {
-                    throw new Error(result.error || '生成内容失败')
-                  }
-                } catch (error) {
-                  console.error('AI处理失败:', error)
-                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
-                  setToolboxState((prev) => ({
-                    ...prev,
-                    loading: false,
-                    content: '处理失败，请重试'
-                  }))
-                }
-              }}
-              className="floating-toolbox-actions-btn"
-            >
-              中译英
-            </Button>
             <Button
               size="small"
               type="tertiary"
