@@ -26,6 +26,7 @@
     "@douyinfe/semi-ui": "^2.77.0",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
+    "axios": "^1.8.4",
     "cherry-markdown": "^0.8.58",
     "openai": "^4.89.0",
     "uuid": "^11.1.0",

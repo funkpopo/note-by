@@ -62,7 +62,9 @@ const defaultSettings = {
     enabled: false,
     syncOnStartup: false,
     syncDirection: 'bidirectional'
-  } as WebDAVConfig
+  } as WebDAVConfig,
+  // 默认更新设置
+  checkUpdatesOnStartup: true
 }
 
 // 读取设置

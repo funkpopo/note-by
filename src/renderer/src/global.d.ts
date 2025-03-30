@@ -44,6 +44,19 @@ interface Window {
       // 删除配置
       deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
     }
+    // 更新检查相关API
+    updates: {
+      // 检查更新
+      checkForUpdates: () => Promise<{
+        hasUpdate: boolean
+        latestVersion: string
+        currentVersion: string
+      }>
+      // 监听更新通知
+      onUpdateAvailable: (
+        callback: (updateInfo: { latestVersion: string; currentVersion: string }) => void
+      ) => void
+    }
     // Markdown文件管理
     markdown: {
       // 保存Markdown文件

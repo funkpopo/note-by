@@ -19,6 +19,7 @@ import {
   syncRemoteToLocal,
   syncBidirectional
 } from './webdav'
+import axios from 'axios'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -47,7 +48,8 @@ const IPC_CHANNELS = {
   TEST_WEBDAV_CONNECTION: 'webdav:test-connection',
   SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
-  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional'
+  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
+  CHECK_FOR_UPDATES: 'app:check-for-updates'
 }
 
 // 获取markdown文件夹路径
@@ -164,6 +166,66 @@ async function performAutoSync(): Promise<void> {
     }
   } catch (error) {
     console.error('WebDAV自动同步失败:', error)
+  }
+}
+
+// GitHub releases API URL
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/funkpopo/note-by/releases/latest'
+
+// 检查更新函数
+async function checkForUpdates(): Promise<{
+  hasUpdate: boolean
+  latestVersion: string
+  currentVersion: string
+}> {
+  try {
+    const currentVersion = app.getVersion()
+    const response = await axios.get(GITHUB_RELEASES_URL)
+
+    if (response.status !== 200) {
+      throw new Error(`GitHub API responded with status: ${response.status}`)
+    }
+
+    const data = response.data as { tag_name: string }
+    const latestVersion = data.tag_name.replace('v', '')
+
+    // 简单的版本比较 (可以使用更复杂的语义版本比较)
+    const hasUpdate = latestVersion > currentVersion
+
+    return {
+      hasUpdate,
+      latestVersion,
+      currentVersion
+    }
+  } catch (error) {
+    console.error('检查更新失败:', error)
+    return {
+      hasUpdate: false,
+      latestVersion: '',
+      currentVersion: app.getVersion()
+    }
+  }
+}
+
+// 在应用启动时检查更新
+async function checkUpdatesOnStartup(): Promise<void> {
+  try {
+    const settings = readSettings()
+    const shouldCheckUpdates = settings.checkUpdatesOnStartup !== false
+
+    if (shouldCheckUpdates) {
+      const updateInfo = await checkForUpdates()
+
+      if (updateInfo.hasUpdate) {
+        // 发送更新通知到渲染进程
+        const mainWindow = BrowserWindow.getAllWindows()[0]
+        if (mainWindow) {
+          mainWindow.webContents.send('update-available', updateInfo)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('启动时检查更新失败:', error)
   }
 }
 
@@ -675,10 +737,18 @@ app.whenReady().then(() => {
     }
   })
 
+  // 更新检查
+  ipcMain.handle(IPC_CHANNELS.CHECK_FOR_UPDATES, async () => {
+    return await checkForUpdates()
+  })
+
   createWindow()
 
   // 应用启动时执行自动同步
   performAutoSync()
+
+  // 在应用启动时检查更新
+  checkUpdatesOnStartup()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

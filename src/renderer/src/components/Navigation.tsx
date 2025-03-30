@@ -35,6 +35,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
   const [selectedKeys, setSelectedKeys] = useState<string[]>(['Editor'])
   const [searchValue, setSearchValue] = useState('')
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([])
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean
     x: number
@@ -225,6 +226,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     if (showSecondaryNav) {
       loadMarkdownFolders()
     }
+
+    // 组件卸载时清理状态
+    return (): void => {
+      setExpandedKeys([])
+    }
   }, [showSecondaryNav])
 
   // 当fileListVersion变化时重新加载文件列表
@@ -245,6 +251,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     // 如果二级导航栏展开，则自动折叠一级导航栏
     if (newShowState) {
       setCollapsed(true)
+      // 当打开二级侧边栏时，重置展开的节点状态（保持所有文件夹收起）
+      setExpandedKeys([])
     }
   }
 
@@ -632,6 +640,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       return convertNavItemsToTreeData(navItems)
     }
 
+    // 存储需要展开的节点keys
+    const keysToExpand: string[] = []
+
     // 递归过滤函数
     const filterItems = (items: NavItem[]): NavItem[] => {
       const result: NavItem[] = []
@@ -645,6 +656,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
         // 如果当前项匹配或有匹配的子项，则保留
         if (matches || (filteredChildren && filteredChildren.length > 0)) {
+          // 如果是文件夹并且有匹配的子项，记录该文件夹需要展开
+          if (item.isFolder && ((filteredChildren && filteredChildren.length > 0) || matches)) {
+            keysToExpand.push(item.itemKey)
+          }
+
           result.push({
             ...item,
             items: filteredChildren
@@ -656,7 +672,14 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     }
 
     // 应用过滤并转换为Tree数据
-    return convertNavItemsToTreeData(filterItems(navItems))
+    const filteredData = convertNavItemsToTreeData(filterItems(navItems))
+
+    // 如果有搜索关键词，更新展开的节点状态
+    if (searchValue && keysToExpand.length > 0) {
+      setExpandedKeys(keysToExpand)
+    }
+
+    return filteredData
   }
 
   // 打开确认对话框
@@ -704,6 +727,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
     traverse(items)
     return paths
+  }
+
+  // 处理树节点展开/折叠事件
+  const handleTreeExpand = (expandedKeys: string[]): void => {
+    setExpandedKeys(expandedKeys)
   }
 
   return (
@@ -772,7 +800,13 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 prefix={<IconSearch />}
                 placeholder="搜索笔记..."
                 value={searchValue}
-                onChange={(value) => setSearchValue(value)}
+                onChange={(value) => {
+                  setSearchValue(value)
+                  // 当清空搜索框时，重置展开状态
+                  if (!value) {
+                    setExpandedKeys([])
+                  }
+                }}
                 style={{ flex: 1 }}
               />
             </div>
@@ -791,6 +825,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
             <Tree
               treeData={getFilteredTreeData()}
               onSelect={handleTreeSelect}
+              expandedKeys={expandedKeys}
+              onExpand={handleTreeExpand}
               onContextMenu={(e, node): void => {
                 // 通过节点的key判断是文件夹还是文件
                 const nodeKey = node.key?.toString() || ''
@@ -820,7 +856,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 width: '100%',
                 borderRadius: '3px'
               }}
-              expandAll
             />
           </div>
 

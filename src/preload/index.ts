@@ -36,7 +36,8 @@ const IPC_CHANNELS = {
   TEST_WEBDAV_CONNECTION: 'webdav:test-connection',
   SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
-  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional'
+  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
+  CHECK_FOR_UPDATES: 'app:check-for-updates'
 }
 
 // 内容生成请求接口
@@ -85,6 +86,23 @@ const api = {
     // 删除配置
     deleteConfig: (configId: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.DELETE_API_CONFIG, configId)
+  },
+  // 更新检查相关API
+  updates: {
+    // 检查更新
+    checkForUpdates: (): Promise<{
+      hasUpdate: boolean
+      latestVersion: string
+      currentVersion: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CHECK_FOR_UPDATES),
+    // 监听更新通知
+    onUpdateAvailable: (
+      callback: (updateInfo: { latestVersion: string; currentVersion: string }) => void
+    ): void => {
+      ipcRenderer.on('update-available', (_event, updateInfo) => {
+        callback(updateInfo)
+      })
+    }
   },
   // Markdown文件管理
   markdown: {

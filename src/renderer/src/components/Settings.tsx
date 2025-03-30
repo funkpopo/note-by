@@ -15,7 +15,15 @@ import {
   Tabs,
   TabPane
 } from '@douyinfe/semi-ui'
-import { IconMoon, IconSun, IconPulse, IconPlus, IconDelete, IconEdit } from '@douyinfe/semi-icons'
+import {
+  IconMoon,
+  IconSun,
+  IconPulse,
+  IconPlus,
+  IconDelete,
+  IconEdit,
+  IconRefresh
+} from '@douyinfe/semi-icons'
 import { useTheme } from '../context/theme/useTheme'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
@@ -64,6 +72,14 @@ const Settings: React.FC = () => {
   })
   const [formApi, setFormApi] = useState<{
     setValues: (values: Record<string, string>) => void
+  } | null>(null)
+  // 更新设置状态
+  const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState(true)
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false)
+  const [updateResult, setUpdateResult] = useState<{
+    hasUpdate: boolean
+    latestVersion: string
+    currentVersion: string
   } | null>(null)
 
   // 加载所有设置
@@ -138,6 +154,11 @@ const Settings: React.FC = () => {
         if (formApi) {
           formApi.setValues(defaultPrompts)
         }
+      }
+
+      // 加载更新检查设置
+      if (settings.checkUpdatesOnStartup !== undefined) {
+        setCheckUpdatesOnStartup(settings.checkUpdatesOnStartup as boolean)
       }
     } catch (error) {
       console.error('加载设置失败:', error)
@@ -460,6 +481,66 @@ const Settings: React.FC = () => {
     }))
   }
 
+  // 处理更新检查设置变更
+  const handleUpdateCheckingChange = async (checked: boolean): Promise<void> => {
+    try {
+      setCheckUpdatesOnStartup(checked)
+      const settings = await window.api.settings.getAll()
+      const updatedSettings = {
+        ...settings,
+        checkUpdatesOnStartup: checked
+      }
+      const success = await window.api.settings.setAll(updatedSettings)
+
+      if (!success) {
+        Toast.error('保存更新检查设置失败')
+      }
+    } catch (error) {
+      console.error('保存更新检查设置失败:', error)
+      Toast.error('保存更新检查设置失败')
+    }
+  }
+
+  // 手动检查更新
+  const handleCheckUpdates = async (): Promise<void> => {
+    try {
+      setIsCheckingUpdates(true)
+      setUpdateResult(null)
+
+      const result = await window.api.updates.checkForUpdates()
+      setUpdateResult(result)
+
+      if (result.hasUpdate) {
+        Toast.info(`发现新版本: ${result.latestVersion}`)
+      } else if (result.latestVersion) {
+        Toast.info('当前已是最新版本')
+      } else {
+        Toast.error('检查更新失败')
+      }
+    } catch (error) {
+      console.error('检查更新出错:', error)
+      Toast.error('检查更新出错')
+    } finally {
+      setIsCheckingUpdates(false)
+    }
+  }
+
+  // 监听更新通知
+  useEffect(() => {
+    const handleUpdateAvailable = (updateInfo: {
+      latestVersion: string
+      currentVersion: string
+    }): void => {
+      Toast.info(`发现新版本: ${updateInfo.latestVersion}`)
+      setUpdateResult({
+        hasUpdate: true,
+        ...updateInfo
+      })
+    }
+
+    window.api.updates.onUpdateAvailable(handleUpdateAvailable)
+  }, [])
+
   return (
     <div>
       <Tabs type="line" defaultActiveKey="theme">
@@ -489,6 +570,98 @@ const Settings: React.FC = () => {
               <Divider />
               <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
                 主题设置会保存在settings.json文件中，应用启动时会自动载入
+              </Paragraph>
+            </Card>
+
+            {/* 更新检查设置卡片 */}
+            <Card style={{ marginBottom: 20 }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <div>
+                  <Text strong>自动检查更新</Text>
+                  <Paragraph spacing="normal" type="tertiary">
+                    应用启动时自动检查是否有新版本
+                  </Paragraph>
+                </div>
+                <Switch
+                  onChange={handleUpdateCheckingChange}
+                  checked={checkUpdatesOnStartup}
+                  size="large"
+                  style={{ marginLeft: '16px' }}
+                />
+              </div>
+              <Divider />
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <div>
+                  <Text strong>手动检查更新</Text>
+                  <Paragraph spacing="normal" type="tertiary">
+                    检查GitHub上是否有新版本发布
+                  </Paragraph>
+                </div>
+                <Button
+                  icon={<IconRefresh />}
+                  onClick={handleCheckUpdates}
+                  loading={isCheckingUpdates}
+                  theme="solid"
+                  type="tertiary"
+                >
+                  检查更新
+                </Button>
+              </div>
+
+              {updateResult && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: 6,
+                    backgroundColor: updateResult.hasUpdate
+                      ? 'rgba(0, 100, 250, 0.1)'
+                      : 'rgba(0, 180, 42, 0.1)',
+                    border: `1px solid ${
+                      updateResult.hasUpdate ? 'rgba(0, 100, 250, 0.2)' : 'rgba(0, 180, 42, 0.2)'
+                    }`
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Text
+                      strong
+                      style={{
+                        color: updateResult.hasUpdate ? '#0064fa' : '#00b42a'
+                      }}
+                    >
+                      {updateResult.hasUpdate
+                        ? `✓ 发现新版本: ${updateResult.latestVersion}`
+                        : '✓ 当前已是最新版本'}
+                    </Text>
+                  </div>
+                  <Text style={{ marginTop: 4, fontSize: '13px' }}>
+                    {updateResult.hasUpdate
+                      ? `您当前的版本为 ${updateResult.currentVersion}，可以前往 GitHub 下载最新版本`
+                      : `当前版本: ${updateResult.currentVersion}`}
+                  </Text>
+                  {updateResult.hasUpdate && (
+                    <div style={{ marginTop: 8 }}>
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={() =>
+                          window.open('https://github.com/funkpopo/note-by/releases', '_blank')
+                        }
+                      >
+                        前往下载
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Divider />
+              <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
+                更新检查会连接到GitHub查询最新版本信息
               </Paragraph>
             </Card>
 

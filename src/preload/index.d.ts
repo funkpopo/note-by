@@ -17,6 +17,18 @@ interface SettingsAPI {
   set: <T>(key: string, value: T) => Promise<boolean>
 }
 
+// 更新检查API接口定义
+interface UpdatesAPI {
+  checkForUpdates: () => Promise<{
+    hasUpdate: boolean
+    latestVersion: string
+    currentVersion: string
+  }>
+  onUpdateAvailable: (
+    callback: (updateInfo: { latestVersion: string; currentVersion: string }) => void
+  ) => void
+}
+
 // OpenAI API接口定义
 interface OpenAIAPI {
   testConnection: (apiConfig: ApiConfig) => Promise<{ success: boolean; message: string }>
