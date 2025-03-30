@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { Card, Button, Spin, Typography } from '@douyinfe/semi-ui'
-import { IconClose } from '@douyinfe/semi-icons'
+import { Card, Button, Spin, Typography, Toast } from '@douyinfe/semi-ui'
+import { IconClose, IconCopy } from '@douyinfe/semi-icons'
 import './FloatingToolbox.css'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
@@ -75,6 +75,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   // 更新startPosition类型
   const [startPosition, setStartPosition] = useState<StartPosition>({ x: 0, y: 0 })
   const [hasSetInitialPosition, setHasSetInitialPosition] = useState(false)
+  const [selectedText, setSelectedText] = useState<string>('')
 
   // 自动计算宽度（根据内容状态）- 用useCallback包装
   const getCardWidth = useCallback((): number => {
@@ -279,58 +280,58 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
   // 修改处理横向滚动问题的代码，增强内容处理
   const handleContentRender = (content: HTMLElement): void => {
-    if (!content) return;
-    
+    if (!content) return
+
     // 设置主容器样式
-    content.style.overflow = 'hidden';
-    content.style.overflowX = 'hidden';
-    content.style.wordWrap = 'break-word';
-    content.style.overflowWrap = 'break-word';
-    content.style.wordBreak = 'break-word';
-    content.style.maxWidth = '100%';
-    content.style.width = '100%';
-    content.style.boxSizing = 'border-box';
-    
+    content.style.overflow = 'hidden'
+    content.style.overflowX = 'hidden'
+    content.style.wordWrap = 'break-word'
+    content.style.overflowWrap = 'break-word'
+    content.style.wordBreak = 'break-word'
+    content.style.maxWidth = '100%'
+    content.style.width = '100%'
+    content.style.boxSizing = 'border-box'
+
     // 处理所有可能导致溢出的元素
     const elementsToHandle = content.querySelectorAll(
       'pre, code, table, img, iframe, svg, div, p, ul, ol, blockquote'
-    );
-    
+    )
+
     elementsToHandle.forEach((el) => {
       if (el instanceof HTMLElement) {
-        el.style.maxWidth = '100%';
-        el.style.boxSizing = 'border-box';
-        
+        el.style.maxWidth = '100%'
+        el.style.boxSizing = 'border-box'
+
         // 针对不同元素类型应用特定样式
         if (el.tagName === 'PRE' || el.tagName === 'CODE') {
-          el.style.whiteSpace = 'pre-wrap';
-          el.style.wordBreak = 'break-word';
-          el.style.paddingRight = '20px';
+          el.style.whiteSpace = 'pre-wrap'
+          el.style.wordBreak = 'break-word'
+          el.style.paddingRight = '20px'
         } else if (el.tagName === 'TABLE') {
-          el.style.tableLayout = 'fixed';
-          el.style.width = 'fit-content';
-          el.style.maxWidth = '100%';
-          el.style.display = 'block';
-          
+          el.style.tableLayout = 'fixed'
+          el.style.width = 'fit-content'
+          el.style.maxWidth = '100%'
+          el.style.display = 'block'
+
           // 处理表格内的单元格
           el.querySelectorAll('td, th').forEach((cell) => {
             if (cell instanceof HTMLElement) {
-              cell.style.wordBreak = 'break-word';
-              cell.style.maxWidth = '200px';
-              cell.style.overflow = 'hidden';
-              cell.style.textOverflow = 'ellipsis';
+              cell.style.wordBreak = 'break-word'
+              cell.style.maxWidth = '200px'
+              cell.style.overflow = 'hidden'
+              cell.style.textOverflow = 'ellipsis'
             }
-          });
+          })
         } else if (el.tagName === 'IMG') {
-          el.style.maxWidth = '100%';
-          el.style.height = 'auto';
+          el.style.maxWidth = '100%'
+          el.style.height = 'auto'
         } else if (el.tagName === 'BLOCKQUOTE') {
-          el.style.paddingRight = '10px';
-          el.style.margin = '8px 0';
+          el.style.paddingRight = '10px'
+          el.style.margin = '8px 0'
         }
       }
-    });
-  };
+    })
+  }
 
   // 当content变化时更新内容
   useEffect(() => {
@@ -592,10 +593,12 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         // 计算新的尺寸
         const calculatedWidth = Math.min(newWidth, 550)
         const calculatedHeight = Math.min(newHeight, 500)
-        
+
         // 仅当尺寸发生实际变化时才更新状态
-        if (calculatedWidth !== toolboxSize.width || 
-            (toolboxSize.height !== 'auto' && calculatedHeight !== toolboxSize.height)) {
+        if (
+          calculatedWidth !== toolboxSize.width ||
+          (toolboxSize.height !== 'auto' && calculatedHeight !== toolboxSize.height)
+        ) {
           // 设置新尺寸，同时确保不会太大
           setToolboxSize({
             width: calculatedWidth,
@@ -612,7 +615,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         }
       }
     }
-  // 从依赖数组中移除toolboxSize，防止无限循环
+    // 从依赖数组中移除toolboxSize，防止无限循环
   }, [isAiResponse, visible, content, title])
 
   // 处理拖动开始
@@ -754,11 +757,11 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       width: rect.width,
       height: rect.height
     })
-    
+
     // 预先计算并缓存编辑器边界，避免调整过程中重复计算
     const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
     const editorRect = editorElement ? editorElement.getBoundingClientRect() : null
-    
+
     setStartPosition({
       x: e.clientX,
       y: e.clientY,
@@ -823,6 +826,51 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
   }, [isDragging, isResizing, handleDrag, handleResize])
 
+  // 处理复制功能
+  const handleCopy = (): void => {
+    if (selectedText) {
+      // 如果有选中文本，复制选中的内容
+      navigator.clipboard
+        .writeText(selectedText)
+        .then(() => {
+          Toast.success('已复制选中内容')
+        })
+        .catch((err) => {
+          console.error('复制失败:', err)
+          Toast.error('复制失败')
+        })
+    } else if (content) {
+      // 如果没有选中文本，则复制整个内容
+      navigator.clipboard
+        .writeText(content)
+        .then(() => {
+          Toast.success('已复制全部内容')
+        })
+        .catch((err) => {
+          console.error('复制失败:', err)
+          Toast.error('复制失败')
+        })
+    }
+  }
+
+  // 监听文本选择事件
+  useEffect(() => {
+    const handleSelection = (): void => {
+      const selection = window.getSelection()
+      setSelectedText(selection ? selection.toString() : '')
+    }
+
+    // 添加监听器
+    document.addEventListener('mouseup', handleSelection)
+    document.addEventListener('keyup', handleSelection)
+
+    return (): void => {
+      // 移除监听器
+      document.removeEventListener('mouseup', handleSelection)
+      document.removeEventListener('keyup', handleSelection)
+    }
+  }, [])
+
   if (!visible) return null
 
   return (
@@ -849,13 +897,19 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         header={
           <div ref={headerRef} className="floating-toolbox-header" onMouseDown={handleDragStart}>
             <Typography.Text strong>{title}</Typography.Text>
-            <Button
-              type="tertiary"
-              icon={<IconClose />}
-              size="small"
-              onClick={onClose}
-              style={{ marginLeft: 'auto' }}
-            />
+            <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+              {/* 添加复制按钮 */}
+              {(isAiResponse || content) && (
+                <Button
+                  type="tertiary"
+                  icon={<IconCopy />}
+                  size="small"
+                  onClick={handleCopy}
+                  title="复制内容"
+                />
+              )}
+              <Button type="tertiary" icon={<IconClose />} size="small" onClick={onClose} />
+            </div>
           </div>
         }
         bodyStyle={{
