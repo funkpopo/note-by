@@ -1,5 +1,7 @@
+import { ElectronAPI } from '@electron-toolkit/preload'
+
 interface Window {
-  electron: any
+  electron: ElectronAPI
   api: {
     settings: {
       getAll: () => Promise<Record<string, unknown>>

@@ -133,23 +133,24 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         }
       }
     }
+    return (): void => {} // 添加空函数作为默认返回值
   }, [visible, isAiResponse, isStreaming])
 
-  // 更新显示的内容时避免完整替换，而是追加新内容
   const updateStreamingContent = useCallback(
     (newContent: string, isComplete: boolean): void => {
-      // 检查新内容是否包含之前的内容，如果不包含则假定为增量内容
-      if (newContent && streamingContentRef.current && !newContent.includes(streamingContentRef.current)) {
-        // 增量更新 - 追加新内容
+      if (
+        newContent &&
+        streamingContentRef.current &&
+        !newContent.includes(streamingContentRef.current)
+      ) {
         const updatedContent = streamingContentRef.current + newContent
         streamingContentRef.current = updatedContent
         setDisplayedContent(updatedContent)
       } else {
-        // 全量更新 - 直接设置新内容
         streamingContentRef.current = newContent
         setDisplayedContent(newContent)
       }
-      
+
       if (isComplete) {
         setIsStreaming(false)
         if (streamTimerRef.current) {
@@ -174,20 +175,14 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         setDisplayedContent(content || '')
       }
     }
-    // 当内容变化时更新显示的内容
     if (visible && isAiResponse && streamingContent && isStreaming && content) {
-      // 内容有更新时，立即显示最新内容，而不是等待下一次定时器触发
       updateStreamingContent(content, false)
-      
-      // 强制立即重新渲染Markdown
-      setForceUpdateKey(prev => prev + 1)
+      setForceUpdateKey((prev) => prev + 1)
     }
   }, [visible, isAiResponse, streamingContent, content, isStreaming, updateStreamingContent])
 
-  // 如果不是流式内容，则使用原来的流式打印效果
   useEffect((): void => {
     if (visible && isAiResponse && !streamingContent) {
-      // 如果有aiContent，进行流式打印
       if (aiContent && !isPrinting) {
         setIsPrinting(true)
         setCurrentWordIndex(0)
@@ -222,16 +217,76 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
   }, [content, isAiResponse])
 
-  // 修改 useEffect 使窗口位置仅在首次显示时初始化
+  // 修改 useEffect 使窗口位置仅在首次显示时初始化，并确保不超出编辑器边界
   useEffect(() => {
     if (visible && position && !hasSetInitialPosition) {
-      setToolboxPosition(position)
+      // 获取编辑器边界
+      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+      if (editorElement && toolboxRef.current) {
+        const editorRect = editorElement.getBoundingClientRect()
+        const toolboxRect = toolboxRef.current.getBoundingClientRect()
+        
+        // 计算窗口位置，确保不超出编辑器边界
+        const newX = Math.max(
+          editorRect.left, 
+          Math.min(position.x, editorRect.right - toolboxRect.width)
+        )
+        const newY = Math.max(
+          editorRect.top, 
+          Math.min(position.y, editorRect.bottom - toolboxRect.height)
+        )
+        
+        setToolboxPosition({ x: newX, y: newY })
+      } else {
+        // 如果找不到编辑器，直接使用提供的位置
+        setToolboxPosition(position)
+      }
       setHasSetInitialPosition(true)
     } else if (!visible) {
       // 重置标记，使窗口下次显示时可以设置新位置
       setHasSetInitialPosition(false)
     }
   }, [visible, position, hasSetInitialPosition])
+
+  // 添加窗口大小变化时检查边界的effect
+  useEffect(() => {
+    if (visible && toolboxRef.current) {
+      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+      if (editorElement) {
+        const editorRect = editorElement.getBoundingClientRect()
+        const toolboxRect = toolboxRef.current.getBoundingClientRect()
+        
+        // 检查当前位置是否超出编辑器
+        let newX = toolboxPosition.x
+        let newY = toolboxPosition.y
+        
+        // 检查右边界
+        if (newX + toolboxRect.width > editorRect.right) {
+          newX = editorRect.right - toolboxRect.width
+        }
+        
+        // 检查下边界
+        if (newY + toolboxRect.height > editorRect.bottom) {
+          newY = editorRect.bottom - toolboxRect.height
+        }
+        
+        // 检查左边界
+        if (newX < editorRect.left) {
+          newX = editorRect.left
+        }
+        
+        // 检查上边界
+        if (newY < editorRect.top) {
+          newY = editorRect.top
+        }
+        
+        // 只有当位置发生变化时才更新
+        if (newX !== toolboxPosition.x || newY !== toolboxPosition.y) {
+          setToolboxPosition({ x: newX, y: newY })
+        }
+      }
+    }
+  }, [visible, toolboxSize, toolboxPosition])
 
   // 当标题变为AI助手且isAiResponse为false时，重置窗口大小
   useEffect(() => {
@@ -347,7 +402,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     e.preventDefault()
   }
 
-  // 处理拖动过程
+  // 增强handleDrag函数中的边界检查
   const handleDrag = useCallback(
     (e: MouseEvent): void => {
       if (!isDragging || !toolboxRef.current) return
@@ -362,7 +417,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         const editorRect = editorElement.getBoundingClientRect()
         const toolboxRect = toolboxRef.current.getBoundingClientRect()
 
-        // 限制在编辑器内
+        // 限制在编辑器内，确保考虑了窗口的实际大小
         newX = Math.max(editorRect.left, Math.min(newX, editorRect.right - toolboxRect.width))
         newY = Math.max(editorRect.top, Math.min(newY, editorRect.bottom - toolboxRect.height))
       } else {
