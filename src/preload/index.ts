@@ -107,7 +107,7 @@ const api = {
 
               // 设置监听器接收数据块
               const dataListener = (
-                event: Electron.IpcRendererEvent,
+                _event: Electron.IpcRendererEvent,
                 data: { chunk: string }
               ): void => {
                 callbacks.onData(data.chunk)
@@ -115,7 +115,7 @@ const api = {
 
               // 设置监听器接收完成事件
               const doneListener = (
-                event: Electron.IpcRendererEvent,
+                _event: Electron.IpcRendererEvent,
                 data: { content: string }
               ): void => {
                 callbacks.onDone(data.content)
@@ -128,7 +128,7 @@ const api = {
 
               // 设置监听器接收错误事件
               const errorListener = (
-                event: Electron.IpcRendererEvent,
+                _event: Electron.IpcRendererEvent,
                 data: { error: string }
               ): void => {
                 callbacks.onError(data.error)

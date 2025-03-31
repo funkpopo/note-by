@@ -240,7 +240,7 @@ export async function streamGenerateContent(
   const eventEmitter = new EventEmitter()
 
   // 异步处理流式请求
-  ;(async () => {
+  ;(async (): Promise<void> => {
     try {
       const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
 
