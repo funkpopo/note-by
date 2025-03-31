@@ -228,28 +228,38 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   // 修改 useEffect 使窗口位置仅在首次显示时初始化，并确保不超出编辑器边界
   useEffect(() => {
     if (visible && position && !hasSetInitialPosition) {
-      // 获取编辑器边界
-      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
-      if (editorElement && toolboxRef.current) {
-        const editorRect = editorElement.getBoundingClientRect()
-        const toolboxRect = toolboxRef.current.getBoundingClientRect()
+      // 添加小延时，确保DOM已完全渲染
+      setTimeout(() => {
+        // 获取编辑器边界
+        const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+        if (editorElement && toolboxRef.current) {
+          const editorRect = editorElement.getBoundingClientRect()
+          const toolboxRect = toolboxRef.current.getBoundingClientRect()
 
-        // 计算窗口位置，确保不超出编辑器边界
-        const newX = Math.max(
-          editorRect.left,
-          Math.min(position.x, editorRect.right - toolboxRect.width)
-        )
-        const newY = Math.max(
-          editorRect.top,
-          Math.min(position.y, editorRect.bottom - toolboxRect.height)
-        )
+          // 添加偏移量，使窗口出现在鼠标右下方
+          const offsetX = 15 // 向右偏移15像素
+          const offsetY = 15 // 向下偏移15像素
 
-        setToolboxPosition({ x: newX, y: newY })
-      } else {
-        // 如果找不到编辑器，直接使用提供的位置
-        setToolboxPosition(position)
-      }
-      setHasSetInitialPosition(true)
+          // 计算窗口位置，确保不超出编辑器边界
+          const newX = Math.max(
+            editorRect.left,
+            Math.min(position.x + offsetX, editorRect.right - toolboxRect.width)
+          )
+          const newY = Math.max(
+            editorRect.top,
+            Math.min(position.y + offsetY, editorRect.bottom - toolboxRect.height)
+          )
+
+          setToolboxPosition({ x: newX, y: newY })
+        } else {
+          // 如果找不到编辑器，直接使用提供的位置，但仍添加偏移量
+          setToolboxPosition({
+            x: position.x + 15,
+            y: position.y + 15
+          })
+        }
+        setHasSetInitialPosition(true)
+      }, 10) // 10毫秒的延时通常足够DOM渲染完成
     } else if (!visible) {
       // 重置标记，使窗口下次显示时可以设置新位置
       setHasSetInitialPosition(false)
