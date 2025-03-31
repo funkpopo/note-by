@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useContext, useState } from 'react'
+import React, { useEffect, useRef, useContext, useState, useCallback } from 'react'
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
 import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from '@douyinfe/semi-ui'
@@ -124,6 +124,17 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     streamingContent: false,
     selectedText: undefined // 初始化selectedText为undefined
   })
+
+  // 添加一个ref来跟踪当前活跃的流式请求
+  const activeStreamRef = useRef<string | null>(null)
+  // 添加一个函数用于中断当前的流式请求
+  const cancelActiveStream = useCallback(() => {
+    if (activeStreamRef.current) {
+      console.log('取消流式请求:', activeStreamRef.current)
+      // 将活跃请求ID设为null，这样回调函数将忽略后续数据
+      activeStreamRef.current = null
+    }
+  }, [])
 
   // 添加翻译语言选项
   const translationOptions: TranslationOption[] = [
@@ -475,10 +486,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // 关闭浮动窗口
   const closeToolbox = (): void => {
+    // 取消任何活跃的流式请求
+    cancelActiveStream()
+
     setToolboxState((prev) => ({
       ...prev,
       visible: false,
       action: null,
+      streamingContent: false, // 确保关闭流式状态
       selectedText: undefined // 清空保存的选中文本
     }))
   }
@@ -618,21 +633,22 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         throw new Error('未找到选中的模型配置')
       }
 
-      // 构建请求参数
+      // 构建请求参数，始终使用selectedText而不是当前content
+      const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
       const sourceLanguageName = languageNameMap[option.sourceLanguage] || option.sourceLanguage
       const targetLanguageName = languageNameMap[option.targetLanguage] || option.targetLanguage
 
       let prompt = option.prompt
         .replace(/\${sourceLanguage}/g, sourceLanguageName)
         .replace(/\${targetLanguage}/g, targetLanguageName)
-        .replace(/\${content}/g, toolboxState.content || '')
+        .replace(/\${content}/g, contentToProcess)
 
       // 如果存在自定义提示，则使用自定义提示
       if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
         const aiPrompts = settings.aiPrompts as AIPrompts
         if (aiPrompts.translate && typeof aiPrompts.translate === 'string') {
           prompt = aiPrompts.translate
-            .replace(/\${content}/g, toolboxState.content || '')
+            .replace(/\${content}/g, contentToProcess)
             .replace(/\${sourceLanguage}/g, sourceLanguageName)
             .replace(/\${targetLanguage}/g, targetLanguageName)
         }
@@ -652,7 +668,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
-  // 处理流式内容生成
+  // 修改流式内容生成处理函数，添加取消机制
   const handleStreamGeneration = async (
     modelConfig: {
       id: string
@@ -668,6 +684,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   ): Promise<void> => {
     // 准备初始内容
     const initialContent = appendContent ? toolboxState.content || '' : ''
+    // 保存原始选中文本，以便在后续操作中使用
+    const originalSelectedText = toolboxState.selectedText
+
+    // 生成新的请求ID并保存
+    const requestId = `stream-${Date.now()}`
+    activeStreamRef.current = requestId
 
     // 设置为流式输出模式
     setToolboxState((prev) => ({
@@ -675,13 +697,20 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       loading: false, // 立即关闭加载状态
       streamingContent: true,
       isAiResponse: true,
-      content: initialContent // 设置初始内容
+      content: initialContent, // 设置初始内容
+      selectedText: originalSelectedText // 确保保留原始选中文本
     }))
 
     try {
       // 创建流式回调
       const callbacks = {
         onData: (chunk: string): void => {
+          // 检查这个请求是否已被取消
+          if (activeStreamRef.current !== requestId) {
+            console.log('忽略已取消请求的数据')
+            return
+          }
+
           // 更新UI中的内容，处理增量数据
           setToolboxState((prev) => {
             // 只附加到当前内容，而不每次都重新构建完整字符串
@@ -691,21 +720,41 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               ...prev,
               content: newContent,
               streamingContent: true,
-              loading: false
+              loading: false,
+              selectedText: originalSelectedText // 确保保留原始选中文本
             }
           })
         },
         onDone: (content: string): void => {
+          // 检查这个请求是否已被取消
+          if (activeStreamRef.current !== requestId) {
+            console.log('忽略已取消请求的完成事件')
+            return
+          }
+
+          // 清除活跃请求ID
+          activeStreamRef.current = null
+
           // 流式输出完成
           setToolboxState((prev) => ({
             ...prev,
             loading: false,
             // 如果是追加模式，使用完整内容；否则直接使用累积的内容
             content: appendContent ? initialContent + content : prev.content,
-            streamingContent: false
+            streamingContent: false,
+            selectedText: originalSelectedText // 确保保留原始选中文本
           }))
         },
         onError: (error: string): void => {
+          // 检查这个请求是否已被取消
+          if (activeStreamRef.current !== requestId) {
+            console.log('忽略已取消请求的错误')
+            return
+          }
+
+          // 清除活跃请求ID
+          activeStreamRef.current = null
+
           console.error('流式内容生成失败:', error)
           Toast.error(`AI处理失败: ${error}`)
           setToolboxState((prev) => ({
@@ -713,7 +762,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             loading: false,
             content: '处理失败，请重试',
             isAiResponse: false,
-            streamingContent: false
+            streamingContent: false,
+            selectedText: originalSelectedText // 确保保留原始选中文本
           }))
         }
       }
@@ -729,6 +779,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         callbacks
       )
     } catch (error) {
+      // 清除活跃请求ID
+      activeStreamRef.current = null
+
       console.error('流式处理失败:', error)
       Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
       setToolboxState((prev) => ({
@@ -736,7 +789,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         loading: false,
         content: '处理失败，请重试',
         isAiResponse: false,
-        streamingContent: false
+        streamingContent: false,
+        selectedText: originalSelectedText // 确保保留原始选中文本
       }))
     }
   }
@@ -822,6 +876,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
         document.removeEventListener('click', handleDocumentClick)
         document.removeEventListener('keydown', handleKeyDown, true) // 确保使用相同的捕获标志
+
+        // 取消任何活跃的流式请求
+        cancelActiveStream()
       }
     }
 
@@ -829,6 +886,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 清理资源
       cherryRef.current = null
       window.removeEventListener('resize', fixEditorLayout)
+
+      // 取消任何活跃的流式请求
+      cancelActiveStream()
     }
   }, [])
 
@@ -958,7 +1018,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   loading: true,
                   title: '风格改写',
                   action: 'rewrite',
-                  content: prev.content // 保留原始内容
+                  // 保留原始内容以备恢复
+                  content: prev.content
                 }))
 
                 try {
@@ -978,14 +1039,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     throw new Error('未找到选中的模型配置')
                   }
 
-                  // 构建请求参数
-                  let prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${toolboxState.content}`
+                  // 构建请求参数，始终使用selectedText而不是当前content
+                  const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
+                  let prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${contentToProcess}`
 
                   // 如果存在自定义提示，则使用自定义提示
                   if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
                     const aiPrompts = settings.aiPrompts as AIPrompts
                     if (aiPrompts.rewrite && typeof aiPrompts.rewrite === 'string') {
-                      prompt = aiPrompts.rewrite.replace(/\${content}/g, toolboxState.content || '')
+                      prompt = aiPrompts.rewrite.replace(/\${content}/g, contentToProcess)
                     }
                   }
 
@@ -1037,17 +1099,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     throw new Error('未找到选中的模型配置')
                   }
 
-                  // 构建请求参数
-                  let prompt = `请继续编写以下内容：\n\n${toolboxState.content}\n\n请直接续写，不要重复已有内容。`
+                  // 构建请求参数，始终使用selectedText而不是当前content
+                  const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
+                  let prompt = `请继续编写以下内容：\n\n${contentToProcess}\n\n请直接续写，不要重复已有内容。`
 
                   // 如果存在自定义提示，则使用自定义提示
                   if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
                     const aiPrompts = settings.aiPrompts as AIPrompts
                     if (aiPrompts.continue && typeof aiPrompts.continue === 'string') {
-                      prompt = aiPrompts.continue.replace(
-                        /\${content}/g,
-                        toolboxState.content || ''
-                      )
+                      prompt = aiPrompts.continue.replace(/\${content}/g, contentToProcess)
                     }
                   }
 
@@ -1119,6 +1179,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
                 try {
                   // 获取当前编辑器内容进行全文分析
+                  // 内容分析功能特殊，需要分析整个文档而不仅是选中内容
                   const editorContent = cherryRef.current?.getMarkdown() || ''
 
                   // 查找当前选中的模型配置
@@ -1137,7 +1198,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     throw new Error('未找到选中的模型配置')
                   }
 
-                  // 构建请求参数
+                  // 构建请求参数 - 内容分析是特殊的，总是使用完整编辑器内容
                   const prompt = `请分析以下文本内容，提供主题概述、关键点、结构分析和改进建议：\n\n${editorContent}`
 
                   // 使用流式内容生成
@@ -1167,13 +1228,18 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               size="small"
               type="tertiary"
               onClick={() => {
-                // 返回主菜单时保留selectedText
+                // 取消当前的流式请求
+                cancelActiveStream()
+
+                // 返回主菜单时恢复原始选中的文本
                 setToolboxState((prev) => ({
                   ...prev,
                   action: null,
                   title: 'AI助手',
-                  content: prev.content?.split(':')[1]?.trim() || prev.content || '',
-                  isAiResponse: false
+                  // 使用最初选中的文本作为content，而不是AI处理后的结果
+                  content: prev.selectedText || '',
+                  isAiResponse: false,
+                  streamingContent: false // 确保关闭流式状态
                   // 保留selectedText字段，不修改它
                 }))
               }}
