@@ -1,5 +1,12 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+// 流式内容回调接口
+interface StreamCallbacks {
+  onData: (chunk: string) => void
+  onDone: (content: string) => void
+  onError: (error: string) => void
+}
+
 interface Window {
   electron: ElectronAPI
   api: {
@@ -17,6 +24,26 @@ interface Window {
         apiUrl: string
         modelName: string
       }) => Promise<{ success: boolean; message: string }>
+
+      generateContent: (request: {
+        apiKey: string
+        apiUrl: string
+        modelName: string
+        prompt: string
+        maxTokens?: number
+        stream?: boolean
+      }) => Promise<{ success: boolean; content?: string; error?: string }>
+
+      streamGenerateContent: (
+        request: {
+          apiKey: string
+          apiUrl: string
+          modelName: string
+          prompt: string
+          maxTokens?: number
+        },
+        callbacks: StreamCallbacks
+      ) => Promise<{ success: boolean; streamId?: string; error?: string }>
     }
     api: {
       saveConfig: (config: {

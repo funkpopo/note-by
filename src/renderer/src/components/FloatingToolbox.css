@@ -177,6 +177,7 @@ body[theme-mode='dark'] .floating-toolbox-content ::selection {
 
 /* AI内容展示区域 */
 .floating-toolbox-ai-content {
+  position: relative;
   max-height: 500px;
   overflow-x: hidden !important; /* 强制隐藏横向滚动条 */
   overflow-y: auto;
@@ -540,4 +541,30 @@ body[theme-mode='dark'] .floating-toolbox-header:active {
 
 .floating-toolbox-ai-content table th {
   background-color: var(--semi-color-fill-1);
+}
+
+.floating-toolbox-ai-content.streaming::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--semi-color-primary) 0%,
+    var(--semi-color-primary-light-default) 50%,
+    var(--semi-color-primary) 100%
+  );
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite linear;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }

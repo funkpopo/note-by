@@ -18,6 +18,7 @@ const IPC_CHANNELS = {
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   GENERATE_CONTENT: 'openai:generate-content',
+  STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
@@ -47,6 +48,14 @@ interface ContentGenerationRequest {
   modelName: string
   prompt: string
   maxTokens?: number
+  stream?: boolean
+}
+
+// 流式内容回调接口
+interface StreamCallbacks {
+  onData: (chunk: string) => void
+  onDone: (content: string) => void
+  onError: (error: string) => void
 }
 
 // Custom APIs for renderer
@@ -76,7 +85,82 @@ const api = {
     generateContent: (
       request: ContentGenerationRequest
     ): Promise<{ success: boolean; content?: string; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_CONTENT, request)
+      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_CONTENT, request),
+
+    // 流式生成内容
+    streamGenerateContent: (
+      request: ContentGenerationRequest,
+      callbacks: StreamCallbacks
+    ): Promise<{ success: boolean; streamId?: string; error?: string }> => {
+      return new Promise((resolve) => {
+        // 发送流式生成请求
+        ipcRenderer
+          .invoke(IPC_CHANNELS.STREAM_GENERATE_CONTENT, {
+            ...request,
+            stream: true // 确保stream标志为true
+          })
+          .then((result: { success: boolean; streamId?: string; error?: string }) => {
+            if (result.success && result.streamId) {
+              const streamId = result.streamId
+
+              // 设置监听器接收数据块
+              const dataListener = (
+                event: Electron.IpcRendererEvent,
+                data: { chunk: string }
+              ): void => {
+                callbacks.onData(data.chunk)
+              }
+
+              // 设置监听器接收完成事件
+              const doneListener = (
+                event: Electron.IpcRendererEvent,
+                data: { content: string }
+              ): void => {
+                callbacks.onDone(data.content)
+
+                // 清理所有监听器
+                ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
+                ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
+                ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
+              }
+
+              // 设置监听器接收错误事件
+              const errorListener = (
+                event: Electron.IpcRendererEvent,
+                data: { error: string }
+              ): void => {
+                callbacks.onError(data.error)
+
+                // 清理所有监听器
+                ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
+                ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
+                ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
+              }
+
+              // 添加所有监听器
+              ipcRenderer.on(`stream-data-${streamId}`, dataListener)
+              ipcRenderer.on(`stream-done-${streamId}`, doneListener)
+              ipcRenderer.on(`stream-error-${streamId}`, errorListener)
+
+              resolve(result)
+            } else {
+              // 请求失败，直接调用错误回调
+              if (result.error) {
+                callbacks.onError(result.error)
+              } else {
+                callbacks.onError('未知错误')
+              }
+              resolve(result)
+            }
+          })
+          .catch((error) => {
+            // 处理请求过程中的异常
+            const errorMessage = error instanceof Error ? error.message : '未知错误'
+            callbacks.onError(errorMessage)
+            resolve({ success: false, error: errorMessage })
+          })
+      })
+    }
   },
   // API配置管理
   api: {

@@ -44,6 +44,7 @@ interface FloatingToolboxState {
   position?: { x: number; y: number }
   action: 'rewrite' | 'continue' | 'translate' | 'analyze' | null
   isAiResponse?: boolean
+  streamingContent?: boolean
 }
 
 // 在文件顶部添加一个接口定义
@@ -61,7 +62,22 @@ interface OpenAIAPI {
     modelName: string
     prompt: string
     maxTokens?: number
+    stream?: boolean
   }) => Promise<{ success: boolean; content?: string; error?: string }>
+  streamGenerateContent: (
+    request: {
+      apiKey: string
+      apiUrl: string
+      modelName: string
+      prompt: string
+      maxTokens?: number
+    },
+    callbacks: {
+      onData: (chunk: string) => void
+      onDone: (content: string) => void
+      onError: (error: string) => void
+    }
+  ) => Promise<{ success: boolean; streamId?: string; error?: string }>
 }
 
 // 语言代码到语言名称的映射
@@ -103,7 +119,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     loading: false,
     position: undefined,
     action: null,
-    isAiResponse: false
+    isAiResponse: false,
+    streamingContent: false
   })
 
   // 添加翻译语言选项
@@ -581,7 +598,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       ...prev,
       loading: true,
       title: `${option.label}翻译`,
-      action: 'translate'
+      action: 'translate',
+      content: prev.content // 保留原始内容
     }))
 
     try {
@@ -621,24 +639,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
       }
 
-      // 调用AI接口
-      const result = await (window.api.openai as OpenAIAPI).generateContent({
-        apiKey: modelConfig.apiKey,
-        apiUrl: modelConfig.apiUrl,
-        modelName: modelConfig.modelName,
-        prompt
-      })
-
-      if (result.success && result.content) {
-        setToolboxState((prev) => ({
-          ...prev,
-          loading: false,
-          content: result.content,
-          isAiResponse: true
-        }))
-      } else {
-        throw new Error(result.error || '生成内容失败')
-      }
+      // 使用流式内容生成
+      await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
     } catch (error) {
       console.error('AI处理失败:', error)
       Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -647,6 +649,95 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         loading: false,
         content: '处理失败，请重试',
         isAiResponse: false
+      }))
+    }
+  }
+
+  // 处理流式内容生成
+  const handleStreamGeneration = async (
+    modelConfig: {
+      id: string
+      name: string
+      apiKey: string
+      apiUrl: string
+      modelName: string
+    },
+    prompt: string,
+    toolboxState: FloatingToolboxState,
+    setToolboxState: React.Dispatch<React.SetStateAction<FloatingToolboxState>>,
+    appendContent = false // 是否追加内容，如内容续写功能
+  ): Promise<void> => {
+    // 准备初始内容
+    const initialContent = appendContent ? toolboxState.content || '' : ''
+
+    // 设置为流式输出模式
+    setToolboxState((prev) => ({
+      ...prev,
+      loading: false, // 立即关闭加载状态
+      streamingContent: true,
+      isAiResponse: true,
+      content: initialContent // 设置初始内容
+    }))
+
+    try {
+      // 创建流式回调
+      const callbacks = {
+        onData: (chunk: string): void => {
+          // 更新UI中的内容，处理增量数据
+          setToolboxState((prev) => {
+            // 只附加到当前内容，而不每次都重新构建完整字符串
+            const newContent = prev.content + chunk
+
+            return {
+              ...prev,
+              content: newContent,
+              streamingContent: true,
+              loading: false
+            }
+          })
+        },
+        onDone: (content: string): void => {
+          // 流式输出完成
+          setToolboxState((prev) => ({
+            ...prev,
+            loading: false,
+            // 如果是追加模式，使用完整内容；否则直接使用累积的内容
+            content: appendContent ? initialContent + content : prev.content,
+            streamingContent: false
+          }))
+        },
+        onError: (error: string): void => {
+          console.error('流式内容生成失败:', error)
+          Toast.error(`AI处理失败: ${error}`)
+          setToolboxState((prev) => ({
+            ...prev,
+            loading: false,
+            content: '处理失败，请重试',
+            isAiResponse: false,
+            streamingContent: false
+          }))
+        }
+      }
+
+      // 调用流式API
+      await (window.api.openai as OpenAIAPI).streamGenerateContent(
+        {
+          apiKey: modelConfig.apiKey,
+          apiUrl: modelConfig.apiUrl,
+          modelName: modelConfig.modelName,
+          prompt
+        },
+        callbacks
+      )
+    } catch (error) {
+      console.error('流式处理失败:', error)
+      Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      setToolboxState((prev) => ({
+        ...prev,
+        loading: false,
+        content: '处理失败，请重试',
+        isAiResponse: false,
+        streamingContent: false
       }))
     }
   }
@@ -867,7 +958,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   ...prev,
                   loading: true,
                   title: '风格改写',
-                  action: 'rewrite'
+                  action: 'rewrite',
+                  content: prev.content // 保留原始内容
                 }))
 
                 try {
@@ -898,24 +990,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     }
                   }
 
-                  // 调用AI接口
-                  const result = await (window.api.openai as OpenAIAPI).generateContent({
-                    apiKey: modelConfig.apiKey,
-                    apiUrl: modelConfig.apiUrl,
-                    modelName: modelConfig.modelName,
-                    prompt
-                  })
-
-                  if (result.success && result.content) {
-                    setToolboxState((prev) => ({
-                      ...prev,
-                      loading: false,
-                      content: result.content,
-                      isAiResponse: true
-                    }))
-                  } else {
-                    throw new Error(result.error || '生成内容失败')
-                  }
+                  // 使用流式内容生成
+                  await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
                 } catch (error) {
                   console.error('AI处理失败:', error)
                   Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -941,7 +1017,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   ...prev,
                   loading: true,
                   title: '内容续写',
-                  action: 'continue'
+                  action: 'continue',
+                  content: prev.content // 保留原始内容
                 }))
 
                 try {
@@ -975,24 +1052,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     }
                   }
 
-                  // 调用AI接口
-                  const result = await (window.api.openai as OpenAIAPI).generateContent({
-                    apiKey: modelConfig.apiKey,
-                    apiUrl: modelConfig.apiUrl,
-                    modelName: modelConfig.modelName,
-                    prompt
-                  })
-
-                  if (result.success && result.content) {
-                    setToolboxState((prev) => ({
-                      ...prev,
-                      loading: false,
-                      content: `${toolboxState.content}${result.content}`,
-                      isAiResponse: true
-                    }))
-                  } else {
-                    throw new Error(result.error || '生成内容失败')
-                  }
+                  // 使用流式内容生成，参数appendContent=true表示追加内容
+                  await handleStreamGeneration(
+                    modelConfig,
+                    prompt,
+                    toolboxState,
+                    setToolboxState,
+                    true
+                  )
                 } catch (error) {
                   console.error('AI处理失败:', error)
                   Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -1047,7 +1114,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   ...prev,
                   loading: true,
                   title: '内容分析',
-                  action: 'analyze'
+                  action: 'analyze',
+                  content: prev.content // 保留原始内容
                 }))
 
                 try {
@@ -1073,24 +1141,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   // 构建请求参数
                   const prompt = `请分析以下文本内容，提供主题概述、关键点、结构分析和改进建议：\n\n${editorContent}`
 
-                  // 调用AI接口
-                  const result = await (window.api.openai as OpenAIAPI).generateContent({
-                    apiKey: modelConfig.apiKey,
-                    apiUrl: modelConfig.apiUrl,
-                    modelName: modelConfig.modelName,
-                    prompt
-                  })
-
-                  if (result.success && result.content) {
-                    setToolboxState((prev) => ({
-                      ...prev,
-                      loading: false,
-                      content: result.content,
-                      isAiResponse: true
-                    }))
-                  } else {
-                    throw new Error(result.error || '生成内容失败')
-                  }
+                  // 使用流式内容生成
+                  await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
                 } catch (error) {
                   console.error('AI处理失败:', error)
                   Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)

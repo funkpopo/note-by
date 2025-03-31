@@ -124,7 +124,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       // 设置定时器，每秒强制更新 ReactMarkdown
       streamTimerRef.current = setInterval(() => {
         setForceUpdateKey((prev) => prev + 1)
-      }, 1000)
+      }, 500) // 减少更新间隔，从1000ms改为500ms，使显示更流畅
 
       return (): void => {
         if (streamTimerRef.current) {
@@ -138,20 +138,10 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
 
   const updateStreamingContent = useCallback(
     (newContent: string, isComplete: boolean): void => {
-      if (
-        newContent &&
-        streamingContentRef.current &&
-        !newContent.includes(streamingContentRef.current)
-      ) {
-        const updatedContent = streamingContentRef.current + newContent
-        streamingContentRef.current = updatedContent
-        setDisplayedContent(updatedContent)
-      } else {
+      if (isComplete) {
+        // 如果是完成事件，直接设置最终内容
         streamingContentRef.current = newContent
         setDisplayedContent(newContent)
-      }
-
-      if (isComplete) {
         setIsStreaming(false)
         if (streamTimerRef.current) {
           clearInterval(streamTimerRef.current)
@@ -160,6 +150,14 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         if (onStreamingComplete) {
           onStreamingComplete()
         }
+      } else if (newContent) {
+        // 处理增量更新 - 流式数据模式
+        // 这里不再检查是否包含之前的内容，直接添加新的内容块
+        const updatedContent = streamingContentRef.current + newContent
+        streamingContentRef.current = updatedContent
+        setDisplayedContent(updatedContent)
+        // 强制立即更新ReactMarkdown，不等待计时器
+        setForceUpdateKey((prev) => prev + 1)
       }
     },
     [onStreamingComplete]
@@ -175,11 +173,21 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         setDisplayedContent(content || '')
       }
     }
-    if (visible && isAiResponse && streamingContent && isStreaming && content) {
-      updateStreamingContent(content, false)
-      setForceUpdateKey((prev) => prev + 1)
+    if (visible && isAiResponse && streamingContent && isStreaming && content !== undefined) {
+      // 确保content有值且不同于当前内容才更新
+      if (content !== displayedContent) {
+        updateStreamingContent(content, false)
+      }
     }
-  }, [visible, isAiResponse, streamingContent, content, isStreaming, updateStreamingContent])
+  }, [
+    visible,
+    isAiResponse,
+    streamingContent,
+    content,
+    isStreaming,
+    updateStreamingContent,
+    displayedContent
+  ])
 
   useEffect((): void => {
     if (visible && isAiResponse && !streamingContent) {
@@ -711,7 +719,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
             {isAiResponse && (
               <div
                 ref={markdownContainerRef}
-                className="floating-toolbox-ai-content"
+                className={`floating-toolbox-ai-content${isStreaming ? ' streaming' : ''}`}
                 style={{
                   width: '100%',
                   minHeight: '100px',

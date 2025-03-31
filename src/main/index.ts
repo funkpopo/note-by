@@ -11,7 +11,7 @@ import {
   ApiConfig,
   getWebDAVConfig
 } from './settings'
-import { testOpenAIConnection, generateContent } from './openai'
+import { testOpenAIConnection, generateContent, streamGenerateContent } from './openai'
 import { promises as fsPromises } from 'fs'
 import {
   testWebDAVConnection,
@@ -29,6 +29,7 @@ const IPC_CHANNELS = {
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   GENERATE_CONTENT: 'openai:generate-content',
+  STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
@@ -279,6 +280,47 @@ app.whenReady().then(() => {
   // 内容生成
   ipcMain.handle(IPC_CHANNELS.GENERATE_CONTENT, async (_, request) => {
     return await generateContent(request)
+  })
+
+  // 流式内容生成
+  ipcMain.handle(IPC_CHANNELS.STREAM_GENERATE_CONTENT, async (event, request) => {
+    try {
+      const emitter = await streamGenerateContent(request)
+      const sender = event.sender
+
+      // 为每个流式数据块分配唯一ID
+      const streamId = Date.now().toString()
+
+      // 监听数据事件
+      emitter.on('data', (chunk) => {
+        if (!sender.isDestroyed()) {
+          sender.send(`stream-data-${streamId}`, { chunk })
+        }
+      })
+
+      // 监听完成事件
+      emitter.on('done', (fullContent) => {
+        if (!sender.isDestroyed()) {
+          sender.send(`stream-done-${streamId}`, { content: fullContent })
+        }
+      })
+
+      // 监听错误事件
+      emitter.on('error', (error) => {
+        if (!sender.isDestroyed()) {
+          sender.send(`stream-error-${streamId}`, { error })
+        }
+      })
+
+      // 返回流ID供客户端使用
+      return { success: true, streamId }
+    } catch (error) {
+      console.error('启动流式内容生成失败:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '启动流式生成失败'
+      }
+    }
   })
 
   // 保存API配置
