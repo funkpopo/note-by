@@ -8,7 +8,7 @@
   z-index: 10;
   height: auto;
   min-height: 20px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   row-gap: 10px;
 }
 
@@ -17,15 +17,46 @@
   align-items: center;
   flex-wrap: wrap;
   row-gap: 5px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-title-container .semi-typography {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .editor-actions {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .editor-actions .semi-button {
   margin-left: 8px;
+}
+
+/* Semi Space组件样式调整，保证在窗口宽度减小时保持同一行 */
+.editor-actions.semi-space {
+  flex-wrap: nowrap !important;
+}
+
+.editor-actions.semi-space.semi-space-align-center {
+  align-items: center !important;
+}
+
+.editor-actions.semi-space.semi-space-horizontal {
+  flex-direction: row !important;
+}
+
+.editor-actions.semi-space.semi-space-tight-horizontal,
+.editor-actions.semi-space.semi-space-tight-vertical {
+  gap: 4px !important; /* 调整紧凑间距 */
 }
 
 /* 美化编辑器内部样式 */
@@ -101,19 +132,32 @@ body[theme-mode='dark'] .cherry-editor .cherry-editor-previewWrap {
   background-color: var(--semi-color-bg-2);
 }
 
-/* 响应式布局 */
-@media (max-width: 768px) {
+/* 当宽度小于600px时，对按钮和标题做调整 */
+@media (max-width: 600px) {
   .editor-header {
     padding: 12px 16px;
   }
 
-  .editor-title-container {
-    width: 100%;
-    margin-bottom: 8px;
+  .editor-title-container .semi-typography {
+    font-size: 18px !important; /* 减小标题字体大小 */
+    max-width: 200px; /* 限制标题最大宽度 */
   }
 
-  .editor-actions {
-    width: 100%;
-    justify-content: flex-end;
+  .editor-actions .semi-button {
+    padding: 0 8px; /* 减小按钮内边距 */
   }
 }
+
+/* 当宽度非常小时，仅显示图标按钮 */
+@media (max-width: 480px) {
+  .editor-actions .semi-button-content > span:not(.semi-icon) {
+    display: none; /* 隐藏按钮文本，只显示图标 */
+  }
+
+  .editor-actions .semi-button {
+    min-width: 28px;
+    width: 28px;
+    padding: 0;
+  }
+}
+

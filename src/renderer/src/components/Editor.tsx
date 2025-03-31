@@ -774,7 +774,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             {currentFile ? `${currentFile}` : '新文档'}
           </Typography.Title>
         </div>
-        <Space className="editor-actions">
+        <Space className="editor-actions" align="center" spacing="tight" wrap={false}>
           <Tooltip content="复制全文">
             <Button icon={<IconCopy />} type="tertiary" onClick={handleCopyContent} />
           </Tooltip>

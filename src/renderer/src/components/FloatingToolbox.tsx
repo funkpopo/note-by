@@ -225,17 +225,17 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       if (editorElement && toolboxRef.current) {
         const editorRect = editorElement.getBoundingClientRect()
         const toolboxRect = toolboxRef.current.getBoundingClientRect()
-        
+
         // 计算窗口位置，确保不超出编辑器边界
         const newX = Math.max(
-          editorRect.left, 
+          editorRect.left,
           Math.min(position.x, editorRect.right - toolboxRect.width)
         )
         const newY = Math.max(
-          editorRect.top, 
+          editorRect.top,
           Math.min(position.y, editorRect.bottom - toolboxRect.height)
         )
-        
+
         setToolboxPosition({ x: newX, y: newY })
       } else {
         // 如果找不到编辑器，直接使用提供的位置
@@ -255,31 +255,31 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       if (editorElement) {
         const editorRect = editorElement.getBoundingClientRect()
         const toolboxRect = toolboxRef.current.getBoundingClientRect()
-        
+
         // 检查当前位置是否超出编辑器
         let newX = toolboxPosition.x
         let newY = toolboxPosition.y
-        
+
         // 检查右边界
         if (newX + toolboxRect.width > editorRect.right) {
           newX = editorRect.right - toolboxRect.width
         }
-        
+
         // 检查下边界
         if (newY + toolboxRect.height > editorRect.bottom) {
           newY = editorRect.bottom - toolboxRect.height
         }
-        
+
         // 检查左边界
         if (newX < editorRect.left) {
           newX = editorRect.left
         }
-        
+
         // 检查上边界
         if (newY < editorRect.top) {
           newY = editorRect.top
         }
-        
+
         // 只有当位置发生变化时才更新
         if (newX !== toolboxPosition.x || newY !== toolboxPosition.y) {
           setToolboxPosition({ x: newX, y: newY })
