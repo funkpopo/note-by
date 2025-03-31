@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.noteby.app
 productName: note-by
 directories:
   buildResources: build
@@ -35,7 +35,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: https://github.com/funkpopo
   category: Utility
   icon: resources/icon.png
 appImage:
