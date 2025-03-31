@@ -124,22 +124,14 @@
   -webkit-user-select: text !important;
 }
 
-/* Cherry Markdown 内容可选 */
-.cherry-markdown .cherry-markdown-content {
-  overflow-x: hidden !important;
-  word-wrap: break-word !important;
-  overflow-wrap: break-word !important;
-  word-break: break-word !important;
-}
-
-/* 确保所有常见元素都不会溢出 */
-.cherry-markdown .cherry-markdown-content pre,
-.cherry-markdown .cherry-markdown-content code,
-.cherry-markdown .cherry-markdown-content table,
-.cherry-markdown .cherry-markdown-content img,
-.cherry-markdown .cherry-markdown-content iframe,
-.cherry-markdown .cherry-markdown-content svg,
-.cherry-markdown .cherry-markdown-content div {
+/* ReactMarkdown 内容可选 */
+.floating-toolbox-content pre,
+.floating-toolbox-content code,
+.floating-toolbox-content table,
+.floating-toolbox-content img,
+.floating-toolbox-content iframe,
+.floating-toolbox-content svg,
+.floating-toolbox-content div {
   max-width: 100% !important;
   overflow-x: auto !important; /* 修改为auto而不是hidden，允许在元素内部滚动 */
   word-wrap: break-word !important;
@@ -148,37 +140,37 @@
 }
 
 /* 代码块特殊处理 */
-.cherry-markdown .cherry-markdown-content pre {
+.floating-toolbox-content pre {
   white-space: pre-wrap !important;
   padding-right: 20px !important; /* 增加右侧内边距，防止文本顶到边缘 */
 }
 
 /* 表格特殊处理 */
-.cherry-markdown .cherry-markdown-content table {
+.floating-toolbox-content table {
   table-layout: fixed !important;
   display: block !important;
   width: fit-content !important;
   max-width: 100% !important;
 }
 
-.cherry-markdown .cherry-markdown-content td,
-.cherry-markdown .cherry-markdown-content th {
+.floating-toolbox-content td,
+.floating-toolbox-content th {
   word-break: break-word !important;
 }
 
 /* 确保长单词能够换行 */
-.cherry-markdown .cherry-markdown-content * {
+.floating-toolbox-content * {
   word-break: break-word !important;
   overflow-wrap: break-word !important;
 }
 
-/* 增强Cherry Markdown的文本选择样式 */
-.cherry-markdown .cherry-markdown-content ::selection {
+/* 增强文本选择样式 */
+.floating-toolbox-content ::selection {
   background-color: var(--semi-color-primary-light-hover) !important;
   color: var(--semi-color-text-0) !important;
 }
 
-body[theme-mode='dark'] .cherry-markdown .cherry-markdown-content ::selection {
+body[theme-mode='dark'] .floating-toolbox-content ::selection {
   background-color: var(--semi-color-primary-light-active) !important;
   color: var(--semi-color-text-0) !important;
 }
@@ -317,28 +309,11 @@ body[theme-mode='dark'] .floating-toolbox-ai-content table {
 }
 
 /* AI内容样式增强 */
-.floating-toolbox-ai-content .cherry {
+.floating-toolbox-ai-content {
   height: auto !important;
   min-height: 50px;
   width: 100% !important;
   flex: 1 !important;
-}
-
-.floating-toolbox-ai-content .cherry-markdown {
-  height: auto !important;
-  width: 100% !important;
-}
-
-.floating-toolbox-ai-content .cherry-editor {
-  height: auto !important;
-  width: 100% !important;
-}
-
-.floating-toolbox-ai-content #cherry-ai-response {
-  height: 100% !important;
-  width: 100% !important;
-  display: flex;
-  flex-direction: column;
 }
 
 .floating-toolbox-ai-content code {
@@ -507,10 +482,7 @@ body[theme-mode='dark'] .floating-toolbox-header:active {
 }
 
 /* 确保AI内容区域内的所有元素不会导致横向溢出 */
-.floating-toolbox-ai-content .cherry,
-.floating-toolbox-ai-content .cherry-markdown,
-.floating-toolbox-ai-content .cherry-editor,
-.floating-toolbox-ai-content .cherry-markdown-content {
+.floating-toolbox-ai-content {
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;

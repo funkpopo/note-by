@@ -2,15 +2,13 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, Button, Spin, Typography, Toast } from '@douyinfe/semi-ui'
 import { IconClose, IconCopy } from '@douyinfe/semi-icons'
 import './FloatingToolbox.css'
-import Cherry from 'cherry-markdown'
-import 'cherry-markdown/dist/cherry-markdown.css'
+import ReactMarkdown from 'react-markdown'
+import rehypeRaw from 'rehype-raw'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 
 // 添加选中相关的CSS样式
 const selectableContentStyle = `
-.cherry-markdown .cherry-markdown-content * {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-}
 .floating-toolbox-content * {
   user-select: text !important;
   -webkit-user-select: text !important;
@@ -27,6 +25,8 @@ interface FloatingToolboxProps {
   children?: React.ReactNode
   aiContent?: string
   isAiResponse?: boolean
+  streamingContent?: boolean // 添加流式内容标志
+  onStreamingComplete?: () => void // 流式内容完成回调
 }
 
 type ResizeDirection = 'right' | 'bottom' | 'bottom-right' | null
@@ -47,19 +47,24 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   onClose,
   children,
   aiContent = '',
-  isAiResponse = false
+  isAiResponse = false,
+  streamingContent = false,
+  onStreamingComplete
 }) => {
   const toolboxRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
-  const cherryContainerRef = useRef<HTMLDivElement>(null)
+  const markdownContainerRef = useRef<HTMLDivElement>(null)
   const contentContainerRef = useRef<HTMLDivElement>(null)
   const [toolboxPosition, setToolboxPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [cherryInstance, setCherryInstance] = useState<Cherry | null>(null)
-  const [contentCherryInstance, setContentCherryInstance] = useState<Cherry | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [isPrinting, setIsPrinting] = useState(false)
+  const [displayedContent, setDisplayedContent] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false) // 添加流式状态
+  const [forceUpdateKey, setForceUpdateKey] = useState(0) // 用于强制更新
+  const streamingContentRef = useRef('') // 用于存储流式内容
+  const streamTimerRef = useRef<NodeJS.Timeout | null>(null) // 存储定时器引用
 
   // 调整大小相关状态
   const [isResizing, setIsResizing] = useState(false)
@@ -95,297 +100,93 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     return isAiResponse || title !== 'AI助手'
   }, [title, isAiResponse])
 
-  // 初始化Cherry Markdown实例
+  // 设置可选文本的样式
   useEffect((): (() => void) => {
     // 确保允许文本选择的样式已添加
-    if (!document.getElementById('cherry-selectable-style')) {
+    if (!document.getElementById('markdown-selectable-style')) {
       const styleEl = document.createElement('style')
-      styleEl.id = 'cherry-selectable-style'
+      styleEl.id = 'markdown-selectable-style'
       styleEl.innerHTML = selectableContentStyle
       document.head.appendChild(styleEl)
     }
 
-    // 为AI响应内容初始化Cherry实例
-    if (visible && isAiResponse && cherryContainerRef.current && !cherryInstance) {
-      try {
-        // 清除之前可能的内容
-        if (cherryContainerRef.current.innerHTML) {
-          cherryContainerRef.current.innerHTML = ''
-        }
-
-        // 创建一个div元素作为Cherry的挂载点
-        const mountDiv = document.createElement('div')
-        mountDiv.id = 'cherry-ai-response'
-        cherryContainerRef.current.appendChild(mountDiv)
-
-        const instance = new Cherry({
-          id: 'cherry-ai-response',
-          value: content || '',
-          editor: {
-            defaultModel: 'previewOnly',
-            height: '100%'
-          },
-          toolbars: {
-            toolbar: false,
-            sidebar: false,
-            bubble: false,
-            float: false
-          },
-          engine: {
-            global: {
-              flowSessionContext: true // 开启流式适配
-            }
-          },
-          callback: {
-            afterInit: (): void => {
-              // 强制使用预览模式
-              instance.switchModel('previewOnly')
-
-              // 处理横向滚动问题
-              const contentElement = document.querySelector(
-                '#cherry-ai-response .cherry-markdown-content'
-              )
-              if (contentElement instanceof HTMLElement) {
-                contentElement.style.overflow = 'hidden'
-                contentElement.style.wordWrap = 'break-word'
-                contentElement.style.overflowWrap = 'break-word'
-                contentElement.style.whiteSpace = 'pre-wrap'
-              }
-            }
-          }
-        })
-
-        setCherryInstance(instance)
-      } catch (err) {
-        console.error('初始化Cherry Markdown失败:', err)
-      }
-    }
-
-    // 为普通内容初始化Cherry实例
-    if (
-      visible &&
-      content &&
-      !isAiResponse &&
-      contentContainerRef.current &&
-      !contentCherryInstance
-    ) {
-      try {
-        // 清除之前可能的内容
-        if (contentContainerRef.current.innerHTML) {
-          contentContainerRef.current.innerHTML = ''
-        }
-
-        // 创建一个div元素作为Cherry的挂载点
-        const mountDiv = document.createElement('div')
-        mountDiv.id = 'cherry-content'
-        contentContainerRef.current.appendChild(mountDiv)
-
-        const instance = new Cherry({
-          id: 'cherry-content',
-          value: content,
-          editor: {
-            defaultModel: 'previewOnly',
-            height: '100%'
-          },
-          toolbars: {
-            toolbar: false,
-            sidebar: false,
-            bubble: false,
-            float: false
-          }
-        })
-
-        setContentCherryInstance(instance)
-      } catch (err) {
-        console.error('初始化内容Cherry Markdown失败:', err)
-      }
-    }
-
     return (): void => {
-      if (cherryInstance) {
-        cherryInstance.destroy()
-        setCherryInstance(null)
-      }
-      if (contentCherryInstance) {
-        contentCherryInstance.destroy()
-        setContentCherryInstance(null)
+      const styleEl = document.getElementById('markdown-selectable-style')
+      if (styleEl) {
+        styleEl.remove()
       }
     }
-  }, [visible, isAiResponse, content, cherryInstance, contentCherryInstance])
+  }, [])
 
-  // 添加选择事件处理和DOM修改
+  // 实现每秒重新渲染 Markdown
   useEffect(() => {
-    // 处理AI内容的DOM，使其可选
-    if (cherryContainerRef.current) {
-      const contentElements = cherryContainerRef.current.querySelectorAll(
-        '.cherry-markdown-content, .cherry-markdown-content *'
-      )
-      contentElements.forEach((el) => {
-        if (el instanceof HTMLElement) {
-          el.style.userSelect = 'text'
-          el.style.webkitUserSelect = 'text'
-          el.style.cursor = 'text'
-        }
-      })
-    }
+    if (visible && isAiResponse && isStreaming) {
+      // 设置定时器，每秒强制更新 ReactMarkdown
+      streamTimerRef.current = setInterval(() => {
+        setForceUpdateKey((prev) => prev + 1)
+      }, 1000)
 
-    // 处理普通内容的DOM，使其可选
-    if (contentContainerRef.current) {
-      const contentElements = contentContainerRef.current.querySelectorAll(
-        '.cherry-markdown-content, .cherry-markdown-content *'
-      )
-      contentElements.forEach((el) => {
-        if (el instanceof HTMLElement) {
-          el.style.userSelect = 'text'
-          el.style.webkitUserSelect = 'text'
-          el.style.cursor = 'text'
-        }
-      })
-    }
-  }, [cherryInstance, contentCherryInstance, visible, aiContent, content])
-
-  // 添加MutationObserver监听DOM变化，专门确保文本可选择
-  useEffect(() => {
-    if (!visible) return
-
-    // 创建MutationObserver实例监听DOM变化
-    const selectObserver = new MutationObserver(() => {
-      // 每当DOM变化时，确保Cherry Markdown内容可选
-      document
-        .querySelectorAll(
-          '.cherry-markdown .cherry-markdown-content, .cherry-markdown .cherry-markdown-content *'
-        )
-        .forEach((el) => {
-          if (el instanceof HTMLElement) {
-            el.style.userSelect = 'text'
-            el.style.webkitUserSelect = 'text'
-            el.style.cursor = 'text'
-          }
-        })
-    })
-
-    // 观察整个浮动工具箱
-    if (toolboxRef.current) {
-      selectObserver.observe(toolboxRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: false
-      })
-    }
-
-    return (): void => {
-      selectObserver.disconnect()
-    }
-  }, [visible])
-
-  // 修改处理横向滚动问题的代码，增强内容处理
-  const handleContentRender = (content: HTMLElement): void => {
-    if (!content) return
-
-    // 设置主容器样式
-    content.style.overflow = 'hidden'
-    content.style.overflowX = 'hidden'
-    content.style.wordWrap = 'break-word'
-    content.style.overflowWrap = 'break-word'
-    content.style.wordBreak = 'break-word'
-    content.style.maxWidth = '100%'
-    content.style.width = '100%'
-    content.style.boxSizing = 'border-box'
-
-    // 处理所有可能导致溢出的元素
-    const elementsToHandle = content.querySelectorAll(
-      'pre, code, table, img, iframe, svg, div, p, ul, ol, blockquote'
-    )
-
-    elementsToHandle.forEach((el) => {
-      if (el instanceof HTMLElement) {
-        el.style.maxWidth = '100%'
-        el.style.boxSizing = 'border-box'
-
-        // 针对不同元素类型应用特定样式
-        if (el.tagName === 'PRE' || el.tagName === 'CODE') {
-          el.style.whiteSpace = 'pre-wrap'
-          el.style.wordBreak = 'break-word'
-          el.style.paddingRight = '20px'
-        } else if (el.tagName === 'TABLE') {
-          el.style.tableLayout = 'fixed'
-          el.style.width = 'fit-content'
-          el.style.maxWidth = '100%'
-          el.style.display = 'block'
-
-          // 处理表格内的单元格
-          el.querySelectorAll('td, th').forEach((cell) => {
-            if (cell instanceof HTMLElement) {
-              cell.style.wordBreak = 'break-word'
-              cell.style.maxWidth = '200px'
-              cell.style.overflow = 'hidden'
-              cell.style.textOverflow = 'ellipsis'
-            }
-          })
-        } else if (el.tagName === 'IMG') {
-          el.style.maxWidth = '100%'
-          el.style.height = 'auto'
-        } else if (el.tagName === 'BLOCKQUOTE') {
-          el.style.paddingRight = '10px'
-          el.style.margin = '8px 0'
+      return (): void => {
+        if (streamTimerRef.current) {
+          clearInterval(streamTimerRef.current)
+          streamTimerRef.current = null
         }
       }
-    })
-  }
-
-  // 当content变化时更新内容
-  useEffect(() => {
-    if (contentCherryInstance && content && !isAiResponse) {
-      contentCherryInstance.setMarkdown(content)
     }
+  }, [visible, isAiResponse, isStreaming])
 
-    if (cherryInstance && content && isAiResponse && !aiContent) {
-      cherryInstance.setMarkdown(content)
-
-      // 在每次内容更新后应用样式以隐藏横向滚动条
-      setTimeout(() => {
-        const contentElement = document.querySelector(
-          '#cherry-ai-response .cherry-markdown-content'
-        )
-        if (contentElement instanceof HTMLElement) {
-          handleContentRender(contentElement)
-        }
-      }, 0)
-    }
-  }, [content, contentCherryInstance, cherryInstance, isAiResponse, aiContent])
-
-  // 添加MutationObserver监听DOM变化，专门处理横向滚动问题
-  useEffect(() => {
-    if (!visible || !isAiResponse) return
-
-    // 创建MutationObserver实例监听DOM变化
-    const scrollObserver = new MutationObserver(() => {
-      // 每当DOM变化时，确保所有内容元素都不会产生横向滚动
-      const contentElement = document.querySelector('#cherry-ai-response .cherry-markdown-content')
-      if (contentElement instanceof HTMLElement) {
-        handleContentRender(contentElement)
+  // 更新显示的内容时避免完整替换，而是追加新内容
+  const updateStreamingContent = useCallback(
+    (newContent: string, isComplete: boolean): void => {
+      // 检查新内容是否包含之前的内容，如果不包含则假定为增量内容
+      if (newContent && streamingContentRef.current && !newContent.includes(streamingContentRef.current)) {
+        // 增量更新 - 追加新内容
+        const updatedContent = streamingContentRef.current + newContent
+        streamingContentRef.current = updatedContent
+        setDisplayedContent(updatedContent)
+      } else {
+        // 全量更新 - 直接设置新内容
+        streamingContentRef.current = newContent
+        setDisplayedContent(newContent)
       }
-    })
+      
+      if (isComplete) {
+        setIsStreaming(false)
+        if (streamTimerRef.current) {
+          clearInterval(streamTimerRef.current)
+          streamTimerRef.current = null
+        }
+        if (onStreamingComplete) {
+          onStreamingComplete()
+        }
+      }
+    },
+    [onStreamingComplete]
+  )
 
-    // 观察markdown内容区域
-    const targetNode = document.querySelector('#cherry-ai-response')
-    if (targetNode) {
-      scrollObserver.observe(targetNode, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true
-      })
+  // 处理流式内容启动
+  useEffect(() => {
+    if (visible && isAiResponse && streamingContent) {
+      // 如果启用了流式内容但尚未开始流式处理
+      if (!isStreaming) {
+        setIsStreaming(true)
+        streamingContentRef.current = content || ''
+        setDisplayedContent(content || '')
+      }
     }
-
-    return (): void => {
-      scrollObserver.disconnect()
+    // 当内容变化时更新显示的内容
+    if (visible && isAiResponse && streamingContent && isStreaming && content) {
+      // 内容有更新时，立即显示最新内容，而不是等待下一次定时器触发
+      updateStreamingContent(content, false)
+      
+      // 强制立即重新渲染Markdown
+      setForceUpdateKey(prev => prev + 1)
     }
-  }, [visible, isAiResponse])
+  }, [visible, isAiResponse, streamingContent, content, isStreaming, updateStreamingContent])
 
-  // 处理AI内容流式展示
+  // 如果不是流式内容，则使用原来的流式打印效果
   useEffect((): void => {
-    if (visible && isAiResponse && cherryInstance) {
+    if (visible && isAiResponse && !streamingContent) {
       // 如果有aiContent，进行流式打印
       if (aiContent && !isPrinting) {
         setIsPrinting(true)
@@ -394,55 +195,13 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
         const printContent = (): void => {
           if (currentWordIndex <= aiContent.length) {
             const currentText = aiContent.substring(0, currentWordIndex)
-            cherryInstance.setMarkdown(currentText)
+            setDisplayedContent(currentText)
             setCurrentWordIndex((prev) => prev + 1)
-
-            // 即使在流式输出过程中也确保不显示横向滚动条
-            const contentElement = document.querySelector(
-              '#cherry-ai-response .cherry-markdown-content'
-            )
-            if (contentElement instanceof HTMLElement) {
-              contentElement.style.overflow = 'hidden'
-              contentElement.style.wordWrap = 'break-word'
-              contentElement.style.overflowWrap = 'break-word'
-              contentElement.style.whiteSpace = 'pre-wrap'
-            }
 
             if (currentWordIndex < aiContent.length) {
               setTimeout(printContent, 30)
             } else {
               setIsPrinting(false)
-
-              // 流式输出完成后，确保所有元素都应用了样式
-              setTimeout(() => {
-                const contentElement = document.querySelector(
-                  '#cherry-ai-response .cherry-markdown-content'
-                )
-                if (contentElement instanceof HTMLElement) {
-                  // 应用主容器样式
-                  contentElement.style.overflow = 'hidden'
-                  contentElement.style.wordWrap = 'break-word'
-                  contentElement.style.overflowWrap = 'break-word'
-                  contentElement.style.whiteSpace = 'pre-wrap'
-
-                  // 处理所有代码块和表格
-                  contentElement.querySelectorAll('pre, code').forEach((el) => {
-                    if (el instanceof HTMLElement) {
-                      el.style.whiteSpace = 'pre-wrap'
-                      el.style.wordBreak = 'break-word'
-                      el.style.overflowX = 'hidden'
-                    }
-                  })
-
-                  contentElement.querySelectorAll('table').forEach((el) => {
-                    if (el instanceof HTMLElement) {
-                      el.style.maxWidth = '100%'
-                      el.style.tableLayout = 'fixed'
-                      el.style.wordBreak = 'break-word'
-                    }
-                  })
-                }
-              }, 50)
             }
           }
         }
@@ -451,10 +210,17 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       }
       // 如果没有aiContent但有content，直接显示content
       else if (content && !aiContent && !isPrinting) {
-        cherryInstance.setMarkdown(content)
+        setDisplayedContent(content)
       }
     }
-  }, [visible, isAiResponse, cherryInstance, aiContent, content, currentWordIndex, isPrinting])
+  }, [visible, isAiResponse, aiContent, content, currentWordIndex, isPrinting, streamingContent])
+
+  // 当content变化时更新内容（非AI响应情况）
+  useEffect(() => {
+    if (content && !isAiResponse) {
+      setDisplayedContent(content)
+    }
+  }, [content, isAiResponse])
 
   // 修改 useEffect 使窗口位置仅在首次显示时初始化
   useEffect(() => {
@@ -499,71 +265,6 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       document.removeEventListener('keydown', handleEscape, true)
     }
   }, [visible, onClose])
-
-  // 监听isAiResponse变化，确保Cherry实例正确更新
-  useEffect(() => {
-    // 当isAiResponse状态变化时，销毁旧的实例
-    if (!isAiResponse && cherryInstance) {
-      cherryInstance.destroy()
-      setCherryInstance(null)
-    }
-
-    if (isAiResponse && !cherryInstance && visible && content && cherryContainerRef.current) {
-      // 清除容器内容
-      if (cherryContainerRef.current.innerHTML) {
-        cherryContainerRef.current.innerHTML = ''
-      }
-
-      // 创建挂载点
-      const mountDiv = document.createElement('div')
-      mountDiv.id = 'cherry-ai-response'
-      cherryContainerRef.current.appendChild(mountDiv)
-
-      // 创建新实例
-      try {
-        const instance = new Cherry({
-          id: 'cherry-ai-response',
-          value: content || '',
-          editor: {
-            defaultModel: 'previewOnly',
-            height: '100%'
-          },
-          toolbars: {
-            toolbar: false,
-            sidebar: false,
-            bubble: false,
-            float: false
-          },
-          engine: {
-            global: {
-              flowSessionContext: true
-            }
-          },
-          callback: {
-            afterInit: (): void => {
-              // 强制使用预览模式
-              instance.switchModel('previewOnly')
-
-              // 处理横向滚动问题
-              const contentElement = document.querySelector(
-                '#cherry-ai-response .cherry-markdown-content'
-              )
-              if (contentElement instanceof HTMLElement) {
-                contentElement.style.overflow = 'hidden'
-                contentElement.style.wordWrap = 'break-word'
-                contentElement.style.overflowWrap = 'break-word'
-                contentElement.style.whiteSpace = 'pre-wrap'
-              }
-            }
-          }
-        })
-
-        setCherryInstance(instance)
-      } catch (err) {
-        console.error('重新初始化Cherry Markdown失败:', err)
-      }
-    }
-  }, [isAiResponse, visible, content, cherryInstance])
 
   // 添加一个专门监听isAiResponse变化的useEffect，处理窗口尺寸优化
   useEffect(() => {
@@ -871,6 +572,16 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     }
   }, [])
 
+  // 组件卸载时清除定时器
+  useEffect(() => {
+    return (): void => {
+      if (streamTimerRef.current) {
+        clearInterval(streamTimerRef.current)
+        streamTimerRef.current = null
+      }
+    }
+  }, [])
+
   if (!visible) return null
 
   return (
@@ -933,15 +644,18 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
             style={{ overflow: 'auto', flex: '1 1 auto' }}
           >
             {content && title !== 'AI助手' && !isAiResponse && (
-              <div
-                ref={contentContainerRef}
-                className="floating-toolbox-content"
-                id="cherry-content"
-              />
+              <div ref={contentContainerRef} className="floating-toolbox-content">
+                <ReactMarkdown
+                  rehypePlugins={[rehypeRaw, rehypeHighlight]}
+                  remarkPlugins={[remarkGfm]}
+                >
+                  {displayedContent}
+                </ReactMarkdown>
+              </div>
             )}
             {isAiResponse && (
               <div
-                ref={cherryContainerRef}
+                ref={markdownContainerRef}
                 className="floating-toolbox-ai-content"
                 style={{
                   width: '100%',
@@ -955,7 +669,15 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
                   overflowWrap: 'break-word',
                   wordWrap: 'break-word'
                 }}
-              />
+              >
+                <ReactMarkdown
+                  key={forceUpdateKey} // 添加key，强制每秒重新渲染
+                  rehypePlugins={[rehypeRaw, rehypeHighlight]}
+                  remarkPlugins={[remarkGfm]}
+                >
+                  {displayedContent}
+                </ReactMarkdown>
+              </div>
             )}
             {children}
           </div>

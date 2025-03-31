@@ -29,6 +29,10 @@
     "axios": "^1.8.4",
     "cherry-markdown": "^0.8.58",
     "openai": "^4.89.0",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
     "uuid": "^11.1.0",
     "webdav": "^5.8.0"
   },
