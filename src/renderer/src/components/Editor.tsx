@@ -45,6 +45,7 @@ interface FloatingToolboxState {
   action: 'rewrite' | 'continue' | 'translate' | 'analyze' | null
   isAiResponse?: boolean
   streamingContent?: boolean
+  selectedText?: string // 保存用户选中的文本
 }
 
 // 在文件顶部添加一个接口定义
@@ -120,7 +121,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     position: undefined,
     action: null,
     isAiResponse: false,
-    streamingContent: false
+    streamingContent: false,
+    selectedText: undefined // 初始化selectedText为undefined
   })
 
   // 添加翻译语言选项
@@ -476,7 +478,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     setToolboxState((prev) => ({
       ...prev,
       visible: false,
-      action: null
+      action: null,
+      selectedText: undefined // 清空保存的选中文本
     }))
   }
 
@@ -495,16 +498,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const applyAIContent = (aiContent: string): void => {
     if (!cherryRef.current) return
 
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) {
-      Toast.warning('无法确定应用位置')
-      return
-    }
+    // 优先使用保存在状态中的selectedText
+    const textToReplace = toolboxState.selectedText || window.getSelection()?.toString()
 
-    // 获取选中文本
-    const selectedText = selection.toString()
-    if (!selectedText) {
-      Toast.warning('请选择要替换的文本')
+    if (!textToReplace) {
+      Toast.warning('无法确定应用位置')
       return
     }
 
@@ -513,7 +511,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       const currentContent = cherryRef.current.getMarkdown()
 
       // 直接替换编辑器中的内容
-      const newContent = currentContent.replace(selectedText, aiContent)
+      const newContent = currentContent.replace(textToReplace, aiContent)
       cherryRef.current.setValue(newContent)
 
       // 通知用户
@@ -557,14 +555,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
     if (!isClickInEditor) return
 
-    // 显示浮动工具箱在鼠标位置
+    // 显示浮动工具箱在鼠标位置，同时保存选中的文本
     setToolboxState({
       visible: true,
       title: 'AI助手',
       content: selection,
       loading: false,
       position: { x: e.clientX, y: e.clientY },
-      action: null
+      action: null,
+      selectedText: selection // 保存选中的文本
     })
   }
 
@@ -1168,13 +1167,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               size="small"
               type="tertiary"
               onClick={() => {
-                // 返回主菜单
+                // 返回主菜单时保留selectedText
                 setToolboxState((prev) => ({
                   ...prev,
                   action: null,
                   title: 'AI助手',
                   content: prev.content?.split(':')[1]?.trim() || prev.content || '',
                   isAiResponse: false
+                  // 保留selectedText字段，不修改它
                 }))
               }}
             >
