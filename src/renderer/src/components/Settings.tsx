@@ -37,6 +37,8 @@ interface ApiConfig {
   apiKey: string
   apiUrl: string
   modelName: string
+  temperature?: string
+  maxTokens?: string
 }
 
 // AI提示配置接口
@@ -55,7 +57,9 @@ const Settings: React.FC = () => {
     name: '',
     apiKey: '',
     apiUrl: '',
-    modelName: ''
+    modelName: '',
+    temperature: '0.7',
+    maxTokens: '2000'
   })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -175,7 +179,9 @@ const Settings: React.FC = () => {
       name: '',
       apiKey: '',
       apiUrl: '',
-      modelName: ''
+      modelName: '',
+      temperature: '0.7',
+      maxTokens: '2000'
     })
     setIsEditMode(false)
     setIsModalOpen(true)
@@ -394,6 +400,18 @@ const Settings: React.FC = () => {
                   模型:
                 </Text>
                 <Text>{config.modelName || '未设置'}</Text>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="tertiary" style={{ marginRight: 6 }}>
+                  温度:
+                </Text>
+                <Text>{config.temperature || '0.7'}</Text>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="tertiary" style={{ marginRight: 6 }}>
+                  最大Token:
+                </Text>
+                <Text>{config.maxTokens || '2000'}</Text>
               </div>
 
               {/* 测试结果显示区域 */}
@@ -779,6 +797,7 @@ const Settings: React.FC = () => {
         title={isEditMode ? '编辑API配置' : '添加API配置'}
         visible={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
+        centered
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <ButtonGroup>
@@ -826,6 +845,44 @@ const Settings: React.FC = () => {
             onChange={(value) => handleConfigChange('modelName', value)}
             showClear
           />
+          <div style={{ marginBottom: 20 }}>
+            <Form.Label>温度 (Temperature)</Form.Label>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '85%', marginRight: 10 }}>
+                <Form.Slider
+                  field="temperature"
+                  initValue={parseFloat(currentConfig.temperature || '0.7')}
+                  onChange={(value) => handleConfigChange('temperature', (value || 0).toString())}
+                  max={2}
+                  min={0}
+                  step={0.1}
+                  marks={{ 0: '0', 1: '1', 2: '2' }}
+                />
+              </div>
+            </div>
+            <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
+              较低的值使输出更确定，较高的值使输出更随机、创造性
+            </Paragraph>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <Form.Label>最大Token数 (Max Tokens)</Form.Label>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '85%', marginRight: 10 }}>
+                <Form.Slider
+                  field="maxTokens"
+                  initValue={parseInt(currentConfig.maxTokens || '2000')}
+                  onChange={(value) => handleConfigChange('maxTokens', (value || 100).toString())}
+                  max={16000}
+                  min={100}
+                  step={100}
+                  marks={{ 100: '100', 4000: '4k', 8000: '8k', 16000: '16k' }}
+                />
+              </div>
+            </div>
+            <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
+              限制模型生成的最大token数量
+            </Paragraph>
+          </div>
         </Form>
       </Modal>
     </div>

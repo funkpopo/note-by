@@ -27,6 +27,8 @@ export interface ApiConfig {
   apiKey: string
   apiUrl: string
   modelName: string
+  temperature?: string
+  maxTokens?: string
 }
 
 // WebDAV配置接口

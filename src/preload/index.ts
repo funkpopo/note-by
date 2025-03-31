@@ -8,6 +8,8 @@ interface ApiConfig {
   apiKey: string
   apiUrl: string
   modelName: string
+  temperature?: string
+  maxTokens?: string
 }
 
 // 设置的IPC通信频道

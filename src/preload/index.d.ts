@@ -7,6 +7,8 @@ interface ApiConfig {
   apiKey: string
   apiUrl: string
   modelName: string
+  temperature?: string
+  maxTokens?: string
 }
 
 // 设置API接口定义
