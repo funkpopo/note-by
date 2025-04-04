@@ -47,7 +47,7 @@ const App: React.FC = () => {
   return (
     <Layout className="components-layout-demo" style={{ height: '100%', overflow: 'hidden' }}>
       <Layout style={{ flexDirection: 'row', height: '100%' }}>
-        <div style={{ display: 'flex', flexShrink: 0 }}>
+        <div style={{ display: 'flex', height: '100%', position: 'relative' }}>
           <Navigation
             onNavChange={handleNavChange}
             onFileSelect={handleFileSelect}
