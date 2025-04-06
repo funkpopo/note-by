@@ -251,11 +251,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
       const result = await window.api.webdav.syncBidirectional(values)
       if (result.success) {
-        const message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件${
-          (result.skippedUpload || result.skippedDownload) ? 
-            `，跳过 ${result.skippedUpload} 个未修改上传文件和 ${result.skippedDownload} 个未修改下载文件` : 
-            ''
-        }`
+        const message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件`
         Toast.success(message)
         setSyncStatus({
           show: true,
@@ -433,6 +429,12 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                 </Form.RadioGroup>
               </div>
             </Card>
+            
+            <div style={{ marginTop: 16, textAlign: 'right' }}>
+              <Button type="secondary" onClick={handleSaveConfig}>
+                保存配置
+              </Button>
+            </div>
           </TabPane>
 
           {/* 操作标签页 */}
@@ -478,12 +480,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                 </Text>
               </div>
             </Card>
-
-            <div style={{ marginTop: 16, textAlign: 'right' }}>
-              <Button type="secondary" onClick={handleSaveConfig}>
-                保存配置
-              </Button>
-            </div>
           </TabPane>
         </Tabs>
       </Form>

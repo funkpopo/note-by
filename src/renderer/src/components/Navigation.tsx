@@ -7,7 +7,8 @@ import {
   IconDelete,
   IconFile,
   IconEdit,
-  IconPlus
+  IconPlus,
+  IconSync
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import ConfirmDialog from './ConfirmDialog'
@@ -770,6 +771,62 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               setShowSecondaryNav(false)
               onNavChange('Settings')
               setSelectedKeys(['Settings'])
+            }
+          },
+          {
+            itemKey: 'Sync',
+            text: '同步',
+            icon: <IconSync />,
+            onClick: async (): Promise<void> => {
+              try {
+                // 获取WebDAV配置
+                const settings = await window.api.settings.getAll()
+                const webdavConfig = settings.webdav as {
+                  url: string
+                  username: string
+                  password: string
+                  remotePath: string
+                  enabled?: boolean
+                  syncDirection?: string
+                  localPath?: string
+                } | undefined
+
+                // 检查是否启用了WebDAV
+                if (!webdavConfig || !webdavConfig.enabled || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+                  Toast.warning('请先在设置中配置并启用WebDAV同步')
+                  onNavChange('Settings')
+                  setSelectedKeys(['Settings'])
+                  return
+                }
+
+                // 显示同步中提示
+                const loadingToast = Toast.info({
+                  content: '正在同步中...',
+                  duration: 0 // 不自动关闭
+                })
+
+                // 执行双向同步
+                const result = await window.api.webdav.syncBidirectional({
+                  url: webdavConfig.url,
+                  username: webdavConfig.username,
+                  password: webdavConfig.password,
+                  remotePath: webdavConfig.remotePath || '/markdown'
+                })
+                
+                // 关闭加载提示
+                Toast.close(loadingToast)
+
+                // 显示同步结果
+                if (result.success) {
+                  const message = `同步成功`
+                  Toast.success(message)
+                } else {
+                  Toast.error(`同步失败: ${result.message}`)
+                }
+              } catch (error) {
+                console.error('同步失败:', error)
+                Toast.error(`同步失败: ${error}`)
+              }
             }
           }
         ]}

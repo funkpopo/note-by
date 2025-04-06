@@ -452,17 +452,7 @@ const Settings: React.FC = () => {
   }
 
   // 添加WebDAV同步完成回调
-  const handleSyncComplete = (result: {
-    success: boolean
-    message: string
-    direction: 'upload' | 'download' | 'bidirectional'
-  }): void => {
-    if (result.success) {
-      Toast.success(result.message)
-    } else {
-      Toast.error(result.message)
-    }
-  }
+  const handleSyncComplete = (): void => {}
 
   // 保存AI提示设置
   const saveAIPrompts = async (): Promise<void> => {
