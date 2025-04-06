@@ -781,18 +781,26 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               try {
                 // 获取WebDAV配置
                 const settings = await window.api.settings.getAll()
-                const webdavConfig = settings.webdav as {
-                  url: string
-                  username: string
-                  password: string
-                  remotePath: string
-                  enabled?: boolean
-                  syncDirection?: string
-                  localPath?: string
-                } | undefined
+                const webdavConfig = settings.webdav as
+                  | {
+                      url: string
+                      username: string
+                      password: string
+                      remotePath: string
+                      enabled?: boolean
+                      syncDirection?: string
+                      localPath?: string
+                    }
+                  | undefined
 
                 // 检查是否启用了WebDAV
-                if (!webdavConfig || !webdavConfig.enabled || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+                if (
+                  !webdavConfig ||
+                  !webdavConfig.enabled ||
+                  !webdavConfig.url ||
+                  !webdavConfig.username ||
+                  !webdavConfig.password
+                ) {
                   Toast.warning('请先在设置中配置并启用WebDAV同步')
                   onNavChange('Settings')
                   setSelectedKeys(['Settings'])
@@ -812,7 +820,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                   password: webdavConfig.password,
                   remotePath: webdavConfig.remotePath || '/markdown'
                 })
-                
+
                 // 关闭加载提示
                 Toast.close(loadingToast)
 

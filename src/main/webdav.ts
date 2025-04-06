@@ -113,12 +113,16 @@ async function getRemoteFiles(remotePath: string): Promise<FileStat[]> {
 }
 
 // 判断文件是否需要上传：新文件或修改过的文件
-async function needUpload(localFilePath: string, remoteFilePath: string, remoteFiles: FileStat[]): Promise<boolean> {
+async function needUpload(
+  localFilePath: string,
+  remoteFilePath: string,
+  remoteFiles: FileStat[]
+): Promise<boolean> {
   if (!webdavClient) return false
 
   try {
     // 检查远程文件是否存在
-    const remoteFile = remoteFiles.find(file => file.filename === remoteFilePath)
+    const remoteFile = remoteFiles.find((file) => file.filename === remoteFilePath)
     if (!remoteFile) {
       // 远程文件不存在，需要上传
       return true
@@ -127,10 +131,10 @@ async function needUpload(localFilePath: string, remoteFilePath: string, remoteF
     // 检查本地文件的最后修改时间
     const localStats = await fs.stat(localFilePath)
     const localModTime = localStats.mtime.getTime()
-    
+
     // 远程文件的最后修改时间
     const remoteModTime = new Date(remoteFile.lastmod).getTime()
-    
+
     // 如果本地文件更新，则需要上传
     return localModTime > remoteModTime
   } catch (error) {
@@ -141,7 +145,7 @@ async function needUpload(localFilePath: string, remoteFilePath: string, remoteF
 }
 
 // 判断文件是否需要下载：新文件或远程有更新的文件
-async function needDownload(remoteFilePath: string, localFilePath: string, remoteFile: FileStat): Promise<boolean> {
+async function needDownload(localFilePath: string, remoteFile: FileStat): Promise<boolean> {
   try {
     // 检查本地文件是否存在
     try {
@@ -154,10 +158,10 @@ async function needDownload(remoteFilePath: string, localFilePath: string, remot
     // 检查本地文件的最后修改时间
     const localStats = await fs.stat(localFilePath)
     const localModTime = localStats.mtime.getTime()
-    
+
     // 远程文件的最后修改时间
     const remoteModTime = new Date(remoteFile.lastmod).getTime()
-    
+
     // 如果远程文件更新，则需要下载
     return remoteModTime > localModTime
   } catch (error) {
@@ -177,7 +181,13 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
   if (!webdavClient) {
     const initResult = initWebDAVClient(config)
     if (!initResult) {
-      return { success: false, message: 'WebDAV客户端初始化失败', uploaded: 0, failed: 0, skipped: 0 }
+      return {
+        success: false,
+        message: 'WebDAV客户端初始化失败',
+        uploaded: 0,
+        failed: 0,
+        skipped: 0
+      }
     }
   }
 
@@ -226,7 +236,7 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           // 检查文件是否需要上传
           const shouldUpload = await needUpload(localPath, remotePath, remoteFiles)
-          
+
           if (shouldUpload) {
             // 上传markdown文件
             const success = await uploadFile(localPath, remotePath)
@@ -275,7 +285,13 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
   if (!webdavClient) {
     const initResult = initWebDAVClient(config)
     if (!initResult) {
-      return { success: false, message: 'WebDAV客户端初始化失败', downloaded: 0, failed: 0, skipped: 0 }
+      return {
+        success: false,
+        message: 'WebDAV客户端初始化失败',
+        downloaded: 0,
+        failed: 0,
+        skipped: 0
+      }
     }
   }
 
@@ -305,8 +321,8 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
           await syncDirectory(entryRemotePath, entryLocalPath)
         } else if (entry.type === 'file' && entryName.endsWith('.md')) {
           // 检查文件是否需要下载
-          const shouldDownload = await needDownload(entryRemotePath, entryLocalPath, entry)
-          
+          const shouldDownload = await needDownload(entryLocalPath, entry)
+
           if (shouldDownload) {
             // 下载markdown文件
             const success = await downloadFile(entryRemotePath, entryLocalPath)
