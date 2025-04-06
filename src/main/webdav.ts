@@ -112,21 +112,78 @@ async function getRemoteFiles(remotePath: string): Promise<FileStat[]> {
   }
 }
 
+// 判断文件是否需要上传：新文件或修改过的文件
+async function needUpload(localFilePath: string, remoteFilePath: string, remoteFiles: FileStat[]): Promise<boolean> {
+  if (!webdavClient) return false
+
+  try {
+    // 检查远程文件是否存在
+    const remoteFile = remoteFiles.find(file => file.filename === remoteFilePath)
+    if (!remoteFile) {
+      // 远程文件不存在，需要上传
+      return true
+    }
+
+    // 检查本地文件的最后修改时间
+    const localStats = await fs.stat(localFilePath)
+    const localModTime = localStats.mtime.getTime()
+    
+    // 远程文件的最后修改时间
+    const remoteModTime = new Date(remoteFile.lastmod).getTime()
+    
+    // 如果本地文件更新，则需要上传
+    return localModTime > remoteModTime
+  } catch (error) {
+    console.error(`检查文件是否需要上传失败: ${localFilePath}`, error)
+    // 出错时保守处理，上传文件
+    return true
+  }
+}
+
+// 判断文件是否需要下载：新文件或远程有更新的文件
+async function needDownload(remoteFilePath: string, localFilePath: string, remoteFile: FileStat): Promise<boolean> {
+  try {
+    // 检查本地文件是否存在
+    try {
+      await fs.access(localFilePath)
+    } catch {
+      // 本地文件不存在，需要下载
+      return true
+    }
+
+    // 检查本地文件的最后修改时间
+    const localStats = await fs.stat(localFilePath)
+    const localModTime = localStats.mtime.getTime()
+    
+    // 远程文件的最后修改时间
+    const remoteModTime = new Date(remoteFile.lastmod).getTime()
+    
+    // 如果远程文件更新，则需要下载
+    return remoteModTime > localModTime
+  } catch (error) {
+    console.error(`检查文件是否需要下载失败: ${localFilePath}`, error)
+    // 出错时保守处理，下载文件
+    return true
+  }
+}
+
 export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
   success: boolean
   message: string
   uploaded: number
   failed: number
+  skipped: number
 }> {
   if (!webdavClient) {
     const initResult = initWebDAVClient(config)
     if (!initResult) {
-      return { success: false, message: 'WebDAV客户端初始化失败', uploaded: 0, failed: 0 }
+      return { success: false, message: 'WebDAV客户端初始化失败', uploaded: 0, failed: 0, skipped: 0 }
     }
   }
 
   let uploaded = 0
   let failed = 0
+  let skipped = 0
 
   try {
     // 确保远程根目录存在
@@ -136,14 +193,25 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
         success: false,
         message: `无法确保远程目录存在: ${config.remotePath}`,
         uploaded,
-        failed
+        failed,
+        skipped
       }
     }
+
+    // 缓存远程文件列表(按目录)
+    const remoteFilesCache = new Map<string, FileStat[]>()
 
     // 递归同步函数
     async function syncDirectory(localDir: string, remoteDir: string): Promise<void> {
       // 确保远程目录存在
       await ensureRemoteDirectory(remoteDir)
+
+      // 获取远程文件列表并缓存
+      if (!remoteFilesCache.has(remoteDir)) {
+        const remoteFiles = await getRemoteFiles(remoteDir)
+        remoteFilesCache.set(remoteDir, remoteFiles)
+      }
+      const remoteFiles = remoteFilesCache.get(remoteDir) || []
 
       // 获取本地文件列表
       const localEntries = await fs.readdir(localDir, { withFileTypes: true })
@@ -156,12 +224,20 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
           // 递归同步子目录
           await syncDirectory(localPath, remotePath)
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
-          // 上传markdown文件
-          const success = await uploadFile(localPath, remotePath)
-          if (success) {
-            uploaded++
+          // 检查文件是否需要上传
+          const shouldUpload = await needUpload(localPath, remotePath, remoteFiles)
+          
+          if (shouldUpload) {
+            // 上传markdown文件
+            const success = await uploadFile(localPath, remotePath)
+            if (success) {
+              uploaded++
+            } else {
+              failed++
+            }
           } else {
-            failed++
+            // 文件不需要上传，跳过
+            skipped++
           }
         }
       }
@@ -172,9 +248,10 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
 
     return {
       success: true,
-      message: `同步完成: 上传了 ${uploaded} 个文件，失败 ${failed} 个文件`,
+      message: `同步完成: 上传了 ${uploaded} 个文件，跳过 ${skipped} 个未修改文件，失败 ${failed} 个文件`,
       uploaded,
-      failed
+      failed,
+      skipped
     }
   } catch (error) {
     console.error('同步本地到远程失败:', error)
@@ -182,7 +259,8 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
       success: false,
       message: `同步失败: ${error}`,
       uploaded,
-      failed
+      failed,
+      skipped
     }
   }
 }
@@ -192,16 +270,18 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
   message: string
   downloaded: number
   failed: number
+  skipped: number
 }> {
   if (!webdavClient) {
     const initResult = initWebDAVClient(config)
     if (!initResult) {
-      return { success: false, message: 'WebDAV客户端初始化失败', downloaded: 0, failed: 0 }
+      return { success: false, message: 'WebDAV客户端初始化失败', downloaded: 0, failed: 0, skipped: 0 }
     }
   }
 
   let downloaded = 0
   let failed = 0
+  let skipped = 0
 
   try {
     // 确保本地根目录存在
@@ -224,12 +304,20 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
           // 递归同步子目录
           await syncDirectory(entryRemotePath, entryLocalPath)
         } else if (entry.type === 'file' && entryName.endsWith('.md')) {
-          // 下载markdown文件
-          const success = await downloadFile(entryRemotePath, entryLocalPath)
-          if (success) {
-            downloaded++
+          // 检查文件是否需要下载
+          const shouldDownload = await needDownload(entryRemotePath, entryLocalPath, entry)
+          
+          if (shouldDownload) {
+            // 下载markdown文件
+            const success = await downloadFile(entryRemotePath, entryLocalPath)
+            if (success) {
+              downloaded++
+            } else {
+              failed++
+            }
           } else {
-            failed++
+            // 文件不需要下载，跳过
+            skipped++
           }
         }
       }
@@ -240,9 +328,10 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
 
     return {
       success: true,
-      message: `同步完成: 下载了 ${downloaded} 个文件，失败 ${failed} 个文件`,
+      message: `同步完成: 下载了 ${downloaded} 个文件，跳过 ${skipped} 个未修改文件，失败 ${failed} 个文件`,
       downloaded,
-      failed
+      failed,
+      skipped
     }
   } catch (error) {
     console.error('同步远程到本地失败:', error)
@@ -250,7 +339,8 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
       success: false,
       message: `同步失败: ${error}`,
       downloaded,
-      failed
+      failed,
+      skipped
     }
   }
 }
@@ -261,6 +351,8 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
   uploaded: number
   downloaded: number
   failed: number
+  skippedUpload: number
+  skippedDownload: number
 }> {
   if (!webdavClient) {
     const initResult = initWebDAVClient(config)
@@ -270,7 +362,9 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
         message: 'WebDAV客户端初始化失败',
         uploaded: 0,
         downloaded: 0,
-        failed: 0
+        failed: 0,
+        skippedUpload: 0,
+        skippedDownload: 0
       }
     }
   }
@@ -284,10 +378,12 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
     return {
       success: remoteToLocalResult.success && localToRemoteResult.success,
-      message: `双向同步完成: 上传 ${localToRemoteResult.uploaded} 个，下载 ${remoteToLocalResult.downloaded} 个，失败 ${remoteToLocalResult.failed + localToRemoteResult.failed} 个`,
+      message: `双向同步完成: 上传 ${localToRemoteResult.uploaded} 个，下载 ${remoteToLocalResult.downloaded} 个，跳过 ${localToRemoteResult.skipped} 个上传文件和 ${remoteToLocalResult.skipped} 个下载文件，失败 ${remoteToLocalResult.failed + localToRemoteResult.failed} 个`,
       uploaded: localToRemoteResult.uploaded,
       downloaded: remoteToLocalResult.downloaded,
-      failed: remoteToLocalResult.failed + localToRemoteResult.failed
+      failed: remoteToLocalResult.failed + localToRemoteResult.failed,
+      skippedUpload: localToRemoteResult.skipped,
+      skippedDownload: remoteToLocalResult.skipped
     }
   } catch (error) {
     console.error('双向同步失败:', error)
@@ -296,7 +392,9 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       message: `双向同步失败: ${error}`,
       uploaded: 0,
       downloaded: 0,
-      failed: 0
+      failed: 0,
+      skippedUpload: 0,
+      skippedDownload: 0
     }
   }
 }

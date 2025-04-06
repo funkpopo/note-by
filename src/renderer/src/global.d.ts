@@ -135,6 +135,7 @@ interface Window {
         message: string
         uploaded: number
         failed: number
+        skipped?: number
       }>
 
       // 同步远程到本地
@@ -149,6 +150,7 @@ interface Window {
         message: string
         downloaded: number
         failed: number
+        skipped?: number
       }>
 
       // 双向同步
@@ -164,6 +166,8 @@ interface Window {
         uploaded: number
         downloaded: number
         failed: number
+        skippedUpload: number
+        skippedDownload: number
       }>
     }
   }

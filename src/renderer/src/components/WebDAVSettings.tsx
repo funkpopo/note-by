@@ -125,7 +125,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
       const result = await window.api.webdav.syncLocalToRemote(values)
       if (result.success) {
-        const message = `上传成功: 上传了 ${result.uploaded} 个文件`
+        const message = `上传成功: 上传了 ${result.uploaded} 个文件${result.skipped ? `，跳过 ${result.skipped} 个未修改文件` : ''}`
         Toast.success(message)
         setSyncStatus({
           show: true,
@@ -188,7 +188,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
       const result = await window.api.webdav.syncRemoteToLocal(values)
       if (result.success) {
-        const message = `下载成功: 下载了 ${result.downloaded} 个文件`
+        const message = `下载成功: 下载了 ${result.downloaded} 个文件${result.skipped ? `，跳过 ${result.skipped} 个未修改文件` : ''}`
         Toast.success(message)
         setSyncStatus({
           show: true,
@@ -251,7 +251,11 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
       const result = await window.api.webdav.syncBidirectional(values)
       if (result.success) {
-        const message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件`
+        const message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件${
+          (result.skippedUpload || result.skippedDownload) ? 
+            `，跳过 ${result.skippedUpload} 个未修改上传文件和 ${result.skippedDownload} 个未修改下载文件` : 
+            ''
+        }`
         Toast.success(message)
         setSyncStatus({
           show: true,
