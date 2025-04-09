@@ -1,0 +1,7 @@
+/* AIAssistant 主要是容器组件，主要样式在 MenuFloatingWindow.css 和 ResponseFloatingWindow.css 中定义 */
+/* 但可以在这里添加一些共享样式 */
+
+.ai-assistant-container {
+  position: absolute;
+  z-index: 1000;
+}

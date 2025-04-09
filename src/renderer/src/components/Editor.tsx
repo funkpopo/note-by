@@ -2,18 +2,9 @@ import React, { useEffect, useRef, useContext, useState, useCallback } from 'rea
 import Cherry from 'cherry-markdown'
 import 'cherry-markdown/dist/cherry-markdown.css'
 import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from '@douyinfe/semi-ui'
-import {
-  IconSave,
-  IconCopy,
-  IconEdit,
-  IconMore,
-  IconLanguage,
-  IconRefresh,
-  IconDoubleChevronRight,
-  IconSearch
-} from '@douyinfe/semi-icons'
+import { IconSave, IconCopy, IconEdit, IconMore } from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
-import FloatingToolbox from './FloatingToolbox'
+import AIAssistant from './AIAssistant'
 import './Editor.css'
 
 interface EditorProps {
@@ -795,6 +786,172 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
+  // 处理风格改写
+  const handleRewrite = async (): Promise<void> => {
+    // 显示风格改写加载状态
+    setToolboxState((prev) => ({
+      ...prev,
+      loading: true,
+      title: '风格改写',
+      action: 'rewrite',
+      // 保留原始内容以备恢复
+      content: prev.content
+    }))
+
+    try {
+      // 查找当前选中的模型配置
+      const settings = await window.api.settings.getAll()
+      const apiConfigs = settings.apiConfigs as Array<{
+        id: string
+        name: string
+        apiKey: string
+        apiUrl: string
+        modelName: string
+      }>
+
+      const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+      if (!modelConfig) {
+        throw new Error('未找到选中的模型配置')
+      }
+
+      // 构建请求参数，始终使用selectedText而不是当前content
+      const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
+      let prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${contentToProcess}`
+
+      // 如果存在自定义提示，则使用自定义提示
+      if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+        const aiPrompts = settings.aiPrompts as AIPrompts
+        if (aiPrompts.rewrite && typeof aiPrompts.rewrite === 'string') {
+          prompt = aiPrompts.rewrite.replace(/\${content}/g, contentToProcess)
+        }
+      }
+
+      // 使用流式内容生成
+      await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
+    } catch (error) {
+      console.error('AI处理失败:', error)
+      Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      setToolboxState((prev) => ({
+        ...prev,
+        loading: false,
+        content: '处理失败，请重试',
+        isAiResponse: false
+      }))
+    }
+  }
+
+  // 处理内容续写
+  const handleContinue = async (): Promise<void> => {
+    // 显示内容续写加载状态
+    setToolboxState((prev) => ({
+      ...prev,
+      loading: true,
+      title: '内容续写',
+      action: 'continue',
+      content: prev.content // 保留原始内容
+    }))
+
+    try {
+      // 查找当前选中的模型配置
+      const settings = await window.api.settings.getAll()
+      const apiConfigs = settings.apiConfigs as Array<{
+        id: string
+        name: string
+        apiKey: string
+        apiUrl: string
+        modelName: string
+      }>
+
+      const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+      if (!modelConfig) {
+        throw new Error('未找到选中的模型配置')
+      }
+
+      // 构建请求参数，始终使用selectedText而不是当前content
+      const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
+      let prompt = `请继续编写以下内容：\n\n${contentToProcess}\n\n请直接续写，不要重复已有内容。`
+
+      // 如果存在自定义提示，则使用自定义提示
+      if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
+        const aiPrompts = settings.aiPrompts as AIPrompts
+        if (aiPrompts.continue && typeof aiPrompts.continue === 'string') {
+          prompt = aiPrompts.continue.replace(/\${content}/g, contentToProcess)
+        }
+      }
+
+      // 使用流式内容生成，参数appendContent=true表示追加内容
+      await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState, true)
+    } catch (error) {
+      console.error('AI处理失败:', error)
+      Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      setToolboxState((prev) => ({
+        ...prev,
+        loading: false,
+        content: '处理失败，请重试',
+        isAiResponse: false
+      }))
+    }
+  }
+
+  // 显示翻译下拉菜单
+  const showTranslateDropdown = (): void => {
+    // 简单地显示第一个翻译选项，实际应该显示一个选择菜单
+    if (translationOptions.length > 0) {
+      handleTranslate(translationOptions[0])
+    }
+  }
+
+  // 处理内容分析
+  const handleAnalyze = async (): Promise<void> => {
+    // 显示内容分析加载状态
+    setToolboxState((prev) => ({
+      ...prev,
+      loading: true,
+      title: '内容分析',
+      action: 'analyze',
+      content: prev.content // 保留原始内容
+    }))
+
+    try {
+      // 获取当前编辑器内容进行全文分析
+      // 内容分析功能特殊，需要分析整个文档而不仅是选中内容
+      const editorContent = cherryRef.current?.getMarkdown() || ''
+
+      // 查找当前选中的模型配置
+      const settings = await window.api.settings.getAll()
+      const apiConfigs = settings.apiConfigs as Array<{
+        id: string
+        name: string
+        apiKey: string
+        apiUrl: string
+        modelName: string
+      }>
+
+      const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
+
+      if (!modelConfig) {
+        throw new Error('未找到选中的模型配置')
+      }
+
+      // 构建请求参数 - 内容分析是特殊的，总是使用完整编辑器内容
+      const prompt = `请分析以下文本内容，提供主题概述、关键点、结构分析和改进建议：\n\n${editorContent}`
+
+      // 使用流式内容生成
+      await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
+    } catch (error) {
+      console.error('AI处理失败:', error)
+      Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      setToolboxState((prev) => ({
+        ...prev,
+        loading: false,
+        content: '处理失败，请重试',
+        isAiResponse: false
+      }))
+    }
+  }
+
   useEffect((): (() => void) => {
     // 加载文件夹列表
     loadFolders()
@@ -995,7 +1152,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       />
 
       {/* 浮动工具箱 */}
-      <FloatingToolbox
+      <AIAssistant
         visible={toolboxState.visible}
         title={toolboxState.title}
         content={toolboxState.content}
@@ -1003,264 +1160,40 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         position={toolboxState.position}
         onClose={closeToolbox}
         isAiResponse={toolboxState.isAiResponse}
-      >
-        {!toolboxState.loading && toolboxState.action === null && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <Button
-              size="small"
-              type="tertiary"
-              icon={<IconRefresh />}
-              onClick={async () => {
-                // 显示风格改写加载状态
-                setToolboxState((prev) => ({
-                  ...prev,
-                  loading: true,
-                  title: '风格改写',
-                  action: 'rewrite',
-                  // 保留原始内容以备恢复
-                  content: prev.content
-                }))
+        streamingContent={toolboxState.streamingContent}
+        action={toolboxState.action}
+        onMenuItemClick={(action) => {
+          if (action === 'rewrite') {
+            handleRewrite()
+          } else if (action === 'continue') {
+            handleContinue()
+          } else if (action === 'translate') {
+            // 显示翻译下拉菜单 - 这里需要额外实现
+            showTranslateDropdown()
+          } else if (action === 'analyze') {
+            handleAnalyze()
+          }
+        }}
+        onReturn={() => {
+          // 取消当前的流式请求
+          cancelActiveStream()
 
-                try {
-                  // 查找当前选中的模型配置
-                  const settings = await window.api.settings.getAll()
-                  const apiConfigs = settings.apiConfigs as Array<{
-                    id: string
-                    name: string
-                    apiKey: string
-                    apiUrl: string
-                    modelName: string
-                  }>
-
-                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
-
-                  if (!modelConfig) {
-                    throw new Error('未找到选中的模型配置')
-                  }
-
-                  // 构建请求参数，始终使用selectedText而不是当前content
-                  const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
-                  let prompt = `请改写以下文本，保持文本原意但使用更优美的表达：\n\n${contentToProcess}`
-
-                  // 如果存在自定义提示，则使用自定义提示
-                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
-                    const aiPrompts = settings.aiPrompts as AIPrompts
-                    if (aiPrompts.rewrite && typeof aiPrompts.rewrite === 'string') {
-                      prompt = aiPrompts.rewrite.replace(/\${content}/g, contentToProcess)
-                    }
-                  }
-
-                  // 使用流式内容生成
-                  await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
-                } catch (error) {
-                  console.error('AI处理失败:', error)
-                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
-                  setToolboxState((prev) => ({
-                    ...prev,
-                    loading: false,
-                    content: '处理失败，请重试',
-                    isAiResponse: false
-                  }))
-                }
-              }}
-              className="floating-toolbox-actions-btn"
-            >
-              风格改写
-            </Button>
-            <Button
-              size="small"
-              type="tertiary"
-              icon={<IconDoubleChevronRight />}
-              onClick={async () => {
-                // 显示内容续写加载状态
-                setToolboxState((prev) => ({
-                  ...prev,
-                  loading: true,
-                  title: '内容续写',
-                  action: 'continue',
-                  content: prev.content // 保留原始内容
-                }))
-
-                try {
-                  // 查找当前选中的模型配置
-                  const settings = await window.api.settings.getAll()
-                  const apiConfigs = settings.apiConfigs as Array<{
-                    id: string
-                    name: string
-                    apiKey: string
-                    apiUrl: string
-                    modelName: string
-                  }>
-
-                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
-
-                  if (!modelConfig) {
-                    throw new Error('未找到选中的模型配置')
-                  }
-
-                  // 构建请求参数，始终使用selectedText而不是当前content
-                  const contentToProcess = toolboxState.selectedText || toolboxState.content || ''
-                  let prompt = `请继续编写以下内容：\n\n${contentToProcess}\n\n请直接续写，不要重复已有内容。`
-
-                  // 如果存在自定义提示，则使用自定义提示
-                  if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
-                    const aiPrompts = settings.aiPrompts as AIPrompts
-                    if (aiPrompts.continue && typeof aiPrompts.continue === 'string') {
-                      prompt = aiPrompts.continue.replace(/\${content}/g, contentToProcess)
-                    }
-                  }
-
-                  // 使用流式内容生成，参数appendContent=true表示追加内容
-                  await handleStreamGeneration(
-                    modelConfig,
-                    prompt,
-                    toolboxState,
-                    setToolboxState,
-                    true
-                  )
-                } catch (error) {
-                  console.error('AI处理失败:', error)
-                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
-                  setToolboxState((prev) => ({
-                    ...prev,
-                    loading: false,
-                    content: '处理失败，请重试',
-                    isAiResponse: false
-                  }))
-                }
-              }}
-              className="floating-toolbox-actions-btn"
-            >
-              内容续写
-            </Button>
-
-            {/* 整合的翻译下拉菜单按钮 */}
-            <Dropdown
-              trigger="click"
-              position="rightTop"
-              render={
-                <Dropdown.Menu className="translation-dropdown">
-                  <Dropdown.Title>选择翻译语言</Dropdown.Title>
-                  {translationOptions.map((option) => (
-                    <Dropdown.Item
-                      key={`${option.sourceLanguage}-${option.targetLanguage}`}
-                      onClick={() => handleTranslate(option)}
-                    >
-                      {option.label}
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Menu>
-              }
-            >
-              <Button
-                size="small"
-                type="tertiary"
-                icon={<IconLanguage />}
-                className="floating-toolbox-actions-btn"
-              >
-                翻译功能
-              </Button>
-            </Dropdown>
-
-            <Button
-              size="small"
-              type="tertiary"
-              icon={<IconSearch />}
-              onClick={async () => {
-                // 显示内容分析加载状态
-                setToolboxState((prev) => ({
-                  ...prev,
-                  loading: true,
-                  title: '内容分析',
-                  action: 'analyze',
-                  content: prev.content // 保留原始内容
-                }))
-
-                try {
-                  // 获取当前编辑器内容进行全文分析
-                  // 内容分析功能特殊，需要分析整个文档而不仅是选中内容
-                  const editorContent = cherryRef.current?.getMarkdown() || ''
-
-                  // 查找当前选中的模型配置
-                  const settings = await window.api.settings.getAll()
-                  const apiConfigs = settings.apiConfigs as Array<{
-                    id: string
-                    name: string
-                    apiKey: string
-                    apiUrl: string
-                    modelName: string
-                  }>
-
-                  const modelConfig = apiConfigs.find((config) => config.id === selectedModel)
-
-                  if (!modelConfig) {
-                    throw new Error('未找到选中的模型配置')
-                  }
-
-                  // 构建请求参数 - 内容分析是特殊的，总是使用完整编辑器内容
-                  const prompt = `请分析以下文本内容，提供主题概述、关键点、结构分析和改进建议：\n\n${editorContent}`
-
-                  // 使用流式内容生成
-                  await handleStreamGeneration(modelConfig, prompt, toolboxState, setToolboxState)
-                } catch (error) {
-                  console.error('AI处理失败:', error)
-                  Toast.error(`AI处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
-                  setToolboxState((prev) => ({
-                    ...prev,
-                    loading: false,
-                    content: '处理失败，请重试',
-                    isAiResponse: false
-                  }))
-                }
-              }}
-              className="floating-toolbox-actions-btn"
-            >
-              内容分析
-            </Button>
-          </div>
-        )}
-
-        {/* 添加应用按钮区域 */}
-        {!toolboxState.loading && toolboxState.action && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-            <Button
-              size="small"
-              type="tertiary"
-              onClick={() => {
-                // 取消当前的流式请求
-                cancelActiveStream()
-
-                // 返回主菜单时恢复原始选中的文本
-                setToolboxState((prev) => ({
-                  ...prev,
-                  action: null,
-                  title: 'AI助手',
-                  // 使用最初选中的文本作为content，而不是AI处理后的结果
-                  content: prev.selectedText || '',
-                  isAiResponse: false,
-                  streamingContent: false // 确保关闭流式状态
-                  // 保留selectedText字段，不修改它
-                }))
-              }}
-            >
-              返回
-            </Button>
-            {toolboxState.action !== 'analyze' && (
-              <Button
-                size="small"
-                type="primary"
-                onClick={() => {
-                  if (toolboxState.content) {
-                    applyAIContent(toolboxState.content)
-                  }
-                }}
-              >
-                应用
-              </Button>
-            )}
-          </div>
-        )}
-      </FloatingToolbox>
+          // 返回主菜单时恢复原始选中的文本
+          setToolboxState((prev) => ({
+            ...prev,
+            action: null,
+            title: 'AI助手',
+            // 使用最初选中的文本作为content，而不是AI处理后的结果
+            content: prev.selectedText || '',
+            isAiResponse: false,
+            streamingContent: false // 确保关闭流式状态
+            // 保留selectedText字段，不修改它
+          }))
+        }}
+        onApply={(aiContent) => {
+          applyAIContent(aiContent)
+        }}
+      />
 
       {/* 保存文件对话框 */}
       <Modal
