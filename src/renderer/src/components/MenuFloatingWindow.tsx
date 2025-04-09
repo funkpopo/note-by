@@ -61,11 +61,11 @@ const MenuFloatingWindow: React.FC<MenuFloatingWindowProps> = ({
       document.addEventListener('mouseup', handleDragEnd)
     }
 
-    return () => {
+    return (): void => {
       document.removeEventListener('mousemove', handleDrag)
       document.removeEventListener('mouseup', handleDragEnd)
     }
-  }, [isDragging])
+  })
 
   // 显示工具提示
   const showTooltip = (tooltipId: string): void => {

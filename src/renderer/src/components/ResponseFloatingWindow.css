@@ -3,19 +3,43 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-width: 280px;
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: 300px;
+  min-height: 100px;
+  max-height: 600px;
   overflow: hidden;
   animation: fadeIn 0.2s ease-in-out;
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   transition: box-shadow 0.3s;
+  resize: both;
+  position: relative;
 }
 
 /* 暗色模式 */
 body[theme-mode='dark'] .response-floating-window {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 添加右下角调整大小提示 */
+.response-floating-window::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--semi-color-border);
+  border-bottom: 2px solid var(--semi-color-border);
+  cursor: nwse-resize;
+  opacity: 0.8;
+}
+
+/* 悬停时强调调整提示 */
+.response-floating-window:hover::after {
+  opacity: 1;
+  border-right: 2px solid var(--semi-color-primary);
+  border-bottom: 2px solid var(--semi-color-primary);
 }
 
 .response-floating-window.dragging {
@@ -55,7 +79,6 @@ body[theme-mode='dark'] .response-floating-window {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
-  max-height: 500px;
 }
 
 .response-loading {

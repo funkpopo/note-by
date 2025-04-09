@@ -15,8 +15,6 @@ interface ResponseFloatingWindowProps {
   position?: { x: number; y: number }
   onClose: () => void
   isStreaming?: boolean
-  action?: 'rewrite' | 'continue' | 'translate' | 'analyze' | null
-  onApply?: (content: string) => void
   onReturn?: () => void
 }
 
@@ -28,8 +26,6 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
   position,
   onClose,
   isStreaming = false,
-  action = null,
-  onApply,
   onReturn
 }) => {
   const responseRef = useRef<HTMLDivElement>(null)
@@ -178,13 +174,6 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
     }
   }
 
-  // 应用内容
-  const handleApply = (): void => {
-    if (content && onApply) {
-      onApply(content)
-    }
-  }
-
   if (!visible) return null
 
   return (
@@ -201,6 +190,11 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
       <div ref={headerRef} className="response-header" onMouseDown={handleDragStart}>
         <Typography.Text strong>{title}</Typography.Text>
         <div className="response-header-buttons">
+          {onReturn && (
+            <Button type="tertiary" size="small" onClick={handleReturn} title="返回">
+              返回
+            </Button>
+          )}
           <Button
             type="tertiary"
             icon={<IconCopy />}
@@ -228,22 +222,6 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
                 {content}
               </ReactMarkdown>
             </div>
-
-            {/* 添加操作按钮区域 */}
-            {action && !loading && (
-              <div className="response-actions">
-                {onReturn && (
-                  <Button size="small" type="tertiary" onClick={handleReturn}>
-                    返回
-                  </Button>
-                )}
-                {onApply && action !== 'analyze' && (
-                  <Button size="small" type="primary" onClick={handleApply}>
-                    应用
-                  </Button>
-                )}
-              </div>
-            )}
           </>
         )}
       </div>
