@@ -77,6 +77,27 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   }, [position])
 
+  // 添加ESC键监听，实现按ESC关闭窗口
+  useEffect(() => {
+    // 只有当浮动窗口可见时才添加监听
+    if (visible) {
+      const handleKeyDown = (event: KeyboardEvent): void => {
+        // 检查是否按下ESC键
+        if (event.key === 'Escape' || event.keyCode === 27) {
+          onClose()
+        }
+      }
+
+      // 添加键盘事件监听
+      window.addEventListener('keydown', handleKeyDown)
+
+      // 组件卸载时移除监听
+      return (): void => {
+        window.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+  }, [visible, onClose])
+
   // 显示处理逻辑
   const showMenu = visible && action === null
   const showResponse = visible && (action !== null || isAiResponse)

@@ -107,6 +107,16 @@ body[theme-mode='dark'] .response-floating-window {
   font-size: 14px;
 }
 
+/* 添加夜间模式下AI回复内容的字体颜色设置 */
+body[theme-mode='dark'] .response-markdown {
+  color: #ffffff;
+}
+
+/* 确保夜间模式下所有嵌套文本元素也是白色 */
+body[theme-mode='dark'] .response-markdown * {
+  color: #ffffff;
+}
+
 .response-markdown * {
   user-select: text !important;
   -webkit-user-select: text !important;
