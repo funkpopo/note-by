@@ -18,6 +18,7 @@ interface AIAssistantProps {
   onClose: () => void
   onMenuItemClick: (action: Exclude<AIAction, null>) => void
   onReturn?: () => void
+  onApply: (content: string) => void
 }
 
 const AIAssistant: React.FC<AIAssistantProps> = ({
@@ -31,7 +32,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
   streamingContent = false,
   onClose,
   onMenuItemClick,
-  onReturn
+  onReturn,
+  onApply
 }) => {
   // 菜单位置和响应窗口位置
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
@@ -121,6 +123,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
         onClose={onClose}
         isStreaming={streamingContent}
         onReturn={onReturn}
+        onApply={onApply}
       />
     </>
   )

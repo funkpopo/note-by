@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Button, Spin, Typography } from '@douyinfe/semi-ui'
-import { IconClose, IconCopy } from '@douyinfe/semi-icons'
+import { IconClose, IconCopy, IconTick } from '@douyinfe/semi-icons'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
@@ -16,6 +16,7 @@ interface ResponseFloatingWindowProps {
   onClose: () => void
   isStreaming?: boolean
   onReturn?: () => void
+  onApply?: (content: string) => void
 }
 
 const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
@@ -26,7 +27,8 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
   position,
   onClose,
   isStreaming = false,
-  onReturn
+  onReturn,
+  onApply
 }) => {
   const responseRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
@@ -174,6 +176,13 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
     }
   }
 
+  // 应用AI生成的内容
+  const handleApply = (): void => {
+    if (onApply && content) {
+      onApply(content)
+    }
+  }
+
   if (!visible) return null
 
   return (
@@ -194,6 +203,15 @@ const ResponseFloatingWindow: React.FC<ResponseFloatingWindowProps> = ({
             <Button type="tertiary" size="small" onClick={handleReturn} title="返回">
               返回
             </Button>
+          )}
+          {onApply && (
+            <Button
+              type="tertiary"
+              icon={<IconTick />}
+              size="small"
+              onClick={handleApply}
+              title="应用内容"
+            />
           )}
           <Button
             type="tertiary"

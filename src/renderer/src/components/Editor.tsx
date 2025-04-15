@@ -5,6 +5,7 @@ import { Button, Typography, Space, Tooltip, Toast, Modal, Form, Dropdown } from
 import { IconSave, IconCopy, IconEdit, IconMore } from '@douyinfe/semi-icons'
 import { ThemeContext } from '../context/theme/ThemeContext'
 import AIAssistant from './AIAssistant'
+import TranslateSubMenu from './TranslateSubMenu'
 import './Editor.css'
 
 interface EditorProps {
@@ -106,15 +107,21 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // 添加浮动窗口状态
   const [toolboxState, setToolboxState] = useState<FloatingToolboxState>({
     visible: false,
-    title: '',
+    title: 'AI助手',
     content: '',
     loading: false,
     position: undefined,
     action: null,
     isAiResponse: false,
     streamingContent: false,
-    selectedText: undefined // 初始化selectedText为undefined
+    selectedText: undefined
   })
+
+  // 翻译子菜单状态
+  const [translateSubMenuVisible, setTranslateSubMenuVisible] = useState(false)
+  const [translateSubMenuPosition, setTranslateSubMenuPosition] = useState<
+    { x: number; y: number } | undefined
+  >(undefined)
 
   // 添加一个ref来跟踪当前活跃的流式请求
   const activeStreamRef = useRef<string | null>(null)
@@ -629,20 +636,29 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       const sourceLanguageName = languageNameMap[option.sourceLanguage] || option.sourceLanguage
       const targetLanguageName = languageNameMap[option.targetLanguage] || option.targetLanguage
 
-      let prompt = option.prompt
-        .replace(/\${sourceLanguage}/g, sourceLanguageName)
-        .replace(/\${targetLanguage}/g, targetLanguageName)
-        .replace(/\${content}/g, contentToProcess)
-
+      // 确保使用通用翻译prompt和正确的变量替换顺序
+      let prompt
       // 如果存在自定义提示，则使用自定义提示
       if (settings.aiPrompts && typeof settings.aiPrompts === 'object') {
         const aiPrompts = settings.aiPrompts as AIPrompts
         if (aiPrompts.translate && typeof aiPrompts.translate === 'string') {
+          // 首先替换语言变量，然后再替换内容变量
           prompt = aiPrompts.translate
-            .replace(/\${content}/g, contentToProcess)
             .replace(/\${sourceLanguage}/g, sourceLanguageName)
             .replace(/\${targetLanguage}/g, targetLanguageName)
+            .replace(/\${content}/g, contentToProcess)
+        } else {
+          // 如果没有自定义提示，使用默认提示
+          prompt = option.prompt
+            .replace(/\${sourceLanguage}/g, sourceLanguageName)
+            .replace(/\${targetLanguage}/g, targetLanguageName)
+            .replace(/\${content}/g, contentToProcess)
         }
+      } else {
+        prompt = option.prompt
+          .replace(/\${sourceLanguage}/g, sourceLanguageName)
+          .replace(/\${targetLanguage}/g, targetLanguageName)
+          .replace(/\${content}/g, contentToProcess)
       }
 
       // 使用流式内容生成
@@ -897,9 +913,52 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // 显示翻译下拉菜单
   const showTranslateDropdown = (): void => {
-    // 简单地显示第一个翻译选项，实际应该显示一个选择菜单
-    if (translationOptions.length > 0) {
-      handleTranslate(translationOptions[0])
+    // 显示翻译子菜单
+    setTranslateSubMenuVisible(true)
+    // 使用当前工具箱的位置，计算子菜单的位置
+    if (toolboxState.position) {
+      // 将子菜单放在工具箱的右侧
+      setTranslateSubMenuPosition({
+        x: toolboxState.position.x + 220, // 根据工具箱宽度调整
+        y: toolboxState.position.y
+      })
+    }
+  }
+
+  // 处理翻译选项选择
+  const handleTranslateOptionSelect = (sourceLanguage: string, targetLanguage: string): void => {
+    // 查找匹配的翻译选项
+    const selectedOption = findTranslationOption(sourceLanguage, targetLanguage)
+
+    if (selectedOption) {
+      // 关闭翻译子菜单
+      setTranslateSubMenuVisible(false)
+      // 调用翻译处理函数
+      handleTranslate(selectedOption)
+    }
+  }
+
+  // 查找匹配的翻译选项
+  const findTranslationOption = (
+    sourceLanguage: string,
+    targetLanguage: string
+  ): TranslationOption | undefined => {
+    // 查找完全匹配的选项
+    const exactMatch = translationOptions.find(
+      (option) =>
+        option.sourceLanguage === sourceLanguage && option.targetLanguage === targetLanguage
+    )
+
+    if (exactMatch) {
+      return exactMatch
+    }
+
+    // 如果没有完全匹配的选项，创建一个新的选项
+    return {
+      sourceLanguage,
+      targetLanguage,
+      label: `${languageNameMap[sourceLanguage] || sourceLanguage}译${languageNameMap[targetLanguage] || targetLanguage}`,
+      prompt: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
     }
   }
 
@@ -1062,20 +1121,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   }, [currentFolder, currentFile])
 
   return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <div className="editor-header">
+    <div className="editor-container">
+      {/* 工具栏 */}
+      <div className="editor-toolbar">
         <div className="editor-title-container">
           <Typography.Title style={{ margin: 0, fontSize: 20 }}>
             {currentFile ? `${currentFile}` : '新文档'}
@@ -1168,7 +1216,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           } else if (action === 'continue') {
             handleContinue()
           } else if (action === 'translate') {
-            // 显示翻译下拉菜单 - 这里需要额外实现
+            // 显示翻译下拉菜单
             showTranslateDropdown()
           } else if (action === 'analyze') {
             handleAnalyze()
@@ -1190,9 +1238,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 保留selectedText字段，不修改它
           }))
         }}
-        onApply={(aiContent) => {
-          applyAIContent(aiContent)
-        }}
+        onApply={applyAIContent}
+      />
+
+      {/* 翻译子菜单 */}
+      <TranslateSubMenu
+        visible={translateSubMenuVisible}
+        position={translateSubMenuPosition}
+        textToTranslate={toolboxState.selectedText || ''}
+        onConfirm={handleTranslateOptionSelect}
+        onClose={() => setTranslateSubMenuVisible(false)}
       />
 
       {/* 保存文件对话框 */}

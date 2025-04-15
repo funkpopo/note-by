@@ -50,10 +50,12 @@ const defaultSettings = {
   apiConfigs: [] as ApiConfig[],
   // 默认AI提示设置
   aiPrompts: {
-    rewrite: '请改写以下文本，保持文本原意但使用更优美的表达：\n\n${content}',
-    continue: '请继续编写以下内容：\n\n${content}\n\n请直接续写，不要重复已有内容。',
-    translateToZh: '请将以下文本翻译成中文：\n\n${content}',
-    translateToEn: '请将以下文本翻译成英文：\n\n${content}'
+    rewrite:
+      '对${content}的内容进行写作风格的修改，不要修改${content}的本意。仅输出修改后的内容，不提出任何建议，不对${content}发表任何评论。',
+    continue:
+      '对${content}的内容继续进行创作，创作的内容需要符合${content}的写作风格。仅返回续写后的内容，不对后续写作提出任何建议，不对${content}发表任何评论。',
+    translate:
+      '将${content}作为${sourceLanguage}文本翻译成${targetLanguage}，仅返回${targetLanguage}，不要提出任何建议，不要做任何解释，不对${content}发表任何评论。'
   },
   // 默认WebDAV配置
   webdav: {

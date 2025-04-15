@@ -1,0 +1,81 @@
+.translate-submenu {
+  background-color: var(--semi-color-bg-2);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 150px;
+  user-select: none;
+  overflow: hidden;
+  border: 1px solid var(--semi-color-border);
+}
+
+.translate-submenu.dragging {
+  opacity: 0.85;
+  cursor: move;
+}
+
+.translate-submenu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: var(--semi-color-bg-1);
+  border-bottom: 1px solid var(--semi-color-border);
+  cursor: move;
+  font-weight: 600;
+}
+
+.translate-submenu-close {
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.translate-submenu-close:hover {
+  opacity: 1;
+}
+
+.translate-submenu-content {
+  padding: 16px;
+}
+
+.language-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.language-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.language-selector label {
+  font-size: 14px;
+  color: var(--semi-color-text-1);
+  margin-bottom: 4px;
+}
+
+/* 语言检测标签样式 */
+.detected-language-tag {
+  font-size: 12px;
+  color: var(--semi-color-text-2);
+  margin-left: 4px;
+  font-weight: normal;
+  font-style: italic;
+}
+
+.translate-actions {
+  margin-top: 16px;
+}
+
+/* 夜间模式样式调整 */
+body[theme-mode='dark'] .translate-submenu-header {
+  color: #ffffff;
+}
+
+body[theme-mode='dark'] .translate-submenu-close {
+  color: #ffffff;
+}
