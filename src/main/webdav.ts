@@ -1,6 +1,8 @@
 import { createClient, WebDAVClient, FileStat } from 'webdav'
 import { promises as fs } from 'fs'
 import * as path from 'path'
+import * as crypto from 'crypto'
+import * as fsTypes from 'fs'
 
 // 更新WebDAV配置接口，使其与settings.ts中的兼容
 export interface WebDAVConfig {
@@ -135,6 +137,14 @@ async function needUpload(
     // 远程文件的最后修改时间
     const remoteModTime = new Date(remoteFile.lastmod).getTime()
 
+    // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
+    const TIME_THRESHOLD = 3000 // 毫秒
+
+    // 如果时间戳相近，通过内容比较判断
+    if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
+      return await compareFileContent(localFilePath, remoteFilePath)
+    }
+
     // 如果本地文件更新，则需要上传
     return localModTime > remoteModTime
   } catch (error) {
@@ -162,12 +172,58 @@ async function needDownload(localFilePath: string, remoteFile: FileStat): Promis
     // 远程文件的最后修改时间
     const remoteModTime = new Date(remoteFile.lastmod).getTime()
 
+    // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
+    const TIME_THRESHOLD = 3000 // 毫秒
+
+    // 如果时间戳相近，通过内容比较判断
+    if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
+      return await compareFileContent(localFilePath, remoteFile.filename)
+    }
+
     // 如果远程文件更新，则需要下载
     return remoteModTime > localModTime
   } catch (error) {
     console.error(`检查文件是否需要下载失败: ${localFilePath}`, error)
     // 出错时保守处理，下载文件
     return true
+  }
+}
+
+// 计算文件的MD5哈希
+async function calculateFileHash(filePath: string): Promise<string> {
+  try {
+    const content = await fs.readFile(filePath)
+    return crypto.createHash('md5').update(content).digest('hex')
+  } catch (error) {
+    console.error(`计算文件哈希失败: ${filePath}`, error)
+    return ''
+  }
+}
+
+// 比较本地和远程文件内容
+async function compareFileContent(localFilePath: string, remoteFilePath: string): Promise<boolean> {
+  if (!webdavClient) return false
+
+  try {
+    // 计算本地文件哈希
+    const localHash = await calculateFileHash(localFilePath)
+    if (!localHash) return true // 如果无法计算本地哈希，保守返回不同
+
+    // 获取远程文件内容
+    const remoteContent = await webdavClient.getFileContents(remoteFilePath, { format: 'binary' })
+    if (!remoteContent) return true
+
+    // 计算远程文件哈希
+    const remoteHash = crypto
+      .createHash('md5')
+      .update(remoteContent as Buffer)
+      .digest('hex')
+
+    // 返回是否相同 (false表示内容相同，不需要同步)
+    return localHash !== remoteHash
+  } catch (error) {
+    console.error(`比较文件内容失败: ${localFilePath} vs ${remoteFilePath}`, error)
+    return true // 出错时保守返回需要同步
   }
 }
 
@@ -385,32 +441,182 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
     }
   }
 
-  try {
-    // 先同步远程到本地
-    const remoteToLocalResult = await syncRemoteToLocal(config)
+  let uploaded = 0
+  let downloaded = 0
+  let failed = 0
+  let skippedUpload = 0
+  let skippedDownload = 0
 
-    // 然后同步本地到远程
-    const localToRemoteResult = await syncLocalToRemote(config)
+  try {
+    // 确保本地和远程根目录存在
+    await fs.mkdir(config.localPath, { recursive: true })
+    const remoteRootExists = await ensureRemoteDirectory(config.remotePath)
+    if (!remoteRootExists) {
+      return {
+        success: false,
+        message: `无法确保远程目录存在: ${config.remotePath}`,
+        uploaded,
+        downloaded,
+        failed,
+        skippedUpload,
+        skippedDownload
+      }
+    }
+
+    // 缓存远程文件列表(按目录)，在整个同步过程中共享
+    const remoteFilesCache = new Map<string, FileStat[]>()
+    // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
+    const TIME_THRESHOLD = 3000 // 毫秒
+
+    // 递归同步函数 - 整合了双向同步
+    async function syncDirectoryBidirectional(localDir: string, remoteDir: string): Promise<void> {
+      // 确保远程目录存在
+      await ensureRemoteDirectory(remoteDir)
+
+      // 确保本地目录存在
+      await fs.mkdir(localDir, { recursive: true })
+
+      // 1. 获取远程文件列表并缓存
+      if (!remoteFilesCache.has(remoteDir)) {
+        const remoteFiles = await getRemoteFiles(remoteDir)
+        remoteFilesCache.set(remoteDir, remoteFiles)
+      }
+      const remoteFiles = remoteFilesCache.get(remoteDir) || []
+
+      // 2. 获取本地文件列表
+      const localEntries = await fs.readdir(localDir, { withFileTypes: true })
+      const localEntriesMap = new Map<string, fsTypes.Dirent>()
+      localEntries.forEach((entry) => {
+        localEntriesMap.set(entry.name, entry)
+      })
+
+      // 3. 处理远程文件 (远程 -> 本地)
+      for (const remoteEntry of remoteFiles) {
+        const remoteFilename = path.basename(remoteEntry.filename)
+        const remoteFullPath = remoteEntry.filename
+        const localFullPath = path.join(localDir, remoteFilename)
+
+        if (remoteEntry.type === 'directory') {
+          // 创建本地目录（如果不存在）
+          await fs.mkdir(localFullPath, { recursive: true })
+
+          // 递归处理子目录
+          await syncDirectoryBidirectional(localFullPath, remoteFullPath)
+
+          // 从本地文件映射中移除已处理的目录
+          localEntriesMap.delete(remoteFilename)
+        } else if (remoteEntry.type === 'file' && remoteFilename.endsWith('.md')) {
+          const localEntry = localEntriesMap.get(remoteFilename)
+
+          if (!localEntry) {
+            // 本地不存在此文件，需要从远程下载
+            const success = await downloadFile(remoteFullPath, localFullPath)
+            if (success) {
+              downloaded++
+            } else {
+              failed++
+            }
+          } else {
+            // 本地存在此文件，需要比较修改时间
+            try {
+              const localStats = await fs.stat(localFullPath)
+              const localModTime = localStats.mtime.getTime()
+              const remoteModTime = new Date(remoteEntry.lastmod).getTime()
+
+              // 比较修改时间
+              if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
+                // 时间戳相近，通过内容比较判断
+                const needSync = await compareFileContent(localFullPath, remoteFullPath)
+
+                if (needSync) {
+                  // 内容不同，以最新修改时间为准
+                  if (localModTime > remoteModTime) {
+                    // 以本地为准，上传到远程
+                    const success = await uploadFile(localFullPath, remoteFullPath)
+                    if (success) uploaded++
+                    else failed++
+                  } else {
+                    // 以远程为准，下载到本地
+                    const success = await downloadFile(remoteFullPath, localFullPath)
+                    if (success) downloaded++
+                    else failed++
+                  }
+                } else {
+                  // 内容相同，不需要同步
+                  skippedUpload++
+                  skippedDownload++
+                }
+              } else if (localModTime > remoteModTime) {
+                // 本地文件更新，上传到远程
+                const success = await uploadFile(localFullPath, remoteFullPath)
+                if (success) uploaded++
+                else failed++
+              } else if (remoteModTime > localModTime) {
+                // 远程文件更新，下载到本地
+                const success = await downloadFile(remoteFullPath, localFullPath)
+                if (success) downloaded++
+                else failed++
+              } else {
+                // 文件时间相同，不需要同步
+                skippedUpload++
+                skippedDownload++
+              }
+            } catch (error) {
+              console.error(`比较文件时间失败: ${localFullPath}`, error)
+              failed++
+            }
+
+            // 从本地文件映射中移除已处理的文件
+            localEntriesMap.delete(remoteFilename)
+          }
+        }
+      }
+
+      // 4. 处理剩余的本地文件 (本地 -> 远程)
+      for (const [filename, entry] of localEntriesMap.entries()) {
+        const localFullPath = path.join(localDir, filename)
+        const remoteFullPath = path.join(remoteDir, filename).replace(/\\/g, '/')
+
+        if (entry.isDirectory()) {
+          // 确保远程目录存在
+          await ensureRemoteDirectory(remoteFullPath)
+
+          // 递归处理子目录
+          await syncDirectoryBidirectional(localFullPath, remoteFullPath)
+        } else if (entry.isFile() && filename.endsWith('.md')) {
+          // 这是一个只存在于本地的文件，上传到远程
+          const success = await uploadFile(localFullPath, remoteFullPath)
+          if (success) {
+            uploaded++
+          } else {
+            failed++
+          }
+        }
+      }
+    }
+
+    // 开始同步
+    await syncDirectoryBidirectional(config.localPath, config.remotePath)
 
     return {
-      success: remoteToLocalResult.success && localToRemoteResult.success,
-      message: `双向同步完成: 上传 ${localToRemoteResult.uploaded} 个，下载 ${remoteToLocalResult.downloaded} 个，跳过 ${localToRemoteResult.skipped} 个上传文件和 ${remoteToLocalResult.skipped} 个下载文件，失败 ${remoteToLocalResult.failed + localToRemoteResult.failed} 个`,
-      uploaded: localToRemoteResult.uploaded,
-      downloaded: remoteToLocalResult.downloaded,
-      failed: remoteToLocalResult.failed + localToRemoteResult.failed,
-      skippedUpload: localToRemoteResult.skipped,
-      skippedDownload: remoteToLocalResult.skipped
+      success: true,
+      message: `双向同步完成: 上传 ${uploaded} 个，下载 ${downloaded} 个，跳过 ${skippedUpload} 个上传文件和 ${skippedDownload} 个下载文件，失败 ${failed} 个`,
+      uploaded,
+      downloaded,
+      failed,
+      skippedUpload,
+      skippedDownload
     }
   } catch (error) {
     console.error('双向同步失败:', error)
     return {
       success: false,
       message: `双向同步失败: ${error}`,
-      uploaded: 0,
-      downloaded: 0,
-      failed: 0,
-      skippedUpload: 0,
-      skippedDownload: 0
+      uploaded,
+      downloaded,
+      failed,
+      skippedUpload,
+      skippedDownload
     }
   }
 }
