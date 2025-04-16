@@ -34,7 +34,6 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "uuid": "^11.1.0",
-    "vditor": "^3.11.0",
     "webdav": "^5.8.0"
   },
   "devDependencies": {
