@@ -98,6 +98,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
         window.removeEventListener('keydown', handleKeyDown)
       }
     }
+    return undefined
   }, [visible, onClose])
 
   // 显示处理逻辑

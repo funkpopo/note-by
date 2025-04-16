@@ -88,7 +88,7 @@ export async function testOpenAIConnection(
 
     return {
       success: true,
-      message: content ? `连接成功! 响应: ${content}` : '连接成功!'
+      message: content ? `连接成功!` : '连接成功!'
     }
   } catch (error: unknown) {
     console.error('AI API连接测试失败:', error)
