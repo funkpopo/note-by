@@ -212,6 +212,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 设置文件名（用于显示和保存）
       setFileName(file.replace('.md', ''))
       setSelectedFolder(folder)
+
+      // 文件加载完成后，切换到预览模式
+      // if (cherryRef.current) {
+      //   cherryRef.current.switchModel('previewOnly')
+      // }
     } catch (error) {
       console.error('加载文件内容失败:', error)
       Toast.error('加载文件内容失败')
