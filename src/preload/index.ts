@@ -33,6 +33,7 @@ const IPC_CHANNELS = {
   CREATE_MARKDOWN_NOTE: 'markdown:create-note',
   DELETE_MARKDOWN_FILE: 'markdown:delete-file',
   RENAME_MARKDOWN_FILE: 'markdown:rename-file',
+  UPLOAD_FILE: 'markdown:upload-file',
   DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
   GET_ALL_SETTINGS: 'settings:getAll',
   CHECK_FILE_EXISTS: 'markdown:checkFileExists',
@@ -253,7 +254,15 @@ const api = {
       oldFilePath: string,
       newFilePath: string
     ): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.RENAME_MARKDOWN_FILE, oldFilePath, newFilePath)
+      ipcRenderer.invoke(IPC_CHANNELS.RENAME_MARKDOWN_FILE, oldFilePath, newFilePath),
+
+    // 上传文件
+    uploadFile: (
+      filePath: string,
+      fileData: string,
+      fileName: string
+    ): Promise<{ success: boolean; url?: string; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPLOAD_FILE, filePath, fileData, fileName)
   },
   // WebDAV同步相关API
   webdav: {

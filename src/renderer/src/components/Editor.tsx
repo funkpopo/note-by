@@ -202,6 +202,18 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       if (result.success && result.content) {
         cherryRef.current?.setValue(result.content)
         setFileContent(result.content)
+
+        // 检测文件内容中是否有base64图片，如果有则转换
+        if (result.content.includes('data:image/')) {
+          console.log('文件加载后，检测到base64图片，准备转换...')
+          // 延迟执行，确保编辑器已完成内容加载
+          setTimeout(() => {
+            if (cherryRef.current) {
+              const content = cherryRef.current.getMarkdown()
+              detectAndConvertBase64Images(content)
+            }
+          }, 500)
+        }
       } else {
         // 文件不存在或读取失败，创建新文件
         const mockContent = `# ${file.replace('.md', '')}\n\n这是一个新文档，开始编辑吧！`
@@ -265,19 +277,189 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
-  // 保存当前文档
+  // 将文档中的base64图片转换为文件并更新引用
+  const convertBase64ImagesToFiles = async (content: string): Promise<string> => {
+    if (!currentFile || !currentFolder) {
+      return content // 如果没有当前文件，直接返回原内容
+    }
+
+    // 构建当前文件的完整路径
+    const filePath = `${currentFolder}/${currentFile}`
+
+    // 使用正则表达式查找markdown中的图片引用
+    // 匹配![alt](data:image/xxx;base64,xxx)格式
+    const imgRegex = /!\[(.*?)\]\((data:image\/[a-zA-Z]+;base64,[^)]+)\)/g
+    // 也匹配<img src="data:image/xxx;base64,xxx" />格式
+    const imgTagRegex = /<img.*?src="(data:image\/[a-zA-Z]+;base64,[^"]+)".*?>/g
+
+    let match
+    let newContent = content
+    let processedContent = content
+
+    // 统计转换的图片数量
+    let convertedMarkdownImages = 0
+    let convertedHtmlImages = 0
+
+    console.log('开始检查文档中的base64图片...')
+
+    // 处理Markdown图片引用格式
+    while ((match = imgRegex.exec(content)) !== null) {
+      const altText = match[1]
+      const base64Data = match[2]
+
+      // 从base64数据中提取图片格式
+      const imgFormat = base64Data.match(/data:image\/([a-zA-Z]+);base64/)?.[1] || 'png'
+
+      // 为图片生成唯一文件名
+      const timestamp = new Date().getTime()
+      const fileName = `image_${timestamp}.${imgFormat}`
+
+      console.log(`发现Markdown格式的base64图片: ${altText || '无标题'}.${imgFormat}`)
+
+      try {
+        // 调用API上传图片文件
+        interface UploadFileAPI {
+          uploadFile: (
+            filePath: string,
+            fileData: string,
+            fileName: string
+          ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
+        }
+
+        const markdownAPI = window.api.markdown as unknown as UploadFileAPI
+        const result = await markdownAPI.uploadFile(filePath, base64Data, fileName)
+
+        if (result.success && result.url) {
+          // 替换base64图片为文件引用
+          const imageMarkdown = `![${altText}](${result.url})`
+          // 使用replace只替换当前匹配到的图片，而不是全局替换
+          // 需要转义特殊字符，因为base64包含+号等正则特殊字符
+          const escapedBase64 = match[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          processedContent = processedContent.replace(new RegExp(escapedBase64), imageMarkdown)
+          convertedMarkdownImages++
+          console.log(`成功将base64图片转换为文件: ${result.url}`)
+        }
+      } catch (error) {
+        console.error('转换base64图片到文件失败:', error)
+        // 出错时保留原base64图片
+      }
+    }
+
+    // 处理HTML图片标签格式
+    content = processedContent // 更新内容为已处理过Markdown格式的内容
+    processedContent = content // 重置处理内容
+
+    while ((match = imgTagRegex.exec(content)) !== null) {
+      const fullImgTag = match[0]
+      const base64Data = match[1]
+
+      // 从base64数据中提取图片格式
+      const imgFormat = base64Data.match(/data:image\/([a-zA-Z]+);base64/)?.[1] || 'png'
+
+      // 为图片生成唯一文件名
+      const timestamp = new Date().getTime()
+      const fileName = `image_${timestamp}.${imgFormat}`
+
+      console.log(`发现HTML格式的base64图片: ${fileName}`)
+
+      try {
+        // 调用API上传图片文件
+        interface UploadFileAPI {
+          uploadFile: (
+            filePath: string,
+            fileData: string,
+            fileName: string
+          ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
+        }
+
+        const markdownAPI = window.api.markdown as unknown as UploadFileAPI
+        const result = await markdownAPI.uploadFile(filePath, base64Data, fileName)
+
+        if (result.success && result.url) {
+          // 提取并保留原始img标签中的属性
+          const widthMatch = fullImgTag.match(/width="([^"]+)"/)
+          const heightMatch = fullImgTag.match(/height="([^"]+)"/)
+          const altMatch = fullImgTag.match(/alt="([^"]+)"/)
+
+          let newImgTag = `<img src="${result.url}"`
+          if (widthMatch) newImgTag += ` width="${widthMatch[1]}"`
+          if (heightMatch) newImgTag += ` height="${heightMatch[1]}"`
+          if (altMatch) newImgTag += ` alt="${altMatch[1]}"`
+          newImgTag += ' />'
+
+          // 使用replace只替换当前匹配到的图片
+          const escapedImgTag = fullImgTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          processedContent = processedContent.replace(new RegExp(escapedImgTag), newImgTag)
+          convertedHtmlImages++
+          console.log(`成功将HTML格式的base64图片转换为文件: ${result.url}`)
+        }
+      } catch (error) {
+        console.error('转换HTML图片标签中的base64到文件失败:', error)
+        // 出错时保留原base64图片
+      }
+    }
+
+    newContent = processedContent
+
+    // 转换完成后输出统计信息
+    const totalConverted = convertedMarkdownImages + convertedHtmlImages
+    if (totalConverted > 0) {
+      console.log(
+        `图片转换完成! 共处理 ${totalConverted} 张图片 (Markdown格式: ${convertedMarkdownImages}, HTML格式: ${convertedHtmlImages})`
+      )
+      Toast.success(`已将文档中的 ${totalConverted} 张base64图片转换为文件`)
+    } else {
+      console.log('文档中未发现base64格式的图片。')
+    }
+
+    return newContent
+  }
+
+  // 保存文档
   const saveDocument = async (): Promise<void> => {
     if (!cherryRef.current) return
 
     // 获取当前编辑器内容
     const content = cherryRef.current.getMarkdown()
-    setFileContent(content)
 
-    // 如果已经有文件名和文件夹，直接保存
-    if (currentFile && currentFolder) {
-      await saveToFile(currentFolder, currentFile, content)
+    // 如果内容为空，则不保存
+    if (!content.trim()) {
+      Toast.warning('文档内容为空，未保存')
+      return
+    }
+
+    // 如果当前已经有打开的文件，则直接保存到该文件
+    if (currentFolder && currentFile) {
+      setSaving(true)
+      try {
+        // 处理文档中的base64图片
+        const processedContent = await convertBase64ImagesToFiles(content)
+
+        // 构建相对路径
+        const filePath = `${currentFolder}/${currentFile}`
+        const result = await window.api.markdown.save(filePath, processedContent)
+        if (result.success) {
+          Toast.success('文档保存成功')
+          // 通知文件列表更新（如果有文件变更，如新增了图片文件）
+          if (onFileChanged) {
+            onFileChanged()
+          }
+          // 更新编辑器内容（以显示转换后的图片路径）
+          if (cherryRef.current) {
+            cherryRef.current.setMarkdown(processedContent)
+          }
+        } else {
+          Toast.error(`保存失败: ${result.error}`)
+        }
+      } catch (error) {
+        console.error('保存文档失败:', error)
+        Toast.error('保存文档失败')
+      } finally {
+        setSaving(false)
+      }
     } else {
-      // 否则打开保存对话框
+      // 如果没有当前文件，则打开保存对话框
+      setFileContent(content)
       setSaveModalVisible(true)
     }
   }
@@ -291,18 +473,25 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 构建相对路径
       const filePath = `${folder}/${filename}`
 
+      // 处理文档中的base64图片
+      const processedContent = await convertBase64ImagesToFiles(content)
+
       // 检查文件是否已存在
       const checkResult = await window.api.markdown.checkFileExists(filePath)
 
       if (checkResult.success && checkResult.exists) {
         // 如果是当前已打开的文件，直接覆盖
         if (currentFile === filename && currentFolder === folder) {
-          const result = await window.api.markdown.save(filePath, content)
+          const result = await window.api.markdown.save(filePath, processedContent)
           if (result.success) {
             Toast.success('文档保存成功')
             // 通知文件列表更新
             if (onFileChanged) {
               onFileChanged()
+            }
+            // 更新编辑器内容（以显示转换后的图片路径）
+            if (cherryRef.current) {
+              cherryRef.current.setMarkdown(processedContent)
             }
           } else {
             Toast.error(`保存失败: ${result.error}`)
@@ -317,12 +506,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
       } else {
         // 文件不存在，直接保存
-        const result = await window.api.markdown.save(filePath, content)
+        const result = await window.api.markdown.save(filePath, processedContent)
         if (result.success) {
           Toast.success('文档保存成功')
           // 通知文件列表更新
           if (onFileChanged) {
             onFileChanged()
+          }
+          // 更新编辑器内容（以显示转换后的图片路径）
+          if (cherryRef.current && currentFile === filename && currentFolder === folder) {
+            cherryRef.current.setMarkdown(processedContent)
           }
         } else {
           Toast.error(`保存失败: ${result.error}`)
@@ -348,12 +541,19 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 构建相对路径
       const filePath = `${selectedFolder}/${filename}`
 
-      const result = await window.api.markdown.save(filePath, fileContent)
+      // 处理文档中的base64图片
+      const processedContent = await convertBase64ImagesToFiles(fileContent)
+
+      const result = await window.api.markdown.save(filePath, processedContent)
       if (result.success) {
         Toast.success('文档覆盖保存成功')
         // 通知文件列表更新
         if (onFileChanged) {
           onFileChanged()
+        }
+        // 如果当前打开的就是这个文件，更新编辑器内容
+        if (cherryRef.current && currentFile === filename && currentFolder === selectedFolder) {
+          cherryRef.current.setMarkdown(processedContent)
         }
       } else {
         Toast.error(`保存失败: ${result.error}`)
@@ -390,8 +590,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
       }
 
+      // 处理文档中的base64图片
+      const processedContent = await convertBase64ImagesToFiles(fileContent)
+
       // 保存副本
-      const result = await window.api.markdown.save(filePath, fileContent)
+      const result = await window.api.markdown.save(filePath, processedContent)
       if (result.success) {
         Toast.success(`文档已保存为 ${filename}`)
         // 通知文件列表更新
@@ -1016,6 +1219,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
+  // 在Cherry Markdown编辑器初始化中的callback部分进行修改
   useEffect((): (() => void) => {
     // 加载文件夹列表
     loadFolders()
@@ -1064,8 +1268,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           height: '100%'
         },
         callback: {
-          afterChange: (): void => {
+          afterChange: (markdown: string): void => {
             // 编辑器内容变化后的回调
+            // 检测是否有base64图片，如果有则转换为文件
+            if (currentFile && currentFolder && markdown.includes('data:image/')) {
+              detectAndConvertBase64Images(markdown)
+            }
           },
           afterInit: (): void => {
             // 编辑器初始化后修复布局
@@ -1073,6 +1281,127 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 初始化后设置主题
             updateCherryTheme(isDarkMode)
           }
+        },
+        // 添加文件上传处理函数
+        fileUpload: (file: File, callback: (url: string, params?: object) => void): void => {
+          // 检查文件是否为从文件系统拖放的文件路径
+          // 某些拖放操作可能会包含本地路径信息而不是实际文件
+          if (
+            (file as { path?: string }).path ||
+            ('webkitRelativePath' in file &&
+              (file as { webkitRelativePath: string }).webkitRelativePath)
+          ) {
+            console.log(
+              '检测到可能是本地文件路径:',
+              (file as { path?: string }).path ||
+                (file as { webkitRelativePath: string }).webkitRelativePath
+            )
+            // 这种情况下，我们尝试读取文件内容而不是使用路径
+          }
+
+          // 如果当前没有打开的文件，则使用base64
+          if (!currentFile || !currentFolder) {
+            // 使用FileReader读取文件为base64
+            const reader = new FileReader()
+            reader.onload = (e: ProgressEvent<FileReader>): void => {
+              if (e.target?.result) {
+                console.log('没有打开文件，使用base64表示图片')
+                callback(e.target.result as string)
+              }
+            }
+            reader.readAsDataURL(file)
+            return
+          }
+
+          // 构建当前文件的完整路径
+          const filePath = `${currentFolder}/${currentFile}`
+          console.log(`准备上传图片到文件: ${filePath}`)
+
+          // 上传文件到服务器
+          const doUpload = async (): Promise<void> => {
+            try {
+              // 读取文件为base64
+              const reader = new FileReader()
+              reader.onloadend = async (): Promise<void> => {
+                try {
+                  interface UploadFileAPI {
+                    uploadFile: (
+                      filePath: string,
+                      fileData: string,
+                      fileName: string
+                    ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
+                  }
+
+                  // 确保文件名不包含特殊字符
+                  const cleanFileName = file.name.replace(/["']/g, '')
+                  console.log(`开始上传图片: ${cleanFileName}`)
+
+                  // 确保是base64数据或二进制数据，而不是文件路径
+                  const fileContent = reader.result as string
+
+                  const markdownAPI = window.api.markdown as unknown as UploadFileAPI
+                  const result = await markdownAPI.uploadFile(filePath, fileContent, cleanFileName)
+
+                  if (result.success && result.url) {
+                    console.log(`图片上传成功，URL: ${result.url}`)
+
+                    // 上传成功，返回文件URL
+                    if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(cleanFileName)) {
+                      // 为图片类型添加额外参数
+                      console.log(`图片类型文件，设置图片alt文本为文件名`)
+
+                      // 获取文件名（不含扩展名），用作alt文本
+                      const fileNameWithoutExt = cleanFileName.replace(/\.[^.]+$/, '')
+
+                      // 使用指定格式处理URL: ![图片文件名称](绝对路径/.assets/对应的图片文件名)
+                      callback(result.url, {
+                        name: fileNameWithoutExt, // 文件名（不含扩展名）作为alt文本
+                        noSize: true // 不添加尺寸参数，确保格式符合要求
+                      })
+                    } else {
+                      // 其他类型的文件
+                      console.log(`非图片类型文件，直接使用URL`)
+                      callback(result.url)
+                    }
+
+                    // 通知父组件文件已变更（如果需要）
+                    if (onFileChanged) {
+                      onFileChanged()
+                    }
+
+                    // 确保图片显示正确，可以手动触发内容更新
+                    setTimeout(() => {
+                      if (cherryRef.current) {
+                        const currentContent = cherryRef.current.getMarkdown()
+                        cherryRef.current.setMarkdown(currentContent)
+                      }
+                    }, 500) // 延迟500毫秒以确保编辑器完成图片插入
+                  } else {
+                    // 上传失败，使用base64（备选方案）
+                    console.error('文件上传失败，使用base64代替', result.error)
+                    callback(reader.result as string)
+                  }
+                } catch (error) {
+                  console.error('文件上传过程出错', error)
+                  callback(reader.result as string)
+                }
+              }
+              reader.readAsDataURL(file)
+            } catch (error) {
+              console.error('文件读取失败', error)
+              // 失败时回退到base64
+              const fallbackReader = new FileReader()
+              fallbackReader.onload = (e: ProgressEvent<FileReader>): void => {
+                if (e.target?.result) {
+                  callback(e.target.result as string)
+                }
+              }
+              fallbackReader.readAsDataURL(file)
+            }
+          }
+
+          // 执行上传
+          doUpload()
         }
       })
 
@@ -1124,6 +1453,49 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       loadFileContent(currentFolder, currentFile)
     }
   }, [currentFolder, currentFile])
+
+  // 检测并转换base64图片
+  const detectAndConvertBase64Images = async (content: string): Promise<void> => {
+    console.log('检测到内容变化，查找base64图片...')
+
+    if (!content.includes('data:image/')) {
+      return // 没有base64图片，直接返回
+    }
+
+    // 检查是否有base64图片，防止无限循环
+    const lastConversionTime = cherryRef.current?.['__lastConversionTime'] as number | undefined
+    const now = Date.now()
+
+    // 如果上次转换时间距离现在小于3秒，则不执行转换，避免频繁转换
+    if (lastConversionTime && now - lastConversionTime < 3000) {
+      console.log('距离上次转换时间过短，跳过本次转换')
+      return
+    }
+
+    console.log('找到base64图片，开始转换...')
+    try {
+      // 保存当前转换时间，防止重复转换
+      cherryRef.current!['__lastConversionTime'] = now
+
+      // 执行转换
+      const processedContent = await convertBase64ImagesToFiles(content)
+
+      // 如果内容有变化，更新编辑器
+      if (processedContent !== content) {
+        console.log('转换完成，更新编辑器内容')
+        // 设置延时以避免编辑器状态冲突
+        setTimeout(() => {
+          if (cherryRef.current) {
+            cherryRef.current.setMarkdown(processedContent)
+          }
+        }, 10)
+      } else {
+        console.log('内容未发生变化，无需更新')
+      }
+    } catch (error) {
+      console.error('转换base64图片过程中出错:', error)
+    }
+  }
 
   return (
     <div className="editor-container">

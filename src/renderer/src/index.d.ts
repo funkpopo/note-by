@@ -88,6 +88,11 @@ interface Window {
         oldFilePath: string,
         newFilePath: string
       ) => Promise<{ success: boolean; error?: string }>
+      uploadFile: (
+        filePath: string,
+        fileData: string,
+        fileName: string
+      ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
     }
   }
 }

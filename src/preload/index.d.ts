@@ -57,6 +57,27 @@ interface API {
       folderName: string
     ) => Promise<{ success: boolean; files?: string[]; error?: string }>
     readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
+    /**
+     * 重命名笔记文件
+     * @param oldFilePath 旧文件路径
+     * @param newFilePath 新文件路径
+     */
+    renameFile: (
+      oldFilePath: string,
+      newFilePath: string
+    ) => Promise<{ success: boolean; error?: string }>
+
+    /**
+     * 上传文件
+     * @param filePath 当前markdown文件路径
+     * @param fileData 文件数据（base64或其他格式）
+     * @param fileName 文件名
+     */
+    uploadFile: (
+      filePath: string,
+      fileData: string,
+      fileName: string
+    ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
   }
 }
 

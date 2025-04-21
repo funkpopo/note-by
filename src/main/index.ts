@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join, resolve } from 'path'
+import path, { join, resolve } from 'path'
 import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -42,6 +42,7 @@ const IPC_CHANNELS = {
   CREATE_MARKDOWN_NOTE: 'markdown:create-note',
   DELETE_MARKDOWN_FILE: 'markdown:delete-file',
   RENAME_MARKDOWN_FILE: 'markdown:rename-file',
+  UPLOAD_FILE: 'markdown:upload-file',
   DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
   GET_ALL_SETTINGS: 'settings:getAll',
   CHECK_FILE_EXISTS: 'markdown:checkFileExists',
@@ -778,6 +779,96 @@ app.whenReady().then(() => {
         downloaded: 0,
         failed: 0
       }
+    }
+  })
+
+  // 处理文件上传
+  ipcMain.handle(IPC_CHANNELS.UPLOAD_FILE, async (_, filePath, fileData, fileName) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+
+      // 先处理传入的参数，确保没有引号和特殊字符
+      filePath = filePath ? filePath.replace(/["']/g, '') : ''
+      fileName = fileName ? fileName.replace(/["']/g, '') : ''
+
+      // 检查fileData是否是本地文件路径（以file://开头或包含引号的路径）
+      if (
+        typeof fileData === 'string' &&
+        (fileData.startsWith('file://') || fileData.includes('"') || fileData.includes('\\'))
+      ) {
+        try {
+          // 如果是文件路径，尝试读取文件内容
+          const cleanPath = fileData.replace(/^file:\/\//i, '').replace(/["']/g, '')
+          console.log(`检测到可能的文件路径，尝试读取: ${cleanPath}`)
+
+          try {
+            // 尝试读取文件
+            const fileBuffer = await fsPromises.readFile(cleanPath)
+            // 转换为base64
+            const base64Data = `data:image/${path.extname(cleanPath).substring(1)};base64,${fileBuffer.toString('base64')}`
+            fileData = base64Data
+            console.log('成功读取本地文件并转换为base64')
+          } catch (readError) {
+            console.error('读取文件失败，可能不是有效的本地文件路径:', readError)
+            // 如果读取失败，保持原始数据
+          }
+        } catch (error) {
+          console.error('解析文件路径失败:', error)
+          // 错误处理，继续使用原始fileData
+        }
+      }
+
+      // 解析Markdown文件路径，获取目录和文件名
+      // 使用path.sep来确保跨平台兼容性
+      const pathSeparator = path.sep
+      const lastSeparatorIndex = filePath.lastIndexOf(pathSeparator)
+
+      // 如果找不到平台特定的分隔符，尝试使用正斜杠和反斜杠
+      const mdDirectory =
+        lastSeparatorIndex !== -1
+          ? filePath.substring(0, lastSeparatorIndex)
+          : filePath.substring(0, Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\')))
+
+      // 为当前文档创建一个.assets资源目录（使用隐藏文件夹）
+      const assetsDir = path.join(mdDirectory, '.assets')
+      await ensureMarkdownFolders(assetsDir)
+
+      // 清理文件名中的非法字符，增强对特殊字符的处理
+      const cleanFileName = fileName.replace(/[\\/:*?"<>|']/g, '_')
+
+      // 使用原始文件名，不添加时间戳
+      const uniqueFileName = cleanFileName
+
+      // 完整的保存路径
+      const savePath = path.resolve(markdownRoot, path.join(assetsDir, uniqueFileName))
+
+      // 根据文件类型处理数据
+      if (fileData.startsWith('data:')) {
+        // 处理base64编码的数据
+        const base64Data = fileData.split(',')[1]
+        const buffer = Buffer.from(base64Data, 'base64')
+        await fsPromises.writeFile(savePath, buffer)
+      } else {
+        // 处理非base64数据（如果有的话）
+        await fsPromises.writeFile(savePath, fileData)
+      }
+
+      // 计算绝对路径，用于在Markdown中引用图片
+      // 格式：![图片文件名称](绝对路径/.assets/对应的图片文件名)
+      // 使用path.posix确保在Markdown中使用正斜杠
+      const absoluteDirPath = path.resolve(markdownRoot, mdDirectory)
+      const markdownImagePath = `${absoluteDirPath}${path.posix.sep}.assets${path.posix.sep}${uniqueFileName}`
+
+      console.log(`文件上传成功: ${markdownImagePath}`)
+
+      return {
+        success: true,
+        url: markdownImagePath,
+        path: savePath
+      }
+    } catch (error) {
+      console.error('文件上传失败:', error)
+      return { success: false, error: String(error) }
     }
   })
 
