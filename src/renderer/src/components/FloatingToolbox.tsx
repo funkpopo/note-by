@@ -231,7 +231,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       // 添加小延时，确保DOM已完全渲染
       setTimeout(() => {
         // 获取编辑器边界
-        const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+        const editorElement = document.querySelector('.ck-editor__editable') as HTMLElement
         if (editorElement && toolboxRef.current) {
           const editorRect = editorElement.getBoundingClientRect()
           const toolboxRect = toolboxRef.current.getBoundingClientRect()
@@ -269,7 +269,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
   // 添加窗口大小变化时检查边界的effect
   useEffect(() => {
     if (visible && toolboxRef.current) {
-      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+      const editorElement = document.querySelector('.ck-editor__editable') as HTMLElement
       if (editorElement) {
         const editorRect = editorElement.getBoundingClientRect()
         const toolboxRect = toolboxRef.current.getBoundingClientRect()
@@ -430,7 +430,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
       let newY = e.clientY - dragOffset.y
 
       // 获取编辑器边界
-      const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+      const editorElement = document.querySelector('.ck-editor__editable') as HTMLElement
       if (editorElement) {
         const editorRect = editorElement.getBoundingClientRect()
         const toolboxRect = toolboxRef.current.getBoundingClientRect()
@@ -533,7 +533,7 @@ const FloatingToolbox: React.FC<FloatingToolboxProps> = ({
     })
 
     // 预先计算并缓存编辑器边界，避免调整过程中重复计算
-    const editorElement = document.querySelector('#cherry-markdown') as HTMLElement
+    const editorElement = document.querySelector('.ck-editor__editable') as HTMLElement
     const editorRect = editorElement ? editorElement.getBoundingClientRect() : null
 
     setStartPosition({
