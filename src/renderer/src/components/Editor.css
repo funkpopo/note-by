@@ -263,7 +263,9 @@
 
 /* 增强下拉菜单项的过渡效果 */
 [theme-mode='dark'] .ck.ck-list__item {
-  transition: background-color 0.2s, opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
 }
 
 /* 对话框样式 */
@@ -420,7 +422,11 @@
 
 /* 增强按钮选中状态的过渡效果 */
 [theme-mode='dark'] .ck.ck-button {
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 [theme-mode='dark'] .ck.ck-button.ck-on:focus {

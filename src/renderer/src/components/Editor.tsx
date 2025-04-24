@@ -16,6 +16,22 @@ interface CKEditorType {
   ContextWatchdog: any
 }
 
+// 定义链接装饰器类型
+interface LinkDecoratorAutomaticDefinition {
+  mode: 'automatic'
+  callback: (url: string | null) => boolean
+  attributes: Record<string, string>
+}
+
+interface LinkDecoratorManualDefinition {
+  mode: 'manual'
+  label: string
+  defaultValue?: boolean
+  attributes: Record<string, string>
+}
+
+type LinkDecoratorDefinition = LinkDecoratorAutomaticDefinition | LinkDecoratorManualDefinition
+
 // Define props interface
 interface EditorProps {
   currentFolder?: string
@@ -148,14 +164,12 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
           if (toolbar) {
             // 设置工具栏边框颜色
             toolbar.style.borderColor = isDarkMode ? 'transparent' : ''
-            
+
             // 更新工具栏分隔符样式
             const separators = toolbar.querySelectorAll('.ck.ck-toolbar__separator')
             separators.forEach((separator) => {
               const separatorEl = separator as HTMLElement
-              separatorEl.style.backgroundColor = isDarkMode 
-                ? 'var(--semi-color-border)' 
-                : ''
+              separatorEl.style.backgroundColor = isDarkMode ? 'var(--semi-color-border)' : ''
               separatorEl.style.opacity = isDarkMode ? '0.3' : ''
             })
 
@@ -165,12 +179,8 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
               const buttonEl = button as HTMLElement
               const arrow = buttonEl.querySelector('.ck.ck-dropdown__arrow')
               if (arrow) {
-                (arrow as HTMLElement).style.color = isDarkMode 
-                  ? 'var(--semi-color-text-0)' 
-                  : ''
-                ;(arrow as HTMLElement).style.fill = isDarkMode 
-                  ? 'var(--semi-color-text-0)' 
-                  : ''
+                ;(arrow as HTMLElement).style.color = isDarkMode ? 'var(--semi-color-text-0)' : ''
+                ;(arrow as HTMLElement).style.fill = isDarkMode ? 'var(--semi-color-text-0)' : ''
               }
             })
 
@@ -178,12 +188,8 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
             const icons = toolbar.querySelectorAll('.ck.ck-icon')
             icons.forEach((icon) => {
               const iconEl = icon as HTMLElement
-              iconEl.style.color = isDarkMode 
-                ? 'var(--semi-color-text-0)' 
-                : ''
-              iconEl.style.fill = isDarkMode 
-                ? 'var(--semi-color-text-0)' 
-                : ''
+              iconEl.style.color = isDarkMode ? 'var(--semi-color-text-0)' : ''
+              iconEl.style.fill = isDarkMode ? 'var(--semi-color-text-0)' : ''
             })
           }
         }
@@ -218,6 +224,40 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
         position: 'inside' as const,
         side: 'right' as const,
         forceVisible: true
+      }
+    },
+    // 配置链接功能
+    link: {
+      // 自定义链接工具栏
+      toolbar: ['linkPreview', '|', 'editLink'],
+      // 为链接添加默认协议
+      defaultProtocol: 'https://',
+      // 添加自定义协议支持
+      allowedProtocols: ['http://', 'https://', 'tel:', 'mailto:', 'ftp://'],
+      // 链接装饰器配置
+      decorators: {
+        // 自动为外部链接添加target和rel属性
+        addTargetToExternalLinks: {
+          mode: 'automatic' as const,
+          callback: (url: string | null): boolean => {
+            if (!url) return false
+            return /^(https?:)?\/\//.test(url)
+          },
+          attributes: {
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          }
+        },
+        // 手动切换按钮，允许用户决定是否在新标签页打开链接
+        openInNewTab: {
+          mode: 'manual' as const,
+          label: '在新标签页打开',
+          defaultValue: false,
+          attributes: {
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          }
+        }
       }
     }
   }
@@ -326,14 +366,12 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
                 const toolbar = editor.ui.view?.toolbar?.element
                 if (toolbar) {
                   toolbar.style.borderColor = isDarkMode ? 'transparent' : ''
-                  
+
                   // 更新工具栏分隔符样式
                   const separators = toolbar.querySelectorAll('.ck.ck-toolbar__separator')
                   separators.forEach((separator) => {
                     const separatorEl = separator as HTMLElement
-                    separatorEl.style.backgroundColor = isDarkMode 
-                      ? 'var(--semi-color-border)' 
-                      : ''
+                    separatorEl.style.backgroundColor = isDarkMode ? 'var(--semi-color-border)' : ''
                     separatorEl.style.opacity = isDarkMode ? '0.3' : ''
                   })
 
@@ -343,11 +381,11 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
                     const buttonEl = button as HTMLElement
                     const arrow = buttonEl.querySelector('.ck.ck-dropdown__arrow')
                     if (arrow) {
-                      (arrow as HTMLElement).style.color = isDarkMode 
-                        ? 'var(--semi-color-text-0)' 
+                      ;(arrow as HTMLElement).style.color = isDarkMode
+                        ? 'var(--semi-color-text-0)'
                         : ''
-                      ;(arrow as HTMLElement).style.fill = isDarkMode 
-                        ? 'var(--semi-color-text-0)' 
+                      ;(arrow as HTMLElement).style.fill = isDarkMode
+                        ? 'var(--semi-color-text-0)'
                         : ''
                     }
                   })
@@ -356,12 +394,8 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
                   const icons = toolbar.querySelectorAll('.ck.ck-icon')
                   icons.forEach((icon) => {
                     const iconEl = icon as HTMLElement
-                    iconEl.style.color = isDarkMode 
-                      ? 'var(--semi-color-text-0)' 
-                      : ''
-                    iconEl.style.fill = isDarkMode 
-                      ? 'var(--semi-color-text-0)' 
-                      : ''
+                    iconEl.style.color = isDarkMode ? 'var(--semi-color-text-0)' : ''
+                    iconEl.style.fill = isDarkMode ? 'var(--semi-color-text-0)' : ''
                   })
                 }
               } catch (error) {
