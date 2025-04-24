@@ -55,11 +55,14 @@
   display: flex;
   flex-direction: column;
   height: calc(100% - 46px);
+  min-height: 0;
   overflow: hidden;
 }
 
 .editor-wrapper .ck.ck-editor__main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -69,12 +72,15 @@
 }
 
 .editor-wrapper .ck.ck-editor__editable_inline {
+  flex: 1;
   min-height: auto; /* Override CKEditor's default min-height */
+  overflow-y: auto !important;
 }
 
 .editor-wrapper .ck-toolbar {
   border-color: var(--semi-color-border);
   background-color: var(--semi-color-bg-1);
+  border-bottom: 1px solid var(--semi-color-border);
 }
 
 .editor-wrapper .ck-focused {
@@ -84,7 +90,7 @@
 .editor-footer {
   display: flex;
   justify-content: flex-end;
-  padding: 12px 0;
+  padding: 1px 0;
 }
 
 .save-button {
@@ -137,4 +143,13 @@
 
 [theme-mode='dark'] .ck-button:hover {
   background-color: var(--semi-color-fill-1);
+}
+
+/* "Powered by CKEditor" logo 设置 */
+.ck.ck-balloon-panel.ck-powered-by-balloon {
+  z-index: 100;
+}
+
+.ck.ck-balloon-panel.ck-powered-by-balloon .ck.ck-powered-by {
+  font-size: 9px;
 }

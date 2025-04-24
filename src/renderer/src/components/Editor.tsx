@@ -136,7 +136,14 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
       'insertTable',
       'undo',
       'redo'
-    ]
+    ],
+    ui: {
+      poweredBy: {
+        position: 'inside' as const,
+        side: 'right' as const,
+        forceVisible: true
+      }
+    }
   };
 
   // Handle command+s or ctrl+s to save
