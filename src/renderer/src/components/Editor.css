@@ -130,11 +130,41 @@
 [theme-mode='dark'] .ck-content {
   background-color: var(--semi-color-bg-0);
   color: var(--semi-color-text-0);
+  border-color: var(--semi-color-border) !important;
 }
 
 [theme-mode='dark'] .ck-toolbar {
-  background-color: var(--semi-color-bg-1);
-  color: var(--semi-color-text-0);
+  background-color: var(--semi-color-bg-2) !important;
+  border: none !important;
+}
+
+[theme-mode='dark'] .ck.ck-toolbar {
+  background-color: var(--semi-color-bg-2) !important;
+  border: none !important;
+}
+
+/* 移除工具栏底部边框 */
+[theme-mode='dark'] .editor-wrapper .ck-toolbar {
+  border-bottom: none !important;
+}
+
+[theme-mode='dark'] .ck.ck-toolbar.ck-toolbar_grouping {
+  border: none !important;
+  box-shadow: none;
+}
+
+[theme-mode='dark'] .ck.ck-toolbar .ck.ck-toolbar__separator {
+  background-color: var(--semi-color-border);
+  opacity: 0.3;
+}
+
+[theme-mode='dark'] .ck.ck-toolbar.ck-toolbar_grouping > * {
+  margin-top: 3px;
+  margin-bottom: 3px;
+}
+
+[theme-mode='dark'] .ck.ck-toolbar > .ck.ck-toolbar__items > *:not(:last-child) {
+  margin-right: 3px;
 }
 
 [theme-mode='dark'] .ck-button {
@@ -145,6 +175,195 @@
   background-color: var(--semi-color-fill-1);
 }
 
+[theme-mode='dark'] .ck.ck-button,
+[theme-mode='dark'] .ck.ck-button .ck-button__label {
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-icon,
+[theme-mode='dark'] .ck.ck-button .ck-icon {
+  color: var(--semi-color-text-0);
+  fill: var(--semi-color-text-0);
+}
+
+/* 增强夜间模式下图标对比度 */
+[theme-mode='dark'] .ck.ck-toolbar .ck-button:not(.ck-disabled) .ck-icon {
+  color: var(--semi-color-text-0);
+  fill: var(--semi-color-text-0);
+  opacity: 0.9;
+}
+
+[theme-mode='dark'] .ck.ck-button:not(.ck-disabled):hover .ck-icon,
+[theme-mode='dark'] .ck.ck-button.ck-on .ck-icon {
+  opacity: 1;
+}
+
+[theme-mode='dark'] .ck.ck-button:not(.ck-disabled):hover,
+[theme-mode='dark'] .ck.ck-button:not(.ck-disabled):active {
+  background-color: var(--semi-color-fill-1);
+}
+
+[theme-mode='dark'] .ck.ck-button.ck-disabled .ck-button__label {
+  color: var(--semi-color-text-3);
+}
+
+[theme-mode='dark'] .ck.ck-button.ck-disabled .ck-icon {
+  color: var(--semi-color-text-3);
+  fill: var(--semi-color-text-3);
+}
+
+/* 扩展夜间模式支持 */
+[theme-mode='dark'] .ck.ck-dropdown__panel {
+  background-color: var(--semi-color-bg-1);
+  border: 1px solid var(--semi-color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+[theme-mode='dark'] .ck.ck-dropdown__panel .ck-dropdown__panel-visible {
+  border-color: var(--semi-color-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+[theme-mode='dark'] .ck.ck-dropdown .ck-dropdown__arrow {
+  color: var(--semi-color-text-0);
+  fill: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-dropdown.ck-dropdown_open > .ck-dropdown__button {
+  background-color: var(--semi-color-fill-2);
+  opacity: 0.9;
+}
+
+[theme-mode='dark'] .ck.ck-list {
+  background-color: var(--semi-color-bg-0);
+}
+
+[theme-mode='dark'] .ck.ck-list__item {
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-list__item:hover:not(.ck-disabled) {
+  background-color: var(--semi-color-fill-2);
+}
+
+[theme-mode='dark'] .ck.ck-list__item.ck-on {
+  background-color: var(--semi-color-fill-3);
+  color: var(--semi-color-text-0);
+  opacity: 0.85;
+}
+
+[theme-mode='dark'] .ck.ck-list__item.ck-on .ck-button__label {
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-list__item.ck-on .ck-icon {
+  color: var(--semi-color-text-0);
+  fill: var(--semi-color-text-0);
+}
+
+/* 增强下拉菜单项的过渡效果 */
+[theme-mode='dark'] .ck.ck-list__item {
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+/* 对话框样式 */
+[theme-mode='dark'] .ck.ck-dialog {
+  background-color: var(--semi-color-bg-0);
+  border-color: var(--semi-color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-dialog__title {
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-dialog__body {
+  background-color: var(--semi-color-bg-0);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-dialog__body .ck-label {
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-dialog__footer {
+  background-color: var(--semi-color-bg-1);
+  border-top-color: var(--semi-color-border);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-button.ck-button-save {
+  background-color: var(--semi-color-primary);
+  color: white;
+  border-color: var(--semi-color-primary);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-button.ck-button-save:hover {
+  background-color: var(--semi-color-primary-hover);
+  border-color: var(--semi-color-primary-hover);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-button.ck-button-cancel {
+  background-color: var(--semi-color-bg-1);
+  color: var(--semi-color-text-0);
+  border-color: var(--semi-color-border);
+}
+
+[theme-mode='dark'] .ck.ck-dialog .ck-button.ck-button-cancel:hover {
+  background-color: var(--semi-color-fill-1);
+}
+
+/* CKEditor底部logo样式调整 */
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon {
+  background-color: var(--semi-color-bg-2) !important;
+  border-color: var(--semi-color-border) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon .ck.ck-powered-by {
+  color: var(--semi-color-text-1) !important;
+  background-color: var(--semi-color-bg-2) !important;
+}
+
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon .ck-powered-by__label {
+  color: var(--semi-color-text-1) !important;
+}
+
+[theme-mode='dark'] .ck-powered-by-balloon a,
+[theme-mode='dark'] .ck-powered-by a,
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon a,
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon .ck-powered-by a {
+  color: var(--semi-color-link) !important;
+}
+
+[theme-mode='dark'] .ck-powered-by-balloon a:hover,
+[theme-mode='dark'] .ck-powered-by a:hover,
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon a:hover,
+[theme-mode='dark'] .ck.ck-balloon-panel.ck-powered-by-balloon .ck-powered-by a:hover {
+  color: var(--semi-color-link-hover) !important;
+}
+
+[theme-mode='dark'] .ck.ck-reset_all * {
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-editor {
+  border: none !important;
+}
+
+[theme-mode='dark'] .ck.ck-editor__main {
+  border: none !important;
+}
+
+[theme-mode='dark'] .ck.ck-editor__editable {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[theme-mode='dark'] .ck.ck-editor__editable:not(.ck-editor__nested-editable).ck-focused {
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* "Powered by CKEditor" logo 设置 */
 .ck.ck-balloon-panel.ck-powered-by-balloon {
   z-index: 100;
@@ -152,4 +371,128 @@
 
 .ck.ck-balloon-panel.ck-powered-by-balloon .ck.ck-powered-by {
   font-size: 9px;
+}
+
+/* 代码块和预格式化文本在暗色模式下的样式 */
+[theme-mode='dark'] .ck-content pre {
+  background-color: var(--semi-color-bg-1);
+  border: 1px solid var(--semi-color-border);
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck-content code {
+  background-color: var(--semi-color-bg-1);
+  color: var(--semi-color-text-0);
+  border: 1px solid var(--semi-color-border);
+}
+
+/* 链接在暗色模式下的样式 */
+[theme-mode='dark'] .ck-content a {
+  color: var(--semi-color-link);
+}
+
+[theme-mode='dark'] .ck-content a:hover {
+  color: var(--semi-color-link-hover);
+}
+
+/* 编辑区域样式 */
+[theme-mode='dark'] .ck-editor__editable {
+  background-color: var(--semi-color-bg-0) !important;
+  color: var(--semi-color-text-0) !important;
+  border-color: var(--semi-color-border) !important;
+}
+
+[theme-mode='dark'] .ck.ck-editor__main > .ck-editor__editable {
+  border-color: var(--semi-color-border) !important;
+}
+
+[theme-mode='dark'] .ck.ck-editor__editable:not(.ck-editor__nested-editable).ck-focused {
+  border-color: var(--semi-color-primary) !important;
+  box-shadow: 0 0 0 3px var(--semi-color-primary-light-default);
+}
+
+/* 增强按钮激活状态 */
+[theme-mode='dark'] .ck.ck-button.ck-on {
+  background-color: var(--semi-color-primary-light-default);
+  color: var(--semi-color-primary);
+  border-color: var(--semi-color-primary-light-default);
+}
+
+/* 增强按钮选中状态的过渡效果 */
+[theme-mode='dark'] .ck.ck-button {
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+[theme-mode='dark'] .ck.ck-button.ck-on:focus {
+  box-shadow: 0 0 0 2px var(--semi-color-primary-light-default);
+}
+
+[theme-mode='dark'] .ck.ck-button.ck-on .ck-button__label {
+  color: var(--semi-color-primary);
+}
+
+[theme-mode='dark'] .ck.ck-button.ck-on .ck-icon {
+  color: var(--semi-color-primary);
+  fill: var(--semi-color-primary);
+}
+
+/* 表格相关样式 */
+[theme-mode='dark'] .ck.ck-table-form .ck-table-form__border-row {
+  background-color: var(--semi-color-bg-1);
+}
+
+[theme-mode='dark'] .ck-content .table table {
+  border-color: var(--semi-color-border);
+}
+
+[theme-mode='dark'] .ck-content .table table td,
+[theme-mode='dark'] .ck-content .table table th {
+  border-color: var(--semi-color-border);
+}
+
+[theme-mode='dark'] .ck-content .table table th {
+  background-color: var(--semi-color-bg-2);
+}
+
+[theme-mode='dark'] .ck.ck-balloon-panel {
+  background-color: var(--semi-color-bg-0);
+  border-color: var(--semi-color-border);
+}
+
+[theme-mode='dark'] .ck.ck-input {
+  background-color: var(--semi-color-bg-1);
+  border-color: var(--semi-color-border);
+  color: var(--semi-color-text-0);
+}
+
+[theme-mode='dark'] .ck.ck-input:focus {
+  border-color: var(--semi-color-primary);
+  box-shadow: 0 0 0 3px var(--semi-color-primary-light-default);
+}
+
+[theme-mode='dark'] .ck.ck-labeled-field-view .ck.ck-labeled-field-view__status {
+  background: var(--semi-color-bg-1);
+  color: var(--semi-color-text-1);
+}
+
+/* 确保下拉菜单中的所有菜单项一致性 */
+[theme-mode='dark'] .ck.ck-dropdown .ck-dropdown__panel .ck-list .ck-list__item .ck-button.ck-on {
+  background-color: var(--semi-color-fill-3);
+  color: var(--semi-color-text-0);
+  opacity: 0.85;
+}
+
+[theme-mode='dark'] .ck.ck-dropdown .ck-dropdown__panel .ck-list .ck-list__item .ck-button:hover {
+  background-color: var(--semi-color-fill-2);
+}
+
+/* 确保嵌套UI元素中的菜单项样式一致 */
+[theme-mode='dark'] .ck.ck-reset_all .ck-list__item.ck-on {
+  background-color: var(--semi-color-fill-3);
+  color: var(--semi-color-text-0);
+  opacity: 0.85;
+}
+
+[theme-mode='dark'] .ck.ck-reset_all .ck-list__item:hover:not(.ck-disabled):not(.ck-on) {
+  background-color: var(--semi-color-fill-2);
 }
