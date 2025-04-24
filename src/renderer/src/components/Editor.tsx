@@ -7,31 +7,6 @@ import { IconCopy, IconSetting, IconFile } from '@douyinfe/semi-icons'
 import './Editor.css'
 import { ThemeContext } from '../context/theme/ThemeContext'
 
-// 定义CKEditor的类型接口
-interface CKEditorType {
-  create(element: HTMLElement): Promise<Editor>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  EditorWatchdog: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ContextWatchdog: any
-}
-
-// 定义链接装饰器类型
-interface LinkDecoratorAutomaticDefinition {
-  mode: 'automatic'
-  callback: (url: string | null) => boolean
-  attributes: Record<string, string>
-}
-
-interface LinkDecoratorManualDefinition {
-  mode: 'manual'
-  label: string
-  defaultValue?: boolean
-  attributes: Record<string, string>
-}
-
-type LinkDecoratorDefinition = LinkDecoratorAutomaticDefinition | LinkDecoratorManualDefinition
-
 // Define props interface
 interface EditorProps {
   currentFolder?: string
@@ -201,24 +176,29 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
 
   // Editor configuration
   const editorConfig = {
-    // CKEditor configuration options
-    toolbar: [
-      'heading',
-      '|',
-      'bold',
-      'italic',
-      'link',
-      'bulletedList',
-      'numberedList',
-      '|',
-      'outdent',
-      'indent',
-      '|',
-      'blockQuote',
-      'insertTable',
-      'undo',
-      'redo'
-    ],
+    toolbar: {
+      items: [
+        'undo',
+        'redo',
+        '|',
+        'heading',
+        '|',
+        'bold',
+        'italic',
+        'link',
+        '|',
+        'bulletedList',
+        'numberedList',
+        '|',
+        'uploadImage',
+        'blockQuote',
+        'insertTable',
+        '|',
+        'outdent',
+        'indent'
+      ],
+      shouldNotGroupWhenFull: true
+    },
     ui: {
       poweredBy: {
         position: 'inside' as const,
@@ -279,18 +259,6 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
     }
   }, [editorData, editorInstance])
 
-  // Build AI model dropdown menu (unused, can be removed)
-  /*
-  const aiModelMenu = {
-    render: (item: any) => {
-      return (
-        <Dropdown.Item onClick={() => handleAIModelChange(item.value)}>{item.text}</Dropdown.Item>
-      )
-    },
-    items: AI_MODELS
-  }
-  */
-
   return (
     <div className="editor-container">
       {loading ? (
@@ -342,13 +310,19 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
             </div>
           </div>
           <CKEditor
-            editor={ClassicEditor as unknown as CKEditorType}
+            editor={ClassicEditor}
             data={editorData}
             config={editorConfig}
-            onReady={(editor) => {
-              setEditorInstance(editor as unknown as Editor)
+            onReady={(editor: Editor) => {
+              setEditorInstance(editor)
               // 设置编辑器实例并应用主题样式
               console.log('Editor is ready to use!', editor)
+
+              // 显示可用的工具栏项目
+              console.log(
+                'Available toolbar items:',
+                Array.from(editor.ui.componentFactory.names())
+              )
 
               // 初始化时立即应用当前主题
               try {
@@ -402,7 +376,7 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
                 console.error('初始化编辑器主题样式失败:', error)
               }
             }}
-            onChange={(_, editor) => {
+            onChange={(_, editor: Editor) => {
               const data = editor.getData()
               setEditorData(data)
             }}
