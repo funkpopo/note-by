@@ -1,8 +1,14 @@
 .editor-container {
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .loading-container {
@@ -16,26 +22,54 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   overflow: hidden;
 }
 
-.editor-wrapper .ck-editor {
-  flex-grow: 1;
+.editor-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--semi-color-bg-1);
+  border-bottom: 1px solid var(--semi-color-border);
+  gap: 12px;
+  min-height: 46px;
+}
+
+.file-info {
+  flex: 1;
+  font-size: 14px;
+  color: var(--semi-color-text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* CKEditor specific styles */
+.editor-wrapper .ck.ck-editor {
   display: flex;
   flex-direction: column;
+  height: calc(100% - 46px);
+  overflow: hidden;
 }
 
-.editor-wrapper .ck-editor__main {
-  flex-grow: 1;
-  overflow-y: auto;
+.editor-wrapper .ck.ck-editor__main {
+  flex: 1;
+  overflow: hidden;
 }
 
-.editor-wrapper .ck-content {
-  min-height: 300px;
-  height: calc(100vh - 240px);
-  overflow-y: auto;
-  background-color: var(--semi-color-bg-0);
-  color: var(--semi-color-text-0);
+.editor-wrapper .ck-editor__editable {
+  height: 100% !important;
+  overflow-y: auto !important;
+}
+
+.editor-wrapper .ck.ck-editor__editable_inline {
+  min-height: auto; /* Override CKEditor's default min-height */
 }
 
 .editor-wrapper .ck-toolbar {
@@ -80,26 +114,27 @@
 /* Custom CKEditor styles */
 .ck-editor__editable_inline {
   padding: 20px !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   font-size: 16px !important;
   line-height: 1.6 !important;
 }
 
 /* Adapt dark theme */
-[theme-mode="dark"] .ck-content {
+[theme-mode='dark'] .ck-content {
   background-color: var(--semi-color-bg-0);
   color: var(--semi-color-text-0);
 }
 
-[theme-mode="dark"] .ck-toolbar {
+[theme-mode='dark'] .ck-toolbar {
   background-color: var(--semi-color-bg-1);
   color: var(--semi-color-text-0);
 }
 
-[theme-mode="dark"] .ck-button {
+[theme-mode='dark'] .ck-button {
   color: var(--semi-color-text-0);
 }
 
-[theme-mode="dark"] .ck-button:hover {
+[theme-mode='dark'] .ck-button:hover {
   background-color: var(--semi-color-fill-1);
 }

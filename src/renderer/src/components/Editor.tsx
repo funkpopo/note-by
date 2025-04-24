@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
-import { Spin, Toast } from '@douyinfe/semi-ui';
+import { Spin, Toast, Button, Dropdown, Typography } from '@douyinfe/semi-ui';
+import { IconCopy, IconSetting, IconFile } from '@douyinfe/semi-icons';
 import './Editor.css';
 
 // Define props interface
@@ -11,10 +12,20 @@ interface EditorProps {
   onFileChanged?: () => void;
 }
 
+// Define AI model options
+const AI_MODELS = [
+  { value: 'gpt-3.5', text: 'GPT-3.5' },
+  { value: 'gpt-4', text: 'GPT-4' },
+  { value: 'claude-3', text: 'Claude 3' },
+  { value: 'gemini', text: 'Gemini' },
+];
+
 const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChanged }) => {
   const [editorData, setEditorData] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [editorInstance, setEditorInstance] = useState<any>(null);
+  const [selectedAIModel, setSelectedAIModel] = useState<string>('gpt-3.5');
+  const { Text } = Typography;
 
   // Load file content when current file changes
   useEffect(() => {
@@ -69,6 +80,43 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
     }
   };
 
+  // Copy content to clipboard
+  const copyContent = (): void => {
+    if (editorData) {
+      navigator.clipboard.writeText(editorData)
+        .then(() => {
+          Toast.success('内容已复制到剪贴板');
+        })
+        .catch(err => {
+          console.error('复制失败:', err);
+          Toast.error('复制失败');
+        });
+    }
+  };
+
+  // Handle AI model selection
+  const handleAIModelChange = (value: string): void => {
+    setSelectedAIModel(value);
+    Toast.info(`已选择 ${AI_MODELS.find(model => model.value === value)?.text} 作为 AI 助手`);
+  };
+
+  // Handle editor initialization
+  useEffect(() => {
+    if (editorInstance) {
+      // Make sure the editor can scroll properly
+      try {
+        const editorElement = editorInstance.ui.getEditableElement();
+        if (editorElement) {
+          // Ensure the editable area can scroll
+          editorElement.style.overflow = 'auto';
+          editorElement.style.height = '100%';
+        }
+      } catch (error) {
+        console.error('Error adjusting editor DOM:', error);
+      }
+    }
+  }, [editorInstance]);
+
   // Editor configuration
   const editorConfig = {
     // CKEditor configuration options
@@ -108,6 +156,14 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
     };
   }, [editorData, editorInstance]);
 
+  // Build AI model dropdown menu
+  const aiModelMenu = {
+    render: (item: any) => {
+      return <Dropdown.Item onClick={() => handleAIModelChange(item.value)}>{item.text}</Dropdown.Item>;
+    },
+    items: AI_MODELS,
+  };
+
   return (
     <div className="editor-container">
       {loading ? (
@@ -116,6 +172,54 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
         </div>
       ) : currentFolder && currentFile ? (
         <div className="editor-wrapper">
+          <div className="editor-header">
+            <div className="file-info">
+              <Text icon={<IconFile />} strong>
+                {currentFile} {currentFolder && `(${currentFolder})`}
+              </Text>
+            </div>
+            <div className="editor-actions">
+              <Button 
+                icon={<IconCopy />} 
+                theme="borderless" 
+                onClick={copyContent} 
+                title="复制全部内容"
+              >
+                复制全部
+              </Button>
+              <Dropdown 
+                trigger="click" 
+                position="bottomRight" 
+                render={
+                  <Dropdown.Menu>
+                    {AI_MODELS.map(model => (
+                      <Dropdown.Item 
+                        key={model.value} 
+                        active={selectedAIModel === model.value}
+                        onClick={() => handleAIModelChange(model.value)}
+                      >
+                        {model.text}
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                }
+              >
+                <Button 
+                  icon={<IconSetting />} 
+                  theme="borderless" 
+                  title="AI 助手配置"
+                >
+                  {AI_MODELS.find(model => model.value === selectedAIModel)?.text || '选择 AI 模型'}
+                </Button>
+              </Dropdown>
+              <Button 
+                className="save-button" 
+                onClick={() => saveContent(editorData)}
+              >
+                保存
+              </Button>
+            </div>
+          </div>
           <CKEditor
             editor={ClassicEditor as any}
             data={editorData}
@@ -130,11 +234,6 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
               setEditorData(data);
             }}
           />
-          <div className="editor-footer">
-            <button className="save-button" onClick={() => saveContent(editorData)}>
-              保存
-            </button>
-          </div>
         </div>
       ) : (
         <div className="no-file-selected">

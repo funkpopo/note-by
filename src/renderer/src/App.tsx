@@ -59,7 +59,7 @@ const App: React.FC = () => {
             style={{
               height: '100%',
               width: '100%',
-              padding: 24,
+              padding: currentView === 'Editor' ? 0 : 24,
               background: 'var(--semi-color-bg-0)',
               position: 'relative'
             }}
