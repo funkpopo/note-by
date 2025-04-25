@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { CKEditor } from '@ckeditor/ckeditor5-react'
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
-import type { Editor } from '@ckeditor/ckeditor5-core'
+import CodeBlock from '@ckeditor/ckeditor5-code-block'
+import Markdown from '@ckeditor/ckeditor5-markdown-gfm'
+import '@ckeditor/ckeditor5-build-classic/build/translations/zh-cn.js'
+import { Editor as EditorType } from '@ckeditor/ckeditor5-core'
 import { Spin, Toast, Button, Dropdown, Typography } from '@douyinfe/semi-ui'
 import { IconCopy, IconSetting, IconFile } from '@douyinfe/semi-icons'
 import './Editor.css'
 import { ThemeContext } from '../context/theme/ThemeContext'
 
-// Define props interface
 interface EditorProps {
   currentFolder?: string
   currentFile?: string
@@ -25,7 +27,7 @@ const AI_MODELS = [
 const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChanged }) => {
   const [editorData, setEditorData] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
-  const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
+  const [editorInstance, setEditorInstance] = useState<EditorType | null>(null)
   const [selectedAIModel, setSelectedAIModel] = useState<string>('gpt-3.5')
   const { Text } = Typography
 
@@ -131,7 +133,9 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
         const editorElement = editorInstance.ui.getEditableElement()
         if (editorElement) {
           // 根据主题更新编辑器样式
-          editorElement.style.backgroundColor = isDarkMode ? 'var(--semi-color-bg-0)' : '#ffffff'
+          editorElement.style.backgroundColor = isDarkMode
+            ? 'var(--semi-color-bg-0)'
+            : 'rgba(0, 0, 0, 0.9)'
           editorElement.style.color = isDarkMode ? 'var(--semi-color-text-0)' : 'rgba(0, 0, 0, 0.9)'
 
           // 获取所有工具栏按钮并更新样式
@@ -176,6 +180,7 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
 
   // Editor configuration
   const editorConfig = {
+    language: 'zh-cn',
     toolbar: {
       items: [
         'undo',
@@ -185,19 +190,28 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
         '|',
         'bold',
         'italic',
-        'link',
+        'underline',
+        'strikethrough',
         '|',
+        'link',
         'bulletedList',
         'numberedList',
+        '|',
+        'outdent',
+        'indent',
         '|',
         'uploadImage',
         'blockQuote',
         'insertTable',
         '|',
-        'outdent',
-        'indent'
+        'code',
+        'codeBlock',
+        '|',
+        'alignment',
+        'fontColor',
+        'fontBackgroundColor'
       ],
-      shouldNotGroupWhenFull: true
+      shouldNotGroupWhenFull: false
     },
     ui: {
       poweredBy: {
@@ -205,6 +219,41 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
         side: 'right' as const,
         forceVisible: true
       }
+    },
+    codeBlock: {
+      languages: [
+        { language: 'plaintext', label: '纯文本' },
+        { language: 'javascript', label: 'JavaScript' },
+        { language: 'typescript', label: 'TypeScript' },
+        { language: 'css', label: 'CSS' },
+        { language: 'html', label: 'HTML' },
+        { language: 'xml', label: 'XML' },
+        { language: 'python', label: 'Python' },
+        { language: 'java', label: 'Java' },
+        { language: 'php', label: 'PHP' },
+        { language: 'ruby', label: 'Ruby' },
+        { language: 'c', label: 'C' },
+        { language: 'cpp', label: 'C++' },
+        { language: 'csharp', label: 'C#' },
+        { language: 'markdown', label: 'Markdown' },
+        { language: 'json', label: 'JSON' },
+        { language: 'sql', label: 'SQL' }
+      ]
+    },
+    // 配置图片上传
+    image: {
+      toolbar: [
+        'imageStyle:inline',
+        'imageStyle:block',
+        'imageStyle:side',
+        '|',
+        'toggleImageCaption',
+        'imageTextAlternative'
+      ]
+    },
+    // 配置表格工具栏
+    table: {
+      contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
     },
     // 配置链接功能
     link: {
@@ -310,19 +359,25 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
             </div>
           </div>
           <CKEditor
-            editor={ClassicEditor}
+            editor={ClassicEditor as any}
             data={editorData}
             config={editorConfig}
-            onReady={(editor: Editor) => {
+            onReady={(editor: EditorType) => {
               setEditorInstance(editor)
               // 设置编辑器实例并应用主题样式
               console.log('Editor is ready to use!', editor)
 
               // 显示可用的工具栏项目
-              console.log(
-                'Available toolbar items:',
-                Array.from(editor.ui.componentFactory.names())
-              )
+              const availableItems = Array.from(editor.ui.componentFactory.names())
+              console.log('Available toolbar items:', availableItems)
+
+              // 检查配置的工具栏项目是否可用
+              const configuredItems = editorConfig.toolbar.items.filter((item) => item !== '|')
+              const missingItems = configuredItems.filter((item) => !availableItems.includes(item))
+
+              if (missingItems.length > 0) {
+                console.warn('以下工具栏项不可用:', missingItems)
+              }
 
               // 初始化时立即应用当前主题
               try {
@@ -376,7 +431,7 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
                 console.error('初始化编辑器主题样式失败:', error)
               }
             }}
-            onChange={(_, editor: Editor) => {
+            onChange={(_, editor: EditorType) => {
               const data = editor.getData()
               setEditorData(data)
             }}
@@ -392,3 +447,4 @@ const EditorComponent: React.FC<EditorProps> = ({ currentFolder, currentFile, on
 }
 
 export default EditorComponent
+
