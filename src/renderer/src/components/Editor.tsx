@@ -18,6 +18,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [editorContent, setEditorContent] = useState<string>('')
+  const [editorKey, setEditorKey] = useState<string>('editor-0')
 
   // Create a new editor instance
   const editor = useCreateBlockNote({
@@ -43,6 +45,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       const result = await window.api.markdown.readFile(filePath)
 
       if (result.success && result.content !== undefined) {
+        // Store the content
+        setEditorContent(result.content)
+
+        // Generate a new key to force remount of the editor
+        setEditorKey(`editor-${Date.now()}`)
+
         // Parse Markdown to blocks
         const blocks = await editor.tryParseMarkdownToBlocks(result.content)
         editor.replaceBlocks(editor.document, blocks)
@@ -60,6 +68,22 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       setIsLoading(false)
     }
   }, [currentFolder, currentFile, editor])
+
+  // Effect to reset editor when the key changes
+  useEffect(() => {
+    if (editorContent && editor) {
+      const loadContentToEditor = async (): Promise<void> => {
+        const blocks = await editor.tryParseMarkdownToBlocks(editorContent)
+        editor.replaceBlocks(editor.document, blocks)
+      }
+      loadContentToEditor()
+    }
+  }, [editorKey, editor, editorContent])
+
+  // Load file when current file changes
+  useEffect(() => {
+    loadFileContent()
+  }, [currentFolder, currentFile, loadFileContent])
 
   // Save file content
   const saveFileContent = useCallback(async () => {
@@ -94,11 +118,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       setIsSaving(false)
     }
   }, [currentFolder, currentFile, editor, onFileChanged])
-
-  // Load file when current file changes
-  useEffect(() => {
-    loadFileContent()
-  }, [currentFolder, currentFile, loadFileContent])
 
   // Handler for when the editor's content changes
   const handleEditorChange = useCallback(() => {
@@ -159,6 +178,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           </div>
         ) : (
           <BlockNoteView
+            key={editorKey}
             editor={editor}
             theme="light"
             style={{ height: '100%' }}
