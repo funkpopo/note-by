@@ -100,5 +100,6 @@ code {
 /* 全局增强文本选择样式 */
 ::selection {
   background-color: var(--semi-color-primary-light-hover) !important;
+  /* 选中高亮透明度 */
   opacity: 0.8 !important;
 }

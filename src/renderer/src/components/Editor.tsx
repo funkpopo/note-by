@@ -6,6 +6,20 @@ import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@bloc
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import './Editor.css'
+import {
+  BasicTextStyleButton,
+  BlockTypeSelect,
+  ColorStyleButton,
+  CreateLinkButton,
+  FileCaptionButton,
+  FileReplaceButton,
+  FormattingToolbar,
+  FormattingToolbarController,
+  NestBlockButton,
+  TextAlignButton,
+  UnnestBlockButton
+} from '@blocknote/react'
+import { AIButton } from './AIButton'
 
 interface EditorProps {
   currentFolder?: string
@@ -278,19 +292,45 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              height: '100%'
+              height: '100%',
+              color: 'var(--semi-color-text-2)'
             }}
           >
             <Typography.Text type="secondary">请从左侧边栏选择一个文件</Typography.Text>
           </div>
         ) : (
           <BlockNoteView
-            key={editorKey}
             editor={editor}
+            key={editorKey}
             theme={editorThemes}
-            style={{ height: '100%' }}
+            formattingToolbar={false}
             onChange={handleEditorChange}
-          />
+            style={{ height: '100%' }}
+          >
+            <FormattingToolbarController
+              formattingToolbar={() => (
+                <FormattingToolbar>
+                  <BlockTypeSelect key="blockTypeSelect" />
+                  {/* Add AI button */}
+                  <AIButton key="aiButton" />
+                  <FileCaptionButton key="fileCaptionButton" />
+                  <FileReplaceButton key="replaceFileButton" />
+                  <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
+                  <BasicTextStyleButton basicTextStyle="italic" key="italicStyleButton" />
+                  <BasicTextStyleButton basicTextStyle="underline" key="underlineStyleButton" />
+                  <BasicTextStyleButton basicTextStyle="strike" key="strikeStyleButton" />
+                  <BasicTextStyleButton basicTextStyle="code" key="codeStyleButton" />
+                  <TextAlignButton textAlignment="left" key="textAlignLeftButton" />
+                  <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
+                  <TextAlignButton textAlignment="right" key="textAlignRightButton" />
+                  <ColorStyleButton key="colorStyleButton" />
+                  <NestBlockButton key="nestBlockButton" />
+                  <UnnestBlockButton key="unnestBlockButton" />
+                  <CreateLinkButton key="createLinkButton" />
+                </FormattingToolbar>
+              )}
+            />
+          </BlockNoteView>
         )}
       </div>
     </div>
