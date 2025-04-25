@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Typography, Button, Space, Toast, Spin } from '@douyinfe/semi-ui'
 import { IconSave } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
@@ -20,6 +20,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [editorContent, setEditorContent] = useState<string>('')
   const [editorKey, setEditorKey] = useState<string>('editor-0')
+  const lastSavedContentRef = useRef<string>('')
+  const lastLoadedFileRef = useRef<string | null>(null)
 
   // Create a new editor instance
   const editor = useCreateBlockNote({
@@ -32,42 +34,84 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     ]
   })
 
+  // 清空编辑器内容的辅助函数
+  const clearEditor = useCallback(() => {
+    editor.replaceBlocks(editor.document, [
+      {
+        type: 'paragraph',
+        content: ''
+      }
+    ])
+    setEditorContent('')
+    lastSavedContentRef.current = ''
+    setIsEditing(false)
+  }, [editor])
+
   // Load file content
   const loadFileContent = useCallback(async () => {
+    // 检查必要的参数
     if (!currentFolder || !currentFile) {
       setTitle('')
+      clearEditor()
+      lastLoadedFileRef.current = null
       return
     }
 
+    // 这里不再尝试使用TypeScript断言，逻辑上我们已经确认了值不为undefined
+    const filePath = currentFolder + '/' + currentFile
+
+    // 如果请求加载的文件与当前已加载文件相同，则不重新加载
+    if (lastLoadedFileRef.current === filePath) {
+      return
+    }
+
+    // 清空之前的内容
+    clearEditor()
+
     setIsLoading(true)
+
     try {
-      const filePath = `${currentFolder}/${currentFile}`
+      // 这里传入文件路径，即使TypeScript警告有未定义的可能性，我们知道这是安全的
       const result = await window.api.markdown.readFile(filePath)
 
       if (result.success && result.content !== undefined) {
-        // Store the content
-        setEditorContent(result.content)
+        // 更新当前加载的文件路径
+        lastLoadedFileRef.current = filePath
 
-        // Generate a new key to force remount of the editor
+        // 存储内容
+        setEditorContent(result.content)
+        // 保存初始内容以供比较
+        lastSavedContentRef.current = result.content
+
+        // 生成新的key强制重新挂载编辑器
         setEditorKey(`editor-${Date.now()}`)
 
-        // Parse Markdown to blocks
-        const blocks = await editor.tryParseMarkdownToBlocks(result.content)
-        editor.replaceBlocks(editor.document, blocks)
-
-        // Set title from filename
+        // 从文件名设置标题
         setTitle(currentFile.replace('.md', ''))
-        setIsEditing(false)
+
+        // 在下一个事件循环中延迟加载内容到编辑器
+        // 这确保了组件状态已经更新
+        setTimeout(async () => {
+          try {
+            const blocks = await editor.tryParseMarkdownToBlocks(result.content)
+            editor.replaceBlocks(editor.document, blocks)
+            setIsEditing(false)
+          } catch (err) {
+            console.error('解析Markdown内容失败:', err)
+          }
+        }, 0)
       } else {
         Toast.error('无法加载文件内容')
+        lastLoadedFileRef.current = null
       }
     } catch (error) {
       console.error('加载文件内容失败:', error)
       Toast.error('加载文件内容失败')
+      lastLoadedFileRef.current = null
     } finally {
       setIsLoading(false)
     }
-  }, [currentFolder, currentFile, editor])
+  }, [currentFolder, currentFile, editor, clearEditor])
 
   // Effect to reset editor when the key changes
   useEffect(() => {
@@ -103,6 +147,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       if (result.success) {
         Toast.success('文件保存成功')
         setIsEditing(false)
+        // Update the last saved content
+        lastSavedContentRef.current = markdown
 
         // Notify parent component that file has changed
         if (onFileChanged) {
@@ -120,9 +166,21 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   }, [currentFolder, currentFile, editor, onFileChanged])
 
   // Handler for when the editor's content changes
-  const handleEditorChange = useCallback(() => {
-    setIsEditing(true)
-  }, [])
+  const handleEditorChange = useCallback(async () => {
+    try {
+      // Convert current blocks to Markdown for comparison
+      const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
+
+      // Only set editing state if content actually changed
+      if (currentMarkdown !== lastSavedContentRef.current) {
+        setIsEditing(true)
+      } else {
+        setIsEditing(false)
+      }
+    } catch (error) {
+      console.error('比较内容变化失败:', error)
+    }
+  }, [editor])
 
   return (
     <div className="editor-container">
