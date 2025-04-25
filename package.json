@@ -21,6 +21,9 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@blocknote/core": "^0.29.1",
+    "@blocknote/mantine": "^0.29.1",
+    "@blocknote/react": "^0.29.1",
     "@douyinfe/semi-icons": "^2.77.0",
     "@douyinfe/semi-icons-lab": "^2.77.0",
     "@douyinfe/semi-ui": "^2.77.0",
