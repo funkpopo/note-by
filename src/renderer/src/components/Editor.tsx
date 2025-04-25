@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Typography, Button, Space, Toast, Spin } from '@douyinfe/semi-ui'
 import { IconSave } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
-import { BlockNoteView } from '@blocknote/mantine'
+import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import './Editor.css'
@@ -22,6 +22,53 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [editorKey, setEditorKey] = useState<string>('editor-0')
   const lastSavedContentRef = useRef<string>('')
   const lastLoadedFileRef = useRef<string | null>(null)
+
+  // Create custom light theme with enhanced selection colors
+  const customLightTheme: Theme = {
+    ...lightDefaultTheme,
+    colors: {
+      ...lightDefaultTheme.colors,
+      selected: {
+        text: '#ffffff',
+        background: 'var(--semi-color-primary)'
+      },
+      hovered: {
+        text: '#3f3f3f',
+        background: 'var(--semi-color-primary-light-default)'
+      }
+    }
+  }
+
+  // Create custom dark theme with enhanced selection colors
+  const customDarkTheme: Theme = {
+    ...darkDefaultTheme,
+    colors: {
+      ...darkDefaultTheme.colors,
+      editor: {
+        text: 'var(--semi-color-text-0)',
+        background: 'var(--semi-color-bg-0)'
+      },
+      menu: {
+        text: 'var(--semi-color-text-0)',
+        background: 'var(--semi-color-bg-1)'
+      },
+      selected: {
+        text: '#ffffff',
+        background: 'var(--semi-color-primary)'
+      },
+      hovered: {
+        text: 'var(--semi-color-text-0)',
+        background: 'var(--semi-color-primary-light-default)'
+      },
+      border: 'var(--semi-color-border)'
+    }
+  }
+
+  // Combined themes object for automatic switching
+  const editorThemes = {
+    light: customLightTheme,
+    dark: customDarkTheme
+  }
 
   // Create a new editor instance
   const editor = useCreateBlockNote({
@@ -93,7 +140,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         // 这确保了组件状态已经更新
         setTimeout(async () => {
           try {
-            const blocks = await editor.tryParseMarkdownToBlocks(result.content)
+            // 确保content是字符串
+            const content = result.content || ''
+            const blocks = await editor.tryParseMarkdownToBlocks(content)
             editor.replaceBlocks(editor.document, blocks)
             setIsEditing(false)
           } catch (err) {
@@ -238,7 +287,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           <BlockNoteView
             key={editorKey}
             editor={editor}
-            theme="light"
+            theme={editorThemes}
             style={{ height: '100%' }}
             onChange={handleEditorChange}
           />

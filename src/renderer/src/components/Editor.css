@@ -119,3 +119,56 @@ body[theme-mode='dark'] .editor-header {
   align-items: center;
   flex: 1;
 }
+
+/* BlockNote Editor Theming */
+.bn-container[data-color-scheme='light'] {
+  /* Editor colors */
+  --bn-colors-editor-text: var(--semi-color-text-0);
+  --bn-colors-editor-background: var(--semi-color-bg-0);
+  --bn-colors-menu-text: var(--semi-color-text-0);
+  --bn-colors-menu-background: var(--semi-color-bg-0);
+  --bn-colors-tooltip-text: var(--semi-color-text-0);
+  --bn-colors-tooltip-background: var(--semi-color-bg-1);
+
+  /* Interactive states */
+  --bn-colors-hovered-text: var(--semi-color-text-0);
+  --bn-colors-hovered-background: var(--semi-color-primary-light-default);
+  --bn-colors-selected-text: #ffffff;
+  --bn-colors-selected-background: var(--semi-color-primary);
+  --bn-colors-disabled-text: var(--semi-color-disabled-text);
+  --bn-colors-disabled-background: var(--semi-color-disabled-bg);
+
+  /* UI elements */
+  --bn-colors-shadow: var(--semi-color-shadow);
+  --bn-colors-border: var(--semi-color-border);
+  --bn-colors-side-menu: #cfcfcf;
+
+  /* Other settings */
+  --bn-border-radius: 6px;
+}
+
+.bn-container[data-color-scheme='dark'] {
+  /* Editor colors */
+  --bn-colors-editor-text: var(--semi-color-text-0);
+  --bn-colors-editor-background: var(--semi-color-bg-0);
+  --bn-colors-menu-text: var(--semi-color-text-0);
+  --bn-colors-menu-background: var(--semi-color-bg-0);
+  --bn-colors-tooltip-text: var(--semi-color-text-0);
+  --bn-colors-tooltip-background: var(--semi-color-bg-1);
+
+  /* Interactive states */
+  --bn-colors-hovered-text: var(--semi-color-text-0);
+  --bn-colors-hovered-background: var(--semi-color-primary-light-default);
+  --bn-colors-selected-text: #ffffff;
+  --bn-colors-selected-background: var(--semi-color-primary);
+  --bn-colors-disabled-text: var(--semi-color-disabled-text);
+  --bn-colors-disabled-background: var(--semi-color-disabled-bg);
+
+  /* UI elements */
+  --bn-colors-shadow: var(--semi-color-shadow);
+  --bn-colors-border: var(--semi-color-border);
+  --bn-colors-side-menu: rgba(255, 255, 255, 0.3);
+
+  /* Other settings */
+  --bn-border-radius: 6px;
+}
