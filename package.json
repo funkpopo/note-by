@@ -27,7 +27,6 @@
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "axios": "^1.8.4",
-    "cherry-markdown": "^0.9.1",
     "openai": "^4.89.0",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",

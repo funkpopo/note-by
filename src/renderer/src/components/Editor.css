@@ -59,77 +59,10 @@
   gap: 4px !important; /* 调整紧凑间距 */
 }
 
-/* 美化编辑器内部样式 */
-#cherry-markdown {
-  background-color: var(--semi-color-bg-1);
-  overflow: hidden !important; /* 强制禁用滚动条 */
-}
-
-/* 针对Cherry Markdown编辑器的样式修复 */
-.cherry-editor {
-  overflow: hidden !important;
-  max-width: 100% !important;
-}
-
-.cherry-toolbar {
-  flex-wrap: wrap !important;
-  height: auto !important;
-  min-height: 40px !important;
-  overflow: visible !important;
-}
-
-.cherry-toolbar .cherry-toolbar-content {
-  flex-wrap: wrap !important;
-  height: auto !important;
-  overflow: visible !important;
-}
-
-.cherry-toolbar .cherry-toolbar-content .cherry-toolbar-item {
-  margin-bottom: 5px !important;
-}
-
-/* 防止cherry编辑器内部元素溢出 */
-.cherry * {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* 增强Cherry编辑器的文本选择样式 */
-.cherry-editor ::selection {
-  background-color: var(--semi-color-primary-light-hover) !important;
-  color: var(--semi-color-text-0) !important;
-}
-
-.cherry-editor .CodeMirror-selected {
-  background-color: var(--semi-color-primary-light-hover) !important;
-}
-
 /* 在暗色模式下调整样式 - 使用theme-mode属性 */
 body[theme-mode='dark'] .editor-header {
   background-color: var(--semi-color-bg-1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-body[theme-mode='dark'] #cherry-markdown {
-  background-color: var(--semi-color-bg-2);
-}
-
-/* 为Cherry编辑器添加暗色主题增强样式 */
-body[theme-mode='dark'] .cherry-editor {
-  color: var(--semi-color-text-0);
-}
-
-body[theme-mode='dark'] .cherry-toolbar {
-  background-color: var(--semi-color-bg-2);
-  border-bottom: 1px solid var(--semi-color-border);
-}
-
-body[theme-mode='dark'] .cherry-toolbar .cherry-toolbar-item {
-  color: var(--semi-color-text-0);
-}
-
-body[theme-mode='dark'] .cherry-editor .cherry-editor-previewWrap {
-  background-color: var(--semi-color-bg-2);
 }
 
 /* 当宽度小于600px时，对按钮和标题做调整 */
