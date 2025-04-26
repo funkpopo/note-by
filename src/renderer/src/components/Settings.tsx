@@ -46,6 +46,7 @@ interface AIPrompts {
   rewrite: string
   continue: string
   translate: string
+  analyze: string
 }
 
 const Settings: React.FC = () => {
@@ -72,7 +73,8 @@ const Settings: React.FC = () => {
   const [aiPrompts, setAiPrompts] = useState<AIPrompts>({
     rewrite: '',
     continue: '',
-    translate: ''
+    translate: '',
+    analyze: ''
   })
   const [formApi, setFormApi] = useState<{
     setValues: (values: Record<string, string>) => void
@@ -107,7 +109,8 @@ const Settings: React.FC = () => {
       formApi.setValues({
         rewrite: aiPrompts.rewrite || '',
         continue: aiPrompts.continue || '',
-        translate: aiPrompts.translate || ''
+        translate: aiPrompts.translate || '',
+        analyze: aiPrompts.analyze || ''
       })
     }
   }, [formApi, aiPrompts])
@@ -143,15 +146,17 @@ const Settings: React.FC = () => {
             continue: loadedPrompts.continue || '',
             translate:
               loadedPrompts.translate ||
-              '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
+              '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}',
+            analyze: loadedPrompts.analyze || ''
           })
         }
       } else {
         // 如果没有任何AI提示设置，设置默认值
         const defaultPrompts = {
-          rewrite: '',
-          continue: '',
-          translate: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
+          rewrite: '重写以下内容，保持原意但改进表达，使其更流畅、更清晰：\n\n${content}',
+          continue: '继续以下内容，保持风格和逻辑连贯：\n\n${content}',
+          translate: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}',
+          analyze: '分析以下内容，提供关键点、主题、情感倾向等分析：\n\n${content}'
         }
         setAiPrompts(defaultPrompts)
 
@@ -763,6 +768,16 @@ const Settings: React.FC = () => {
                   label="翻译提示: 使用 ${sourceLanguage} 表示原语言，${targetLanguage} 表示目标语言。"
                   placeholder="请设置翻译的提示模板，例如：请将以下${sourceLanguage}文本翻译成${targetLanguage}: ${content}"
                   onChange={(value) => handleAIPromptChange('translate', value)}
+                  rows={3}
+                  showClear
+                  style={{ marginBottom: 0 }}
+                />
+
+                <Form.TextArea
+                  field="analyze"
+                  label="分析提示"
+                  placeholder="请设置分析的提示模板"
+                  onChange={(value) => handleAIPromptChange('analyze', value)}
                   rows={3}
                   showClear
                   style={{ marginBottom: 0 }}

@@ -20,6 +20,9 @@ import {
   UnnestBlockButton
 } from '@blocknote/react'
 import { TranslateButton } from './TranslateButton'
+import { AnalyzeButton } from './AnalyzeButton'
+import { ContinueButton } from './ContinueButton'
+import { RewriteButton } from './RewriteButton'
 
 interface EditorProps {
   currentFolder?: string
@@ -312,6 +315,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 <FormattingToolbar>
                   <BlockTypeSelect key="blockTypeSelect" />
                   <TranslateButton key="translateButton" />
+                  <AnalyzeButton key="analyzeButton" />
+                  <ContinueButton key="continueButton" />
+                  <RewriteButton key="rewriteButton" />
                   <FileCaptionButton key="fileCaptionButton" />
                   <FileReplaceButton key="replaceFileButton" />
                   <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
