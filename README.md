@@ -12,7 +12,7 @@
 - 支持暗黑模式
 - 离线使用
 - 跨平台支持 (Windows, macOS, Linux)
-- 使用Cherry-markdown实现Markdown文档的阅览和编辑功能
+- 使用BlockNote实现Markdown文档的阅览和编辑功能
 - 本地文件系统存储笔记
   - 开发环境：笔记保存在项目根目录的 `markdown` 文件夹中
   - 生产环境：笔记保存在应用程序同级目录的 `markdown` 文件夹中
@@ -69,7 +69,6 @@ npm run electron:build
 
 - [Electron](https://www.electronjs.org/) - 跨平台桌面应用框架
 - [semi design](https://semi.design/) - 组件库
-- [Cherry-Markdown](https://github.com/Tencent/cherry-markdown/) - Markdown支持
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全的 JavaScript
 - [WebDAV](https://github.com/perry-mitchell/webdav-client) - WebDAV 客户端
 
