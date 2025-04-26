@@ -36,7 +36,7 @@ npm install
 ### 开发模式
 
 ```bash
-npm run electron:dev
+npm run start
 ```
 
 这将启动 React 开发服务器和 Electron 应用。
@@ -44,7 +44,7 @@ npm run electron:dev
 ### 构建应用
 
 ```bash
-npm run electron:build
+npm run build
 ```
 
 这将构建 React 应用和 Electron 应用，并生成可分发的安装包。
@@ -69,6 +69,7 @@ npm run electron:build
 
 - [Electron](https://www.electronjs.org/) - 跨平台桌面应用框架
 - [semi design](https://semi.design/) - 组件库
+- [Block Note](https://www.blocknotejs.org/) - 富文本编辑支持
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全的 JavaScript
 - [WebDAV](https://github.com/perry-mitchell/webdav-client) - WebDAV 客户端
 
