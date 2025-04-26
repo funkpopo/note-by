@@ -19,7 +19,7 @@ import {
   TextAlignButton,
   UnnestBlockButton
 } from '@blocknote/react'
-import { AIButton } from './AIButton'
+import { TranslateButton } from './TranslateButton'
 
 interface EditorProps {
   currentFolder?: string
@@ -311,8 +311,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               formattingToolbar={() => (
                 <FormattingToolbar>
                   <BlockTypeSelect key="blockTypeSelect" />
-                  {/* Add AI button */}
-                  <AIButton key="aiButton" />
+                  <TranslateButton key="translateButton" />
                   <FileCaptionButton key="fileCaptionButton" />
                   <FileReplaceButton key="replaceFileButton" />
                   <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
