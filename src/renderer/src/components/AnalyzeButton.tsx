@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { Button, Popover, Space, Spin, Typography } from '@douyinfe/semi-ui'
-import { IconPieChart2Stroked } from '@douyinfe/semi-icons'
+import { IconSearchStroked } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
+import { useTheme } from '../context/theme/useTheme'
 
 // AnalyzeButton component for BlockNote formatting toolbar
 export const AnalyzeButton: React.FC = () => {
   const editor = useBlockNoteEditor()
+  const { isDarkMode } = useTheme()
   const [loading, setLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -185,7 +187,7 @@ export const AnalyzeButton: React.FC = () => {
           padding: '4px 8px'
         }}
       >
-        <IconPieChart2Stroked />
+        <IconSearchStroked style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>
     </Popover>
   )

@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { Button, Popover, Space, Spin, Typography } from '@douyinfe/semi-ui'
-import { IconForward } from '@douyinfe/semi-icons'
+import { IconEditStroked } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
+import { useTheme } from '../context/theme/useTheme'
 
 // ContinueButton component for BlockNote formatting toolbar
 export const ContinueButton: React.FC = () => {
   const editor = useBlockNoteEditor()
+  const { isDarkMode } = useTheme()
   const [loading, setLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -259,7 +261,7 @@ export const ContinueButton: React.FC = () => {
           padding: '4px 8px'
         }}
       >
-        <IconForward />
+        <IconEditStroked style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>
     </Popover>
   )

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Button, Popover, Space, Spin, Typography, Select } from '@douyinfe/semi-ui'
-import { IconBulb } from '@douyinfe/semi-icons'
+import { IconLanguage } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
+import { useTheme } from '../context/theme/useTheme'
 
 // Language options for translation
 interface LanguageOption {
@@ -28,6 +29,7 @@ const SOURCE_LANGUAGE_OPTIONS: LanguageOption[] = [
 // TranslateButton component for BlockNote formatting toolbar
 export const TranslateButton: React.FC = () => {
   const editor = useBlockNoteEditor()
+  const { isDarkMode } = useTheme()
   const [loading, setLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -340,7 +342,7 @@ export const TranslateButton: React.FC = () => {
           padding: '4px 8px'
         }}
       >
-        <IconBulb />
+        <IconLanguage style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>
     </Popover>
   )
