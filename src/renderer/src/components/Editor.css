@@ -172,3 +172,51 @@ body[theme-mode='dark'] .editor-header {
   /* Other settings */
   --bn-border-radius: 6px;
 }
+
+/* Code block styling */
+.bn-code-block {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bn-code-block pre {
+  margin: 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+}
+
+.bn-code-block code {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Light theme code block */
+.bn-container[data-color-scheme='light'] .bn-code-block {
+  background-color: #f5f5f5;
+  border: 1px solid var(--semi-color-border);
+}
+
+/* Dark theme code block */
+.bn-container[data-color-scheme='dark'] .bn-code-block {
+  background-color: #2d2d2d;
+  border: 1px solid var(--semi-color-border);
+}
+
+/* Language selector styling */
+.bn-code-block-language-selector {
+  background-color: var(--bn-colors-menu-background);
+  color: var(--bn-colors-menu-text);
+  border: 1px solid var(--semi-color-border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* Code block toolbar */
+.bn-code-block-toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background-color: var(--bn-colors-menu-background);
+  border-bottom: 1px solid var(--semi-color-border);
+}

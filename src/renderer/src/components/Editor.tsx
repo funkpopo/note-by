@@ -5,6 +5,7 @@ import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
+import { codeBlock } from '@blocknote/code-block'
 import './Editor.css'
 import {
   BasicTextStyleButton,
@@ -89,11 +90,107 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // Create a new editor instance
   const editor = useCreateBlockNote({
-    // Provide at least one default paragraph block
+    // Enable code block syntax highlighting with configuration
+    codeBlock: {
+      ...codeBlock,
+      // Default language for new code blocks
+      defaultLanguage: 'javascript',
+      // Allow indenting with Tab key
+      indentLineWithTab: true,
+      // Define supported languages
+      supportedLanguages: {
+        javascript: {
+          name: 'JavaScript',
+          aliases: ['js']
+        },
+        typescript: {
+          name: 'TypeScript',
+          aliases: ['ts']
+        },
+        python: {
+          name: 'Python',
+          aliases: ['py']
+        },
+        java: {
+          name: 'Java'
+        },
+        csharp: {
+          name: 'C#',
+          aliases: ['cs']
+        },
+        cpp: {
+          name: 'C++',
+          aliases: ['c++', 'cpp']
+        },
+        go: {
+          name: 'Go'
+        },
+        rust: {
+          name: 'Rust',
+          aliases: ['rs']
+        },
+        php: {
+          name: 'PHP'
+        },
+        css: {
+          name: 'CSS'
+        },
+        html: {
+          name: 'HTML'
+        },
+        json: {
+          name: 'JSON'
+        },
+        xml: {
+          name: 'XML'
+        },
+        markdown: {
+          name: 'Markdown',
+          aliases: ['md']
+        },
+        sql: {
+          name: 'SQL'
+        },
+        bash: {
+          name: 'Bash',
+          aliases: ['sh', 'shell']
+        }
+      }
+    },
+    // Initial content with example
     initialContent: [
       {
         type: 'paragraph',
-        content: ''
+        content: [
+          {
+            type: 'text',
+            text: '请选择或创建一个Markdown文件开始编辑。你现在可以使用代码块功能了！',
+            styles: {}
+          }
+        ]
+      },
+      {
+        type: 'codeBlock',
+        props: {
+          language: 'javascript'
+        },
+        content: [
+          {
+            type: 'text',
+            text: '// 这是一个JavaScript代码块示例\nconst greeting = "Hello, world!";\nconsole.log(greeting);',
+            styles: {}
+          }
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: '点击代码块上方的JavaScript标签可以选择不同的编程语言。',
+            styles: {}
+          }
+        ]
       }
     ]
   })
@@ -103,7 +200,36 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     editor.replaceBlocks(editor.document, [
       {
         type: 'paragraph',
-        content: ''
+        content: [
+          {
+            type: 'text',
+            text: '请选择或创建一个Markdown文件开始编辑。你现在可以使用代码块功能了！',
+            styles: {}
+          }
+        ]
+      },
+      {
+        type: 'codeBlock',
+        props: {
+          language: 'javascript'
+        },
+        content: [
+          {
+            type: 'text',
+            text: '// 这是一个JavaScript代码块示例\nconst greeting = "Hello, world!";\nconsole.log(greeting);',
+            styles: {}
+          }
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: '点击代码块上方的JavaScript标签可以选择不同的编程语言。',
+            styles: {}
+          }
+        ]
       }
     ])
     setEditorContent('')
