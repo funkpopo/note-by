@@ -233,7 +233,7 @@ export async function generateContent(
   }
 }
 
-// SSE流式生成内容
+// 流式生成内容
 export async function streamGenerateContent(
   request: ContentGenerationRequest
 ): Promise<EventEmitter> {
@@ -273,56 +273,69 @@ export async function streamGenerateContent(
         baseURL: normalizedApiUrl
       })
 
-      let accumulatedContent = ''
+      try {
+        // 使用流式响应选项
+        const stream = await openai.chat.completions.create({
+          model: modelName,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          stream: true
+        })
 
-      // 使用流式响应
-      const stream = await openai.chat.completions.create({
-        model: modelName,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-        stream: true
-      })
+        // 用于累积完整响应
+        let fullContent = ''
 
-      // 处理每个流式响应块
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || ''
-        if (content) {
-          // 发送新的内容块
-          eventEmitter.emit('data', content)
-          accumulatedContent += content
+        // 处理流式响应
+        for await (const chunk of stream) {
+          try {
+            // 提取delta内容
+            const content = chunk.choices[0]?.delta?.content || ''
+
+            if (content) {
+              // 发送增量内容
+              eventEmitter.emit('data', content)
+              // 累积完整内容
+              fullContent += content
+            }
+          } catch (streamError) {
+            console.error('处理流式响应块时出错:', streamError)
+            // 继续处理下一个块，不中断整个流
+          }
         }
-      }
 
-      // 流式输出完成，发送完成事件
-      eventEmitter.emit('done', accumulatedContent)
-    } catch (error: unknown) {
-      console.error('流式内容生成失败:', error)
+        // 流结束，发送完成事件
+        eventEmitter.emit('done', fullContent)
+      } catch (apiError) {
+        console.error('AI API 流式请求失败:', apiError)
 
-      // 提取更友好的错误信息
-      let errorMessage = '生成失败'
+        // 提取更友好的错误信息
+        let errorMessage = '流式生成失败'
 
-      if (error instanceof Error) {
-        errorMessage += `: ${error.message}`
-      }
-
-      // 处理AI API的错误，它们可能有特定的结构
-      const apiError = error as { response?: { status?: number }; status?: number }
-      const statusCode = apiError.status || apiError.response?.status
-
-      if (statusCode) {
-        errorMessage += ` (HTTP 状态码: ${statusCode})`
-
-        // 为常见错误提供更具体的说明
-        if (statusCode === 404) {
-          errorMessage += '。可能是API URL不正确，请检查URL格式。'
-        } else if (statusCode === 401) {
-          errorMessage += '。API密钥可能无效或已过期。'
-        } else if (statusCode === 429) {
-          errorMessage += '。请求频率过高或达到API限制。'
+        if (apiError instanceof Error) {
+          errorMessage += `: ${apiError.message}`
         }
-      }
 
-      eventEmitter.emit('error', errorMessage)
+        // 处理API错误的状态码
+        const statusError = apiError as { response?: { status?: number }; status?: number }
+        const statusCode = statusError.status || statusError.response?.status
+
+        if (statusCode) {
+          errorMessage += ` (HTTP 状态码: ${statusCode})`
+
+          if (statusCode === 404) {
+            errorMessage += '。可能是API URL不正确，请检查URL格式。'
+          } else if (statusCode === 401) {
+            errorMessage += '。API密钥可能无效或已过期。'
+          } else if (statusCode === 429) {
+            errorMessage += '。请求频率过高或达到API限制。'
+          }
+        }
+
+        eventEmitter.emit('error', errorMessage)
+      }
+    } catch (error) {
+      console.error('流式生成内容时发生未知错误:', error)
+      eventEmitter.emit('error', '发生未知错误')
     }
   })()
 

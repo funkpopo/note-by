@@ -34,6 +34,29 @@ interface UpdatesAPI {
 // OpenAI API接口定义
 interface OpenAIAPI {
   testConnection: (apiConfig: ApiConfig) => Promise<{ success: boolean; message: string }>
+  generateContent: (request: {
+    apiKey: string
+    apiUrl: string
+    modelName: string
+    prompt: string
+    maxTokens?: number
+    stream?: boolean
+  }) => Promise<{ success: boolean; content?: string; error?: string }>
+
+  streamGenerateContent: (
+    request: {
+      apiKey: string
+      apiUrl: string
+      modelName: string
+      prompt: string
+      maxTokens?: number
+    },
+    callbacks: {
+      onData: (chunk: string) => void
+      onDone: (content: string) => void
+      onError: (error: string) => void
+    }
+  ) => Promise<{ success: boolean; streamId?: string; error?: string }>
 }
 
 // API配置管理接口定义

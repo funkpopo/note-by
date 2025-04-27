@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Button, Popover, Space, Spin, Typography, Select } from '@douyinfe/semi-ui'
+import React, { useState, useEffect, useRef } from 'react'
+import { Button, Popover, Spin, Typography, Select } from '@douyinfe/semi-ui'
 import { IconLanguage } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
@@ -32,9 +32,12 @@ export const TranslateButton: React.FC = () => {
   const { isDarkMode } = useTheme()
   const [loading, setLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState('')
+  const [streamingResponse, setStreamingResponse] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sourceLanguage, setSourceLanguage] = useState<string>('auto')
   const [targetLanguage, setTargetLanguage] = useState<string>('zh')
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // Load saved language preference
   useEffect(() => {
@@ -103,12 +106,15 @@ export const TranslateButton: React.FC = () => {
     setLoading(true)
     setError(null)
     setAiResponse('')
+    setStreamingResponse('')
+    setIsStreaming(true)
 
     try {
       const selectedText = await getSelectedText()
       if (!selectedText) {
         setError('请先选择一些文本')
         setLoading(false)
+        setIsStreaming(false)
         return
       }
 
@@ -128,6 +134,7 @@ export const TranslateButton: React.FC = () => {
       if (apiConfigs.length === 0) {
         setError('未配置AI模型，请先在设置中配置AI模型')
         setLoading(false)
+        setIsStreaming(false)
         return
       }
 
@@ -168,30 +175,55 @@ export const TranslateButton: React.FC = () => {
         }
       }
 
-      // Call AI service
-      const result = await window.api.openai.generateContent({
-        apiKey: apiConfig.apiKey,
-        apiUrl: apiConfig.apiUrl,
-        modelName: apiConfig.modelName,
-        prompt: prompt,
-        maxTokens: parseInt(apiConfig.maxTokens || '2000')
-      })
+      // 使用流式API
+      const result = await window.api.openai.streamGenerateContent(
+        {
+          apiKey: apiConfig.apiKey,
+          apiUrl: apiConfig.apiUrl,
+          modelName: apiConfig.modelName,
+          prompt: prompt,
+          maxTokens: parseInt(apiConfig.maxTokens || '2000')
+        },
+        {
+          onData: (chunk: string) => {
+            // 更新流式响应，添加新的文本块
+            setStreamingResponse((prev) => prev + chunk)
 
-      if (result.success && result.content) {
-        setAiResponse(result.content)
-      } else {
+            // 自动滚动到底部
+            if (contentRef.current) {
+              contentRef.current.scrollTop = contentRef.current.scrollHeight
+            }
+          },
+          onDone: (content: string) => {
+            // 完成时设置最终响应
+            setAiResponse(content)
+            setLoading(false)
+            setIsStreaming(false)
+          },
+          onError: (error: string) => {
+            setError(error)
+            setLoading(false)
+            setIsStreaming(false)
+          }
+        }
+      )
+
+      if (!result.success) {
         setError(result.error || '处理失败')
+        setLoading(false)
+        setIsStreaming(false)
       }
     } catch (err) {
       setError('AI处理出错：' + (err instanceof Error ? err.message : String(err)))
-    } finally {
       setLoading(false)
+      setIsStreaming(false)
     }
   }
 
   // Function to apply AI response to editor
   const applyAIResponse = (): void => {
-    if (!aiResponse) return
+    const responseToApply = aiResponse || streamingResponse
+    if (!responseToApply) return
 
     const selection = editor.getSelection()
     if (!selection) return
@@ -200,13 +232,14 @@ export const TranslateButton: React.FC = () => {
     const domSelection = window.getSelection()
     if (domSelection && !domSelection.isCollapsed) {
       // Simple replacement for text selection
-      const cleanResponse = aiResponse.trim()
+      const cleanResponse = responseToApply.trim()
 
       try {
-        // For partial text selection, insert the translated text directly
+        // For partial text selection, insert the rewritten text directly
         document.execCommand('insertText', false, cleanResponse)
         // Close popover
         setAiResponse('')
+        setStreamingResponse('')
         return
       } catch (err) {
         console.error('Error using execCommand:', err)
@@ -216,7 +249,7 @@ export const TranslateButton: React.FC = () => {
 
     // Fallback to BlockNote block replacement
     try {
-      editor.tryParseMarkdownToBlocks(aiResponse).then((blocks) => {
+      editor.tryParseMarkdownToBlocks(responseToApply).then((blocks) => {
         if (blocks && blocks.length > 0) {
           editor.replaceBlocks(selection.blocks, blocks)
         } else {
@@ -224,7 +257,7 @@ export const TranslateButton: React.FC = () => {
           editor.replaceBlocks(selection.blocks, [
             {
               type: 'paragraph',
-              content: aiResponse
+              content: responseToApply
             }
           ])
         }
@@ -235,6 +268,7 @@ export const TranslateButton: React.FC = () => {
 
     // Close popover by clearing response
     setAiResponse('')
+    setStreamingResponse('')
   }
 
   // Handle source language change
@@ -253,11 +287,66 @@ export const TranslateButton: React.FC = () => {
   const renderPopoverContent = (): React.ReactNode => {
     if (loading) {
       return (
-        <div style={{ padding: '12px', textAlign: 'center' }}>
-          <Spin size="small" />
-          <Typography.Text style={{ display: 'block', marginTop: '8px' }}>
-            AI正在处理...
-          </Typography.Text>
+        <div
+          style={{
+            padding: '12px',
+            minWidth: '300px',
+            maxWidth: '300px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <Spin size="small" />
+            <Typography.Text style={{ display: 'block', marginTop: '8px' }}>
+              AI正在{isStreaming ? '生成' : '处理'}...
+            </Typography.Text>
+          </div>
+
+          {isStreaming && streamingResponse && (
+            <div
+              ref={contentRef}
+              style={{
+                marginTop: '12px',
+                maxHeight: '300px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                padding: '8px',
+                border: '1px solid var(--semi-color-border)',
+                borderRadius: '4px',
+                backgroundColor: isDarkMode ? 'var(--semi-color-bg-1)' : 'var(--semi-color-bg-0)'
+              }}
+            >
+              <Typography.Paragraph
+                style={{ whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'break-word' }}
+              >
+                {streamingResponse}
+              </Typography.Paragraph>
+            </div>
+          )}
+
+          {isStreaming && streamingResponse && (
+            <div style={{ marginTop: '12px', textAlign: 'right' }}>
+              <Button
+                size="small"
+                type="tertiary"
+                onClick={() => {
+                  setLoading(false)
+                  setIsStreaming(false)
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                style={{ marginLeft: '8px' }}
+                onClick={applyAIResponse}
+              >
+                应用
+              </Button>
+            </div>
+          )}
         </div>
       )
     }
@@ -275,20 +364,45 @@ export const TranslateButton: React.FC = () => {
 
     if (aiResponse) {
       return (
-        <div style={{ padding: '12px', maxWidth: '300px' }}>
-          <Typography.Text
-            style={{ display: 'block', marginBottom: '8px', maxHeight: '150px', overflow: 'auto' }}
+        <div
+          style={{
+            padding: '12px',
+            minWidth: '300px',
+            maxWidth: '300px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div
+            style={{
+              maxHeight: '300px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              padding: '8px',
+              border: '1px solid var(--semi-color-border)',
+              borderRadius: '4px',
+              backgroundColor: isDarkMode ? 'var(--semi-color-bg-1)' : 'var(--semi-color-bg-0)'
+            }}
           >
-            {aiResponse}
-          </Typography.Text>
-          <Space>
-            <Button size="small" type="primary" onClick={applyAIResponse}>
-              应用
-            </Button>
+            <Typography.Paragraph
+              style={{ whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'break-word' }}
+            >
+              {aiResponse}
+            </Typography.Paragraph>
+          </div>
+          <div style={{ marginTop: '12px', textAlign: 'right' }}>
             <Button size="small" onClick={() => setAiResponse('')}>
               取消
             </Button>
-          </Space>
+            <Button
+              size="small"
+              type="primary"
+              style={{ marginLeft: '8px' }}
+              onClick={applyAIResponse}
+            >
+              应用
+            </Button>
+          </div>
         </div>
       )
     }
