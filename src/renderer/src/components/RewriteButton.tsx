@@ -85,12 +85,17 @@ export const RewriteButton: React.FC = () => {
       let prompt = ''
       const aiPrompts = (settings.aiPrompts as Record<string, string>) || {}
 
-      if (aiPrompts && typeof aiPrompts === 'object' && 'rewrite' in aiPrompts) {
+      if (
+        aiPrompts &&
+        typeof aiPrompts === 'object' &&
+        'rewrite' in aiPrompts &&
+        aiPrompts.rewrite.trim() !== ''
+      ) {
         // Replace placeholder with actual content
         prompt = aiPrompts.rewrite.replace('${content}', selectedText.trim())
       } else {
         // Default prompt for content rewriting
-        prompt = `重写以下内容，保持原意但改进表达，使其更流畅、更清晰：\n\n${selectedText.trim()}`
+        prompt = `Rewrite the following content, keeping the original meaning but improving the expression, making it more fluent and clear:\n\n${selectedText.trim()}`
       }
 
       // Call AI service

@@ -85,12 +85,17 @@ export const ContinueButton: React.FC = () => {
       let prompt = ''
       const aiPrompts = (settings.aiPrompts as Record<string, string>) || {}
 
-      if (aiPrompts && typeof aiPrompts === 'object' && 'continue' in aiPrompts) {
+      if (
+        aiPrompts &&
+        typeof aiPrompts === 'object' &&
+        'continue' in aiPrompts &&
+        aiPrompts.continue.trim() !== ''
+      ) {
         // Replace placeholder with actual content
         prompt = aiPrompts.continue.replace('${content}', selectedText.trim())
       } else {
         // Default prompt for content continuation
-        prompt = `继续以下内容，保持风格和逻辑连贯：\n\n${selectedText.trim()}`
+        prompt = `Continue the following content, keeping the style and logic consistent:\n\n${selectedText.trim()}`
       }
 
       // Call AI service

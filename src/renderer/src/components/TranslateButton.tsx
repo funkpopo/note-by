@@ -138,10 +138,34 @@ export const TranslateButton: React.FC = () => {
       let prompt = ''
       const textToTranslate = selectedText.trim()
 
-      if (sourceLanguage === 'auto') {
-        prompt = `Translate the following text to ${targetLanguage}. Output only the translation without explanations, notes, or original text:\n\n${textToTranslate}`
+      // Get translation prompt from settings or use default
+      const aiPrompts = (settings.aiPrompts as Record<string, string>) || {}
+
+      if (
+        aiPrompts &&
+        typeof aiPrompts === 'object' &&
+        'translate' in aiPrompts &&
+        aiPrompts.translate.trim() !== ''
+      ) {
+        // Replace placeholders with actual values
+        let customPrompt = aiPrompts.translate
+          .replace('${content}', textToTranslate)
+          .replace('${targetLanguage}', targetLanguage)
+
+        if (sourceLanguage === 'auto') {
+          customPrompt = customPrompt.replace('${sourceLanguage}', '自动检测')
+        } else {
+          customPrompt = customPrompt.replace('${sourceLanguage}', sourceLanguage)
+        }
+
+        prompt = customPrompt
       } else {
-        prompt = `Translate the following text from ${sourceLanguage} to ${targetLanguage}. Output only the translation without explanations, notes, or original text:\n\n${textToTranslate}`
+        // Use default prompt if no custom prompt is available
+        if (sourceLanguage === 'auto') {
+          prompt = `Translate the following text to ${targetLanguage}. Output only the translation without explanations, notes, or original text:\n\n${textToTranslate}`
+        } else {
+          prompt = `Translate the following text from ${sourceLanguage} to ${targetLanguage}. Output only the translation without explanations, notes, or original text:\n\n${textToTranslate}`
+        }
       }
 
       // Call AI service

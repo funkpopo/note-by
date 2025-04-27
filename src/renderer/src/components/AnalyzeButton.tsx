@@ -85,12 +85,17 @@ export const AnalyzeButton: React.FC = () => {
       let prompt = ''
       const aiPrompts = (settings.aiPrompts as Record<string, string>) || {}
 
-      if (aiPrompts && typeof aiPrompts === 'object' && 'analyze' in aiPrompts) {
+      if (
+        aiPrompts &&
+        typeof aiPrompts === 'object' &&
+        'analyze' in aiPrompts &&
+        aiPrompts.analyze.trim() !== ''
+      ) {
         // Replace placeholder with actual content
         prompt = aiPrompts.analyze.replace('${content}', selectedText.trim())
       } else {
         // Default prompt for content analysis
-        prompt = `分析以下内容，提供关键点、主题、情感倾向等分析：\n\n${selectedText.trim()}`
+        prompt = `Analyze the following content, providing key points, themes, and emotional倾向等分析：\n\n${selectedText.trim()}`
       }
 
       // Call AI service

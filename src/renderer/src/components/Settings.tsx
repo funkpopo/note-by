@@ -24,6 +24,7 @@ import {
   IconEdit,
   IconRefresh
 } from '@douyinfe/semi-icons'
+import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import { useTheme } from '../context/theme/useTheme'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
@@ -76,9 +77,7 @@ const Settings: React.FC = () => {
     translate: '',
     analyze: ''
   })
-  const [formApi, setFormApi] = useState<{
-    setValues: (values: Record<string, string>) => void
-  } | null>(null)
+  const [formApi, setFormApi] = useState<FormApi<AIPrompts> | null>(null)
   // 更新设置状态
   const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState(true)
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false)
@@ -738,7 +737,7 @@ const Settings: React.FC = () => {
                 在下面设置各种AI操作的提示模板，使用 ${'{content}'} 表示要处理的文本内容。
               </Paragraph>
 
-              <Form
+              <Form<AIPrompts>
                 labelPosition="top"
                 getFormApi={(api) => setFormApi(api)}
                 initValues={aiPrompts}
@@ -816,7 +815,7 @@ const Settings: React.FC = () => {
           </div>
         }
       >
-        <Form labelPosition="left" labelWidth={100}>
+        <Form<ApiConfig> labelPosition="left" labelWidth={100}>
           <Form.Input
             field="name"
             label="配置名称"
