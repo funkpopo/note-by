@@ -22,14 +22,21 @@ interface Window {
         modelName: string
       }) => Promise<{ success: boolean; message: string }>
 
-      // 生成内容
-      generateContent: (request: {
-        apiKey: string
-        apiUrl: string
-        modelName: string
-        prompt: string
-        maxTokens?: number
-      }) => Promise<{ success: boolean; content?: string; error?: string }>
+      // 流式生成内容
+      streamGenerateContent: (
+        request: {
+          apiKey: string
+          apiUrl: string
+          modelName: string
+          prompt: string
+          maxTokens?: number
+        },
+        callbacks: {
+          onData: (chunk: string) => void
+          onDone: (content: string) => void
+          onError: (error: string) => void
+        }
+      ) => Promise<{ success: boolean; streamId?: string; error?: string }>
     }
     // API配置管理
     api: {
