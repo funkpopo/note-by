@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Nav, Input, Typography, Tree, Toast } from '@douyinfe/semi-ui'
+import { Nav, Typography, Tree, Toast } from '@douyinfe/semi-ui'
 import {
   IconFolder,
   IconSetting,
-  IconSearch,
   IconDelete,
   IconFile,
   IconEdit,
@@ -35,7 +34,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
   const [selectedKeys, setSelectedKeys] = useState<string[]>(['Editor'])
-  const [searchValue, setSearchValue] = useState('')
   const [expandedKeys, setExpandedKeys] = useState<string[]>([])
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean
@@ -635,52 +633,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     }
   }
 
-  // 过滤树数据
-  const getFilteredTreeData = (): TreeNodeData[] => {
-    if (!searchValue) {
-      return convertNavItemsToTreeData(navItems)
-    }
-
-    // 存储需要展开的节点keys
-    const keysToExpand: string[] = []
-
-    // 递归过滤函数
-    const filterItems = (items: NavItem[]): NavItem[] => {
-      const result: NavItem[] = []
-
-      for (const item of items) {
-        // 检查当前项是否匹配
-        const matches = item.text.toLowerCase().includes(searchValue.toLowerCase())
-
-        // 过滤子项
-        const filteredChildren = item.items ? filterItems(item.items) : undefined
-
-        // 如果当前项匹配或有匹配的子项，则保留
-        if (matches || (filteredChildren && filteredChildren.length > 0)) {
-          // 如果是文件夹并且有匹配的子项，记录该文件夹需要展开
-          if (item.isFolder && ((filteredChildren && filteredChildren.length > 0) || matches)) {
-            keysToExpand.push(item.itemKey)
-          }
-
-          result.push({
-            ...item,
-            items: filteredChildren
-          })
-        }
-      }
-
-      return result
-    }
-
-    // 应用过滤并转换为Tree数据
-    const filteredData = convertNavItemsToTreeData(filterItems(navItems))
-
-    // 如果有搜索关键词，更新展开的节点状态
-    if (searchValue && keysToExpand.length > 0) {
-      setExpandedKeys(keysToExpand)
-    }
-
-    return filteredData
+  // 处理树节点展开/折叠事件
+  const handleTreeExpand = (expandedKeys: string[]): void => {
+    setExpandedKeys(expandedKeys)
   }
 
   // 打开确认对话框
@@ -728,11 +683,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
     traverse(items)
     return paths
-  }
-
-  // 处理树节点展开/折叠事件
-  const handleTreeExpand = (expandedKeys: string[]): void => {
-    setExpandedKeys(expandedKeys)
   }
 
   return (
@@ -860,25 +810,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         ref={secondaryNavRef}
         onContextMenu={handleEmptyAreaContextMenu}
       >
-        {/* 搜索框 */}
-        <div style={{ padding: '8px', borderBottom: '1px solid var(--semi-color-border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Input
-              prefix={<IconSearch />}
-              placeholder="搜索笔记..."
-              value={searchValue}
-              onChange={(value) => {
-                setSearchValue(value)
-                // 当清空搜索框时，重置展开状态
-                if (!value) {
-                  setExpandedKeys([])
-                }
-              }}
-              style={{ flex: 1 }}
-            />
-          </div>
-        </div>
-
         <div
           className="empty-area"
           style={{
@@ -890,7 +821,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           onClick={hideContextMenu} // 点击空白处隐藏右键菜单
         >
           <Tree
-            treeData={getFilteredTreeData()}
+            treeData={convertNavItemsToTreeData(navItems)}
             onSelect={handleTreeSelect}
             expandedKeys={expandedKeys}
             onExpand={handleTreeExpand}
@@ -915,7 +846,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 <Typography.Text>加载中...</Typography.Text>
               ) : (
                 <Typography.Text type="tertiary" className="empty-area">
-                  {searchValue ? '没有找到匹配的项目' : '暂无笔记'}
+                  暂无笔记
                 </Typography.Text>
               )
             }
