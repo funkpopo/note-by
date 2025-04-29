@@ -37,6 +37,11 @@
   flex-wrap: nowrap;
 }
 
+/* 添加模型选择下拉菜单的样式 */
+.editor-actions .semi-select {
+  margin-right: 8px;
+}
+
 .editor-actions .semi-button {
   margin-left: 8px;
 }
@@ -79,6 +84,11 @@ body[theme-mode='dark'] .editor-header {
   .editor-actions .semi-button {
     padding: 0 8px; /* 减小按钮内边距 */
   }
+
+  /* 在小屏幕上调整下拉菜单宽度 */
+  .editor-actions .semi-select {
+    width: 120px !important;
+  }
 }
 
 /* 当宽度非常小时，仅显示图标按钮 */
@@ -91,6 +101,11 @@ body[theme-mode='dark'] .editor-header {
     min-width: 28px;
     width: 28px;
     padding: 0;
+  }
+
+  /* 在极小屏幕上进一步调整下拉菜单 */
+  .editor-actions .semi-select {
+    width: 100px !important;
   }
 }
 

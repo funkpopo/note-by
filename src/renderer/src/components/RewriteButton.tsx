@@ -85,8 +85,17 @@ export const RewriteButton: React.FC = () => {
         return
       }
 
-      // Use the first API config
-      const apiConfig = apiConfigs[0]
+      // 获取从localStorage中存储的选中模型ID
+      const selectedModelId = window.localStorage.getItem('selectedModelId')
+
+      // 根据选中的模型ID获取API配置，如果未找到则使用第一个
+      let apiConfig = apiConfigs[0]
+      if (selectedModelId) {
+        const selectedConfig = apiConfigs.find((config) => config.id === selectedModelId)
+        if (selectedConfig) {
+          apiConfig = selectedConfig
+        }
+      }
 
       // Get rewrite prompt from settings or use default
       let prompt = ''

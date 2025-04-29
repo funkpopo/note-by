@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Button,
-  Form,
-  Toast,
-  Banner,
-  Space,
-  Typography,
-  Card,
-} from '@douyinfe/semi-ui'
+import { Button, Form, Toast, Banner, Space, Typography, Card } from '@douyinfe/semi-ui'
 import { IconUpload, IconDownload, IconSync } from '@douyinfe/semi-icons'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 
@@ -388,7 +380,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               type="password"
               rules={[{ required: true, message: '请输入密码' }]}
             />
-            
+
             <div style={{ marginTop: 16 }}>
               <Button loading={testLoading} onClick={handleTestConnection} type="primary">
                 测试连接

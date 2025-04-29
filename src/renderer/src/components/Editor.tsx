@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Typography, Button, Space, Toast, Spin } from '@douyinfe/semi-ui'
+import { Typography, Button, Space, Toast, Spin, Select } from '@douyinfe/semi-ui'
 import { IconSave } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
@@ -25,6 +25,17 @@ import { AnalyzeButton } from './AnalyzeButton'
 import { ContinueButton } from './ContinueButton'
 import { RewriteButton } from './RewriteButton'
 
+// 添加一个接口定义API配置
+interface ApiConfig {
+  id: string
+  name: string
+  apiKey: string
+  apiUrl: string
+  modelName: string
+  temperature?: string
+  maxTokens?: string
+}
+
 interface EditorProps {
   currentFolder?: string
   currentFile?: string
@@ -40,6 +51,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [editorKey, setEditorKey] = useState<string>('editor-0')
   const lastSavedContentRef = useRef<string>('')
   const lastLoadedFileRef = useRef<string | null>(null)
+
+  // 添加API配置和选中模型状态
+  const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([])
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
 
   // Create custom light theme with enhanced selection colors
   const customLightTheme: Theme = {
@@ -87,6 +102,28 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     light: customLightTheme,
     dark: customDarkTheme
   }
+
+  // 加载API配置
+  useEffect(() => {
+    const loadApiConfigs = async (): Promise<void> => {
+      try {
+        const settings = await window.api.settings.getAll()
+        if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
+          const configs = settings.apiConfigs as ApiConfig[]
+          setApiConfigs(configs)
+
+          // 如果有配置且没有选中的模型，默认选择第一个
+          if (configs.length > 0 && !selectedModelId) {
+            setSelectedModelId(configs[0].id)
+          }
+        }
+      } catch (error) {
+        console.error('加载API配置失败:', error)
+      }
+    }
+
+    loadApiConfigs()
+  }, [selectedModelId])
 
   // Create a new editor instance
   const editor = useCreateBlockNote({
@@ -374,6 +411,21 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [editor])
 
+  // 获取当前选中模型的详细信息
+  const getSelectedModel = useCallback(() => {
+    if (!selectedModelId || apiConfigs.length === 0) return null
+    return apiConfigs.find((config) => config.id === selectedModelId) || null
+  }, [selectedModelId, apiConfigs])
+
+  // 将选中的模型信息存储到本地存储，以便AI功能组件获取
+  useEffect(() => {
+    const selectedModel = getSelectedModel()
+    if (selectedModel) {
+      // 将选中的模型信息设置到本地存储中，供AI功能组件使用
+      window.localStorage.setItem('selectedModelId', selectedModelId)
+    }
+  }, [selectedModelId, getSelectedModel])
+
   return (
     <div className="editor-container">
       <div className="editor-header">
@@ -387,6 +439,21 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         </div>
         <div className="editor-actions">
           <Space>
+            {apiConfigs.length > 0 && (
+              <Select
+                value={selectedModelId}
+                onChange={(value) => setSelectedModelId(value as string)}
+                style={{ width: 150 }}
+                placeholder="选择AI模型"
+                disabled={apiConfigs.length === 0}
+              >
+                {apiConfigs.map((config) => (
+                  <Select.Option key={config.id} value={config.id}>
+                    {config.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            )}
             {isEditing && (
               <Button
                 theme="solid"
