@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Nav, Typography, Tree, Toast } from '@douyinfe/semi-ui'
+import { Nav, Typography, Tree, Toast, Input } from '@douyinfe/semi-ui'
 import {
   IconFolder,
   IconSetting,
@@ -7,9 +7,11 @@ import {
   IconFile,
   IconEdit,
   IconPlus,
-  IconSync
+  IconSync,
+  IconSearch
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
+import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
 import ConfirmDialog from './ConfirmDialog'
 import RenameDialog from './RenameDialog'
 import CreateDialog from './CreateDialog'
@@ -89,6 +91,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     title: '',
     type: 'folder'
   })
+  const [searchText, setSearchText] = useState<string>('')
+  const [showFilteredOnly] = useState<boolean>(false)
+  const [filteredExpandedKeys, setFilteredExpandedKeys] = useState<string[]>([])
 
   const navWidth = '180px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
@@ -685,6 +690,32 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     return paths
   }
 
+  // 处理搜索结果及展开的节点
+  const handleSearch = (value: string, expandedKeys: string[]): void => {
+    console.log('搜索文本:', value)
+    console.log('自动展开的节点:', expandedKeys)
+    setFilteredExpandedKeys(expandedKeys)
+  }
+
+  // 自定义搜索框渲染
+  const renderSearch = (searchProps: SearchRenderProps): React.ReactNode => {
+    return (
+      <Input
+        {...searchProps}
+        prefix={<IconSearch />}
+        placeholder="搜索笔记和文件夹..."
+        size="small"
+        style={{ margin: '8px 0' }}
+        onChange={(value) => {
+          setSearchText(value)
+          if (searchProps.onChange) {
+            searchProps.onChange(value)
+          }
+        }}
+      />
+    )
+  }
+
   return (
     <>
       {/* 主导航栏 */}
@@ -820,10 +851,21 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           }}
           onClick={hideContextMenu} // 点击空白处隐藏右键菜单
         >
+          {showSecondaryNav && (
+            <div
+              style={{
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            ></div>
+          )}
+
           <Tree
             treeData={convertNavItemsToTreeData(navItems)}
             onSelect={handleTreeSelect}
-            expandedKeys={expandedKeys}
+            expandedKeys={searchText ? [...expandedKeys, ...filteredExpandedKeys] : expandedKeys}
             onExpand={handleTreeExpand}
             onContextMenu={(e, node): void => {
               // 通过节点的key判断是文件夹还是文件
@@ -854,6 +896,10 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               width: '100%',
               borderRadius: '3px'
             }}
+            filterTreeNode={true}
+            showFilteredOnly={showFilteredOnly}
+            searchRender={renderSearch}
+            onSearch={handleSearch}
           />
         </div>
 
