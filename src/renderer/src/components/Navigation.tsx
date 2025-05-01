@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Nav, Typography, Tree, Toast, Input } from '@douyinfe/semi-ui'
+import { Nav, Typography, Tree, Toast, Input, Button, Spin, Space } from '@douyinfe/semi-ui'
 import {
   IconFolder,
-  IconSetting,
-  IconDelete,
   IconFile,
+  IconSetting,
   IconEdit,
+  IconDelete,
   IconPlus,
   IconSync,
-  IconSearch
+  IconSearch,
+  IconClose
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
@@ -790,7 +791,31 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
                 // 显示同步中提示
                 const loadingToast = Toast.info({
-                  content: '正在同步中...',
+                  content: (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Space>
+                        <Spin />
+                        <span>正在同步中...</span>
+                      </Space>
+                      <Button 
+                        type="danger" 
+                        theme="borderless" 
+                        icon={<IconClose />} 
+                        size="small"
+                        onClick={async (): Promise<void> => {
+                          try {
+                            // 发送取消同步请求
+                            await window.api.webdav.cancelSync()
+                            Toast.info('已发送取消同步请求，正在中断...')
+                          } catch (error) {
+                            console.error('取消同步失败:', error)
+                          }
+                        }}
+                      >
+                        取消
+                      </Button>
+                    </div>
+                  ),
                   duration: 0 // 不自动关闭
                 })
 
@@ -809,6 +834,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 if (result.success) {
                   const message = `同步成功`
                   Toast.success(message)
+                } else if (result.cancelled) {
+                  Toast.warning('同步已被中断')
                 } else {
                   Toast.error(`同步失败: ${result.message}`)
                 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Button, Form, Toast, Banner, Space, Typography, Card } from '@douyinfe/semi-ui'
-import { IconUpload, IconDownload, IconSync } from '@douyinfe/semi-icons'
+import { Button, Form, Toast, Banner, Space, Typography, Card, Spin } from '@douyinfe/semi-ui'
+import { IconUpload, IconDownload, IconSync, IconClose } from '@douyinfe/semi-icons'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 
 const { Text } = Typography
@@ -16,12 +16,15 @@ interface WebDAVConfig {
   syncDirection: 'localToRemote' | 'remoteToLocal' | 'bidirectional'
 }
 
+interface SyncCompleteCallback {
+  success: boolean
+  message: string
+  direction: 'upload' | 'download' | 'bidirectional'
+  cancelled?: boolean
+}
+
 interface WebDAVSettingsProps {
-  onSyncComplete?: (result: {
-    success: boolean
-    message: string
-    direction: 'upload' | 'download' | 'bidirectional'
-  }) => void
+  onSyncComplete?: (result: SyncCompleteCallback) => void
 }
 
 const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
@@ -239,7 +242,41 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       const values = (await formApi.validate()) as WebDAVConfig
       await saveConfig(values)
 
+      // 显示同步中提示，带取消按钮
+      const loadingToast = Toast.info({
+        content: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Space>
+              <Spin />
+              <span>正在同步中...</span>
+            </Space>
+            <Button 
+              type="danger" 
+              theme="borderless" 
+              icon={<IconClose />} 
+              size="small"
+              onClick={async (): Promise<void> => {
+                try {
+                  // 发送取消同步请求
+                  await window.api.webdav.cancelSync()
+                  Toast.info('已发送取消同步请求，正在中断...')
+                } catch (error) {
+                  console.error('取消同步失败:', error)
+                }
+              }}
+            >
+              取消
+            </Button>
+          </div>
+        ),
+        duration: 0 // 不自动关闭
+      })
+
       const result = await window.api.webdav.syncBidirectional(values)
+      
+      // 关闭加载提示
+      Toast.close(loadingToast)
+
       if (result.success) {
         const message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件`
         Toast.success(message)
@@ -254,6 +291,23 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
             success: true,
             message,
             direction: 'bidirectional'
+          })
+        }
+      } else if (result.cancelled) {
+        const message = '同步已被中断'
+        Toast.warning(message)
+        setSyncStatus({
+          show: true,
+          type: 'warning',
+          message
+        })
+
+        if (onSyncComplete) {
+          onSyncComplete({
+            success: false,
+            message,
+            direction: 'bidirectional',
+            cancelled: true
           })
         }
       } else {

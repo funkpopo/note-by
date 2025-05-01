@@ -4,6 +4,24 @@ import * as path from 'path'
 import * as crypto from 'crypto'
 import * as fsTypes from 'fs'
 
+// 同步取消标志
+let isSyncCancelled = false
+
+// 重置取消标志
+export function resetSyncCancellation(): void {
+  isSyncCancelled = false
+}
+
+// 设置取消标志
+export function cancelSync(): void {
+  isSyncCancelled = true
+}
+
+// 检查是否取消同步
+function checkSyncCancelled(): boolean {
+  return isSyncCancelled
+}
+
 // 更新WebDAV配置接口，使其与settings.ts中的兼容
 export interface WebDAVConfig {
   url: string
@@ -425,7 +443,11 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
   failed: number
   skippedUpload: number
   skippedDownload: number
+  cancelled?: boolean
 }> {
+  // 重置取消标志
+  resetSyncCancellation()
+
   if (!webdavClient) {
     const initResult = initWebDAVClient(config)
     if (!initResult) {
@@ -470,6 +492,11 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
     // 递归同步函数 - 整合了双向同步
     async function syncDirectoryBidirectional(localDir: string, remoteDir: string): Promise<void> {
+      // 检查是否取消同步
+      if (checkSyncCancelled()) {
+        throw new Error('用户取消了同步')
+      }
+
       // 确保远程目录存在
       await ensureRemoteDirectory(remoteDir)
 
@@ -492,6 +519,11 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
       // 3. 处理远程文件 (远程 -> 本地)
       for (const remoteEntry of remoteFiles) {
+        // 检查是否取消同步
+        if (checkSyncCancelled()) {
+          throw new Error('用户取消了同步')
+        }
+
         const remoteFilename = path.basename(remoteEntry.filename)
         const remoteFullPath = remoteEntry.filename
         const localFullPath = path.join(localDir, remoteFilename)
@@ -574,6 +606,11 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
       // 4. 处理剩余的本地文件 (本地 -> 远程)
       for (const [filename, entry] of localEntriesMap.entries()) {
+        // 检查是否取消同步
+        if (checkSyncCancelled()) {
+          throw new Error('用户取消了同步')
+        }
+
         const localFullPath = path.join(localDir, filename)
         const remoteFullPath = path.join(remoteDir, filename).replace(/\\/g, '/')
 
@@ -609,6 +646,21 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
     }
   } catch (error) {
     console.error('双向同步失败:', error)
+    
+    // 检查是否是因为用户取消而失败
+    if (String(error).includes('用户取消了同步')) {
+      return {
+        success: false,
+        message: '同步已被用户取消',
+        uploaded,
+        downloaded,
+        failed,
+        skippedUpload,
+        skippedDownload,
+        cancelled: true
+      }
+    }
+    
     return {
       success: false,
       message: `双向同步失败: ${error}`,

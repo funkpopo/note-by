@@ -17,7 +17,8 @@ import {
   testWebDAVConnection,
   syncLocalToRemote,
   syncRemoteToLocal,
-  syncBidirectional
+  syncBidirectional,
+  cancelSync
 } from './webdav'
 import axios from 'axios'
 
@@ -51,6 +52,7 @@ const IPC_CHANNELS = {
   SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
+  CANCEL_SYNC: 'webdav:cancel-sync',
   CHECK_FOR_UPDATES: 'app:check-for-updates'
 }
 
@@ -779,6 +781,17 @@ app.whenReady().then(() => {
         downloaded: 0,
         failed: 0
       }
+    }
+  })
+
+  // 取消同步
+  ipcMain.handle(IPC_CHANNELS.CANCEL_SYNC, async () => {
+    try {
+      cancelSync()
+      return { success: true, message: '已发送取消同步请求' }
+    } catch (error) {
+      console.error('取消同步失败:', error)
+      return { success: false, message: `取消同步失败: ${error}` }
     }
   })
 

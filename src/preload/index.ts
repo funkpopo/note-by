@@ -41,7 +41,8 @@ const IPC_CHANNELS = {
   SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
-  CHECK_FOR_UPDATES: 'app:check-for-updates'
+  CHECK_FOR_UPDATES: 'app:check-for-updates',
+  CANCEL_SYNC: 'webdav:cancel-sync'
 }
 
 // 内容生成请求接口
@@ -316,7 +317,14 @@ const api = {
       uploaded: number
       downloaded: number
       failed: number
-    }> => ipcRenderer.invoke(IPC_CHANNELS.SYNC_BIDIRECTIONAL, config)
+      cancelled?: boolean
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SYNC_BIDIRECTIONAL, config),
+    
+    // 取消同步
+    cancelSync: (): Promise<{
+      success: boolean
+      message: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CANCEL_SYNC)
   }
 }
 

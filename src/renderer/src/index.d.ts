@@ -94,5 +94,68 @@ interface Window {
         fileName: string
       ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
     }
+    webdav: {
+      testConnection: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+      }) => Promise<{ success: boolean; message: string }>
+      syncLocalToRemote: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+        localPath?: string
+      }) => Promise<{
+        success: boolean
+        message: string
+        uploaded: number
+        failed: number
+      }>
+      syncRemoteToLocal: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+        localPath?: string
+      }) => Promise<{
+        success: boolean
+        message: string
+        downloaded: number
+        failed: number
+      }>
+      syncBidirectional: (config: {
+        url: string
+        username: string
+        password: string
+        remotePath: string
+        localPath?: string
+      }) => Promise<{
+        success: boolean
+        message: string
+        uploaded: number
+        downloaded: number
+        failed: number
+        cancelled?: boolean
+      }>
+      cancelSync: () => Promise<{
+        success: boolean
+        message: string
+      }>
+    }
+    system: {
+      diagnoseEnvironment: () => Promise<{
+        success: boolean
+        systemInfo: {
+          os: string
+          arch: string
+          electronVersion: string
+          nodeVersion: string
+          chromiumVersion: string
+        }
+        error?: string
+      }>
+    }
   }
 }
