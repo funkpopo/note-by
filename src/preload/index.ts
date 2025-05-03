@@ -319,7 +319,7 @@ const api = {
       failed: number
       cancelled?: boolean
     }> => ipcRenderer.invoke(IPC_CHANNELS.SYNC_BIDIRECTIONAL, config),
-    
+
     // 取消同步
     cancelSync: (): Promise<{
       success: boolean

@@ -792,15 +792,21 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 // 显示同步中提示
                 const loadingToast = Toast.info({
                   content: (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
                       <Space>
                         <Spin />
                         <span>正在同步中...</span>
                       </Space>
-                      <Button 
-                        type="danger" 
-                        theme="borderless" 
-                        icon={<IconClose />} 
+                      <Button
+                        type="danger"
+                        theme="borderless"
+                        icon={<IconClose />}
                         size="small"
                         onClick={async (): Promise<void> => {
                           try {

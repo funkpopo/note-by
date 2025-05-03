@@ -250,10 +250,10 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               <Spin />
               <span>正在同步中...</span>
             </Space>
-            <Button 
-              type="danger" 
-              theme="borderless" 
-              icon={<IconClose />} 
+            <Button
+              type="danger"
+              theme="borderless"
+              icon={<IconClose />}
               size="small"
               onClick={async (): Promise<void> => {
                 try {
@@ -273,7 +273,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       })
 
       const result = await window.api.webdav.syncBidirectional(values)
-      
+
       // 关闭加载提示
       Toast.close(loadingToast)
 

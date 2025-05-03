@@ -646,7 +646,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
     }
   } catch (error) {
     console.error('双向同步失败:', error)
-    
+
     // 检查是否是因为用户取消而失败
     if (String(error).includes('用户取消了同步')) {
       return {
@@ -660,7 +660,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
         cancelled: true
       }
     }
-    
+
     return {
       success: false,
       message: `双向同步失败: ${error}`,

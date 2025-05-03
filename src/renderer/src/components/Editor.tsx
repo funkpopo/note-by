@@ -24,6 +24,7 @@ import { TranslateButton } from './TranslateButton'
 import { AnalyzeButton } from './AnalyzeButton'
 import { ContinueButton } from './ContinueButton'
 import { RewriteButton } from './RewriteButton'
+import CreateDialog from './CreateDialog'
 
 // 添加一个接口定义API配置
 interface ApiConfig {
@@ -426,6 +427,49 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [selectedModelId, getSelectedModel])
 
+  const [showCreateDialog, setShowCreateDialog] = useState<boolean>(false)
+  const [createDialogType, setCreateDialogType] = useState<'folder' | 'note'>('note')
+  const [availableFolders, setAvailableFolders] = useState<string[]>(['default'])
+
+  // Load available folders for the create dialog
+  useEffect(() => {
+    const loadFolders = async (): Promise<void> => {
+      try {
+        const result = await window.api.markdown.getFolders()
+        if (result.success && result.folders && result.folders.length > 0) {
+          setAvailableFolders(result.folders)
+        } else {
+          // Ensure we always have at least the default folder
+          setAvailableFolders(['default'])
+        }
+      } catch (error) {
+        console.error('加载文件夹列表失败:', error)
+        setAvailableFolders(['default'])
+      }
+    }
+
+    loadFolders()
+  }, [])
+
+  // Function to open file browser
+  const handleOpenFileBrowser = useCallback(() => {
+    // Trigger click on the first folder item in sidebar
+    const folderElements = document.querySelectorAll('[data-key^="folder:"]')
+    if (folderElements && folderElements.length > 0) {
+      // Find the first folder and simulate click to expand it
+      const firstFolder = folderElements[0] as HTMLElement
+      firstFolder.click()
+    } else {
+      Toast.info('未找到可用的文件夹，请先创建一个文件夹')
+    }
+  }, [])
+
+  // Function to open create dialog
+  const handleOpenCreateFile = useCallback(() => {
+    setCreateDialogType('note')
+    setShowCreateDialog(true)
+  }, [])
+
   return (
     <div className="editor-container">
       <div className="editor-header">
@@ -486,13 +530,139 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           <div
             style={{
               display: 'flex',
+              flexDirection: 'column',
               justifyContent: 'center',
               alignItems: 'center',
               height: '100%',
-              color: 'var(--semi-color-text-2)'
+              padding: '2rem',
+              color: 'var(--semi-color-text-2)',
+              textAlign: 'center'
             }}
           >
-            <Typography.Text type="secondary">请从左侧边栏选择一个文件</Typography.Text>
+            <div style={{ marginBottom: '2rem' }}>
+              <svg
+                width="120"
+                height="120"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z"
+                  stroke="var(--semi-color-primary)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M14 2V8H20"
+                  stroke="var(--semi-color-primary)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 15H15"
+                  stroke="var(--semi-color-primary)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 11H15"
+                  stroke="var(--semi-color-primary)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <Typography.Title
+              heading={3}
+              style={{ margin: '0 0 1rem 0', color: 'var(--semi-color-text-0)' }}
+            >
+              欢迎使用Markdown编辑器
+            </Typography.Title>
+            <Typography.Paragraph
+              style={{ fontSize: '16px', maxWidth: '500px', marginBottom: '1.5rem' }}
+            >
+              请从左侧边栏选择一个文件开始编辑，或者创建一个新的Markdown文件
+            </Typography.Paragraph>
+            <div
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                flexWrap: 'wrap',
+                justifyContent: 'center'
+              }}
+            >
+              <Button
+                theme="light"
+                onClick={handleOpenFileBrowser}
+                icon={
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M19 11H5M5 11L12 4M5 11L12 18"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                }
+              >
+                选择文件
+              </Button>
+              <Button
+                theme="solid"
+                onClick={handleOpenCreateFile}
+                icon={
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 5V19M5 12H19"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                }
+              >
+                创建文件
+              </Button>
+            </div>
+            <div
+              style={{
+                marginTop: '2rem',
+                padding: '1rem',
+                background: 'var(--semi-color-fill-0)',
+                borderRadius: '8px',
+                maxWidth: '500px'
+              }}
+            >
+              <Typography.Text strong style={{ marginBottom: '0.5rem', display: 'block' }}>
+                提示与快捷键:
+              </Typography.Text>
+              <ul style={{ textAlign: 'left', margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+                <li>
+                  使用 <Typography.Text code>Ctrl+S</Typography.Text> 保存文件
+                </li>
+                <li>支持代码块高亮和Markdown格式化</li>
+                <li>可以使用AI功能辅助内容创作</li>
+              </ul>
+            </div>
           </div>
         ) : (
           <BlockNoteView
@@ -531,6 +701,41 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           </BlockNoteView>
         )}
       </div>
+
+      {showCreateDialog && (
+        <CreateDialog
+          visible={showCreateDialog}
+          title={createDialogType === 'folder' ? '创建文件夹' : '创建笔记'}
+          type={createDialogType}
+          folders={availableFolders}
+          onCancel={() => setShowCreateDialog(false)}
+          onConfirm={async (name, folder) => {
+            try {
+              // Create markdown file
+              if (createDialogType === 'note') {
+                const targetFolder = folder || 'default'
+                const filePath = `${targetFolder}/${name}.md`
+                const result = await window.api.markdown.save(filePath, '# ' + name)
+
+                if (result.success) {
+                  Toast.success('创建文件成功')
+                  // Notify parent to refresh file list
+                  if (onFileChanged) {
+                    onFileChanged()
+                  }
+                } else {
+                  Toast.error(`创建失败: ${result.error}`)
+                }
+              }
+            } catch (error) {
+              console.error('创建文件失败:', error)
+              Toast.error('创建文件失败')
+            } finally {
+              setShowCreateDialog(false)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
