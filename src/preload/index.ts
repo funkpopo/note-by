@@ -182,7 +182,10 @@ const api = {
       hasUpdate: boolean
       latestVersion: string
       currentVersion: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.CHECK_FOR_UPDATES),
+      error?: string
+    }> => {
+      return ipcRenderer.invoke(IPC_CHANNELS.CHECK_FOR_UPDATES)
+    },
     // 监听更新通知
     onUpdateAvailable: (
       callback: (updateInfo: { latestVersion: string; currentVersion: string }) => void

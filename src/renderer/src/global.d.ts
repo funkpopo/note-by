@@ -58,6 +58,7 @@ interface Window {
         hasUpdate: boolean
         latestVersion: string
         currentVersion: string
+        error?: string
       }>
       // 监听更新通知
       onUpdateAvailable: (

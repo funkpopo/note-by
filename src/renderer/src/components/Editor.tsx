@@ -451,19 +451,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     loadFolders()
   }, [])
 
-  // Function to open file browser
-  const handleOpenFileBrowser = useCallback(() => {
-    // Trigger click on the first folder item in sidebar
-    const folderElements = document.querySelectorAll('[data-key^="folder:"]')
-    if (folderElements && folderElements.length > 0) {
-      // Find the first folder and simulate click to expand it
-      const firstFolder = folderElements[0] as HTMLElement
-      firstFolder.click()
-    } else {
-      Toast.info('未找到可用的文件夹，请先创建一个文件夹')
-    }
-  }, [])
-
   // Function to open create dialog
   const handleOpenCreateFile = useCallback(() => {
     setCreateDialogType('note')
@@ -514,7 +501,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', height: 'calc(100% - 60px)' }}>
+      <div
+        style={{
+          flex: 1,
+          overflow: currentFile ? 'auto' : 'hidden',
+          height: 'calc(100% - 60px)'
+        }}
+      >
         {isLoading ? (
           <div
             style={{
@@ -541,8 +534,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           >
             <div style={{ marginBottom: '2rem' }}>
               <svg
-                width="120"
-                height="120"
+                width="80"
+                height="80"
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -577,12 +570,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 />
               </svg>
             </div>
-            <Typography.Title
-              heading={3}
-              style={{ margin: '0 0 1rem 0', color: 'var(--semi-color-text-0)' }}
-            >
-              欢迎使用Markdown编辑器
-            </Typography.Title>
             <Typography.Paragraph
               style={{ fontSize: '16px', maxWidth: '500px', marginBottom: '1.5rem' }}
             >
@@ -596,29 +583,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 justifyContent: 'center'
               }}
             >
-              <Button
-                theme="light"
-                onClick={handleOpenFileBrowser}
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M19 11H5M5 11L12 4M5 11L12 18"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                }
-              >
-                选择文件
-              </Button>
               <Button
                 theme="solid"
                 onClick={handleOpenCreateFile}

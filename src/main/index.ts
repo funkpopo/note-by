@@ -21,6 +21,8 @@ import {
   cancelSync
 } from './webdav'
 import axios from 'axios'
+import http from 'http'
+import https from 'https'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -183,13 +185,77 @@ async function checkForUpdates(): Promise<{
   hasUpdate: boolean
   latestVersion: string
   currentVersion: string
+  error?: string
 }> {
   try {
     const currentVersion = app.getVersion()
-    const response = await axios.get(GITHUB_RELEASES_URL)
 
-    if (response.status !== 200) {
-      throw new Error(`GitHub API responded with status: ${response.status}`)
+    // 基本请求配置
+    const requestConfig = {
+      timeout: 10000, // 10秒超时
+      headers: {
+        'User-Agent': `note-by/${currentVersion}`
+      }
+    }
+
+    let response
+    let directConnectionError: Error | null = null
+
+    try {
+      // 首先尝试使用系统代理（如果有）
+      response = await axios.get(GITHUB_RELEASES_URL, requestConfig)
+    } catch (proxyError) {
+      console.warn('使用系统代理检查更新失败，尝试直接连接:', proxyError)
+
+      // 临时修改环境变量，以便proxy-from-env不使用系统代理
+      const originalHttpProxy = process.env.HTTP_PROXY
+      const originalHttpsProxy = process.env.HTTPS_PROXY
+      const originalNoProxy = process.env.NO_PROXY
+
+      // 清除代理环境变量
+      delete process.env.HTTP_PROXY
+      delete process.env.HTTPS_PROXY
+      process.env.NO_PROXY = '*'
+
+      try {
+        // 使用直接连接
+        const httpAgent = new http.Agent({ keepAlive: true })
+        const httpsAgent = new https.Agent({
+          keepAlive: true,
+          rejectUnauthorized: true // 确保验证SSL证书
+        })
+
+        response = await axios.get(GITHUB_RELEASES_URL, {
+          ...requestConfig,
+          httpAgent,
+          httpsAgent,
+          proxy: false // 显式禁用代理
+        })
+      } catch (directError) {
+        // 保存直接连接的错误
+        directConnectionError =
+          directError instanceof Error ? directError : new Error(String(directError))
+        console.error('直接连接检查更新也失败:', directError)
+      } finally {
+        // 恢复原始环境变量
+        if (originalHttpProxy) process.env.HTTP_PROXY = originalHttpProxy
+        else delete process.env.HTTP_PROXY
+
+        if (originalHttpsProxy) process.env.HTTPS_PROXY = originalHttpsProxy
+        else delete process.env.HTTPS_PROXY
+
+        if (originalNoProxy) process.env.NO_PROXY = originalNoProxy
+        else delete process.env.NO_PROXY
+      }
+
+      // 如果直接连接也失败，抛出错误
+      if (directConnectionError) {
+        throw directConnectionError
+      }
+    }
+
+    if (!response || response.status !== 200) {
+      throw new Error(`GitHub API请求失败: ${response ? response.status : '无响应'}`)
     }
 
     const data = response.data as { tag_name: string }
@@ -208,7 +274,8 @@ async function checkForUpdates(): Promise<{
     return {
       hasUpdate: false,
       latestVersion: '',
-      currentVersion: app.getVersion()
+      currentVersion: app.getVersion(),
+      error: error instanceof Error ? error.message : String(error)
     }
   }
 }

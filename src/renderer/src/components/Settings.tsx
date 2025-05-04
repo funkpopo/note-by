@@ -50,26 +50,24 @@ interface AIPrompts {
   analyze: string
 }
 
+interface UpdateResult {
+  hasUpdate: boolean
+  latestVersion: string
+  currentVersion: string
+  error?: string
+}
+
 const Settings: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([])
-  const [currentConfig, setCurrentConfig] = useState<ApiConfig>({
-    id: '',
-    name: '',
-    apiKey: '',
-    apiUrl: '',
-    modelName: '',
-    temperature: '0.7',
-    maxTokens: '2000'
-  })
+  const [currentConfig, setCurrentConfig] = useState<ApiConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<
     Record<string, { success: boolean; message: string }>
   >({})
-  // 添加一个ref来存储定时器ID
   const testResultTimersRef = React.useRef<Record<string, NodeJS.Timeout>>({})
   const [aiPrompts, setAiPrompts] = useState<AIPrompts>({
     rewrite: '',
@@ -78,14 +76,9 @@ const Settings: React.FC = () => {
     analyze: ''
   })
   const [formApi, setFormApi] = useState<FormApi<AIPrompts> | null>(null)
-  // 更新设置状态
-  const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState(true)
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false)
-  const [updateResult, setUpdateResult] = useState<{
-    hasUpdate: boolean
-    latestVersion: string
-    currentVersion: string
-  } | null>(null)
+  const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState<boolean>(true)
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState<boolean>(false)
+  const [updateResult, setUpdateResult] = useState<UpdateResult | null>(null)
 
   // 加载所有设置
   useEffect(() => {
@@ -202,7 +195,7 @@ const Settings: React.FC = () => {
   const handleSaveConfig = async (): Promise<void> => {
     try {
       // 校验必填字段
-      if (!currentConfig.name.trim()) {
+      if (!currentConfig?.name.trim()) {
         Toast.error('请输入配置名称')
         return
       }
@@ -258,10 +251,13 @@ const Settings: React.FC = () => {
 
   // 更新当前编辑的配置
   const handleConfigChange = (key: keyof ApiConfig, value: string): void => {
-    setCurrentConfig((prev) => ({
-      ...prev,
-      [key]: value
-    }))
+    setCurrentConfig((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        [key]: value
+      }
+    })
   }
 
   // 测试连接
@@ -520,18 +516,42 @@ const Settings: React.FC = () => {
       setUpdateResult(null)
 
       const result = await window.api.updates.checkForUpdates()
-      setUpdateResult(result)
 
-      if (result.hasUpdate) {
+      // 检查是否有错误信息
+      if (result.error) {
+        // 有错误信息表示检查失败
+        Toast.error(`检查更新失败: ${result.error}`)
+        setUpdateResult({
+          hasUpdate: false,
+          latestVersion: '',
+          currentVersion: result.currentVersion,
+          error: result.error
+        })
+      } else if (result.hasUpdate) {
+        // 有更新
         Toast.info(`发现新版本: ${result.latestVersion}`)
+        setUpdateResult(result)
       } else if (result.latestVersion) {
+        // 已是最新版本
         Toast.info('当前已是最新版本')
+        setUpdateResult(result)
       } else {
-        Toast.error('检查更新失败')
+        // 检查失败，但没有详细错误信息
+        Toast.error('检查更新失败，请检查网络连接')
+        setUpdateResult({
+          ...result,
+          error: '无法连接到更新服务器'
+        })
       }
     } catch (error) {
       console.error('检查更新出错:', error)
       Toast.error('检查更新出错')
+      setUpdateResult({
+        hasUpdate: false,
+        latestVersion: '',
+        currentVersion: '',
+        error: error instanceof Error ? error.message : '未知错误'
+      })
     } finally {
       setIsCheckingUpdates(false)
     }
@@ -630,11 +650,17 @@ const Settings: React.FC = () => {
                     marginTop: 16,
                     padding: 12,
                     borderRadius: 6,
-                    backgroundColor: updateResult.hasUpdate
-                      ? 'rgba(0, 100, 250, 0.1)'
-                      : 'rgba(0, 180, 42, 0.1)',
+                    backgroundColor: updateResult.error
+                      ? 'rgba(255, 77, 79, 0.1)'
+                      : updateResult.hasUpdate
+                        ? 'rgba(0, 100, 250, 0.1)'
+                        : 'rgba(0, 180, 42, 0.1)',
                     border: `1px solid ${
-                      updateResult.hasUpdate ? 'rgba(0, 100, 250, 0.2)' : 'rgba(0, 180, 42, 0.2)'
+                      updateResult.error
+                        ? 'rgba(255, 77, 79, 0.2)'
+                        : updateResult.hasUpdate
+                          ? 'rgba(0, 100, 250, 0.2)'
+                          : 'rgba(0, 180, 42, 0.2)'
                     }`
                   }}
                 >
@@ -642,20 +668,28 @@ const Settings: React.FC = () => {
                     <Text
                       strong
                       style={{
-                        color: updateResult.hasUpdate ? '#0064fa' : '#00b42a'
+                        color: updateResult.error
+                          ? '#ff4d4f'
+                          : updateResult.hasUpdate
+                            ? '#0064fa'
+                            : '#00b42a'
                       }}
                     >
-                      {updateResult.hasUpdate
-                        ? `✓ 发现新版本: ${updateResult.latestVersion}`
-                        : '✓ 当前已是最新版本'}
+                      {updateResult.error
+                        ? `❌ 检查更新失败`
+                        : updateResult.hasUpdate
+                          ? `✓ 发现新版本: ${updateResult.latestVersion}`
+                          : '✓ 当前已是最新版本'}
                     </Text>
                   </div>
                   <Text style={{ marginTop: 4, fontSize: '13px' }}>
-                    {updateResult.hasUpdate
-                      ? `您当前的版本为 ${updateResult.currentVersion}，可以前往 GitHub 下载最新版本`
-                      : `当前版本: ${updateResult.currentVersion}`}
+                    {updateResult.error
+                      ? `错误信息: ${updateResult.error}`
+                      : updateResult.hasUpdate
+                        ? `您当前的版本为 ${updateResult.currentVersion}，可以前往 GitHub 下载最新版本`
+                        : `当前版本: ${updateResult.currentVersion}`}
                   </Text>
-                  {updateResult.hasUpdate && (
+                  {updateResult.hasUpdate && !updateResult.error && (
                     <div style={{ marginTop: 8 }}>
                       <Button
                         type="primary"
@@ -673,7 +707,7 @@ const Settings: React.FC = () => {
 
               <Divider />
               <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
-                更新检查会连接到GitHub查询最新版本信息
+                更新检查会连接GitHub查询最新版本信息，确保你可以访问GitHub
               </Paragraph>
             </Card>
 
@@ -820,7 +854,7 @@ const Settings: React.FC = () => {
             field="name"
             label="配置名称"
             placeholder="请输入配置名称，如OpenAI、Claude等"
-            initValue={currentConfig.name}
+            initValue={currentConfig?.name}
             onChange={(value) => handleConfigChange('name', value)}
             showClear
             required
@@ -829,7 +863,7 @@ const Settings: React.FC = () => {
             field="apiKey"
             label="API Key"
             placeholder="请输入API Key"
-            initValue={currentConfig.apiKey}
+            initValue={currentConfig?.apiKey}
             onChange={(value) => handleConfigChange('apiKey', value)}
             showClear
           />
@@ -837,7 +871,7 @@ const Settings: React.FC = () => {
             field="apiUrl"
             label="API URL"
             placeholder="请输入API URL，如https://api.openai.com"
-            initValue={currentConfig.apiUrl}
+            initValue={currentConfig?.apiUrl}
             onChange={(value) => handleConfigChange('apiUrl', value)}
             showClear
           />
@@ -845,7 +879,7 @@ const Settings: React.FC = () => {
             field="modelName"
             label="模型名称"
             placeholder="请输入模型名称，如gpt-3.5-turbo"
-            initValue={currentConfig.modelName}
+            initValue={currentConfig?.modelName}
             onChange={(value) => handleConfigChange('modelName', value)}
             showClear
           />
@@ -855,7 +889,7 @@ const Settings: React.FC = () => {
               <div style={{ width: '85%', marginRight: 10 }}>
                 <Form.Slider
                   field="temperature"
-                  initValue={parseFloat(currentConfig.temperature || '0.7')}
+                  initValue={parseFloat(currentConfig?.temperature || '0.7')}
                   onChange={(value) => handleConfigChange('temperature', (value || 0).toString())}
                   max={2}
                   min={0}
@@ -874,7 +908,7 @@ const Settings: React.FC = () => {
               <div style={{ width: '85%', marginRight: 10 }}>
                 <Form.Slider
                   field="maxTokens"
-                  initValue={parseInt(currentConfig.maxTokens || '2000')}
+                  initValue={parseInt(currentConfig?.maxTokens || '2000')}
                   onChange={(value) => handleConfigChange('maxTokens', (value || 100).toString())}
                   max={16000}
                   min={100}

@@ -25,6 +25,7 @@ interface UpdatesAPI {
     hasUpdate: boolean
     latestVersion: string
     currentVersion: string
+    error?: string
   }>
   onUpdateAvailable: (
     callback: (updateInfo: { latestVersion: string; currentVersion: string }) => void
