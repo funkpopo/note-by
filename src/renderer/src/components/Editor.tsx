@@ -24,6 +24,7 @@ import { TranslateButton } from './TranslateButton'
 import { AnalyzeButton } from './AnalyzeButton'
 import { ContinueButton } from './ContinueButton'
 import { RewriteButton } from './RewriteButton'
+import { ImageToolbarController } from './ImageToolbarController'
 import CreateDialog from './CreateDialog'
 
 // 添加一个接口定义API配置
@@ -194,6 +195,213 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           aliases: ['sh', 'shell']
         }
       }
+    },
+    // 添加uploadFile函数，用于处理文件上传
+    uploadFile: async (file: File): Promise<string> => {
+      try {
+        console.log('正在上传文件:', file.name)
+
+        // 确保有当前文件夹和文件
+        if (!currentFolder || !currentFile) {
+          console.log('未选择文件，使用根目录临时文件')
+          // 构造默认文件路径（使用纯文件名，不包含目录部分）
+          const filePath = 'temp_assets.md'
+
+          // 使用FileReader读取文件内容
+          const fileContent = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+              if (e.target?.result) {
+                resolve(e.target.result as string)
+              } else {
+                reject(new Error('读取文件失败'))
+              }
+            }
+            reader.onerror = () => reject(reader.error)
+            reader.readAsDataURL(file) // 读取为Data URL (base64格式)
+          })
+
+          // 通过IPC调用上传文件
+          const result = await window.api.markdown.uploadFile(filePath, fileContent, file.name)
+
+          if (!result.success) {
+            throw new Error(result.error || '文件上传失败')
+          }
+
+          console.log('文件上传成功，URL:', result.url)
+
+          // 确保URL格式正确
+          const imageUrl = result.url
+          // 记录实际路径信息，帮助调试
+          console.log('图片保存到:', imageUrl)
+
+          return imageUrl
+        }
+
+        // 构造文件路径（当前打开的markdown文件路径）
+        const filePath = `${currentFolder}/${currentFile}`
+
+        // 使用FileReader读取文件内容
+        const fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              resolve(e.target.result as string)
+            } else {
+              reject(new Error('读取文件失败'))
+            }
+          }
+          reader.onerror = () => reject(reader.error)
+          reader.readAsDataURL(file) // 读取为Data URL (base64格式)
+        })
+
+        // 通过IPC调用上传文件
+        const result = await window.api.markdown.uploadFile(filePath, fileContent, file.name)
+
+        if (!result.success) {
+          throw new Error(result.error || '文件上传失败')
+        }
+
+        // 将返回的本地文件路径转换为notebyfileprotocol://协议URL
+        // 注意：这里直接使用返回的url，因为我们会在主进程中修改它以包含协议前缀
+        console.log('文件上传成功，URL:', result.url)
+
+        // 确保URL格式正确
+        const imageUrl = result.url
+        // 记录实际路径信息，帮助调试
+        console.log('图片保存到:', imageUrl)
+
+        return imageUrl
+      } catch (error) {
+        console.error('文件上传失败:', error)
+        Toast.error(`文件上传失败: ${error instanceof Error ? error.message : String(error)}`)
+        throw error
+      }
+    },
+    // 添加 resolveFileUrl 函数以确保图片 URL 能正确解析
+    resolveFileUrl: async (url: string): Promise<string> => {
+      console.log('正在解析文件 URL:', url)
+
+      // 如果 URL 已经是 http/https/data 格式，直接返回
+      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+        return url
+      }
+
+      // 如果已经是 file:// 协议，尝试修复可能的编码问题
+      if (url.startsWith('file://')) {
+        try {
+          // 如果URL包含编码字符如%5C（反斜杠），尝试解码
+          if (url.includes('%')) {
+            try {
+              const decodedUrl = decodeURIComponent(url)
+              // 确保使用正斜杠
+              const normalizedUrl = decodedUrl.replace(/\\/g, '/')
+              console.log('解码并修正 file:// URL:', normalizedUrl)
+              return normalizedUrl
+            } catch (e) {
+              // 解码失败，尝试不解码的方式
+              console.warn('解码URL失败，尝试其他方式:', e)
+            }
+          }
+
+          // 确保使用正斜杠
+          const normalizedUrl = url.replace(/\\/g, '/')
+
+          // 修复Windows盘符路径格式
+          // 如果URL格式是 file:///D: 需要确保是 file:///D:/
+          const windowsDriveRegex = /file:\/\/\/([A-Za-z]:)\//
+          if (windowsDriveRegex.test(normalizedUrl)) {
+            return normalizedUrl
+          }
+
+          // 修复可能的错误格式，如 file:///D:Projects 变成 file:///D:/Projects
+          const badDrivePathRegex = /file:\/\/\/([A-Za-z]:)([^/])/
+          const match = badDrivePathRegex.exec(normalizedUrl)
+          if (match) {
+            const fixedUrl = normalizedUrl.replace(badDrivePathRegex, 'file:///$1/$2')
+            console.log('修复Windows盘符路径:', fixedUrl)
+            return fixedUrl
+          }
+
+          console.log('使用标准化的 file:// URL:', normalizedUrl)
+          return normalizedUrl
+        } catch (e) {
+          console.error('处理 file:// URL 时出错:', e)
+          return url
+        }
+      }
+
+      // 检查URL中是否包含 .assets 路径
+      if (url.includes('.assets/') || url.includes('.assets\\')) {
+        try {
+          // 确保使用正确的 file:// 路径格式
+          // 1. 移除前导斜杠
+          let cleanPath = url.replace(/^\/+/, '')
+          // 2. 替换所有反斜杠为正斜杠
+          cleanPath = cleanPath.replace(/\\/g, '/')
+          // 3. 处理盘符格式，确保是 file:///D:/path 格式
+          if (cleanPath.match(/^[A-Za-z]:/)) {
+            const fileUrl = `file:///${cleanPath}`
+            console.log('处理 .assets 资源文件绝对路径 URL:', fileUrl)
+            return fileUrl
+          } else {
+            // 没有盘符，可能是相对路径
+            const fileUrl = `file:///${cleanPath}`
+            console.log('处理 .assets 资源文件相对路径 URL:', fileUrl)
+            return fileUrl
+          }
+        } catch (e) {
+          console.error('处理 .assets 路径失败:', e)
+          return url
+        }
+      }
+
+      // 处理绝对路径 (包括 Windows 盘符路径)
+      if (url.match(/^[A-Za-z]:/) || url.startsWith('/')) {
+        try {
+          // 移除前导斜杠并统一使用正斜杠
+          let cleanPath = url.replace(/^\/+/, '')
+          cleanPath = cleanPath.replace(/\\/g, '/')
+          const fileUrl = `file:///${cleanPath}`
+          console.log('将绝对路径转换为标准 file:// URL:', fileUrl)
+          return fileUrl
+        } catch (e) {
+          console.error('处理绝对路径失败:', e)
+          return url
+        }
+      }
+
+      // 处理相对路径
+      if (url.startsWith('./') || url.startsWith('../')) {
+        try {
+          // 移除前导的 ./ 并转换为正斜杠格式
+          let cleanPath = url.replace(/^\.\//, '')
+          cleanPath = cleanPath.replace(/\\/g, '/')
+          const fileUrl = `file:///${cleanPath}`
+          console.log('将相对路径转换为 file:// URL:', fileUrl)
+          return fileUrl
+        } catch (e) {
+          console.error('处理相对路径失败:', e)
+          return url
+        }
+      }
+
+      // 默认情况：假设是不带协议的路径，添加 file:// 协议
+      if (!url.includes('://')) {
+        try {
+          // 转换为正斜杠格式
+          const cleanPath = url.replace(/\\/g, '/')
+          const fileUrl = `file:///${cleanPath}`
+          console.log('将普通路径转换为 file:// URL:', fileUrl)
+          return fileUrl
+        } catch (e) {
+          console.error('处理普通路径失败:', e)
+          return url
+        }
+      }
+
+      // 其他情况返回原始 URL
+      return url
     },
     // Initial content with example
     initialContent: [
@@ -634,6 +842,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             key={editorKey}
             theme={editorThemes}
             formattingToolbar={false}
+            filePanel={true}
+            linkToolbar={true}
             onChange={handleEditorChange}
             style={{ height: '100%' }}
           >
@@ -662,6 +872,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 </FormattingToolbar>
               )}
             />
+            <ImageToolbarController />
           </BlockNoteView>
         )}
       </div>

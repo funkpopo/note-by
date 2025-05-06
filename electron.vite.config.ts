@@ -15,6 +15,10 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
+    server: {
+      cors: true,
+      strictPort: true
+    },
     plugins: [react()]
   }
 })

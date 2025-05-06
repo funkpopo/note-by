@@ -23,6 +23,7 @@ import {
 import axios from 'axios'
 import http from 'http'
 import https from 'https'
+import { protocol } from 'electron'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -77,8 +78,15 @@ function getMarkdownFolderPath(): string {
       console.log('创建markdown根目录:', markdownPath)
       fsSync.mkdirSync(markdownPath, { recursive: true })
     }
+
+    // 在开发环境和生产环境都创建根目录下的.assets文件夹
+    const defaultAssetsFolderPath = path.join(markdownPath, '.assets')
+    if (!fsSync.existsSync(defaultAssetsFolderPath)) {
+      console.log('创建.assets文件夹:', defaultAssetsFolderPath)
+      fsSync.mkdirSync(defaultAssetsFolderPath, { recursive: true })
+    }
   } catch (error) {
-    console.error('创建markdown根目录失败:', error)
+    console.error('创建文件夹失败:', error)
   }
 
   return markdownPath
@@ -106,8 +114,22 @@ function createWindow(): void {
     icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      webSecurity: false, // 禁用 webSecurity 以允许加载本地文件
+      allowRunningInsecureContent: true // 允许运行不安全的内容
     }
+  })
+
+  // 设置内容安全策略，允许加载本地协议图片
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+        ]
+      }
+    })
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -308,6 +330,40 @@ async function checkUpdatesOnStartup(): Promise<void> {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron.note-by')
+
+  // 注册自定义协议，用于加载本地文件（特别是图片）
+  protocol.registerFileProtocol('notebyfileprotocol', (request, callback) => {
+    try {
+      // 解析URL路径
+      let url = decodeURI(request.url.substr(20)) // 移除 'notebyfileprotocol://'
+
+      // 清理URL，移除可能存在的 file:// 前缀
+      if (url.startsWith('file://')) {
+        url = url.substr(7)
+      }
+
+      // 修复格式：去掉多余的前导斜线
+      while (url.startsWith('//')) {
+        url = url.substr(1)
+      }
+
+      // 修复格式：确保Windows路径正确（处理斜杠问题）
+      const normalizedPath = path.normalize(url)
+
+      // 安全检查：确保路径在应用数据目录内（这里用markdownRoot作为基准）
+      const markdownRoot = getMarkdownFolderPath()
+      if (!normalizedPath.startsWith(markdownRoot)) {
+        console.error(`安全警告: 尝试访问应用数据目录外的文件: ${normalizedPath}`)
+        return callback({ error: -2 }) // 文件不存在或无权限
+      }
+
+      console.log(`通过notebyfileprotocol协议加载文件: ${normalizedPath}`)
+      callback({ path: normalizedPath })
+    } catch (error) {
+      console.error('处理notebyfileprotocol协议请求时出错:', error)
+      callback({ error: -2 })
+    }
+  })
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -909,8 +965,11 @@ app.whenReady().then(() => {
           ? filePath.substring(0, lastSeparatorIndex)
           : filePath.substring(0, Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\')))
 
-      // 为当前文档创建一个.assets资源目录（使用隐藏文件夹）
-      const assetsDir = path.join(mdDirectory, '.assets')
+      // 统一使用markdown/.assets目录存储上传的文件
+      const assetsDir = path.join(markdownRoot, '.assets')
+      console.log(`使用统一的资源目录: ${assetsDir}`)
+
+      // 确保资源目录存在
       await ensureMarkdownFolders(assetsDir)
 
       // 清理文件名中的非法字符，增强对特殊字符的处理
@@ -934,16 +993,45 @@ app.whenReady().then(() => {
       }
 
       // 计算绝对路径，用于在Markdown中引用图片
-      // 格式：![图片文件名称](绝对路径/.assets/对应的图片文件名)
       // 使用path.posix确保在Markdown中使用正斜杠
       const absoluteDirPath = path.resolve(markdownRoot, mdDirectory)
-      const markdownImagePath = `${absoluteDirPath}${path.posix.sep}.assets${path.posix.sep}${uniqueFileName}`
+      const assetRelativePath = `.assets${path.posix.sep}${uniqueFileName}`
+      const markdownImagePath = `${absoluteDirPath}${path.posix.sep}${assetRelativePath}`
 
       console.log(`文件上传成功: ${markdownImagePath}`)
 
+      // 确保路径使用正斜杠，这对于 file:// URL 是必需的
+      let fileUrl = ''
+
+      try {
+        // 从markdownRoot中提取盘符，精确构建路径
+        const assetsPath = path.join(markdownRoot, '.assets', uniqueFileName)
+
+        // 检测是否有Windows盘符 (如 D:\)
+        if (assetsPath.match(/^[A-Za-z]:/)) {
+          // 提取盘符 (如 "D:")
+          const driveLetter = assetsPath.substring(0, 2)
+
+          // 提取路径其余部分并转换为正斜杠格式
+          const pathPart = assetsPath.substring(2).replace(/\\/g, '/')
+
+          // 构建完整URL
+          fileUrl = `file:///${driveLetter}${pathPart}`
+        } else {
+          // 非Windows路径，直接转换斜杠
+          fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`
+        }
+
+        console.log(`修正后的文件URL: ${fileUrl}`)
+      } catch (error) {
+        console.error('生成文件URL时出错:', error)
+        // 使用备用方法生成URL
+        fileUrl = `file:///${markdownImagePath.replace(/\\/g, '/')}`
+      }
+
       return {
         success: true,
-        url: markdownImagePath,
+        url: fileUrl,
         path: savePath
       }
     } catch (error) {
