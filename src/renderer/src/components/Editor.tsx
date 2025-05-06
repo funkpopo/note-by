@@ -24,7 +24,6 @@ import { TranslateButton } from './TranslateButton'
 import { AnalyzeButton } from './AnalyzeButton'
 import { ContinueButton } from './ContinueButton'
 import { RewriteButton } from './RewriteButton'
-import { ImageToolbarController } from './ImageToolbarController'
 import CreateDialog from './CreateDialog'
 
 // 添加一个接口定义API配置
@@ -196,10 +195,44 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
       }
     },
+    // 自定义配置，通过CSS处理图片尺寸
+    domAttributes: {
+      // 添加自定义CSS类，用于设置图片尺寸
+      editor: {
+        class: 'custom-blocknote-editor'
+      }
+    },
     // 添加uploadFile函数，用于处理文件上传
     uploadFile: async (file: File): Promise<string> => {
       try {
         console.log('正在上传文件:', file.name)
+
+        // 创建图片元素以获取原始尺寸信息
+        const getImageDimensions = (
+          imageFile: File
+        ): Promise<{ width: number; height: number }> => {
+          return new Promise((resolve) => {
+            const img = new Image()
+            img.onload = () => {
+              // 获取原始尺寸
+              resolve({
+                width: img.naturalWidth,
+                height: img.naturalHeight
+              })
+              // 清理URL对象
+              URL.revokeObjectURL(img.src)
+            }
+            // 创建临时URL用于加载图片
+            img.src = URL.createObjectURL(imageFile)
+          })
+        }
+
+        // 如果是图片文件，获取其原始尺寸
+        let imageDimensions: { width: number; height: number } | null = null
+        if (file.type.startsWith('image/')) {
+          imageDimensions = await getImageDimensions(file)
+          console.log('原始图片尺寸:', imageDimensions)
+        }
 
         // 确保有当前文件夹和文件
         if (!currentFolder || !currentFile) {
@@ -290,22 +323,41 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 如果已经是 file:// 协议，尝试修复可能的编码问题
       if (url.startsWith('file://')) {
         try {
-          // 如果URL包含编码字符如%5C（反斜杠），尝试解码
-          if (url.includes('%')) {
+          // 首先解码URL以处理百分比编码字符
+          let decodedUrl = url
+          try {
+            // 尝试解码URL
+            decodedUrl = decodeURI(url)
+            console.log('解码URL:', decodedUrl)
+          } catch (e) {
+            // 解码失败，尝试不解码的方式
+            console.warn('解码URL失败，尝试其他方式:', e)
+          }
+
+          // 处理编码的反斜杠 %5C
+          if (url.includes('%5C')) {
             try {
-              const decodedUrl = decodeURIComponent(url)
-              // 确保使用正斜杠
-              const normalizedUrl = decodedUrl.replace(/\\/g, '/')
-              console.log('解码并修正 file:// URL:', normalizedUrl)
-              return normalizedUrl
+              // 先将%5C替换为/
+              const fixedUrl = url.replace(/%5C/g, '/')
+              console.log('解析文件 URL 中的 %5C:', url)
+              console.log('解码并修正 file:// URL:', fixedUrl)
+
+              // 检查是否包含双斜杠问题
+              const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
+              if (doubleDriveSlashRegex.test(fixedUrl)) {
+                const correctedUrl = fixedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
+                console.log('修正Windows盘符后的双斜杠问题:', correctedUrl)
+                return correctedUrl
+              }
+
+              return fixedUrl
             } catch (e) {
-              // 解码失败，尝试不解码的方式
-              console.warn('解码URL失败，尝试其他方式:', e)
+              console.error('处理编码的反斜杠失败:', e)
             }
           }
 
           // 确保使用正斜杠
-          const normalizedUrl = url.replace(/\\/g, '/')
+          const normalizedUrl = decodedUrl.replace(/\\/g, '/')
 
           // 修复Windows盘符路径格式
           // 如果URL格式是 file:///D: 需要确保是 file:///D:/
@@ -314,7 +366,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             return normalizedUrl
           }
 
-          // 修复可能的错误格式，如 file:///D:Projects 变成 file:///D:/Projects
+          // 修复Windows盘符后的双斜杠问题
+          const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
+          if (doubleDriveSlashRegex.test(normalizedUrl)) {
+            const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
+            console.log('修正Windows盘符后的双斜杠问题:', fixedUrl)
+            return fixedUrl
+          }
+
+          // 修复可能的错误格式
           const badDrivePathRegex = /file:\/\/\/([A-Za-z]:)([^/])/
           const match = badDrivePathRegex.exec(normalizedUrl)
           if (match) {
@@ -872,7 +932,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 </FormattingToolbar>
               )}
             />
-            <ImageToolbarController />
           </BlockNoteView>
         )}
       </div>

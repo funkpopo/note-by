@@ -120,13 +120,13 @@ function createWindow(): void {
     }
   })
 
-  // 设置内容安全策略，允许加载本地协议图片
+  // 设置内容安全策略，允许加载本地协议图片和外部网络图片
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'"
         ]
       }
     })
@@ -934,7 +934,27 @@ app.whenReady().then(() => {
       ) {
         try {
           // 如果是文件路径，尝试读取文件内容
-          const cleanPath = fileData.replace(/^file:\/\//i, '').replace(/["']/g, '')
+          let cleanPath = fileData.replace(/^file:\/\//i, '').replace(/["']/g, '')
+
+          // 处理可能的编码字符，如 %5C
+          try {
+            if (cleanPath.includes('%')) {
+              const decodedPath = decodeURI(cleanPath)
+              console.log('解码路径:', decodedPath)
+              cleanPath = decodedPath
+            }
+          } catch (decodeError) {
+            console.error('解码路径失败:', decodeError)
+            // 继续使用原始路径
+          }
+
+          // 确保Windows路径格式正确
+          if (cleanPath.match(/^[A-Za-z]:\/{2,}/)) {
+            // 修复Windows盘符后可能的多斜杠问题
+            cleanPath = cleanPath.replace(/^([A-Za-z]:)\/{2,}/, '$1/')
+            console.log('修复Windows盘符路径格式:', cleanPath)
+          }
+
           console.log(`检测到可能的文件路径，尝试读取: ${cleanPath}`)
 
           try {
@@ -1015,8 +1035,20 @@ app.whenReady().then(() => {
           // 提取路径其余部分并转换为正斜杠格式
           const pathPart = assetsPath.substring(2).replace(/\\/g, '/')
 
-          // 构建完整URL
-          fileUrl = `file:///${driveLetter}${pathPart}`
+          // 确保路径开始没有多余的斜杠，然后添加一个斜杠
+          const cleanPathPart = pathPart.replace(/^\/+/, '/')
+          if (cleanPathPart.startsWith('/')) {
+            // 构建完整URL，避免盘符后出现双斜杠
+            fileUrl = `file:///${driveLetter}${cleanPathPart}`
+          } else {
+            // 确保有一个斜杠分隔盘符和路径
+            fileUrl = `file:///${driveLetter}/${cleanPathPart.replace(/^\/+/, '')}`
+          }
+
+          console.log(`Windows路径处理 - 原始路径: ${assetsPath}`)
+          console.log(`Windows路径处理 - 盘符: ${driveLetter}, 路径部分: ${pathPart}`)
+          console.log(`Windows路径处理 - 清理后路径部分: ${cleanPathPart}`)
+          console.log(`Windows路径处理 - 最终URL: ${fileUrl}`)
         } else {
           // 非Windows路径，直接转换斜杠
           fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`

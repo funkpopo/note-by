@@ -235,3 +235,72 @@ body[theme-mode='dark'] .editor-header {
   background-color: var(--bn-colors-menu-background);
   border-bottom: 1px solid var(--semi-color-border);
 }
+
+/* 自定义图片块样式，解决固定宽度512px的问题 */
+.custom-blocknote-editor .bn-visual-media-wrapper {
+  /* 移除固定宽度设置，但保留width属性以支持图片调整大小功能 */
+  width: var(--media-width, auto) !important;
+  max-width: 100% !important;
+}
+
+.custom-blocknote-editor .bn-visual-media {
+  /* 图片使用原始尺寸 */
+  width: auto !important;
+  /* 但限制最大宽度，防止溢出 */
+  max-width: 100% !important;
+  /* 保持宽高比 */
+  height: auto !important;
+}
+
+/* 确保调整大小后的尺寸能够保存 - 修改以兼容BlockNote内部机制 */
+.custom-blocknote-editor .ProseMirror figure[data-image-resize] {
+  /* 使用media-width变量但不强制覆盖BlockNote的内部机制 */
+  max-width: 100% !important;
+}
+
+.custom-blocknote-editor .ProseMirror figure[data-image-resize] img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* 确保拖动调整大小的控件正常工作 */
+.custom-blocknote-editor .ProseMirror .media-resizer-handle {
+  display: block !important;
+}
+
+/* 新增：支持BlockNote图片调整大小功能的样式 */
+.custom-blocknote-editor .ProseMirror .bn-image-block {
+  position: relative;
+}
+
+.custom-blocknote-editor .ProseMirror .bn-image-block img {
+  max-width: 100% !important;
+}
+
+/* 支持图片调整大小操作 */
+.custom-blocknote-editor .ProseMirror .media-resizer {
+  display: block !important;
+}
+
+/* 新增：补充媒体调整大小相关的样式，解决ID查找问题 */
+.custom-blocknote-editor .ProseMirror .resizable-media {
+  position: relative;
+  max-width: 100%;
+}
+
+/* 确保图片调整大小控件正确显示 */
+.custom-blocknote-editor .ProseMirror .media-resizer .handle {
+  position: absolute;
+  display: block !important;
+  z-index: 10;
+}
+
+/* 确保调整大小时图片宽度能够被正确保存 */
+.custom-blocknote-editor .ProseMirror [data-node-view] {
+  max-width: 100%;
+}
+
+.custom-blocknote-editor .ProseMirror [data-node-view="image"] {
+  /* 确保节点视图宽度正确保存 */
+  width: var(--media-width, auto);
+}
