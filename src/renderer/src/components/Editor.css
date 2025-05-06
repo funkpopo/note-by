@@ -300,7 +300,7 @@ body[theme-mode='dark'] .editor-header {
   max-width: 100%;
 }
 
-.custom-blocknote-editor .ProseMirror [data-node-view="image"] {
+.custom-blocknote-editor .ProseMirror [data-node-view='image'] {
   /* 确保节点视图宽度正确保存 */
   width: var(--media-width, auto);
 }

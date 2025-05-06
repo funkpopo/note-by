@@ -108,11 +108,15 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       console.log('获取到的所有文件夹:', foldersResult.folders)
 
       if (foldersResult.success && foldersResult.folders) {
+        // 过滤掉.assets文件夹
+        const filteredFolders = foldersResult.folders.filter(
+          (folder) => !folder.includes('.assets')
+        )
         const folderItems: NavItem[] = []
         const folderMap: Record<string, NavItem> = {}
 
         // 处理每个文件夹，构建文件夹树
-        for (const folder of foldersResult.folders) {
+        for (const folder of filteredFolders) {
           // 获取文件夹中的文件
           const filesResult = await window.api.markdown.getFiles(folder)
           console.log(`文件夹[${folder}]中的文件:`, filesResult.files)
@@ -130,8 +134,19 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               const part = pathParts[i]
               const isLastPart = i === pathParts.length - 1
 
+              // 跳过.assets目录及其子目录
+              if (part === '.assets') {
+                break
+              }
+
               // 构建当前路径
               currentPath = currentPath ? `${currentPath}/${part}` : part
+
+              // 如果当前路径包含.assets，跳过此路径
+              if (currentPath.includes('.assets')) {
+                break
+              }
+
               const folderKey = `folder:${currentPath}`
 
               // 检查此文件夹是否已存在于映射中
@@ -192,6 +207,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               }
             }
           } else {
+            // 跳过.assets文件夹
+            if (folder === '.assets') {
+              continue
+            }
+
             // 处理普通文件夹（顶级文件夹）
             const folderItem: NavItem = {
               itemKey: `folder:${folder}`,
@@ -243,7 +263,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     if (showSecondaryNav && fileListVersion !== undefined) {
       loadMarkdownFolders()
     }
-  }, [fileListVersion])
+  }, [showSecondaryNav, fileListVersion])
 
   const handleCollapseChange = (status: boolean): void => {
     setCollapsed(status)
@@ -811,7 +831,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         onClick={async (): Promise<void> => {
                           try {
                             // 发送取消同步请求
-                            await window.api.webdav.cancelSync()
+                            await (
+                              window.api.webdav as unknown as {
+                                cancelSync: () => Promise<{ success: boolean; message: string }>
+                              }
+                            ).cancelSync()
                             Toast.info('已发送取消同步请求，正在中断...')
                           } catch (error) {
                             console.error('取消同步失败:', error)
@@ -840,7 +864,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 if (result.success) {
                   const message = `同步成功`
                   Toast.success(message)
-                } else if (result.cancelled) {
+                } else if ((result as { cancelled?: boolean }).cancelled) {
                   Toast.warning('同步已被中断')
                 } else {
                   Toast.error(`同步失败: ${result.message}`)
