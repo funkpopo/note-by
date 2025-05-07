@@ -60,7 +60,7 @@ interface UpdateResult {
 const Settings: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(true)
-  const [apiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
+  const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -114,8 +114,8 @@ const Settings: React.FC = () => {
       const settings = await window.api.settings.getAll()
 
       // 设置API配置
-      if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
-        setApiConfigs(settings.apiConfigs as AiApiConfig[])
+      if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
+        setApiConfigs(settings.AiApiConfigs as AiApiConfig[])
       }
 
       // 设置AI提示配置
@@ -324,7 +324,7 @@ const Settings: React.FC = () => {
 
   // 渲染配置卡片
   const renderApiConfigCards = (): React.ReactNode => {
-    if (apiConfigs.length === 0) {
+    if (AiApiConfigs.length === 0) {
       return (
         <Empty
           image={<IconPlus size="large" />}
@@ -336,7 +336,7 @@ const Settings: React.FC = () => {
 
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-        {apiConfigs.map((config) => (
+        {AiApiConfigs.map((config) => (
           <Card
             key={config.id}
             headerLine={true}

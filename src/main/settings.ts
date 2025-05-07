@@ -47,7 +47,7 @@ export interface WebDAVConfig {
 const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
-  apiConfigs: [] as AiApiConfig[],
+  AiApiConfigs: [] as AiApiConfig[],
   // 默认AI提示设置
   aiPrompts: {
     rewrite:
@@ -81,15 +81,15 @@ export function readSettings(): Record<string, unknown> {
       const settings = JSON.parse(data)
 
       // 解密API配置中的API Keys
-      if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
-        ;(settings.apiConfigs as AiApiConfig[]).forEach((config) => {
+      if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
+        ;(settings.AiApiConfigs as AiApiConfig[]).forEach((config) => {
           if (ENCRYPTED_KEYS.includes('apiKey') && config.apiKey && config.apiKey !== '') {
             config.apiKey = decrypt(config.apiKey)
           }
         })
       } else {
         // 如果不是数组或不存在，初始化为空数组
-        settings.apiConfigs = []
+        settings.AiApiConfigs = []
       }
 
       // 解密WebDAV密码
@@ -118,11 +118,11 @@ export function writeSettings(settings: Record<string, unknown>): void {
     // 在保存前加密API配置中的API Keys
     const settingsToSave = { ...updatedSettings }
 
-    if (settingsToSave.apiConfigs && Array.isArray(settingsToSave.apiConfigs)) {
-      ;(settingsToSave.apiConfigs as AiApiConfig[]) = JSON.parse(
-        JSON.stringify(settingsToSave.apiConfigs)
+    if (settingsToSave.AiApiConfigs && Array.isArray(settingsToSave.AiApiConfigs)) {
+      ;(settingsToSave.AiApiConfigs as AiApiConfig[]) = JSON.parse(
+        JSON.stringify(settingsToSave.AiApiConfigs)
       )
-      ;(settingsToSave.apiConfigs as AiApiConfig[]).forEach((config) => {
+      ;(settingsToSave.AiApiConfigs as AiApiConfig[]).forEach((config) => {
         if (config.apiKey && config.apiKey !== '') {
           config.apiKey = encrypt(config.apiKey)
         }

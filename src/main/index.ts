@@ -451,21 +451,21 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC_CHANNELS.SAVE_API_CONFIG, (_, AiApiConfig) => {
     try {
       const settings = readSettings()
-      const apiConfigs = (settings.apiConfigs as AiApiConfig[]) || []
+      const AiApiConfigs = (settings.AiApiConfigs as AiApiConfig[]) || []
 
       // 检查是否存在相同ID的配置
-      const index = apiConfigs.findIndex((config: AiApiConfig) => config.id === AiApiConfig.id)
+      const index = AiApiConfigs.findIndex((config: AiApiConfig) => config.id === AiApiConfig.id)
 
       if (index >= 0) {
         // 更新已存在的配置
-        apiConfigs[index] = AiApiConfig
+        AiApiConfigs[index] = AiApiConfig
       } else {
         // 添加新配置
-        apiConfigs.push(AiApiConfig)
+        AiApiConfigs.push(AiApiConfig)
       }
 
       // 保存到设置
-      settings.apiConfigs = apiConfigs
+      settings.AiApiConfigs = AiApiConfigs
       writeSettings(settings)
 
       return { success: true }
@@ -479,10 +479,10 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC_CHANNELS.DELETE_API_CONFIG, (_, configId) => {
     try {
       const settings = readSettings()
-      const apiConfigs = (settings.apiConfigs as AiApiConfig[]) || []
+      const AiApiConfigs = (settings.AiApiConfigs as AiApiConfig[]) || []
 
       // 过滤掉要删除的配置
-      settings.apiConfigs = apiConfigs.filter((config: AiApiConfig) => config.id !== configId)
+      settings.AiApiConfigs = AiApiConfigs.filter((config: AiApiConfig) => config.id !== configId)
       writeSettings(settings)
 
       return { success: true }

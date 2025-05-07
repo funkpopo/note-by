@@ -120,8 +120,8 @@ export const TranslateButton: React.FC = () => {
 
       // Get API settings from user configuration
       const settings = await window.api.settings.getAll()
-      const apiConfigs =
-        (settings.apiConfigs as Array<{
+      const AiApiConfigs =
+        (settings.AiApiConfigs as Array<{
           id: string
           name: string
           apiKey: string
@@ -131,7 +131,7 @@ export const TranslateButton: React.FC = () => {
           maxTokens?: string
         }>) || []
 
-      if (apiConfigs.length === 0) {
+      if (AiApiConfigs.length === 0) {
         setError('未配置AI模型，请先在设置中配置AI模型')
         setLoading(false)
         setIsStreaming(false)
@@ -142,9 +142,9 @@ export const TranslateButton: React.FC = () => {
       const selectedModelId = window.localStorage.getItem('selectedModelId')
 
       // 根据选中的模型ID获取API配置，如果未找到则使用第一个
-      let AiApiConfig = apiConfigs[0]
+      let AiApiConfig = AiApiConfigs[0]
       if (selectedModelId) {
-        const selectedConfig = apiConfigs.find((config) => config.id === selectedModelId)
+        const selectedConfig = AiApiConfigs.find((config) => config.id === selectedModelId)
         if (selectedConfig) {
           AiApiConfig = selectedConfig
         }

@@ -62,7 +62,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const lastUserActionRef = useRef<number>(Date.now())
 
   // 添加API配置和选中模型状态
-  const [apiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
+  const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string>('')
 
   // Create custom light theme with enhanced selection colors
@@ -117,8 +117,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     const loadApiConfigs = async (): Promise<void> => {
       try {
         const settings = await window.api.settings.getAll()
-        if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
-          const configs = settings.apiConfigs as AiApiConfig[]
+        if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
+          const configs = settings.AiApiConfigs as AiApiConfig[]
           setApiConfigs(configs)
 
           // 如果有配置且没有选中的模型，默认选择第一个
@@ -731,9 +731,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // 获取当前选中模型的详细信息
   const getSelectedModel = useCallback(() => {
-    if (!selectedModelId || apiConfigs.length === 0) return null
-    return apiConfigs.find((config) => config.id === selectedModelId) || null
-  }, [selectedModelId, apiConfigs])
+    if (!selectedModelId || AiApiConfigs.length === 0) return null
+    return AiApiConfigs.find((config) => config.id === selectedModelId) || null
+  }, [selectedModelId, AiApiConfigs])
 
   // 将选中的模型信息存储到本地存储，以便AI功能组件获取
   useEffect(() => {
@@ -816,15 +816,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         </div>
         <div className="editor-actions">
           <Space>
-            {apiConfigs.length > 0 && (
+            {AiApiConfigs.length > 0 && (
               <Select
                 value={selectedModelId}
                 onChange={(value) => setSelectedModelId(value as string)}
                 style={{ width: 150 }}
                 placeholder="选择AI模型"
-                disabled={apiConfigs.length === 0}
+                disabled={AiApiConfigs.length === 0}
               >
-                {apiConfigs.map((config) => (
+                {AiApiConfigs.map((config) => (
                   <Select.Option key={config.id} value={config.id}>
                     {config.name}
                   </Select.Option>
