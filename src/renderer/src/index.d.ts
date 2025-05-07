@@ -93,6 +93,20 @@ interface Window {
         fileData: string,
         fileName: string
       ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
+      getHistory: (
+        filePath: string
+      ) => Promise<{
+        success: boolean
+        history?: Array<{ id: number; filePath: string; content: string; timestamp: number }>
+        error?: string
+      }>
+      getHistoryById: (
+        historyId: number
+      ) => Promise<{
+        success: boolean
+        history?: { id: number; filePath: string; content: string; timestamp: number }
+        error?: string
+      }>
     }
     webdav: {
       testConnection: (config: {

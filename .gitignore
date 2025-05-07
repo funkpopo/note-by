@@ -7,5 +7,6 @@ out
 settings.json
 
 markdown
+note_history.db
 .cursor
 .codelf

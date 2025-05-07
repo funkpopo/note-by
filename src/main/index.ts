@@ -24,6 +24,7 @@ import axios from 'axios'
 import http from 'http'
 import https from 'https'
 import { protocol } from 'electron'
+import { initDatabase, addNoteHistory, getNoteHistory, getNoteHistoryById } from './database'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -56,7 +57,10 @@ const IPC_CHANNELS = {
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
   CANCEL_SYNC: 'webdav:cancel-sync',
-  CHECK_FOR_UPDATES: 'app:check-for-updates'
+  CHECK_FOR_UPDATES: 'app:check-for-updates',
+  // 添加历史记录相关IPC通道
+  GET_NOTE_HISTORY: 'markdown:get-history',
+  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id'
 }
 
 // 获取markdown文件夹路径
@@ -504,6 +508,12 @@ app.whenReady().then(() => {
 
       // 写入文件
       await fsPromises.writeFile(fullPath, content, 'utf-8')
+
+      // 添加历史记录
+      await addNoteHistory({
+        filePath,
+        content
+      })
 
       return { success: true, path: fullPath }
     } catch (error) {
@@ -1075,6 +1085,31 @@ app.whenReady().then(() => {
     return await checkForUpdates()
   })
 
+  // 获取笔记的历史记录
+  ipcMain.handle(IPC_CHANNELS.GET_NOTE_HISTORY, async (_, filePath) => {
+    try {
+      const history = await getNoteHistory(filePath)
+      return { success: true, history }
+    } catch (error) {
+      console.error('获取笔记历史记录失败:', error)
+      return { success: false, error: String(error), history: [] }
+    }
+  })
+
+  // 获取特定ID的历史记录
+  ipcMain.handle(IPC_CHANNELS.GET_NOTE_HISTORY_BY_ID, async (_, id) => {
+    try {
+      const history = await getNoteHistoryById(id)
+      if (!history) {
+        return { success: false, error: '未找到历史记录', history: null }
+      }
+      return { success: true, history }
+    } catch (error) {
+      console.error('获取特定历史记录失败:', error)
+      return { success: false, error: String(error), history: null }
+    }
+  })
+
   createWindow()
 
   // 应用启动时执行自动同步
@@ -1082,6 +1117,19 @@ app.whenReady().then(() => {
 
   // 在应用启动时检查更新
   checkUpdatesOnStartup()
+
+  // 初始化数据库
+  try {
+    initDatabase()
+      .then(() => {
+        console.log('历史记录数据库初始化成功')
+      })
+      .catch((error) => {
+        console.error('历史记录数据库初始化失败:', error)
+      })
+  } catch (error) {
+    console.error('历史记录数据库初始化尝试失败:', error)
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

@@ -28,6 +28,7 @@ import { ContinueButton } from './ContinueButton'
 import { RewriteButton } from './RewriteButton'
 import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
+import HistoryDropdown from './HistoryDropdown'
 
 // 添加一个接口定义API配置
 interface AiApiConfig {
@@ -800,6 +801,25 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [currentFolder, currentFile, saveFileContent])
 
+  // 处理恢复历史版本
+  const handleRestoreHistory = async (content: string): Promise<void> => {
+    if (editor && content) {
+      try {
+        // 直接重新加载编辑器，而不是尝试修改内容
+        // 创建新的编辑器实例以刷新内容
+        setEditorContent(content)
+        const timestamp = Date.now()
+        setEditorKey(`editor-${timestamp}`)
+
+        Toast.success('已恢复历史版本')
+        setIsEditing(true)
+      } catch (error) {
+        console.error('恢复历史版本失败:', error)
+        Toast.error('恢复历史版本失败')
+      }
+    }
+  }
+
   return (
     <div
       className="editor-container"
@@ -833,6 +853,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             )}
             {currentFile && (
               <>
+                <HistoryDropdown
+                  filePath={
+                    currentFolder && currentFile ? `${currentFolder}/${currentFile}` : undefined
+                  }
+                  onRestore={handleRestoreHistory}
+                  disabled={!currentFile}
+                />
                 <Button
                   theme="solid"
                   type="primary"

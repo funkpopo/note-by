@@ -42,7 +42,10 @@ const IPC_CHANNELS = {
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
   CHECK_FOR_UPDATES: 'app:check-for-updates',
-  CANCEL_SYNC: 'webdav:cancel-sync'
+  CANCEL_SYNC: 'webdav:cancel-sync',
+  // 添加历史记录相关IPC通道
+  GET_NOTE_HISTORY: 'markdown:get-history',
+  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id'
 }
 
 // 内容生成请求接口
@@ -223,6 +226,34 @@ const api = {
     // 读取Markdown文件内容
     readFile: (filePath: string): Promise<{ success: boolean; content?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.READ_MARKDOWN_FILE, filePath),
+
+    // 获取文档历史记录
+    getHistory: (
+      filePath: string
+    ): Promise<{
+      success: boolean
+      history?: Array<{
+        id: number
+        filePath: string
+        content: string
+        timestamp: number
+      }>
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_NOTE_HISTORY, filePath),
+
+    // 获取特定ID的历史记录
+    getHistoryById: (
+      id: number
+    ): Promise<{
+      success: boolean
+      history?: {
+        id: number
+        filePath: string
+        content: string
+        timestamp: number
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_NOTE_HISTORY_BY_ID, id),
 
     // 创建新文件夹
     createFolder: (

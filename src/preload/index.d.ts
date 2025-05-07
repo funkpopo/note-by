@@ -81,6 +81,37 @@ interface API {
       folderName: string
     ) => Promise<{ success: boolean; files?: string[]; error?: string }>
     readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
+
+    /**
+     * 获取文档历史记录
+     * @param filePath 文件路径
+     */
+    getHistory: (filePath: string) => Promise<{
+      success: boolean
+      history?: Array<{
+        id: number
+        filePath: string
+        content: string
+        timestamp: number
+      }>
+      error?: string
+    }>
+
+    /**
+     * 获取特定ID的历史记录
+     * @param id 历史记录ID
+     */
+    getHistoryById: (id: number) => Promise<{
+      success: boolean
+      history?: {
+        id: number
+        filePath: string
+        content: string
+        timestamp: number
+      }
+      error?: string
+    }>
+
     /**
      * 重命名笔记文件
      * @param oldFilePath 旧文件路径
