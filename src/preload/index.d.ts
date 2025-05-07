@@ -1,7 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 // API配置接口
-interface ApiConfig {
+interface AiApiConfig {
   id: string
   name: string
   apiKey: string
@@ -34,7 +34,7 @@ interface UpdatesAPI {
 
 // OpenAI API接口定义
 interface OpenAIAPI {
-  testConnection: (apiConfig: ApiConfig) => Promise<{ success: boolean; message: string }>
+  testConnection: (AiApiConfig: AiApiConfig) => Promise<{ success: boolean; message: string }>
   generateContent: (request: {
     apiKey: string
     apiUrl: string
@@ -62,7 +62,7 @@ interface OpenAIAPI {
 
 // API配置管理接口定义
 interface ApiConfigAPI {
-  saveConfig: (config: ApiConfig) => Promise<{ success: boolean; error?: string }>
+  saveConfig: (config: AiApiConfig) => Promise<{ success: boolean; error?: string }>
   deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
 }
 

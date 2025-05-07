@@ -21,7 +21,7 @@ function getSettingsPath(): string {
 const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword']
 
 // API配置接口
-export interface ApiConfig {
+export interface AiApiConfig {
   id: string
   name: string
   apiKey: string
@@ -47,7 +47,7 @@ export interface WebDAVConfig {
 const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
-  apiConfigs: [] as ApiConfig[],
+  apiConfigs: [] as AiApiConfig[],
   // 默认AI提示设置
   aiPrompts: {
     rewrite:
@@ -82,7 +82,7 @@ export function readSettings(): Record<string, unknown> {
 
       // 解密API配置中的API Keys
       if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
-        ;(settings.apiConfigs as ApiConfig[]).forEach((config) => {
+        ;(settings.apiConfigs as AiApiConfig[]).forEach((config) => {
           if (ENCRYPTED_KEYS.includes('apiKey') && config.apiKey && config.apiKey !== '') {
             config.apiKey = decrypt(config.apiKey)
           }
@@ -119,10 +119,10 @@ export function writeSettings(settings: Record<string, unknown>): void {
     const settingsToSave = { ...updatedSettings }
 
     if (settingsToSave.apiConfigs && Array.isArray(settingsToSave.apiConfigs)) {
-      ;(settingsToSave.apiConfigs as ApiConfig[]) = JSON.parse(
+      ;(settingsToSave.apiConfigs as AiApiConfig[]) = JSON.parse(
         JSON.stringify(settingsToSave.apiConfigs)
       )
-      ;(settingsToSave.apiConfigs as ApiConfig[]).forEach((config) => {
+      ;(settingsToSave.apiConfigs as AiApiConfig[]).forEach((config) => {
         if (config.apiKey && config.apiKey !== '') {
           config.apiKey = encrypt(config.apiKey)
         }

@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // API配置接口
-interface ApiConfig {
+interface AiApiConfig {
   id: string
   name: string
   apiKey: string
@@ -82,8 +82,8 @@ const api = {
   // OpenAI相关API
   openai: {
     // 测试连接
-    testConnection: (apiConfig: ApiConfig): Promise<{ success: boolean; message: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.TEST_OPENAI_CONNECTION, apiConfig),
+    testConnection: (AiApiConfig: AiApiConfig): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_OPENAI_CONNECTION, AiApiConfig),
 
     // 生成内容
     generateContent: (
@@ -169,7 +169,7 @@ const api = {
   // API配置管理
   api: {
     // 保存配置
-    saveConfig: (config: ApiConfig): Promise<{ success: boolean; error?: string }> =>
+    saveConfig: (config: AiApiConfig): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SAVE_API_CONFIG, config),
     // 删除配置
     deleteConfig: (configId: string): Promise<{ success: boolean; error?: string }> =>

@@ -17,7 +17,7 @@ interface Window {
       set: <T>(key: string, value: T) => Promise<boolean>
     }
     openai: {
-      testConnection: (apiConfig: {
+      testConnection: (AiApiConfig: {
         id: string
         name: string
         apiKey: string

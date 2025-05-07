@@ -89,11 +89,11 @@ export const RewriteButton: React.FC = () => {
       const selectedModelId = window.localStorage.getItem('selectedModelId')
 
       // 根据选中的模型ID获取API配置，如果未找到则使用第一个
-      let apiConfig = apiConfigs[0]
+      let AiApiConfig = apiConfigs[0]
       if (selectedModelId) {
         const selectedConfig = apiConfigs.find((config) => config.id === selectedModelId)
         if (selectedConfig) {
-          apiConfig = selectedConfig
+          AiApiConfig = selectedConfig
         }
       }
 
@@ -117,11 +117,11 @@ export const RewriteButton: React.FC = () => {
       // 使用流式API
       const result = await window.api.openai.streamGenerateContent(
         {
-          apiKey: apiConfig.apiKey,
-          apiUrl: apiConfig.apiUrl,
-          modelName: apiConfig.modelName,
+          apiKey: AiApiConfig.apiKey,
+          apiUrl: AiApiConfig.apiUrl,
+          modelName: AiApiConfig.modelName,
           prompt: prompt,
-          maxTokens: parseInt(apiConfig.maxTokens || '2000')
+          maxTokens: parseInt(AiApiConfig.maxTokens || '2000')
         },
         {
           onData: (chunk: string) => {

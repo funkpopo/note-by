@@ -30,7 +30,7 @@ import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
 
 // 添加一个接口定义API配置
-interface ApiConfig {
+interface AiApiConfig {
   id: string
   name: string
   apiKey: string
@@ -62,7 +62,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const lastUserActionRef = useRef<number>(Date.now())
 
   // 添加API配置和选中模型状态
-  const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([])
+  const [apiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string>('')
 
   // Create custom light theme with enhanced selection colors
@@ -118,7 +118,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       try {
         const settings = await window.api.settings.getAll()
         if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
-          const configs = settings.apiConfigs as ApiConfig[]
+          const configs = settings.apiConfigs as AiApiConfig[]
           setApiConfigs(configs)
 
           // 如果有配置且没有选中的模型，默认选择第一个

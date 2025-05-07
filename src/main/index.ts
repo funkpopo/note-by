@@ -8,7 +8,7 @@ import {
   writeSettings,
   updateSetting,
   getSetting,
-  ApiConfig,
+  AiApiConfig,
   getWebDAVConfig
 } from './settings'
 import { testOpenAIConnection, generateContent, streamGenerateContent } from './openai'
@@ -397,8 +397,8 @@ app.whenReady().then(() => {
   })
 
   // OpenAI连接测试
-  ipcMain.handle(IPC_CHANNELS.TEST_OPENAI_CONNECTION, async (_, apiConfig) => {
-    return await testOpenAIConnection(apiConfig)
+  ipcMain.handle(IPC_CHANNELS.TEST_OPENAI_CONNECTION, async (_, AiApiConfig) => {
+    return await testOpenAIConnection(AiApiConfig)
   })
 
   // 内容生成
@@ -448,20 +448,20 @@ app.whenReady().then(() => {
   })
 
   // 保存API配置
-  ipcMain.handle(IPC_CHANNELS.SAVE_API_CONFIG, (_, apiConfig) => {
+  ipcMain.handle(IPC_CHANNELS.SAVE_API_CONFIG, (_, AiApiConfig) => {
     try {
       const settings = readSettings()
-      const apiConfigs = (settings.apiConfigs as ApiConfig[]) || []
+      const apiConfigs = (settings.apiConfigs as AiApiConfig[]) || []
 
       // 检查是否存在相同ID的配置
-      const index = apiConfigs.findIndex((config: ApiConfig) => config.id === apiConfig.id)
+      const index = apiConfigs.findIndex((config: AiApiConfig) => config.id === AiApiConfig.id)
 
       if (index >= 0) {
         // 更新已存在的配置
-        apiConfigs[index] = apiConfig
+        apiConfigs[index] = AiApiConfig
       } else {
         // 添加新配置
-        apiConfigs.push(apiConfig)
+        apiConfigs.push(AiApiConfig)
       }
 
       // 保存到设置
@@ -479,10 +479,10 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC_CHANNELS.DELETE_API_CONFIG, (_, configId) => {
     try {
       const settings = readSettings()
-      const apiConfigs = (settings.apiConfigs as ApiConfig[]) || []
+      const apiConfigs = (settings.apiConfigs as AiApiConfig[]) || []
 
       // 过滤掉要删除的配置
-      settings.apiConfigs = apiConfigs.filter((config: ApiConfig) => config.id !== configId)
+      settings.apiConfigs = apiConfigs.filter((config: AiApiConfig) => config.id !== configId)
       writeSettings(settings)
 
       return { success: true }

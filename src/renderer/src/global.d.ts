@@ -14,7 +14,7 @@ interface Window {
     // OpenAI相关API
     openai: {
       // 测试连接
-      testConnection: (apiConfig: {
+      testConnection: (AiApiConfig: {
         id: string
         name: string
         apiKey: string

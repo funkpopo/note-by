@@ -32,7 +32,7 @@ import WebDAVSettings from './WebDAVSettings'
 const { Title, Paragraph, Text } = Typography
 
 // API配置接口
-interface ApiConfig {
+interface AiApiConfig {
   id: string
   name: string
   apiKey: string
@@ -60,8 +60,8 @@ interface UpdateResult {
 const Settings: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(true)
-  const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([])
-  const [currentConfig, setCurrentConfig] = useState<ApiConfig | null>(null)
+  const [apiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
+  const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
@@ -115,7 +115,7 @@ const Settings: React.FC = () => {
 
       // 设置API配置
       if (settings.apiConfigs && Array.isArray(settings.apiConfigs)) {
-        setApiConfigs(settings.apiConfigs as ApiConfig[])
+        setApiConfigs(settings.apiConfigs as AiApiConfig[])
       }
 
       // 设置AI提示配置
@@ -185,7 +185,7 @@ const Settings: React.FC = () => {
   }
 
   // 编辑配置
-  const handleEditConfig = (config: ApiConfig): void => {
+  const handleEditConfig = (config: AiApiConfig): void => {
     setCurrentConfig({ ...config })
     setIsEditMode(true)
     setIsModalOpen(true)
@@ -250,7 +250,7 @@ const Settings: React.FC = () => {
   }
 
   // 更新当前编辑的配置
-  const handleConfigChange = (key: keyof ApiConfig, value: string): void => {
+  const handleConfigChange = (key: keyof AiApiConfig, value: string): void => {
     setCurrentConfig((prev) => {
       if (!prev) return null
       return {
@@ -261,7 +261,7 @@ const Settings: React.FC = () => {
   }
 
   // 测试连接
-  const handleTestConnection = async (config: ApiConfig): Promise<void> => {
+  const handleTestConnection = async (config: AiApiConfig): Promise<void> => {
     try {
       setTestingId(config.id)
 
@@ -849,7 +849,7 @@ const Settings: React.FC = () => {
           </div>
         }
       >
-        <Form<ApiConfig> labelPosition="left" labelWidth={100}>
+        <Form<AiApiConfig> labelPosition="left" labelWidth={100}>
           <Form.Input
             field="name"
             label="配置名称"

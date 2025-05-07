@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai'
-import { ApiConfig } from './settings'
+import { AiApiConfig } from './settings'
 import { EventEmitter } from 'events'
 
 // 内容生成请求接口
@@ -27,10 +27,10 @@ function normalizeApiUrl(url: string): string {
 
 // 测试AI API连接
 export async function testOpenAIConnection(
-  apiConfig: ApiConfig
+  AiApiConfig: AiApiConfig
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const { apiKey, apiUrl, modelName } = apiConfig
+    const { apiKey, apiUrl, modelName } = AiApiConfig
 
     if (!apiKey) {
       return { success: false, message: 'API Key 未设置' }
