@@ -70,8 +70,6 @@ function getMarkdownFolderPath(): string {
     markdownPath = resolve(app.getPath('exe'), '..', 'markdown')
   }
 
-  console.log('Markdown文件夹路径:', markdownPath)
-
   // 确保markdown根目录存在
   try {
     if (!fsSync.existsSync(markdownPath)) {

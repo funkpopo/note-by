@@ -304,15 +304,19 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
         const localPath = path.join(localDir, entry.name)
         const remotePath = path.join(remoteDir, entry.name).replace(/\\/g, '/')
 
+        // 检查是否在.assets目录内
+        const isInAssetsDir = path.basename(localDir) === '.assets'
+
         if (entry.isDirectory()) {
           // 递归同步子目录
           await syncDirectory(localPath, remotePath)
-        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        } else if (entry.isFile() && (entry.name.endsWith('.md') || isInAssetsDir)) {
+          // 同步markdown文件及.assets目录中的所有文件
           // 检查文件是否需要上传
           const shouldUpload = await needUpload(localPath, remotePath, remoteFiles)
 
           if (shouldUpload) {
-            // 上传markdown文件
+            // 上传文件
             const success = await uploadFile(localPath, remotePath)
             if (success) {
               uploaded++
@@ -390,15 +394,19 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
         const entryName = path.basename(entryRemotePath)
         const entryLocalPath = path.join(localPath, entryName)
 
+        // 检查是否在.assets目录内
+        const isInAssetsDir = path.basename(remotePath) === '.assets'
+
         if (entry.type === 'directory') {
           // 递归同步子目录
           await syncDirectory(entryRemotePath, entryLocalPath)
-        } else if (entry.type === 'file' && entryName.endsWith('.md')) {
+        } else if (entry.type === 'file' && (entryName.endsWith('.md') || isInAssetsDir)) {
+          // 同步markdown文件及.assets目录中的所有文件
           // 检查文件是否需要下载
           const shouldDownload = await needDownload(entryLocalPath, entry)
 
           if (shouldDownload) {
-            // 下载markdown文件
+            // 下载文件
             const success = await downloadFile(entryRemotePath, entryLocalPath)
             if (success) {
               downloaded++
@@ -503,6 +511,10 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       // 确保本地目录存在
       await fs.mkdir(localDir, { recursive: true })
 
+      // 检查是否在.assets目录内
+      const isInAssetsDir =
+        path.basename(localDir) === '.assets' || path.basename(remoteDir) === '.assets'
+
       // 1. 获取远程文件列表并缓存
       if (!remoteFilesCache.has(remoteDir)) {
         const remoteFiles = await getRemoteFiles(remoteDir)
@@ -537,7 +549,10 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
           // 从本地文件映射中移除已处理的目录
           localEntriesMap.delete(remoteFilename)
-        } else if (remoteEntry.type === 'file' && remoteFilename.endsWith('.md')) {
+        } else if (
+          remoteEntry.type === 'file' &&
+          (remoteFilename.endsWith('.md') || isInAssetsDir)
+        ) {
           const localEntry = localEntriesMap.get(remoteFilename)
 
           if (!localEntry) {
@@ -620,7 +635,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
           // 递归处理子目录
           await syncDirectoryBidirectional(localFullPath, remoteFullPath)
-        } else if (entry.isFile() && filename.endsWith('.md')) {
+        } else if (entry.isFile() && (filename.endsWith('.md') || isInAssetsDir)) {
           // 这是一个只存在于本地的文件，上传到远程
           const success = await uploadFile(localFullPath, remoteFullPath)
           if (success) {

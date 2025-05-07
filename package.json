@@ -1,6 +1,6 @@
 {
   "name": "note-by",
-  "version": "1.2.3",
+  "version": "1.2.5",
   "description": "An Note application built with React, TypeScript, and Electron",
   "main": "./out/main/index.js",
   "author": "https://github.com/funkpopo",
@@ -31,7 +31,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "axios": "^1.9.0",
-    "openai": "^4.96.0",
+    "openai": "^4.97.0",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
@@ -60,6 +60,6 @@
     "react-dom": "^18.3.1",
     "sass-embedded": "^1.87.0",
     "typescript": "^5.8.3",
-    "vite": "^6.3.3"
+    "vite": "^6.3.5"
   }
 }

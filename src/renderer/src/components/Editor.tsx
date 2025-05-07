@@ -18,7 +18,9 @@ import {
   FormattingToolbarController,
   NestBlockButton,
   TextAlignButton,
-  UnnestBlockButton
+  UnnestBlockButton,
+  SuggestionMenuController,
+  getDefaultReactSlashMenuItems
 } from '@blocknote/react'
 import { TranslateButton } from './TranslateButton'
 import { AnalyzeButton } from './AnalyzeButton'
@@ -50,8 +52,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [editorContent, setEditorContent] = useState<string>('')
   const [editorKey, setEditorKey] = useState<string>('editor-0')
+  // 添加自动保存状态
+  const [autoSaveStatus, setAutoSaveStatus] = useState<string>('') // 保存状态：'', 'saved', 'saving'
   const lastSavedContentRef = useRef<string>('')
   const lastLoadedFileRef = useRef<string | null>(null)
+  // 添加自动保存相关引用
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastUserActionRef = useRef<number>(Date.now())
 
   // 添加API配置和选中模型状态
   const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([])
@@ -627,6 +634,15 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     loadFileContent()
   }, [currentFolder, currentFile, loadFileContent])
 
+  // 添加清理函数，在组件卸载时清除定时器
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [])
+
   // Save file content
   const saveFileContent = useCallback(async () => {
     if (!currentFolder || !currentFile) {
@@ -635,6 +651,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
 
     setIsSaving(true)
+    setAutoSaveStatus('saving')
     try {
       // Convert blocks to Markdown
       const markdown = await editor.blocksToMarkdownLossy(editor.document)
@@ -645,6 +662,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       if (result.success) {
         Toast.success('文件保存成功')
         setIsEditing(false)
+        setAutoSaveStatus('saved')
+
         // Update the last saved content
         lastSavedContentRef.current = markdown
 
@@ -652,33 +671,65 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         if (onFileChanged) {
           onFileChanged()
         }
+
+        // 5秒后清除"已保存"状态
+        setTimeout(() => {
+          setAutoSaveStatus('')
+        }, 5000)
       } else {
         Toast.error(`保存失败: ${result.error}`)
+        setAutoSaveStatus('')
       }
     } catch (error) {
       console.error('保存文件内容失败:', error)
       Toast.error('保存文件内容失败')
+      setAutoSaveStatus('')
     } finally {
       setIsSaving(false)
     }
   }, [currentFolder, currentFile, editor, onFileChanged])
 
+  // 添加自动保存触发函数
+  const triggerAutoSave = useCallback(() => {
+    // 清除旧的定时器
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    // 只有在有文件打开并且内容有修改的情况下才设置自动保存
+    if (currentFile && isEditing) {
+      // 设置10秒后自动保存
+      autoSaveTimerRef.current = setTimeout(async () => {
+        // 检查距离上次用户操作是否已经10秒
+        if (Date.now() - lastUserActionRef.current >= 10000) {
+          await saveFileContent()
+        }
+      }, 10000)
+    }
+  }, [currentFile, isEditing, saveFileContent])
+
   // Handler for when the editor's content changes
   const handleEditorChange = useCallback(async () => {
     try {
+      // 更新最后用户操作时间
+      lastUserActionRef.current = Date.now()
+
       // Convert current blocks to Markdown for comparison
       const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
 
       // Only set editing state if content actually changed
       if (currentMarkdown !== lastSavedContentRef.current) {
         setIsEditing(true)
+
+        // 触发自动保存计时
+        triggerAutoSave()
       } else {
         setIsEditing(false)
       }
     } catch (error) {
       console.error('比较内容变化失败:', error)
     }
-  }, [editor])
+  }, [editor, triggerAutoSave])
 
   // 获取当前选中模型的详细信息
   const getSelectedModel = useCallback(() => {
@@ -753,17 +804,25 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 ))}
               </Select>
             )}
-            {isEditing && (
-              <Button
-                theme="solid"
-                type="primary"
-                icon={<IconSave />}
-                onClick={saveFileContent}
-                loading={isSaving}
-                disabled={!currentFile}
-              >
-                保存
-              </Button>
+            {currentFile && (
+              <>
+                <Button
+                  theme="solid"
+                  type="primary"
+                  icon={<IconSave />}
+                  onClick={saveFileContent}
+                  loading={isSaving}
+                  disabled={!currentFile}
+                >
+                  保存
+                </Button>
+                {autoSaveStatus === 'saving' && (
+                  <Typography.Text type="tertiary">自动保存...</Typography.Text>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <Typography.Text type="success">已保存</Typography.Text>
+                )}
+              </>
             )}
           </Space>
         </div>
@@ -904,6 +963,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             formattingToolbar={false}
             filePanel={true}
             linkToolbar={true}
+            slashMenu={false}
             onChange={handleEditorChange}
             style={{ height: '100%' }}
           >
@@ -931,6 +991,38 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   <CreateLinkButton key="createLinkButton" />
                 </FormattingToolbar>
               )}
+            />
+            <SuggestionMenuController
+              triggerCharacter="/"
+              getItems={async (query) => {
+                // 获取默认斜杠菜单项
+                const defaultItems = getDefaultReactSlashMenuItems(editor)
+
+                // 过滤掉Video、Audio和File插入选项，只保留Image和其他选项
+                const filteredItems = defaultItems.filter((item) => {
+                  // 排除包含 "Video"、"Audio" 或 "File" 的标题，但保留 "Image"
+                  return !(
+                    (item.title.includes('Video') ||
+                      item.title.includes('Audio') ||
+                      item.title.includes('File')) &&
+                    !item.title.includes('Image')
+                  )
+                })
+
+                // 根据用户输入的查询过滤菜单项
+                return filteredItems.filter((item) => {
+                  const itemTitle = item.title.toLowerCase()
+                  const itemSubtext = (item.subtext || '').toLowerCase()
+                  const itemAliases = item.aliases || []
+                  const queryLower = query.toLowerCase()
+
+                  return (
+                    itemTitle.includes(queryLower) ||
+                    itemSubtext.includes(queryLower) ||
+                    itemAliases.some((alias) => alias.toLowerCase().includes(queryLower))
+                  )
+                })
+              }}
             />
           </BlockNoteView>
         )}
