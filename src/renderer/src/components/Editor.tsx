@@ -26,6 +26,7 @@ import { TranslateButton } from './TranslateButton'
 import { AnalyzeButton } from './AnalyzeButton'
 import { ContinueButton } from './ContinueButton'
 import { RewriteButton } from './RewriteButton'
+import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
 
 // 添加一个接口定义API配置
@@ -301,9 +302,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         if (!result.success) {
           throw new Error(result.error || '文件上传失败')
         }
-
-        // 将返回的本地文件路径转换为notebyfileprotocol://协议URL
-        // 注意：这里直接使用返回的url，因为我们会在主进程中修改它以包含协议前缀
         console.log('文件上传成功，URL:', result.url)
 
         // 确保URL格式正确
@@ -776,8 +774,37 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     setShowCreateDialog(true)
   }, [])
 
+  // 添加键盘快捷键支持 - 放在组件末尾，确保saveFileContent已定义
+  useEffect(() => {
+    // 键盘事件处理函数
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      // 检测Ctrl+S组合键
+      if (e.ctrlKey && e.key === 's') {
+        // 防止浏览器默认的保存行为
+        e.preventDefault()
+
+        // 只在当前有文件打开时才执行保存
+        if (currentFolder && currentFile) {
+          // 调用保存函数
+          saveFileContent()
+        }
+      }
+    }
+
+    // 添加键盘事件监听器
+    window.addEventListener('keydown', handleKeyDown)
+
+    // 清理函数：移除键盘事件监听器
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [currentFolder, currentFile, saveFileContent])
+
   return (
-    <div className="editor-container">
+    <div
+      className="editor-container"
+      tabIndex={0} // 确保div可以接收键盘事件
+    >
       <div className="editor-header">
         <div className="editor-title-container">
           <Typography.Title heading={4} style={{ margin: 0 }}>
@@ -971,6 +998,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               formattingToolbar={() => (
                 <FormattingToolbar>
                   <BlockTypeSelect key="blockTypeSelect" />
+                  <SummaryButton key="summaryButton" />
                   <TranslateButton key="translateButton" />
                   <AnalyzeButton key="analyzeButton" />
                   <ContinueButton key="continueButton" />
