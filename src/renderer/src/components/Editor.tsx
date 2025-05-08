@@ -274,6 +274,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
           // 确保URL格式正确
           const imageUrl = result.url
+          if (!imageUrl) {
+            throw new Error('上传成功但未返回URL')
+          }
           // 记录实际路径信息，帮助调试
           console.log('图片保存到:', imageUrl)
 
@@ -307,6 +310,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
         // 确保URL格式正确
         const imageUrl = result.url
+        if (!imageUrl) {
+          throw new Error('上传成功但未返回URL')
+        }
         // 记录实际路径信息，帮助调试
         console.log('图片保存到:', imageUrl)
 

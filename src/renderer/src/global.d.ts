@@ -129,6 +129,13 @@ interface Window {
         newFilePath: string
       ) => Promise<{ success: boolean; error?: string }>
 
+      // 上传文件（用于图片等资源文件）
+      uploadFile: (
+        filePath: string,
+        fileContent: string,
+        fileName: string
+      ) => Promise<{ success: boolean; url?: string; error?: string }>
+
       // 获取文件历史记录列表
       getHistory: (
         filePath: string
