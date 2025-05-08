@@ -1,3 +1,11 @@
+// 历史记录项接口
+interface HistoryItem {
+  id: number
+  filePath: string
+  content: string
+  timestamp: number
+}
+
 interface Window {
   api: {
     // 设置相关API
@@ -120,6 +128,16 @@ interface Window {
         oldFilePath: string,
         newFilePath: string
       ) => Promise<{ success: boolean; error?: string }>
+
+      // 获取文件历史记录列表
+      getHistory: (
+        filePath: string
+      ) => Promise<{ success: boolean; history?: HistoryItem[]; error?: string }>
+
+      // 获取指定ID的历史记录
+      getHistoryById: (
+        historyId: number
+      ) => Promise<{ success: boolean; history?: HistoryItem; error?: string }>
     }
     // WebDAV同步相关API
     webdav: {
