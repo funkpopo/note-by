@@ -49,6 +49,7 @@ interface AIPrompts {
   continue: string
   translate: string
   analyze: string
+  writingAnalysis: string
 }
 
 interface UpdateResult {
@@ -81,7 +82,8 @@ const Settings: React.FC = () => {
     rewrite: '',
     continue: '',
     translate: '',
-    analyze: ''
+    analyze: '',
+    writingAnalysis: ''
   })
   const [formApi, setFormApi] = useState<FormApi<AIPrompts> | null>(null)
   const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState<boolean>(true)
@@ -115,7 +117,8 @@ const Settings: React.FC = () => {
         rewrite: aiPrompts.rewrite || '',
         continue: aiPrompts.continue || '',
         translate: aiPrompts.translate || '',
-        analyze: aiPrompts.analyze || ''
+        analyze: aiPrompts.analyze || '',
+        writingAnalysis: aiPrompts.writingAnalysis || ''
       })
     }
   }, [formApi, aiPrompts])
@@ -152,7 +155,8 @@ const Settings: React.FC = () => {
             translate:
               loadedPrompts.translate ||
               '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}',
-            analyze: loadedPrompts.analyze || ''
+            analyze: loadedPrompts.analyze || '',
+            writingAnalysis: loadedPrompts.writingAnalysis || ''
           })
         }
       } else {
@@ -161,7 +165,25 @@ const Settings: React.FC = () => {
           rewrite: '重写以下内容，保持原意但改进表达，使其更流畅、更清晰：\n\n${content}',
           continue: '继续以下内容，保持风格和逻辑连贯：\n\n${content}',
           translate: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}',
-          analyze: '分析以下内容，提供关键点、主题、情感倾向等分析：\n\n${content}'
+          analyze: '分析以下内容，提供关键点、主题、情感倾向等分析：\n\n${content}',
+          writingAnalysis: `我有以下笔记应用使用数据，请分析我的写作习惯并给出改进建议：
+
+- 总笔记数量: \${totalNotes}
+- 总编辑次数: \${totalEdits}
+- 平均编辑长度: \${averageEditLength} 字符
+- 最常编辑的前3个笔记: \${mostEditedNotes}
+- 每日笔记数量趋势: \${notesByDate}
+- 每日编辑次数趋势: \${editsByDate}
+- 编辑时间分布: \${editTimeDistribution}
+
+请提供以下详细分析：
+1. 写作习惯概述：分析我的整体写作模式、频率和时间分布
+2. 写作节奏和时间管理：识别我的高效写作时段、写作连贯性和持续时间
+3. 主题和内容偏好：基于编辑模式推断我最关注的内容领域
+4. 写作行为分析：分析我的修改习惯、编辑深度和完善程度
+5. 个性化改进建议：提供3-5条具体可行的改进建议，包括时间安排、内容组织和写作技巧
+6. 效率提升策略：如何更有效地利用笔记应用功能提高写作效率
+7. 建议的写作目标：根据当前习惯，提出合理的短期写作目标`
         }
         setAiPrompts(defaultPrompts)
 
@@ -966,6 +988,16 @@ const Settings: React.FC = () => {
                   label="分析提示"
                   placeholder="请设置分析的提示模板"
                   onChange={(value) => handleAIPromptChange('analyze', value)}
+                  rows={3}
+                  showClear
+                  style={{ marginBottom: 0 }}
+                />
+
+                <Form.TextArea
+                  field="writingAnalysis"
+                  label="写作分析提示"
+                  placeholder="请设置写作分析的提示模板"
+                  onChange={(value) => handleAIPromptChange('writingAnalysis', value)}
                   rows={3}
                   showClear
                   style={{ marginBottom: 0 }}

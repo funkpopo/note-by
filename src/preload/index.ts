@@ -46,7 +46,13 @@ const IPC_CHANNELS = {
   CANCEL_SYNC: 'webdav:cancel-sync',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
-  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id'
+  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id',
+  // 添加数据分析相关IPC通道
+  GET_NOTE_HISTORY_STATS: 'analytics:get-note-history-stats',
+  GET_USER_ACTIVITY_DATA: 'analytics:get-user-activity-data',
+  GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
+  SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
+  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache'
 }
 
 // 内容生成请求接口
@@ -64,6 +70,88 @@ interface StreamCallbacks {
   onData: (chunk: string) => void
   onDone: (content: string) => void
   onError: (error: string) => void
+}
+
+// 分析缓存项接口定义
+interface AnalysisCacheItem {
+  date: string // 分析日期，格式：YYYY-MM-DD
+  stats: {
+    totalNotes: number
+    totalEdits: number
+    averageEditLength: number
+    mostEditedNotes: Array<{
+      filePath: string
+      editCount: number
+      count?: number
+    }>
+    notesByDate: Array<{
+      date: string
+      count: number
+    }>
+    editsByDate: Array<{
+      date: string
+      count: number
+    }>
+    editTimeDistribution: Array<{
+      hour: number
+      count: number
+    }>
+    topFolders?: Array<{
+      folder: string
+      count: number
+    }>
+  }
+  activityData: {
+    dailyActivity: Record<
+      string,
+      {
+        createdNotes: number
+        editedNotes: number
+        totalEdits: number
+        charactersAdded: number
+        activeHours: number[]
+      }
+    >
+    noteDetails: Array<{
+      filePath: string
+      firstEdit: number
+      lastEdit: number
+      editCount: number
+      averageEditSize: number
+    }>
+  }
+  result: {
+    summary: string
+    writingHabits: {
+      title: string
+      content: string
+    }
+    writingRhythm: {
+      title: string
+      content: string
+    }
+    topics: {
+      title: string
+      content: string
+    }
+    writingBehavior: {
+      title: string
+      content: string
+    }
+    recommendations: {
+      title: string
+      items: string[]
+    }
+    efficiencyTips: {
+      title: string
+      items: string[]
+    }
+    suggestedGoals: {
+      title: string
+      items: string[]
+    }
+  }
+  modelId: string
 }
 
 // Custom APIs for renderer
@@ -363,6 +451,88 @@ const api = {
       success: boolean
       message: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.CANCEL_SYNC)
+  },
+  // 数据分析相关API
+  analytics: {
+    // 获取笔记历史统计数据
+    getNoteHistoryStats: (): Promise<{
+      success: boolean
+      stats?: {
+        totalNotes: number
+        totalEdits: number
+        averageEditLength: number
+        mostEditedNotes: Array<{
+          filePath: string
+          count: number
+          lastEditTime: number
+        }>
+        notesByDate: Array<{
+          date: string
+          count: number
+        }>
+        editsByDate: Array<{
+          date: string
+          count: number
+        }>
+        editTimeDistribution: Array<{
+          hour: number
+          count: number
+        }>
+        topFolders: Array<{
+          folder: string
+          count: number
+        }>
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_NOTE_HISTORY_STATS),
+
+    // 获取用户活动数据
+    getUserActivityData: (
+      days: number = 30
+    ): Promise<{
+      success: boolean
+      activityData?: {
+        dailyActivity: Record<
+          string,
+          {
+            createdNotes: number
+            editedNotes: number
+            totalEdits: number
+            charactersAdded: number
+            activeHours: number[]
+          }
+        >
+        noteDetails: Array<{
+          filePath: string
+          firstEdit: number
+          lastEdit: number
+          editCount: number
+          averageEditSize: number
+        }>
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_USER_ACTIVITY_DATA, days),
+
+    // 获取分析缓存
+    getAnalysisCache: (): Promise<{
+      success: boolean
+      cache?: AnalysisCacheItem
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_ANALYSIS_CACHE),
+
+    // 保存分析缓存
+    saveAnalysisCache: (
+      cacheData: AnalysisCacheItem
+    ): Promise<{
+      success: boolean
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SAVE_ANALYSIS_CACHE, cacheData),
+
+    // 重置分析缓存
+    resetAnalysisCache: (): Promise<{
+      success: boolean
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.RESET_ANALYSIS_CACHE)
   }
 }
 

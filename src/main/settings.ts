@@ -90,11 +90,15 @@ export function readSettings(): Record<string, unknown> {
       if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
         ;(settings.AiApiConfigs as AiApiConfig[]).forEach((config) => {
           if (ENCRYPTED_KEYS.includes('apiKey') && config.apiKey && config.apiKey !== '') {
-            config.apiKey = decrypt(config.apiKey)
+            try {
+              config.apiKey = decrypt(config.apiKey)
+            } catch (decryptError) {
+              console.error('解密API Key失败:', decryptError)
+              // 保留原始加密值，以免解密失败导致键被删除
+            }
           }
         })
       } else {
-        // 如果不是数组或不存在，初始化为空数组
         settings.AiApiConfigs = []
       }
 
@@ -110,6 +114,7 @@ export function readSettings(): Record<string, unknown> {
   }
 
   // 如果文件不存在或读取失败，返回默认设置
+  console.log('返回默认设置')
   return { ...defaultSettings }
 }
 

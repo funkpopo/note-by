@@ -3,6 +3,7 @@ import { Layout } from '@douyinfe/semi-ui'
 import Navigation from './components/Navigation'
 import Settings from './components/Settings'
 import EditorComponent from './components/Editor'
+import DataAnalysis from './components/DataAnalysis'
 
 const App: React.FC = () => {
   const { Content } = Layout
@@ -39,6 +40,8 @@ const App: React.FC = () => {
             onFileChanged={handleFileChanged}
           />
         )
+      case 'DataAnalysis':
+        return <DataAnalysis />
       default:
         return <div>分组管理内容</div>
     }

@@ -19,6 +19,37 @@ interface Window {
       // 设置单个设置
       set: <T>(key: string, value: T) => Promise<boolean>
     }
+    // 数据分析相关API
+    analytics: {
+      // 获取笔记历史统计数据
+      getNoteHistoryStats: () => Promise<{
+        success: boolean
+        stats: StatsData
+        error?: string
+      }>
+      // 获取用户活动数据
+      getUserActivityData: (days: number) => Promise<{
+        success: boolean
+        activityData: ActivityData
+        error?: string
+      }>
+      // 获取分析缓存
+      getAnalysisCache: () => Promise<{
+        success: boolean
+        cache?: AnalysisCacheItem
+        error?: string
+      }>
+      // 保存分析缓存
+      saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<{
+        success: boolean
+        error?: string
+      }>
+      // 重置分析缓存
+      resetAnalysisCache: () => Promise<{
+        success: boolean
+        error?: string
+      }>
+    }
     // OpenAI相关API
     openai: {
       // 测试连接
@@ -45,6 +76,19 @@ interface Window {
           onError: (error: string) => void
         }
       ) => Promise<{ success: boolean; streamId?: string; error?: string }>
+
+      // 生成内容
+      generateContent: (request: {
+        apiKey: string
+        apiUrl: string
+        modelName: string
+        prompt: string
+        maxTokens?: number
+      }) => Promise<{
+        success: boolean
+        content?: string
+        error?: string
+      }>
     }
     // API配置管理
     api: {

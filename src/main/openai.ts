@@ -168,9 +168,6 @@ export async function generateContent(
       max_tokens: maxTokens
     })
 
-    // 记录响应信息，用于调试
-    console.log('生成内容API响应:', JSON.stringify(response, null, 2))
-
     // 尝试提取内容
     let content = ''
 

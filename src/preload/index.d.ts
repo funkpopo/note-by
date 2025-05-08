@@ -66,11 +66,173 @@ interface ApiConfigAPI {
   deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
 }
 
+// 分析缓存项接口
+interface AnalysisCacheItem {
+  date: string
+  stats: {
+    totalNotes: number
+    totalEdits: number
+    averageEditLength: number
+    mostEditedNotes: Array<{
+      filePath: string
+      editCount: number
+      count?: number
+    }>
+    notesByDate: Array<{
+      date: string
+      count: number
+    }>
+    editsByDate: Array<{
+      date: string
+      count: number
+    }>
+    editTimeDistribution: Array<{
+      hour: number
+      count: number
+    }>
+    topFolders?: Array<{
+      folder: string
+      count: number
+    }>
+  }
+  activityData: {
+    dailyActivity: Record<
+      string,
+      {
+        createdNotes: number
+        editedNotes: number
+        totalEdits: number
+        charactersAdded: number
+        activeHours: number[]
+      }
+    >
+    noteDetails: Array<{
+      filePath: string
+      firstEdit: number
+      lastEdit: number
+      editCount: number
+      averageEditSize: number
+    }>
+  }
+  result: {
+    summary: string
+    writingHabits: {
+      title: string
+      content: string
+    }
+    writingRhythm: {
+      title: string
+      content: string
+    }
+    topics: {
+      title: string
+      content: string
+    }
+    writingBehavior: {
+      title: string
+      content: string
+    }
+    recommendations: {
+      title: string
+      items: string[]
+    }
+    efficiencyTips: {
+      title: string
+      items: string[]
+    }
+    suggestedGoals: {
+      title: string
+      items: string[]
+    }
+  }
+  modelId: string
+}
+
+// 数据分析API接口定义
+interface AnalyticsAPI {
+  // 获取笔记历史统计数据
+  getNoteHistoryStats: () => Promise<{
+    success: boolean
+    stats?: {
+      totalNotes: number
+      totalEdits: number
+      averageEditLength: number
+      mostEditedNotes: Array<{
+        filePath: string
+        count: number
+        lastEditTime: number
+      }>
+      notesByDate: Array<{
+        date: string
+        count: number
+      }>
+      editsByDate: Array<{
+        date: string
+        count: number
+      }>
+      editTimeDistribution: Array<{
+        hour: number
+        count: number
+      }>
+      topFolders: Array<{
+        folder: string
+        count: number
+      }>
+    }
+    error?: string
+  }>
+
+  // 获取用户活动数据
+  getUserActivityData: (days?: number) => Promise<{
+    success: boolean
+    activityData?: {
+      dailyActivity: Record<
+        string,
+        {
+          createdNotes: number
+          editedNotes: number
+          totalEdits: number
+          charactersAdded: number
+          activeHours: number[]
+        }
+      >
+      noteDetails: Array<{
+        filePath: string
+        firstEdit: number
+        lastEdit: number
+        editCount: number
+        averageEditSize: number
+      }>
+    }
+    error?: string
+  }>
+
+  // 获取分析缓存
+  getAnalysisCache: () => Promise<{
+    success: boolean
+    cache?: AnalysisCacheItem
+    error?: string
+  }>
+
+  // 保存分析缓存
+  saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<{
+    success: boolean
+    error?: string
+  }>
+
+  // 重置分析缓存
+  resetAnalysisCache: () => Promise<{
+    success: boolean
+    error?: string
+  }>
+}
+
 // 全局API接口定义
 interface API {
   settings: SettingsAPI
   openai: OpenAIAPI
   api: ApiConfigAPI
+  updates: UpdatesAPI
   markdown: {
     save: (
       filePath: string,
@@ -134,6 +296,7 @@ interface API {
       fileName: string
     ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
   }
+  analytics: AnalyticsAPI
 }
 
 declare global {

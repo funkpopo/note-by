@@ -32,13 +32,16 @@
     "@electron-toolkit/utils": "^4.0.0",
     "axios": "^1.9.0",
     "better-sqlite3": "^11.9.1",
+    "chart.js": "^4.4.9",
     "openai": "^4.97.0",
+    "react-chartjs-2": "^5.3.0",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "uuid": "^11.1.0",
-    "webdav": "^5.8.0"
+    "webdav": "^5.3.0",
+    "zustand": "^4.5.6"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

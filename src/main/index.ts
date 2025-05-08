@@ -24,7 +24,19 @@ import axios from 'axios'
 import http from 'http'
 import https from 'https'
 import { protocol } from 'electron'
-import { initDatabase, addNoteHistory, getNoteHistory, getNoteHistoryById } from './database'
+import {
+  initDatabase,
+  addNoteHistory,
+  getNoteHistory,
+  getNoteHistoryById,
+  getNoteHistoryStats,
+  getUserActivityData,
+  getAnalysisCache,
+  saveAnalysisCache,
+  initAnalysisCacheTable,
+  resetAnalysisCache,
+  type AnalysisCacheItem
+} from './database'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -61,7 +73,13 @@ const IPC_CHANNELS = {
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
   GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id',
-  UPDATE_SETTING: 'settings:update'
+  UPDATE_SETTING: 'settings:update',
+  // 添加数据分析相关IPC通道
+  GET_NOTE_HISTORY_STATS: 'analytics:get-note-history-stats',
+  GET_USER_ACTIVITY_DATA: 'analytics:get-user-activity-data',
+  GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
+  SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
+  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -1140,6 +1158,61 @@ app.whenReady().then(() => {
     return true
   })
 
+  // 获取笔记历史记录统计数据
+  ipcMain.handle(IPC_CHANNELS.GET_NOTE_HISTORY_STATS, async () => {
+    try {
+      const stats = await getNoteHistoryStats()
+      return { success: true, stats }
+    } catch (error) {
+      console.error('获取笔记历史统计数据失败:', error)
+      return { success: false, error: String(error), stats: null }
+    }
+  })
+
+  // 获取用户活动数据
+  ipcMain.handle(IPC_CHANNELS.GET_USER_ACTIVITY_DATA, async (_, days = 30) => {
+    try {
+      const activityData = await getUserActivityData(days)
+      return { success: true, activityData }
+    } catch (error) {
+      console.error('获取用户活动数据失败:', error)
+      return { success: false, error: String(error), activityData: null }
+    }
+  })
+
+  // 获取分析缓存
+  ipcMain.handle(IPC_CHANNELS.GET_ANALYSIS_CACHE, async () => {
+    try {
+      const cache = await getAnalysisCache()
+      return { success: true, cache }
+    } catch (error) {
+      console.error('获取分析缓存失败:', error)
+      return { success: false, error: String(error), cache: null }
+    }
+  })
+
+  // 保存分析缓存
+  ipcMain.handle(IPC_CHANNELS.SAVE_ANALYSIS_CACHE, async (_, cacheData: AnalysisCacheItem) => {
+    try {
+      const success = await saveAnalysisCache(cacheData)
+      return { success }
+    } catch (error) {
+      console.error('保存分析缓存失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 重置分析缓存
+  ipcMain.handle(IPC_CHANNELS.RESET_ANALYSIS_CACHE, async () => {
+    try {
+      const success = await resetAnalysisCache()
+      return { success }
+    } catch (error) {
+      console.error('重置分析缓存失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
   createWindow()
 
   // 应用启动时执行自动同步
@@ -1150,15 +1223,23 @@ app.whenReady().then(() => {
 
   // 初始化数据库
   try {
+    // 确保数据库初始化成功后立即创建分析缓存表
     initDatabase()
-      .then(() => {
-        console.log('历史记录数据库初始化成功')
+      .then((db) => {
+        if (db) {
+          console.log('历史记录数据库初始化成功')
+          // 立即初始化分析缓存表，并返回Promise以继续链式操作
+          return initAnalysisCacheTable()
+        } else {
+          throw new Error('数据库初始化失败')
+        }
       })
+      .then(() => {})
       .catch((error) => {
-        console.error('历史记录数据库初始化失败:', error)
+        console.error('数据库初始化失败:', error)
       })
   } catch (error) {
-    console.error('历史记录数据库初始化尝试失败:', error)
+    console.error('数据库初始化尝试失败:', error)
   }
 
   app.on('activate', function () {

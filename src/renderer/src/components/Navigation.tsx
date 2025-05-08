@@ -9,6 +9,7 @@ import {
   IconPlus,
   IconSync,
   IconSearch,
+  IconSearchStroked,
   IconClose
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
@@ -758,7 +759,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           {
             itemKey: 'Editor',
             text: '笔记',
-            icon: <IconFolder />,
+            icon: <IconFolder size="large" />,
             onClick: (): void => {
               toggleSecondaryNav()
               onNavChange('Editor')
@@ -766,9 +767,19 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
             }
           },
           {
+            itemKey: 'DataAnalysis',
+            text: '数据分析',
+            icon: <IconSearchStroked size="large" />,
+            onClick: (): void => {
+              setShowSecondaryNav(false)
+              onNavChange('DataAnalysis')
+              setSelectedKeys(['DataAnalysis'])
+            }
+          },
+          {
             itemKey: 'Settings',
             text: '设置',
-            icon: <IconSetting />,
+            icon: <IconSetting size="large" />,
             onClick: (): void => {
               setShowSecondaryNav(false)
               onNavChange('Settings')

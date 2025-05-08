@@ -226,3 +226,563 @@ export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | 
     return null
   }
 }
+
+// 笔记历史记录统计和分析接口
+export interface NoteHistoryStats {
+  totalNotes: number // 笔记总数
+  totalEdits: number // 编辑次数总计
+  averageEditLength: number // 平均编辑长度（字符数）
+  mostEditedNotes: Array<{
+    // 编辑最频繁的笔记
+    filePath: string
+    count: number
+    lastEditTime: number
+  }>
+  notesByDate: Array<{
+    // 每日笔记数量
+    date: string
+    count: number
+  }>
+  editsByDate: Array<{
+    // 每日编辑次数
+    date: string
+    count: number
+  }>
+  editTimeDistribution: Array<{
+    // 编辑时间分布（24小时制）
+    hour: number
+    count: number
+  }>
+  topFolders: Array<{
+    // 最常用的文件夹
+    folder: string
+    count: number
+  }>
+}
+
+// 获取笔记历史记录统计数据
+export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
+  try {
+    const database = await initDatabase()
+
+    // 如果数据库不可用，返回null
+    if (!database) {
+      console.log('无法获取历史记录统计：数据库不可用')
+      return null
+    }
+
+    // 1. 获取笔记总数（去重的文件路径数）
+    const totalNotesStmt = database.prepare(
+      'SELECT COUNT(DISTINCT file_path) as count FROM note_history'
+    )
+    const totalNotes = (totalNotesStmt.get() as { count: number }).count
+
+    // 2. 获取编辑次数总计
+    const totalEditsStmt = database.prepare('SELECT COUNT(*) as count FROM note_history')
+    const totalEdits = (totalEditsStmt.get() as { count: number }).count
+
+    // 3. 计算平均编辑长度
+    const avgLengthStmt = database.prepare('SELECT AVG(LENGTH(content)) as avg FROM note_history')
+    const avgLength = (avgLengthStmt.get() as { avg: number }).avg || 0
+
+    // 4. 获取编辑最频繁的笔记（前5个）
+    const mostEditedStmt = database.prepare(`
+      SELECT 
+        file_path as filePath, 
+        COUNT(*) as count,
+        MAX(timestamp) as lastEditTime
+      FROM note_history 
+      GROUP BY file_path 
+      ORDER BY count DESC 
+      LIMIT 5
+    `)
+    const mostEditedNotes = mostEditedStmt.all() as Array<{
+      filePath: string
+      count: number
+      lastEditTime: number
+    }>
+
+    // 5. 获取每日笔记数量（最近30天）
+    const notesByDateStmt = database.prepare(`
+      SELECT 
+        date(timestamp/1000, 'unixepoch', 'localtime') as date,
+        COUNT(DISTINCT file_path) as count
+      FROM note_history
+      WHERE timestamp >= ?
+      GROUP BY date
+      ORDER BY date ASC
+    `)
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+    const notesByDate = notesByDateStmt.all(thirtyDaysAgo) as Array<{
+      date: string
+      count: number
+    }>
+
+    // 6. 获取每日编辑次数（最近30天）
+    const editsByDateStmt = database.prepare(`
+      SELECT 
+        date(timestamp/1000, 'unixepoch', 'localtime') as date,
+        COUNT(*) as count
+      FROM note_history
+      WHERE timestamp >= ?
+      GROUP BY date
+      ORDER BY date ASC
+    `)
+    const editsByDate = editsByDateStmt.all(thirtyDaysAgo) as Array<{
+      date: string
+      count: number
+    }>
+
+    // 7. 获取编辑时间分布（24小时制）
+    const timeDistStmt = database.prepare(`
+      SELECT 
+        cast(strftime('%H', datetime(timestamp/1000, 'unixepoch', 'localtime')) as integer) as hour,
+        COUNT(*) as count
+      FROM note_history
+      GROUP BY hour
+      ORDER BY hour ASC
+    `)
+    const editTimeDistribution = timeDistStmt.all() as Array<{
+      hour: number
+      count: number
+    }>
+
+    // 8. 获取最常用的文件夹
+    const topFoldersStmt = database.prepare(`
+      SELECT 
+        substr(file_path, 1, instr(file_path, '/') - 1) as folder,
+        COUNT(*) as count
+      FROM note_history
+      WHERE instr(file_path, '/') > 0
+      GROUP BY folder
+      ORDER BY count DESC
+      LIMIT 5
+    `)
+    const topFolders = topFoldersStmt.all() as Array<{
+      folder: string
+      count: number
+    }>
+
+    // 返回完整的统计数据
+    return {
+      totalNotes,
+      totalEdits,
+      averageEditLength: Math.round(avgLength),
+      mostEditedNotes,
+      notesByDate,
+      editsByDate,
+      editTimeDistribution,
+      topFolders
+    }
+  } catch (error) {
+    console.error('获取历史记录统计失败:', error)
+    return null
+  }
+}
+
+// 用户活动数据
+export interface UserActivityData {
+  // 日期格式：YYYY-MM-DD
+  dailyActivity: Record<
+    string,
+    {
+      createdNotes: number
+      editedNotes: number
+      totalEdits: number
+      charactersAdded: number
+      activeHours: number[]
+    }
+  >
+
+  // 笔记详情数据
+  noteDetails: Array<{
+    filePath: string
+    firstEdit: number
+    lastEdit: number
+    editCount: number
+    averageEditSize: number
+  }>
+}
+
+// 获取用户活动数据
+export async function getUserActivityData(days: number = 30): Promise<UserActivityData | null> {
+  try {
+    const database = await initDatabase()
+
+    // 如果数据库不可用，返回null
+    if (!database) {
+      console.log('无法获取用户活动数据：数据库不可用')
+      return null
+    }
+
+    // 计算起始时间（过去days天）
+    const startTime = Date.now() - days * 24 * 60 * 60 * 1000
+
+    // 获取日期范围内的所有编辑记录
+    const editsStmt = database.prepare(`
+      SELECT 
+        id,
+        file_path as filePath,
+        content,
+        timestamp,
+        date(timestamp/1000, 'unixepoch', 'localtime') as date,
+        strftime('%H', datetime(timestamp/1000, 'unixepoch', 'localtime')) as hour
+      FROM note_history
+      WHERE timestamp >= ?
+      ORDER BY timestamp ASC
+    `)
+
+    const edits = editsStmt.all(startTime) as Array<{
+      id: number
+      filePath: string
+      content: string
+      timestamp: number
+      date: string
+      hour: string
+    }>
+
+    // 初始化结果对象
+    const result: UserActivityData = {
+      dailyActivity: {},
+      noteDetails: []
+    }
+
+    // 处理笔记详情数据
+    const notesMap: Record<
+      string,
+      {
+        firstEdit: number
+        lastEdit: number
+        editCount: number
+        totalEditSize: number
+        contents: string[] // 存储每个版本的内容，用于计算平均编辑大小
+      }
+    > = {}
+
+    // 处理日常活动数据
+    const dailyFilesCreated: Record<string, Set<string>> = {}
+    const dailyFilesEdited: Record<string, Set<string>> = {}
+    const dailyEdits: Record<string, number> = {}
+    const dailyChars: Record<string, number> = {}
+    const dailyHours: Record<string, Set<number>> = {}
+
+    // 分析每个编辑记录
+    for (const edit of edits) {
+      // 更新笔记详情
+      if (!notesMap[edit.filePath]) {
+        notesMap[edit.filePath] = {
+          firstEdit: edit.timestamp,
+          lastEdit: edit.timestamp,
+          editCount: 0,
+          totalEditSize: 0,
+          contents: []
+        }
+      }
+
+      const noteInfo = notesMap[edit.filePath]
+      noteInfo.lastEdit = Math.max(noteInfo.lastEdit, edit.timestamp)
+      noteInfo.editCount += 1
+      noteInfo.contents.push(edit.content)
+
+      // 如果有多个版本，计算此次编辑的大小（与上一版本的差异）
+      if (noteInfo.contents.length > 1) {
+        const prevContent = noteInfo.contents[noteInfo.contents.length - 2]
+        const currContent = edit.content
+        // 简单使用长度差异作为编辑大小的估计
+        const editSize = Math.abs(currContent.length - prevContent.length)
+        noteInfo.totalEditSize += editSize
+      } else {
+        // 第一个版本，使用整个内容长度
+        noteInfo.totalEditSize += edit.content.length
+      }
+
+      // 更新日常活动数据
+      const date = edit.date
+      const hour = parseInt(edit.hour)
+
+      // 初始化日期数据（如果不存在）
+      if (!dailyFilesCreated[date]) dailyFilesCreated[date] = new Set()
+      if (!dailyFilesEdited[date]) dailyFilesEdited[date] = new Set()
+      if (!dailyEdits[date]) dailyEdits[date] = 0
+      if (!dailyChars[date]) dailyChars[date] = 0
+      if (!dailyHours[date]) dailyHours[date] = new Set()
+
+      // 更新每日数据
+      dailyFilesEdited[date].add(edit.filePath)
+      dailyEdits[date] += 1
+      dailyHours[date].add(hour)
+
+      // 检查是否是新创建的笔记（第一次编辑）
+      if (noteInfo.editCount === 1) {
+        dailyFilesCreated[date].add(edit.filePath)
+      }
+
+      // 计算字符增加量（简单估计）
+      // 如果有多个版本，计算与上一版本的差异
+      if (noteInfo.contents.length > 1) {
+        const prevContent = noteInfo.contents[noteInfo.contents.length - 2]
+        const currContent = edit.content
+        // 如果当前版本更长，认为是增加了字符
+        if (currContent.length > prevContent.length) {
+          dailyChars[date] += currContent.length - prevContent.length
+        }
+      } else {
+        // 第一个版本，计入全部字符
+        dailyChars[date] += edit.content.length
+      }
+    }
+
+    // 整理日常活动数据
+    for (const date of Object.keys(dailyFilesEdited)) {
+      result.dailyActivity[date] = {
+        createdNotes: dailyFilesCreated[date]?.size || 0,
+        editedNotes: dailyFilesEdited[date]?.size || 0,
+        totalEdits: dailyEdits[date] || 0,
+        charactersAdded: dailyChars[date] || 0,
+        activeHours: Array.from(dailyHours[date] || [])
+      }
+    }
+
+    // 整理笔记详情数据
+    for (const [filePath, info] of Object.entries(notesMap)) {
+      result.noteDetails.push({
+        filePath,
+        firstEdit: info.firstEdit,
+        lastEdit: info.lastEdit,
+        editCount: info.editCount,
+        averageEditSize: info.editCount > 0 ? Math.round(info.totalEditSize / info.editCount) : 0
+      })
+    }
+
+    // 按编辑次数排序笔记详情（降序）
+    result.noteDetails.sort((a, b) => b.editCount - a.editCount)
+
+    return result
+  } catch (error) {
+    console.error('获取用户活动数据失败:', error)
+    return null
+  }
+}
+
+// 分析缓存项接口
+export interface AnalysisCacheItem {
+  date: string // 分析日期，格式：YYYY-MM-DD
+  stats: NoteHistoryStats
+  activityData: UserActivityData
+  result: {
+    summary: string
+    writingHabits: {
+      title: string
+      content: string
+    }
+    writingRhythm: {
+      title: string
+      content: string
+    }
+    topics: {
+      title: string
+      content: string
+    }
+    writingBehavior: {
+      title: string
+      content: string
+    }
+    recommendations: {
+      title: string
+      items: string[]
+    }
+    efficiencyTips: {
+      title: string
+      items: string[]
+    }
+    suggestedGoals: {
+      title: string
+      items: string[]
+    }
+  }
+  modelId: string
+}
+
+// 初始化数据库时创建分析缓存表
+export async function initAnalysisCacheTable(): Promise<void> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法创建分析缓存表：数据库不可用')
+      return
+    }
+
+    // 只在表不存在时创建表，不再删除现有表
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS analysis_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,
+        stats TEXT NOT NULL,
+        activity_data TEXT NOT NULL,
+        result TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_analysis_cache_date ON analysis_cache(date);
+    `)
+  } catch (error) {
+    console.error('创建分析缓存表失败:', error)
+  }
+}
+
+// 保存分析缓存
+export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolean> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法保存分析缓存：数据库不可用')
+      return false
+    }
+
+    // 先检查是否已有当天的数据
+    const checkStmt = database.prepare('SELECT id FROM analysis_cache WHERE date = ?')
+    const existingRecord = checkStmt.get(data.date) as { id: number } | undefined
+
+    if (existingRecord) {
+      // 更新现有记录
+      const updateStmt = database.prepare(`
+        UPDATE analysis_cache 
+        SET stats = ?, activity_data = ?, result = ?, model_id = ?, timestamp = ?
+        WHERE date = ?
+      `)
+
+      try {
+        updateStmt.run(
+          JSON.stringify(data.stats),
+          JSON.stringify(data.activityData),
+          JSON.stringify(data.result),
+          data.modelId,
+          Date.now(),
+          data.date
+        )
+      } catch (error) {
+        console.error('执行更新语句失败:', error, {
+          stats: typeof data.stats,
+          activityData: typeof data.activityData,
+          result: typeof data.result
+        })
+        return false
+      }
+    } else {
+      // 插入新记录
+      const insertStmt = database.prepare(`
+        INSERT INTO analysis_cache 
+        (date, stats, activity_data, result, model_id, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+
+      try {
+        insertStmt.run(
+          data.date,
+          JSON.stringify(data.stats),
+          JSON.stringify(data.activityData),
+          JSON.stringify(data.result),
+          data.modelId,
+          Date.now()
+        )
+      } catch (error) {
+        console.error('执行插入语句失败:', error, {
+          stats: typeof data.stats,
+          activityData: typeof data.activityData,
+          result: typeof data.result
+        })
+        return false
+      }
+    }
+
+    // 清理旧缓存，仅保留最近7天的数据
+    const cleanupStmt = database.prepare(`
+      DELETE FROM analysis_cache 
+      WHERE date NOT IN (
+        SELECT date FROM analysis_cache 
+        ORDER BY date DESC 
+        LIMIT 7
+      )
+    `)
+
+    cleanupStmt.run()
+
+    return true
+  } catch (error) {
+    console.error('保存分析缓存失败:', error)
+    return false
+  }
+}
+
+// 获取分析缓存
+export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法获取分析缓存：数据库不可用')
+      return null
+    }
+
+    // 获取最新的缓存记录
+    const stmt = database.prepare(`
+      SELECT date, stats, activity_data, result, model_id
+      FROM analysis_cache
+      ORDER BY date DESC
+      LIMIT 1
+    `)
+
+    const record = stmt.get() as
+      | {
+          date: string
+          stats: string
+          activity_data: string
+          result: string
+          model_id: string
+        }
+      | undefined
+
+    if (!record) {
+      return null
+    }
+
+    // 解析JSON字段并返回
+    return {
+      date: record.date,
+      stats: JSON.parse(record.stats),
+      activityData: JSON.parse(record.activity_data),
+      result: JSON.parse(record.result),
+      modelId: record.model_id
+    }
+  } catch (error) {
+    console.error('获取分析缓存失败:', error)
+    return null
+  }
+}
+
+// 重置分析缓存表
+export async function resetAnalysisCache(): Promise<boolean> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法重置分析缓存：数据库不可用')
+      return false
+    }
+
+    // 删除并重新创建表
+    database.exec(`DROP TABLE IF EXISTS analysis_cache`)
+
+    // 重新创建表
+    await initAnalysisCacheTable()
+
+    console.log('分析缓存表已重置')
+    return true
+  } catch (error) {
+    console.error('重置分析缓存表失败:', error)
+    return false
+  }
+}
