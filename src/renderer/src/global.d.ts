@@ -176,6 +176,13 @@ interface Window {
         failed: number
         skippedUpload: number
         skippedDownload: number
+        cancelled?: boolean
+      }>
+
+      // 取消同步
+      cancelSync: () => Promise<{
+        success: boolean
+        message: string
       }>
     }
   }

@@ -36,6 +36,7 @@ const IPC_CHANNELS = {
   UPLOAD_FILE: 'markdown:upload-file',
   DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
   GET_ALL_SETTINGS: 'settings:getAll',
+  UPDATE_SETTING: 'settings:update',
   CHECK_FILE_EXISTS: 'markdown:checkFileExists',
   TEST_WEBDAV_CONNECTION: 'webdav:test-connection',
   SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
@@ -80,7 +81,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.GET_SETTING, key, defaultValue),
     // 设置单个设置
     set: <T>(key: string, value: T): Promise<boolean> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SET_SETTING, key, value)
+      ipcRenderer.invoke(IPC_CHANNELS.SET_SETTING, key, value),
+    // 更新单个设置
+    update: <T>(key: string, value: T): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_SETTING, key, value)
   },
   // OpenAI相关API
   openai: {

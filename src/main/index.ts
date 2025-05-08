@@ -60,8 +60,20 @@ const IPC_CHANNELS = {
   CHECK_FOR_UPDATES: 'app:check-for-updates',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
-  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id'
+  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id',
+  UPDATE_SETTING: 'settings:update'
 }
+
+// 禁用硬件加速以解决GPU缓存问题
+app.disableHardwareAcceleration()
+
+// 设置自定义缓存路径
+const userDataPath = app.getPath('userData')
+const customCachePath = path.join(userDataPath, 'Cache')
+app.setPath('sessionData', userDataPath)
+app.setPath('userCache', customCachePath)
+app.commandLine.appendSwitch('disable-gpu')
+app.commandLine.appendSwitch('disable-gpu-compositing')
 
 // 获取markdown文件夹路径
 function getMarkdownFolderPath(): string {
@@ -118,9 +130,21 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       webSecurity: false, // 禁用 webSecurity 以允许加载本地文件
-      allowRunningInsecureContent: true // 允许运行不安全的内容
+      allowRunningInsecureContent: true, // 允许运行不安全的内容
+      disableBlinkFeatures: 'Accelerated2dCanvas,AcceleratedSmil', // 禁用加速2D画布
+      offscreen: false,
+      backgroundThrottling: false
     }
   })
+
+  // 禁用BrowserWindow的硬件加速
+  mainWindow.webContents.setFrameRate(30)
+  mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
+
+  // 配置session缓存路径
+  const userDataPath = app.getPath('userData')
+  const cachePath = path.join(userDataPath, 'GPUCache')
+  mainWindow.webContents.session.setCodeCachePath(cachePath)
 
   // 设置内容安全策略，允许加载本地协议图片和外部网络图片
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -1108,6 +1132,12 @@ app.whenReady().then(() => {
       console.error('获取特定历史记录失败:', error)
       return { success: false, error: String(error), history: null }
     }
+  })
+
+  // 更新单个设置
+  ipcMain.handle(IPC_CHANNELS.UPDATE_SETTING, (_, key: string, value: unknown) => {
+    updateSetting(key, value)
+    return true
   })
 
   createWindow()

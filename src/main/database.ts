@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import { getSetting } from './settings'
 
 // 导入类型定义，即使初始化失败也能使用类型
 import type Database from 'better-sqlite3'
@@ -122,18 +123,50 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
     // 执行插入
     stmt.run(params.filePath, params.content, timestamp)
 
-    // 清理过旧的历史记录，保留最近20条
-    const cleanStmt = database.prepare(`
-      DELETE FROM note_history 
-      WHERE file_path = ? AND id NOT IN (
-        SELECT id FROM note_history 
-        WHERE file_path = ? 
-        ORDER BY timestamp DESC 
-        LIMIT 20
-      )
-    `)
+    // 获取历史记录管理设置
+    interface HistoryManagementSettings {
+      type: 'count' | 'time'
+      maxCount: number
+      maxDays: number
+    }
 
-    cleanStmt.run(params.filePath, params.filePath)
+    const defaultSettings: HistoryManagementSettings = {
+      type: 'count',
+      maxCount: 20,
+      maxDays: 7
+    }
+
+    const historyManagement = (await getSetting(
+      'historyManagement',
+      defaultSettings
+    )) as HistoryManagementSettings
+
+    // 根据设置清理历史记录
+    if (historyManagement.type === 'count') {
+      // 基于数量的清理策略
+      const cleanStmt = database.prepare(`
+        DELETE FROM note_history 
+        WHERE file_path = ? AND id NOT IN (
+          SELECT id FROM note_history 
+          WHERE file_path = ? 
+          ORDER BY timestamp DESC 
+          LIMIT ?
+        )
+      `)
+
+      cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
+    } else if (historyManagement.type === 'time') {
+      // 基于时间的清理策略
+      // 计算时间阈值（当前时间减去maxDays天）
+      const timeThreshold = Date.now() - historyManagement.maxDays * 24 * 60 * 60 * 1000
+
+      const cleanStmt = database.prepare(`
+        DELETE FROM note_history 
+        WHERE file_path = ? AND timestamp < ?
+      `)
+
+      cleanStmt.run(params.filePath, timeThreshold)
+    }
   } catch (error) {
     console.error('添加历史记录失败:', error)
   }

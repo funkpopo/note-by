@@ -13,7 +13,8 @@ import {
   Spin,
   ButtonGroup,
   Tabs,
-  TabPane
+  TabPane,
+  Radio
 } from '@douyinfe/semi-ui'
 import {
   IconMoon,
@@ -57,6 +58,13 @@ interface UpdateResult {
   error?: string
 }
 
+// 历史记录管理设置接口
+interface HistoryManagementSettings {
+  type: 'count' | 'time'
+  maxCount: number
+  maxDays: number
+}
+
 const Settings: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(true)
@@ -79,6 +87,11 @@ const Settings: React.FC = () => {
   const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState<boolean>(true)
   const [isCheckingUpdates, setIsCheckingUpdates] = useState<boolean>(false)
   const [updateResult, setUpdateResult] = useState<UpdateResult | null>(null)
+  const [historyManagement, setHistoryManagement] = useState<HistoryManagementSettings>({
+    type: 'count',
+    maxCount: 20,
+    maxDays: 7
+  })
 
   // 加载所有设置
   useEffect(() => {
@@ -160,6 +173,11 @@ const Settings: React.FC = () => {
       // 加载更新检查设置
       if (settings.checkUpdatesOnStartup !== undefined) {
         setCheckUpdatesOnStartup(settings.checkUpdatesOnStartup as boolean)
+      }
+
+      // 加载历史记录管理设置
+      if (settings.historyManagement) {
+        setHistoryManagement(settings.historyManagement as HistoryManagementSettings)
       }
     } catch (error) {
       console.error('加载设置失败:', error)
@@ -573,10 +591,87 @@ const Settings: React.FC = () => {
     window.api.updates.onUpdateAvailable(handleUpdateAvailable)
   }, [])
 
+  // 保存历史记录管理设置
+  const saveHistoryManagement = async (): Promise<void> => {
+    try {
+      // 根据当前选择的类型创建一个新的设置对象
+      const settingsToSave = {
+        type: historyManagement.type,
+        // 只保存当前选择模式相关的值，另一个值设为默认值
+        maxCount: historyManagement.type === 'count' ? historyManagement.maxCount : 20,
+        maxDays: historyManagement.type === 'time' ? historyManagement.maxDays : 7
+      }
+
+      await window.api.settings.set('historyManagement', settingsToSave)
+      Toast.success('历史记录管理设置已保存')
+    } catch (error) {
+      console.error('保存历史记录管理设置失败:', error)
+      Toast.error('保存历史记录管理设置失败')
+    }
+  }
+
+  // 处理历史记录管理类型变更
+  const handleHistoryTypeChange = (
+    e: { target: { value: 'count' | 'time' } } | 'count' | 'time'
+  ): void => {
+    const newType = typeof e === 'object' && 'target' in e ? e.target.value : e
+    setHistoryManagement({
+      ...historyManagement,
+      type: newType
+    })
+  }
+
+  // 处理历史记录保留数量变更
+  const handleMaxCountChange = (value: string | number): void => {
+    const numValue = typeof value === 'string' ? parseInt(value, 10) : value
+    if (!isNaN(numValue) && numValue > 0) {
+      setHistoryManagement({
+        ...historyManagement,
+        maxCount: numValue
+      })
+    }
+  }
+
+  // 处理历史记录保留天数变更
+  const handleMaxDaysChange = (value: string | number): void => {
+    const numValue = typeof value === 'string' ? parseInt(value, 10) : value
+    if (!isNaN(numValue) && numValue > 0) {
+      setHistoryManagement({
+        ...historyManagement,
+        maxDays: numValue
+      })
+    }
+  }
+
   return (
-    <div>
-      <Tabs type="line" defaultActiveKey="theme">
-        <TabPane tab="基本设置" itemKey="theme">
+    <div
+      style={{
+        padding: '16px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        height: 'calc(100vh - 32px)' // 减去上下padding
+      }}
+    >
+      <Title heading={2}>设置</Title>
+
+      <Tabs
+        type="line"
+        size="large"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          overflow: 'hidden'
+        }}
+        tabPosition="top"
+        contentStyle={{
+          flex: 1,
+          overflow: 'hidden'
+        }}
+      >
+        <TabPane tab="基本设置" itemKey="basic">
           <div className="settings-scroll-container">
             {/* 主题设置卡片 */}
             <Card style={{ marginTop: 20, marginBottom: 20 }}>
@@ -741,6 +836,66 @@ const Settings: React.FC = () => {
             ) : (
               renderApiConfigCards()
             )}
+          </div>
+        </TabPane>
+
+        <TabPane tab="历史记录管理" itemKey="history">
+          <div className="settings-scroll-container">
+            {/* 历史记录管理设置卡片 */}
+            <Card
+              title="历史记录管理"
+              style={{ marginTop: 20, marginBottom: '16px' }}
+              headerExtraContent={
+                <Button type="primary" theme="solid" onClick={saveHistoryManagement}>
+                  保存
+                </Button>
+              }
+            >
+              <Form>
+                <Form.RadioGroup
+                  field="historyType"
+                  label="历史记录保留方式"
+                  initValue={historyManagement.type}
+                  onChange={handleHistoryTypeChange}
+                >
+                  <Radio value="count">按数量保留</Radio>
+                  <Radio value="time">按时间保留</Radio>
+                </Form.RadioGroup>
+
+                {historyManagement.type === 'count' && (
+                  <Form.InputNumber
+                    field="maxCount"
+                    label="保留最近的记录数量"
+                    initValue={historyManagement.maxCount}
+                    onChange={handleMaxCountChange}
+                    min={1}
+                    max={1000}
+                    step={1}
+                    style={{ width: '200px' }}
+                  />
+                )}
+
+                {historyManagement.type === 'time' && (
+                  <Form.InputNumber
+                    field="maxDays"
+                    label="保留天数"
+                    initValue={historyManagement.maxDays}
+                    onChange={handleMaxDaysChange}
+                    min={1}
+                    max={365}
+                    step={1}
+                    suffix="天"
+                    style={{ width: '200px' }}
+                  />
+                )}
+
+                <Paragraph style={{ marginTop: '16px', color: 'var(--semi-color-text-2)' }}>
+                  {historyManagement.type === 'count'
+                    ? `系统将为每个文件保留最近的 ${historyManagement.maxCount} 条历史记录。超出的记录将被自动清理。`
+                    : `系统将自动清理 ${historyManagement.maxDays} 天前的历史记录。`}
+                </Paragraph>
+              </Form>
+            </Card>
           </div>
         </TabPane>
 

@@ -68,7 +68,13 @@ const defaultSettings = {
     syncDirection: 'bidirectional'
   } as WebDAVConfig,
   // 默认更新设置
-  checkUpdatesOnStartup: true
+  checkUpdatesOnStartup: true,
+  // 默认历史记录管理设置
+  historyManagement: {
+    type: 'count', // 'count' 或 'time'
+    maxCount: 20, // 保留的最大记录数
+    maxDays: 7 // 保留的最大天数
+  }
 }
 
 // 读取设置

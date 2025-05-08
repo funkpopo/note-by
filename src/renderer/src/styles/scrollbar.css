@@ -44,15 +44,20 @@ body[theme-mode='dark'] ::-webkit-scrollbar-thumb:hover {
 
 /* 设置页面滚动容器样式 */
 .settings-scroll-container {
-  max-height: calc(100vh - 120px);
+  /* 修改为更灵活的高度计算，支持小窗口显示 */
+  max-height: calc(100vh - 160px);
+  min-height: 200px; /* 确保小窗口时也有最小高度 */
   overflow-y: auto;
   padding-right: 8px; /* 给滚动条预留空间 */
   margin-bottom: 20px; /* 底部边距 */
+  padding-bottom: 30px; /* 增加底部内边距确保内容不被截断 */
 }
 
 /* WebDAV设置特殊处理 */
-.settings-scroll-container .webdav-settings {
+.settings-scroll-container.webdav-settings {
+  /* 继承所有滚动容器样式，但移除右内边距 */
   padding-right: 0; /* 移除右内边距，避免与父容器的padding-right重叠 */
+  height: 100%; /* 确保高度充满Tab内容区域 */
 }
 
 /* 确保嵌套容器不产生额外滚动条 */
