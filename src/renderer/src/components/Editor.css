@@ -304,3 +304,28 @@ body[theme-mode='dark'] .editor-header {
   /* 确保节点视图宽度正确保存 */
   width: var(--media-width, auto);
 }
+
+/* 标签样式 */
+.bn-tag {
+  background-color: var(--semi-color-primary-light-default);
+  color: var(--semi-color-primary);
+  border-radius: 4px;
+  padding: 0 6px;
+  margin: 0 2px;
+  font-weight: bold;
+  user-select: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.bn-tag:hover {
+  background-color: var(--semi-color-primary-light-hover);
+}
+
+/* 深色主题下的标签样式 */
+.bn-dark .bn-tag {
+  background-color: var(--semi-color-primary-light-active);
+  color: var(--semi-color-primary-light);
+}

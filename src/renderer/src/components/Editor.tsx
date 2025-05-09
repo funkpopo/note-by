@@ -22,6 +22,7 @@ import {
   SuggestionMenuController,
   getDefaultReactSlashMenuItems
 } from '@blocknote/react'
+import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core'
 import { TranslateButton } from './TranslateButton'
 import { AnalyzeButton } from './AnalyzeButton'
 import { ContinueButton } from './ContinueButton'
@@ -29,6 +30,9 @@ import { RewriteButton } from './RewriteButton'
 import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
 import HistoryDropdown from './HistoryDropdown'
+// 导入自定义标签组件和工具函数
+import { Tag } from './Tag'
+import { getTagMenuItems, extractTags } from './TagUtils'
 
 // 添加一个接口定义API配置
 interface AiApiConfig {
@@ -46,6 +50,16 @@ interface EditorProps {
   currentFile?: string
   onFileChanged?: () => void
 }
+
+// 创建自定义schema，添加标签支持
+const schema = BlockNoteSchema.create({
+  inlineContentSpecs: {
+    // 添加所有默认内联内容
+    ...defaultInlineContentSpecs,
+    // 添加自定义标签
+    tag: Tag
+  }
+})
 
 const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChanged }) => {
   const [title, setTitle] = useState<string>('')
@@ -65,6 +79,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // 添加API配置和选中模型状态
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string>('')
+
+  // 存储标签列表的状态
+  const [tagList, setTagList] = useState<string[]>([])
 
   // Create custom light theme with enhanced selection colors
   const customLightTheme: Theme = {
@@ -135,8 +152,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     loadApiConfigs()
   }, [selectedModelId])
 
-  // Create a new editor instance
+  // Create a new editor instance with custom schema
   const editor = useCreateBlockNote({
+    schema, // 使用自定义schema
     // Enable code block syntax highlighting with configuration
     codeBlock: {
       ...codeBlock,
@@ -557,25 +575,20 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // Load file content
   const loadFileContent = useCallback(async () => {
-    // 检查必要的参数
     if (!currentFolder || !currentFile) {
-      setTitle('')
-      clearEditor()
-      lastLoadedFileRef.current = null
       return
     }
 
-    // 这里不再尝试使用TypeScript断言，逻辑上我们已经确认了值不为undefined
-    const filePath = currentFolder + '/' + currentFile
+    const filePath = `${currentFolder}/${currentFile}`
 
-    // 如果请求加载的文件与当前已加载文件相同，则不重新加载
-    if (lastLoadedFileRef.current === filePath) {
+    // 检查文件是否已经加载
+    if (filePath === lastLoadedFileRef.current) {
+      // console.log('文件已加载，无需重新加载')
       return
     }
 
-    // 清空之前的内容
+    // 在加载新文件之前，将当前编辑器内容清空
     clearEditor()
-
     setIsLoading(true)
 
     try {
@@ -586,10 +599,23 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         // 更新当前加载的文件路径
         lastLoadedFileRef.current = filePath
 
+        // 尝试从内容中提取标签信息
+        const tagsMatch = result.content.match(/<!-- tags: ([^>]*) -->/)
+        if (tagsMatch && tagsMatch[1]) {
+          const extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
+          setTagList(extractedTags)
+          console.log('从文件中提取的标签:', extractedTags)
+        } else {
+          setTagList([])
+        }
+
+        // 移除标签信息行，避免在编辑器中显示
+        const contentWithoutTags = result.content.replace(/<!-- tags: ([^>]*) -->\n\n/, '')
+
         // 存储内容
-        setEditorContent(result.content)
+        setEditorContent(contentWithoutTags)
         // 保存初始内容以供比较
-        lastSavedContentRef.current = result.content
+        lastSavedContentRef.current = contentWithoutTags
 
         // 生成新的key强制重新挂载编辑器
         setEditorKey(`editor-${Date.now()}`)
@@ -602,7 +628,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         setTimeout(async () => {
           try {
             // 确保content是字符串
-            const content = result.content || ''
+            const content = contentWithoutTags || ''
             const blocks = await editor.tryParseMarkdownToBlocks(content)
             editor.replaceBlocks(editor.document, blocks)
             setIsEditing(false)
@@ -621,7 +647,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     } finally {
       setIsLoading(false)
     }
-  }, [currentFolder, currentFile, editor, clearEditor])
+  }, [currentFolder, currentFile, editor, clearEditor, setTagList])
 
   // Effect to reset editor when the key changes
   useEffect(() => {
@@ -658,11 +684,26 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     setIsSaving(true)
     setAutoSaveStatus('saving')
     try {
-      // Convert blocks to Markdown
+      // 获取编辑器内容的JSON格式（保留标签信息）
+      const blocks = editor.topLevelBlocks
+
+      // 提取标签信息
+      const tags = extractTags(blocks)
+      console.log('提取的标签:', tags)
+
+      // 更新标签列表状态
+      setTagList(tags)
+
+      // Convert blocks to Markdown for saving
       const markdown = await editor.blocksToMarkdownLossy(editor.document)
 
       const filePath = `${currentFolder}/${currentFile}`
-      const result = await window.api.markdown.save(filePath, markdown)
+
+      // 将标签信息添加到保存数据中
+      const tagsHeader = tags.length > 0 ? `<!-- tags: ${tags.join(',')} -->\n\n` : ''
+      const contentWithTags = tagsHeader + markdown
+
+      const result = await window.api.markdown.save(filePath, contentWithTags)
 
       if (result.success) {
         Toast.success('文件保存成功')
@@ -692,7 +733,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     } finally {
       setIsSaving(false)
     }
-  }, [currentFolder, currentFile, editor, onFileChanged])
+  }, [currentFolder, currentFile, editor, onFileChanged, setTagList])
 
   // 添加自动保存触发函数
   const triggerAutoSave = useCallback(() => {
@@ -1052,6 +1093,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   <CreateLinkButton key="createLinkButton" />
                 </FormattingToolbar>
               )}
+            />
+            <SuggestionMenuController
+              triggerCharacter="@"
+              getItems={async (query) => {
+                // 获取标签菜单项，传递查询文本进行过滤和创建新标签
+                return getTagMenuItems(editor, tagList, query)
+              }}
             />
             <SuggestionMenuController
               triggerCharacter="/"
