@@ -88,6 +88,15 @@ interface AnalysisResult {
     title: string
     items: string[]
   }
+  // 标签分析相关字段
+  tagAnalysis?: {
+    title: string
+    content: string
+  }
+  tagRelationships?: {
+    title: string
+    content: string
+  }
 }
 
 // 统计数据接口
@@ -115,6 +124,20 @@ interface StatsData {
   topFolders?: Array<{
     folder: string
     count: number
+  }>
+  // 标签分析相关字段
+  topTags?: Array<{
+    tag: string
+    count: number
+  }>
+  tagRelations?: Array<{
+    source: string
+    target: string
+    strength: number // 关联强度，代表两个标签共同出现的频率
+  }>
+  documentTags?: Array<{
+    filePath: string
+    tags: string[]
   }>
 }
 
@@ -532,6 +555,155 @@ const DataAnalysis: React.FC = () => {
     )
   }
 
+  // 渲染标签云
+  const renderTagCloud = (data: ChartData, title: string): JSX.Element => {
+    return (
+      <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
+        <Title
+          heading={6}
+          style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+        >
+          {title}
+        </Title>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '80%',
+            padding: '20px'
+          }}
+        >
+          {data.labels.map((label, index) => {
+            // 计算标签的字体大小，基于数值的相对大小
+            const maxSize = 28
+            const minSize = 12
+            const maxValue = Math.max(...data.datasets[0].data)
+            const value = data.datasets[0].data[index]
+            const fontSize = minSize + ((maxSize - minSize) * value) / maxValue
+
+            // 使用数据集的颜色
+            const color = Array.isArray(data.datasets[0].backgroundColor)
+              ? data.datasets[0].backgroundColor[index]
+              : data.datasets[0].backgroundColor
+
+            return (
+              <span
+                key={label}
+                style={{
+                  fontSize: `${fontSize}px`,
+                  color: typeof color === 'string' ? color : 'var(--semi-color-primary)',
+                  margin: '8px',
+                  padding: '4px 8px',
+                  background: 'var(--semi-color-primary-light-default)',
+                  borderRadius: '4px',
+                  display: 'inline-block',
+                  cursor: 'default'
+                }}
+                title={`${label}: ${value}`}
+              >
+                {label}
+              </span>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // 渲染标签关系图（使用饼图模拟简单的关系网络图）
+  const renderTagRelations = (
+    data: { source: string; target: string; strength: number }[],
+    title: string
+  ): JSX.Element => {
+    // 将关系数据转换为适合显示的格式
+    const relationLabels = data.map((relation) => `${relation.source} ↔ ${relation.target}`)
+    const relationValues = data.map((relation) => relation.strength)
+
+    // 创建一个Chart.js数据对象
+    const chartData: ChartData = {
+      labels: relationLabels,
+      datasets: [
+        {
+          label: '关联强度',
+          data: relationValues,
+          backgroundColor: generateColors(relationLabels.length),
+          borderColor: generateColors(relationLabels.length, 1),
+          borderWidth: 1
+        }
+      ]
+    }
+
+    return (
+      <div style={{ maxWidth: '100%', height: 500, marginBottom: 24 }}>
+        <Title
+          heading={6}
+          style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+        >
+          {title}
+        </Title>
+        <div style={{ height: '380px', overflowY: 'auto' }}>
+          <Pie
+            data={chartData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    color: isDarkMode ? '#e9e9e9' : '#333',
+                    padding: 16,
+                    font: {
+                      size: 12
+                    },
+                    // 限制标签长度，避免过长
+                    generateLabels: (chart) => {
+                      const originalLabels =
+                        ChartJS.defaults.plugins.legend.labels.generateLabels!(chart)
+                      return originalLabels.map((label) => {
+                        if (label.text && label.text.length > 25) {
+                          label.text = label.text.substring(0, 22) + '...'
+                        }
+                        return label
+                      })
+                    }
+                  }
+                },
+                tooltip: {
+                  backgroundColor: isDarkMode ? '#333' : '#fff',
+                  titleColor: isDarkMode ? '#fff' : '#333',
+                  bodyColor: isDarkMode ? '#fff' : '#333',
+                  borderColor: isDarkMode ? '#555' : '#ddd',
+                  borderWidth: 1,
+                  padding: 12,
+                  callbacks: {
+                    label: (context) => {
+                      const label = context.label || ''
+                      const value = context.raw as number
+                      return `${label}: ${value} 次共现`
+                    }
+                  }
+                }
+              }
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // 生成颜色函数
+  const generateColors = (count: number, alpha: number = 0.7): string[] => {
+    const colors: string[] = []
+    for (let i = 0; i < count; i++) {
+      const hue = (i * 137.5) % 360 // 使用黄金角分布颜色
+      colors.push(`hsla(${hue}, 70%, 60%, ${alpha})`)
+    }
+    return colors
+  }
+
   // 准备图表数据
   const prepareChartData = (): {
     hourlyDistribution: ChartData
@@ -540,6 +712,7 @@ const DataAnalysis: React.FC = () => {
     noteTrend: ChartData
     topFolders?: ChartData
     activeHours: ChartData
+    topTags?: ChartData
   } | null => {
     if (!statsData || !activityData) return null
 
@@ -673,13 +846,31 @@ const DataAnalysis: React.FC = () => {
       ]
     }
 
+    // 7. 最常用的标签（标签云）
+    let topTags: ChartData | undefined = undefined
+    if (statsData.topTags && statsData.topTags.length > 0) {
+      topTags = {
+        labels: statsData.topTags.map((tag) => tag.tag),
+        datasets: [
+          {
+            label: '使用次数',
+            data: statsData.topTags.map((tag) => tag.count),
+            backgroundColor: generateColors(statsData.topTags.length),
+            borderColor: generateColors(statsData.topTags.length, 1),
+            borderWidth: 1
+          }
+        ]
+      }
+    }
+
     return {
       hourlyDistribution,
       topNotes,
       editTrend,
       noteTrend,
       topFolders,
-      activeHours
+      activeHours,
+      topTags
     }
   }
 
@@ -870,6 +1061,40 @@ const DataAnalysis: React.FC = () => {
                     <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
                       {analysisResult.writingBehavior.content}
                     </Paragraph>
+
+                    {/* 添加标签分析描述 */}
+                    {analysisResult.tagAnalysis && (
+                      <>
+                        <Divider margin="24px" />
+
+                        <Title
+                          heading={5}
+                          style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
+                        >
+                          {analysisResult.tagAnalysis.title}
+                        </Title>
+                        <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                          {analysisResult.tagAnalysis.content}
+                        </Paragraph>
+                      </>
+                    )}
+
+                    {/* 添加标签关系描述 */}
+                    {analysisResult.tagRelationships && (
+                      <>
+                        <Divider margin="24px" />
+
+                        <Title
+                          heading={5}
+                          style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
+                        >
+                          {analysisResult.tagRelationships.title}
+                        </Title>
+                        <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                          {analysisResult.tagRelationships.content}
+                        </Paragraph>
+                      </>
+                    )}
                   </div>
                 </TabPane>
 
@@ -1002,13 +1227,8 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {(() => {
-                            const chartData = prepareChartData()
-                            return (
-                              chartData?.topFolders &&
-                              renderBarChart(chartData.topFolders, '最常用的文件夹', false)
-                            )
-                          })()}
+                          {prepareChartData()?.activeHours &&
+                            renderBarChart(prepareChartData()!.activeHours, '活跃时段分布')}
                         </div>
                         <div
                           style={{
@@ -1016,113 +1236,69 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {(() => {
-                            const chartData = prepareChartData()
-                            return (
-                              chartData?.activeHours &&
-                              renderBarChart(chartData.activeHours, '活跃时段分布')
-                            )
-                          })()}
+                          {prepareChartData()?.topFolders &&
+                            renderBarChart(
+                              prepareChartData()!.topFolders!,
+                              '最常用的文件夹',
+                              false
+                            )}
                         </div>
                       </div>
 
-                      <div style={{ marginTop: 24, marginBottom: 24 }}>
-                        <Card
-                          style={{
-                            borderRadius: '8px',
-                            padding: '16px 24px'
-                          }}
-                        >
-                          <Title
-                            heading={5}
-                            style={{ marginBottom: 16, color: 'var(--semi-color-text-0)' }}
-                          >
-                            笔记统计概览
-                          </Title>
+                      {/* 添加标签分析相关的可视化 */}
+                      {statsData.topTags && statsData.topTags.length > 0 && (
+                        <>
+                          <Divider margin="24px">标签分析</Divider>
                           <div
                             style={{
                               display: 'flex',
                               flexWrap: 'wrap',
+                              justifyContent: 'space-between',
                               gap: '24px',
-                              justifyContent: 'center'
+                              marginBottom: '24px'
                             }}
                           >
-                            <Card
-                              style={{
-                                width: 'calc(25% - 18px)',
-                                textAlign: 'center',
-                                padding: '16px'
-                              }}
-                            >
-                              <Title
-                                heading={2}
-                                style={{
-                                  margin: '0 0 8px',
-                                  color: 'var(--semi-color-primary)'
-                                }}
-                              >
-                                {statsData.totalNotes}
-                              </Title>
-                              <Text style={{ fontSize: '14px' }}>笔记总数</Text>
-                            </Card>
-                            <Card
-                              style={{
-                                width: 'calc(25% - 18px)',
-                                textAlign: 'center',
-                                padding: '16px'
-                              }}
-                            >
-                              <Title
-                                heading={2}
-                                style={{
-                                  margin: '0 0 8px',
-                                  color: 'var(--semi-color-primary)'
-                                }}
-                              >
-                                {statsData.totalEdits}
-                              </Title>
-                              <Text style={{ fontSize: '14px' }}>编辑总次数</Text>
-                            </Card>
-                            <Card
-                              style={{
-                                width: 'calc(25% - 18px)',
-                                textAlign: 'center',
-                                padding: '16px'
-                              }}
-                            >
-                              <Title
-                                heading={2}
-                                style={{
-                                  margin: '0 0 8px',
-                                  color: 'var(--semi-color-primary)'
-                                }}
-                              >
-                                {statsData.averageEditLength}
-                              </Title>
-                              <Text style={{ fontSize: '14px' }}>平均编辑长度</Text>
-                            </Card>
-                            <Card
-                              style={{
-                                width: 'calc(25% - 18px)',
-                                textAlign: 'center',
-                                padding: '16px'
-                              }}
-                            >
-                              <Title
-                                heading={2}
-                                style={{
-                                  margin: '0 0 8px',
-                                  color: 'var(--semi-color-primary)'
-                                }}
-                              >
-                                {statsData.editTimeDistribution.sort((a, b) => b.count - a.count)[0]
-                                  ?.hour || 0}
-                              </Title>
-                              <Text style={{ fontSize: '14px' }}>最活跃时段</Text>
-                            </Card>
+                            <div style={{ width: '100%', marginRight: '0' }}>
+                              {prepareChartData()?.topTags &&
+                                renderTagCloud(prepareChartData()!.topTags!, '最常用的标签')}
+
+                              {statsData.topTags &&
+                                statsData.topTags.length > 0 &&
+                                prepareChartData()?.topTags &&
+                                renderTagCloud(prepareChartData()!.topTags!, '最常用的标签')}
+                            </div>
                           </div>
-                        </Card>
-                      </div>
+                        </>
+                      )}
+
+                      {/* 添加标签关系图 */}
+                      {statsData.tagRelations && statsData.tagRelations.length > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: '24px',
+                            marginBottom: '24px'
+                          }}
+                        >
+                          <div style={{ width: '100%', marginRight: '0' }}>
+                            {renderTagRelations(statsData.tagRelations, '标签关联关系')}
+                          </div>
+
+                          <div style={{ width: '100%', marginRight: '0' }}>
+                            {statsData.tagRelations &&
+                              statsData.tagRelations.length > 0 &&
+                              renderTagRelations(
+                                statsData.tagRelations.slice(
+                                  0,
+                                  Math.min(10, statsData.tagRelations.length)
+                                ),
+                                '标签关联关系'
+                              )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </TabPane>

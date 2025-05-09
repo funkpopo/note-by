@@ -3,6 +3,7 @@ import fs from 'fs'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { getSetting } from './settings'
+import fsPromises from 'fs/promises'
 
 // 导入类型定义，即使初始化失败也能使用类型
 import type Database from 'better-sqlite3'
@@ -258,6 +259,22 @@ export interface NoteHistoryStats {
     folder: string
     count: number
   }>
+  topTags?: Array<{
+    // 最常用的标签
+    tag: string
+    count: number
+  }>
+  tagRelations?: Array<{
+    // 标签关联关系
+    source: string
+    target: string
+    strength: number // 关联强度，代表两个标签共同出现的频率
+  }>
+  documentTags?: Array<{
+    // 文档-标签关系
+    filePath: string
+    tags: string[]
+  }>
 }
 
 // 获取笔记历史记录统计数据
@@ -363,6 +380,29 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       count: number
     }>
 
+    // 9. 获取标签分析数据
+    let tagData: {
+      topTags: Array<{ tag: string; count: number }>
+      tagRelations: Array<{ source: string; target: string; strength: number }>
+      documentTags: Array<{ filePath: string; tags: string[] }>
+    } | null = null
+    try {
+      // 获取markdown文件夹路径
+      let markdownPath = ''
+      if (is.dev) {
+        markdownPath = path.resolve(process.cwd(), 'markdown')
+      } else {
+        // 在生产环境中，使用与应用程序可执行文件相同目录下的markdown文件夹
+        markdownPath = path.resolve(process.execPath, '..', 'markdown')
+      }
+
+      // 分析标签数据
+      tagData = await getDocumentTagsData(markdownPath)
+    } catch (error) {
+      console.error('获取标签分析数据失败:', error)
+      // 继续执行，即使标签分析失败
+    }
+
     // 返回完整的统计数据
     return {
       totalNotes,
@@ -372,7 +412,11 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       notesByDate,
       editsByDate,
       editTimeDistribution,
-      topFolders
+      topFolders,
+      // 添加标签分析数据
+      topTags: tagData?.topTags,
+      tagRelations: tagData?.tagRelations,
+      documentTags: tagData?.documentTags
     }
   } catch (error) {
     console.error('获取历史记录统计失败:', error)
@@ -785,4 +829,146 @@ export async function resetAnalysisCache(): Promise<boolean> {
     console.error('重置分析缓存表失败:', error)
     return false
   }
+}
+
+// 用于获取文档中的标签数据
+export async function getDocumentTagsData(markdownPath: string): Promise<{
+  topTags: Array<{ tag: string; count: number }>
+  tagRelations: Array<{ source: string; target: string; strength: number }>
+  documentTags: Array<{ filePath: string; tags: string[] }>
+} | null> {
+  try {
+    // 用于存储所有标签数据
+    const tagCounts: Record<string, number> = {} // 标签计数
+    const tagCooccurrence: Record<string, Record<string, number>> = {} // 标签共现计数
+    const documentTagsMap: Record<string, string[]> = {} // 文档-标签映射
+
+    // 读取markdown目录下的所有文件
+    const files = await getAllMarkdownFiles(markdownPath)
+
+    // 遍历所有文件，提取标签数据
+    for (const filePath of files) {
+      try {
+        // 读取文件内容
+        const content = await fsPromises.readFile(filePath, 'utf-8')
+
+        // 1. 检查HTML注释中的标签 (<!-- tags: tag1,tag2,tag3 -->)
+        const tagsMatch = content.match(/<!-- tags: ([^>]*) -->/)
+        let fileTags: string[] = []
+
+        if (tagsMatch && tagsMatch[1]) {
+          // 从注释中提取标签
+          fileTags = tagsMatch[1]
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        }
+
+        // 2. 检查内容中的@标签
+        const atTagsMatches = content.matchAll(/@([a-zA-Z0-9_\u4e00-\u9fa5]+)/g)
+        for (const match of atTagsMatches) {
+          if (match[1] && !fileTags.includes(match[1])) {
+            fileTags.push(match[1])
+          }
+        }
+
+        // 如果文件中有标签，更新各种统计信息
+        if (fileTags.length > 0) {
+          // 更新文档-标签映射
+          const relativePath = path.relative(markdownPath, filePath).replace(/\\/g, '/')
+          documentTagsMap[relativePath] = fileTags
+
+          // 更新标签计数
+          fileTags.forEach((tag) => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1
+
+            // 初始化共现矩阵条目
+            if (!tagCooccurrence[tag]) {
+              tagCooccurrence[tag] = {}
+            }
+
+            // 更新标签共现计数（在同一文档中出现的标签被视为共现）
+            fileTags.forEach((otherTag) => {
+              if (tag !== otherTag) {
+                tagCooccurrence[tag][otherTag] = (tagCooccurrence[tag][otherTag] || 0) + 1
+              }
+            })
+          })
+        }
+      } catch (error) {
+        console.error(`处理文件 ${filePath} 时出错:`, error)
+        // 继续处理其他文件
+        continue
+      }
+    }
+
+    // 转换数据格式
+
+    // 1. 生成topTags（按计数排序）
+    const topTags = Object.entries(tagCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+
+    // 2. 生成tagRelations（标签关联关系）
+    const tagRelations: Array<{ source: string; target: string; strength: number }> = []
+
+    // 避免重复添加关系对（A-B和B-A算一个）
+    const addedRelations = new Set<string>()
+
+    Object.entries(tagCooccurrence).forEach(([source, targets]) => {
+      Object.entries(targets).forEach(([target, strength]) => {
+        // 确保每对关系只添加一次（按字母顺序排序键）
+        const relationKey = [source, target].sort().join('-')
+        if (!addedRelations.has(relationKey)) {
+          addedRelations.add(relationKey)
+          tagRelations.push({ source, target, strength })
+        }
+      })
+    })
+
+    // 按关联强度排序
+    tagRelations.sort((a, b) => b.strength - a.strength)
+
+    // 3. 生成documentTags（文档-标签列表）
+    const documentTags = Object.entries(documentTagsMap)
+      .map(([filePath, tags]) => ({ filePath, tags }))
+      .sort((a, b) => a.filePath.localeCompare(b.filePath))
+
+    return {
+      topTags: topTags.slice(0, 20), // 只返回前20个最常用的标签
+      tagRelations: tagRelations.slice(0, 50), // 只返回前50个最强的关联关系
+      documentTags
+    }
+  } catch (error) {
+    console.error('获取文档标签数据失败:', error)
+    return null
+  }
+}
+
+// 辅助函数：递归获取目录下所有的Markdown文件
+async function getAllMarkdownFiles(dir: string): Promise<string[]> {
+  const files: string[] = []
+
+  async function traverse(currentDir: string): Promise<void> {
+    const entries = await fsPromises.readdir(currentDir, { withFileTypes: true })
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentDir, entry.name)
+
+      if (entry.isDirectory()) {
+        // 跳过.assets目录和以点开头的隐藏目录
+        if (entry.name !== '.assets' && !entry.name.startsWith('.')) {
+          await traverse(fullPath)
+        }
+      } else if (
+        entry.isFile() &&
+        (entry.name.endsWith('.md') || entry.name.endsWith('.markdown'))
+      ) {
+        files.push(fullPath)
+      }
+    }
+  }
+
+  await traverse(dir)
+  return files
 }

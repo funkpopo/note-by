@@ -31,6 +31,15 @@ export interface AnalysisResult {
     title: string
     items: string[]
   }
+  // 标签分析相关字段
+  tagAnalysis?: {
+    title: string
+    content: string
+  }
+  tagRelationships?: {
+    title: string
+    content: string
+  }
 }
 
 // 分析状态接口
@@ -178,7 +187,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           .join(', '),
         editTimeDistribution: statsData.editTimeDistribution
           .map((item) => `${item.hour}点:${item.count}次`)
-          .join(', ')
+          .join(', '),
+        tagUsage: statsData.topTags
+          ? statsData.topTags.map((tag) => `${tag.tag}:${tag.count}次`).join(', ')
+          : '暂无标签数据',
+        tagRelations:
+          statsData.tagRelations && statsData.tagRelations.length > 0
+            ? statsData.tagRelations
+                .slice(0, Math.min(10, statsData.tagRelations.length))
+                .map((rel) => `${rel.source}↔${rel.target}:${rel.strength}次共现`)
+                .join(', ')
+            : '暂无标签关联数据'
       }
 
       // 获取分析提示词模板
@@ -199,15 +218,19 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
                   - 每日笔记数量趋势: \${notesByDate}
                   - 每日编辑次数趋势: \${editsByDate}
                   - 编辑时间分布: \${editTimeDistribution}
+                  - 标签使用情况: \${tagUsage}
+                  - 标签关联关系: \${tagRelations}
 
                   请提供以下详细分析：
                   1. 写作习惯概述：分析我的整体写作模式、频率和时间分布
                   2. 写作节奏和时间管理：识别我的高效写作时段、写作连贯性和持续时间
                   3. 主题和内容偏好：基于编辑模式推断我最关注的内容领域
                   4. 写作行为分析：分析我的修改习惯、编辑深度和完善程度
-                  5. 个性化改进建议：提供3-5条具体可行的改进建议，包括时间安排、内容组织和写作技巧
-                  6. 效率提升策略：如何更有效地利用笔记应用功能提高写作效率
-                  7. 建议的写作目标：根据当前习惯，提出合理的短期写作目标
+                  5. 标签使用分析：分析我如何使用标签组织和关联内容
+                  6. 标签关联网络：分析标签之间的关联关系和知识网络结构
+                  7. 个性化改进建议：提供3-5条具体可行的改进建议，包括时间安排、内容组织和写作技巧
+                  8. 效率提升策略：如何更有效地利用笔记应用功能提高写作效率
+                  9. 建议的写作目标：根据当前习惯，提出合理的短期写作目标
 
                   请以JSON格式返回结果，格式如下：
                   {
@@ -226,6 +249,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
                     },
                     "writingBehavior": {
                       "title": "写作行为分析",
+                      "content": "详细分析内容"
+                    },
+                    "tagAnalysis": {
+                      "title": "标签使用分析",
+                      "content": "详细分析内容"
+                    },
+                    "tagRelationships": {
+                      "title": "标签关联网络",
                       "content": "详细分析内容"
                     },
                     "recommendations": {
