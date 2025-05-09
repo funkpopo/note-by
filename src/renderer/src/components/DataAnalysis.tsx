@@ -336,8 +336,8 @@ const DataAnalysis: React.FC = () => {
     try {
       // 显示开始分析的提示
       if (forceUpdate) {
-        Toast.info('开始强制重新分析...')
-        // 如果是强制重新分析，先清除缓存日期显示
+        Toast.info('开始重新分析...')
+        // 如果是重新分析，先清除缓存日期显示
         setCacheDate(null)
       } else {
         Toast.info('开始分析，检查缓存...')
@@ -577,7 +577,9 @@ const DataAnalysis: React.FC = () => {
       datasets: [
         {
           label: '编辑次数',
-          data: statsData.mostEditedNotes.map((note) => note.editCount), // 使用editCount替换count
+          data: statsData.mostEditedNotes.map((note) => {
+            return (note.editCount !== undefined ? note.editCount : note.count) || 0
+          }),
           backgroundColor: generateColors(statsData.mostEditedNotes.length),
           borderColor: generateColors(statsData.mostEditedNotes.length, 1),
           borderWidth: 1
@@ -797,7 +799,7 @@ const DataAnalysis: React.FC = () => {
                       onClick={() => handlePerformAnalysis(true)}
                       disabled={isAnalyzing}
                     >
-                      强制重新分析
+                      重新分析
                     </Button>
                   </Space>
                 </Text>
