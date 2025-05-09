@@ -192,56 +192,55 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       } else {
         // 默认提示词
         prompt = `我有以下笔记应用使用数据，请分析我的写作习惯并给出改进建议：
+                  - 总笔记数量: \${totalNotes}
+                  - 总编辑次数: \${totalEdits}
+                  - 平均编辑长度: \${averageEditLength} 字符
+                  - 最常编辑的前3个笔记: \${mostEditedNotes}
+                  - 每日笔记数量趋势: \${notesByDate}
+                  - 每日编辑次数趋势: \${editsByDate}
+                  - 编辑时间分布: \${editTimeDistribution}
 
-- 总笔记数量: \${totalNotes}
-- 总编辑次数: \${totalEdits}
-- 平均编辑长度: \${averageEditLength} 字符
-- 最常编辑的前3个笔记: \${mostEditedNotes}
-- 每日笔记数量趋势: \${notesByDate}
-- 每日编辑次数趋势: \${editsByDate}
-- 编辑时间分布: \${editTimeDistribution}
+                  请提供以下详细分析：
+                  1. 写作习惯概述：分析我的整体写作模式、频率和时间分布
+                  2. 写作节奏和时间管理：识别我的高效写作时段、写作连贯性和持续时间
+                  3. 主题和内容偏好：基于编辑模式推断我最关注的内容领域
+                  4. 写作行为分析：分析我的修改习惯、编辑深度和完善程度
+                  5. 个性化改进建议：提供3-5条具体可行的改进建议，包括时间安排、内容组织和写作技巧
+                  6. 效率提升策略：如何更有效地利用笔记应用功能提高写作效率
+                  7. 建议的写作目标：根据当前习惯，提出合理的短期写作目标
 
-请提供以下详细分析：
-1. 写作习惯概述：分析我的整体写作模式、频率和时间分布
-2. 写作节奏和时间管理：识别我的高效写作时段、写作连贯性和持续时间
-3. 主题和内容偏好：基于编辑模式推断我最关注的内容领域
-4. 写作行为分析：分析我的修改习惯、编辑深度和完善程度
-5. 个性化改进建议：提供3-5条具体可行的改进建议，包括时间安排、内容组织和写作技巧
-6. 效率提升策略：如何更有效地利用笔记应用功能提高写作效率
-7. 建议的写作目标：根据当前习惯，提出合理的短期写作目标
-
-请以JSON格式返回结果，格式如下：
-{
-  "summary": "整体分析摘要",
-  "writingHabits": {
-    "title": "写作习惯概述",
-    "content": "详细分析内容"
-  },
-  "writingRhythm": {
-    "title": "写作节奏和时间管理",
-    "content": "详细分析内容"
-  },
-  "topics": {
-    "title": "主题和内容偏好",
-    "content": "详细分析内容"
-  },
-  "writingBehavior": {
-    "title": "写作行为分析",
-    "content": "详细分析内容"
-  },
-  "recommendations": {
-    "title": "个性化改进建议",
-    "items": ["建议1", "建议2", "建议3", "建议4", "建议5"]
-  },
-  "efficiencyTips": {
-    "title": "效率提升策略",
-    "items": ["策略1", "策略2", "策略3"]
-  },
-  "suggestedGoals": {
-    "title": "建议的写作目标",
-    "items": ["目标1", "目标2", "目标3"]
-  }
-}`
+                  请以JSON格式返回结果，格式如下：
+                  {
+                    "summary": "整体分析摘要",
+                    "writingHabits": {
+                      "title": "写作习惯概述",
+                      "content": "详细分析内容"
+                    },
+                    "writingRhythm": {
+                      "title": "写作节奏和时间管理",
+                      "content": "详细分析内容"
+                    },
+                    "topics": {
+                      "title": "主题和内容偏好",
+                      "content": "详细分析内容"
+                    },
+                    "writingBehavior": {
+                      "title": "写作行为分析",
+                      "content": "详细分析内容"
+                    },
+                    "recommendations": {
+                      "title": "个性化改进建议",
+                      "items": ["建议1", "建议2", "建议3", "建议4", "建议5"]
+                    },
+                    "efficiencyTips": {
+                      "title": "效率提升策略",
+                      "items": ["策略1", "策略2", "策略3"]
+                    },
+                    "suggestedGoals": {
+                      "title": "建议的写作目标",
+                      "items": ["目标1", "目标2", "目标3"]
+                    }
+                  }`
       }
 
       // 填充提示词模板
