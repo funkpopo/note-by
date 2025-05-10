@@ -7,6 +7,7 @@ import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import { codeBlock } from '@blocknote/code-block'
 import './Editor.css'
+import { zhCN } from '../locales'
 import {
   BasicTextStyleButton,
   BlockTypeSelect,
@@ -30,7 +31,6 @@ import { RewriteButton } from './RewriteButton'
 import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
 import HistoryDropdown from './HistoryDropdown'
-// 导入自定义标签组件和工具函数
 import { Tag } from './Tag'
 import { getTagMenuItems, extractTags } from './TagUtils'
 
@@ -155,6 +155,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // Create a new editor instance with custom schema
   const editor = useCreateBlockNote({
     schema, // 使用自定义schema
+    // 添加中文本地化支持
+    dictionary: zhCN,
     // Enable code block syntax highlighting with configuration
     codeBlock: {
       ...codeBlock,
@@ -1109,12 +1111,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
                 // 过滤掉Video、Audio和File插入选项，只保留Image和其他选项
                 const filteredItems = defaultItems.filter((item) => {
-                  // 排除包含 "Video"、"Audio" 或 "File" 的标题，但保留 "Image"
                   return !(
                     (item.title.includes('Video') ||
+                      item.title.includes('视频') ||
                       item.title.includes('Audio') ||
-                      item.title.includes('File')) &&
-                    !item.title.includes('Image')
+                      item.title.includes('音频') ||
+                      item.title.includes('File') ||
+                      item.title.includes('文件')) &&
+                    !(item.title.includes('Image') || item.title.includes('图片'))
                   )
                 })
 
