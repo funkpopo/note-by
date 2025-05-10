@@ -153,7 +153,7 @@ export const zhCN: Dictionary = {
     }
   },
   placeholders: {
-    default: "输入文本或键入'/'显示命令",
+    default: '',
     heading: '标题',
     bulletListItem: '列表',
     numberedListItem: '列表',

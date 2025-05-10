@@ -19,6 +19,11 @@ export const Tag = createReactInlineContentSpec(
       const { inlineContent } = props
       const tagName = inlineContent.props.name
 
+      // 确保标签有内容
+      if (!tagName || tagName.trim() === '') {
+        return <span>@</span>
+      }
+
       return (
         <span
           className="bn-tag"

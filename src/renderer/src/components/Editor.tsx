@@ -32,7 +32,13 @@ import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
 import HistoryDropdown from './HistoryDropdown'
 import { Tag } from './Tag'
-import { getTagMenuItems, extractTags } from './TagUtils'
+import {
+  getTagMenuItems,
+  extractTags,
+  preprocessMarkdownForTags,
+  postprocessBlocksForTags,
+  extractTagsFromMarkdown
+} from './TagUtils'
 
 // 添加一个接口定义API配置
 interface AiApiConfig {
@@ -494,43 +500,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       // 其他情况返回原始 URL
       return url
-    },
-    // Initial content with example
-    initialContent: [
-      {
-        type: 'paragraph',
-        content: [
-          {
-            type: 'text',
-            text: '请选择或创建一个Markdown文件开始编辑。你现在可以使用代码块功能了！',
-            styles: {}
-          }
-        ]
-      },
-      {
-        type: 'codeBlock',
-        props: {
-          language: 'javascript'
-        },
-        content: [
-          {
-            type: 'text',
-            text: '// 这是一个JavaScript代码块示例\nconst greeting = "Hello, world!";\nconsole.log(greeting);',
-            styles: {}
-          }
-        ]
-      },
-      {
-        type: 'paragraph',
-        content: [
-          {
-            type: 'text',
-            text: '点击代码块上方的JavaScript标签可以选择不同的编程语言。',
-            styles: {}
-          }
-        ]
-      }
-    ]
+    }
   })
 
   // 清空编辑器内容的辅助函数
@@ -538,36 +508,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     editor.replaceBlocks(editor.document, [
       {
         type: 'paragraph',
-        content: [
-          {
-            type: 'text',
-            text: '请选择或创建一个Markdown文件开始编辑。你现在可以使用代码块功能了！',
-            styles: {}
-          }
-        ]
-      },
-      {
-        type: 'codeBlock',
-        props: {
-          language: 'javascript'
-        },
-        content: [
-          {
-            type: 'text',
-            text: '// 这是一个JavaScript代码块示例\nconst greeting = "Hello, world!";\nconsole.log(greeting);',
-            styles: {}
-          }
-        ]
-      },
-      {
-        type: 'paragraph',
-        content: [
-          {
-            type: 'text',
-            text: '点击代码块上方的JavaScript标签可以选择不同的编程语言。',
-            styles: {}
-          }
-        ]
+        content: []
       }
     ])
     setEditorContent('')
@@ -585,7 +526,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
     // 检查文件是否已经加载
     if (filePath === lastLoadedFileRef.current) {
-      // console.log('文件已加载，无需重新加载')
       return
     }
 
@@ -603,16 +543,27 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
         // 尝试从内容中提取标签信息
         const tagsMatch = result.content.match(/<!-- tags: ([^>]*) -->/)
+        let extractedTags: string[] = []
+
         if (tagsMatch && tagsMatch[1]) {
-          const extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
-          setTagList(extractedTags)
-          console.log('从文件中提取的标签:', extractedTags)
-        } else {
-          setTagList([])
+          extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
+          console.log('从文件头部提取的标签:', extractedTags)
         }
 
         // 移除标签信息行，避免在编辑器中显示
-        const contentWithoutTags = result.content.replace(/<!-- tags: ([^>]*) -->\n\n/, '')
+        let contentWithoutTags = result.content.replace(/<!-- tags: ([^>]*) -->\n\n/, '')
+
+        // 预处理Markdown内容，将@tag格式转换为可识别的特殊格式
+        // 同时提取内联的@标签
+        const inlineTagsFromMarkdown = extractTagsFromMarkdown(contentWithoutTags)
+        console.log('从Markdown内容提取的内联标签:', inlineTagsFromMarkdown)
+
+        // 合并所有标签
+        const allTags = [...new Set([...extractedTags, ...inlineTagsFromMarkdown])]
+        setTagList(allTags)
+
+        // 预处理Markdown将@tag转换为特殊标记以便后续处理
+        contentWithoutTags = preprocessMarkdownForTags(contentWithoutTags)
 
         // 存储内容
         setEditorContent(contentWithoutTags)
@@ -631,7 +582,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           try {
             // 确保content是字符串
             const content = contentWithoutTags || ''
-            const blocks = await editor.tryParseMarkdownToBlocks(content)
+
+            // 解析Markdown内容为块结构
+            let blocks = await editor.tryParseMarkdownToBlocks(content)
+
+            // 后处理块，将特殊标记转换为Tag内联内容
+            blocks = postprocessBlocksForTags(blocks)
+
+            // 使用处理后的块更新编辑器
             editor.replaceBlocks(editor.document, blocks)
             setIsEditing(false)
           } catch (err) {
@@ -655,7 +613,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   useEffect(() => {
     if (editorContent && editor) {
       const loadContentToEditor = async (): Promise<void> => {
-        const blocks = await editor.tryParseMarkdownToBlocks(editorContent)
+        // 解析Markdown内容为块结构
+        let blocks = await editor.tryParseMarkdownToBlocks(editorContent)
+
+        // 后处理块，确保特殊标记被转换为Tag内联内容
+        blocks = postprocessBlocksForTags(blocks)
+
+        // 使用处理后的块更新编辑器
         editor.replaceBlocks(editor.document, blocks)
       }
       loadContentToEditor()
@@ -869,6 +833,38 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }
 
+  // 添加一个useEffect用于监听编辑器加载完成后的处理
+  useEffect(() => {
+    if (editor && currentFile) {
+      // 在编辑器加载完成后，检查并修复可能的渲染问题
+      const checkAndFixTagRendering = (): void => {
+        try {
+          // 获取当前编辑器的顶级块
+          const blocks = editor.topLevelBlocks
+
+          // 应用后处理，确保所有标签被正确渲染
+          const processedBlocks = postprocessBlocksForTags(blocks)
+
+          // 只有在处理前后有差异时才更新编辑器
+          if (JSON.stringify(blocks) !== JSON.stringify(processedBlocks)) {
+            console.log('发现需要修复的标签渲染问题，正在应用修复...')
+            editor.replaceBlocks(editor.document, processedBlocks)
+          }
+        } catch (error) {
+          console.error('检查和修复标签渲染时出错:', error)
+        }
+      }
+
+      // 延迟执行，确保编辑器内容已完全加载
+      const timer = setTimeout(checkAndFixTagRendering, 500)
+
+      // 清理定时器
+      return () => clearTimeout(timer)
+    }
+
+    return undefined
+  }, [editor, currentFile])
+
   return (
     <div
       className="editor-container"
@@ -1055,6 +1051,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 </li>
                 <li>支持代码块高亮和Markdown格式化</li>
                 <li>可以使用AI功能辅助内容创作</li>
+                <li>使用@符号可以添加标签</li>
               </ul>
             </div>
           </div>
