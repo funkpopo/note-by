@@ -24,6 +24,7 @@ const IPC_CHANNELS = {
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
+  EXPORT_PDF: 'markdown:export-pdf',
   GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
   GET_MARKDOWN_FILES: 'markdown:get-files',
   READ_MARKDOWN_FILE: 'markdown:read-file',
@@ -298,6 +299,13 @@ const api = {
       content: string
     ): Promise<{ success: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SAVE_MARKDOWN, filePath, content),
+
+    // 导出PDF文件
+    exportToPdf: (
+      filePath: string,
+      content: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_PDF, filePath, content),
 
     // 检查文件是否存在
     checkFileExists: (

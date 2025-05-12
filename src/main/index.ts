@@ -1,5 +1,5 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import path, { join, resolve } from 'path'
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage } from 'electron'
+import path, { join, resolve, dirname } from 'path'
 import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -37,6 +37,7 @@ import {
   resetAnalysisCache,
   type AnalysisCacheItem
 } from './database'
+import { mdToPdf } from 'md-to-pdf'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -79,7 +80,8 @@ const IPC_CHANNELS = {
   GET_USER_ACTIVITY_DATA: 'analytics:get-user-activity-data',
   GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
   SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
-  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache'
+  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
+  EXPORT_PDF: 'markdown:export-pdf'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -560,6 +562,38 @@ app.whenReady().then(() => {
       return { success: true, path: fullPath }
     } catch (error) {
       console.error('保存Markdown文件失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 导出PDF文件
+  ipcMain.handle(IPC_CHANNELS.EXPORT_PDF, async (_, filePath, content) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+
+      // 获取文件名（不含扩展名）
+      const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
+
+      // 打开保存对话框，让用户选择保存位置
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+        title: '导出PDF',
+        defaultPath: join(app.getPath('documents'), `${fileName}.pdf`),
+        filters: [{ name: 'PDF文件', extensions: ['pdf'] }]
+      })
+
+      if (canceled || !savePath) {
+        return { success: false, error: '用户取消了操作' }
+      }
+
+      // 使用md-to-pdf库将Markdown转换为PDF
+      await mdToPdf({ content }, { dest: savePath })
+
+      // 转换成功后打开文件
+      shell.openPath(savePath)
+
+      return { success: true, path: savePath }
+    } catch (error) {
+      console.error('导出PDF失败:', error)
       return { success: false, error: String(error) }
     }
   })

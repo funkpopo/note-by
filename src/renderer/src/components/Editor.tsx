@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Typography, Button, Space, Toast, Spin, Select } from '@douyinfe/semi-ui'
-import { IconSave } from '@douyinfe/semi-icons'
+import { IconSave, IconFile } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
 import '@blocknote/core/fonts/inter.css'
@@ -72,6 +72,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [isExporting, setIsExporting] = useState<boolean>(false)
   const [editorContent, setEditorContent] = useState<string>('')
   const [editorKey, setEditorKey] = useState<string>('editor-0')
   // 添加自动保存状态
@@ -865,6 +866,35 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     return undefined
   }, [editor, currentFile])
 
+  // 导出PDF文件
+  const exportToPdf = useCallback(async () => {
+    if (!currentFolder || !currentFile) {
+      Toast.warning('没有选择文件')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      // 获取编辑器内容
+      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+      const filePath = `${currentFolder}/${currentFile}`
+
+      // 调用API导出PDF
+      const result = await window.api.markdown.exportToPdf(filePath, markdown)
+
+      if (result.success) {
+        Toast.success('PDF导出成功')
+      } else {
+        Toast.error(`导出失败: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('导出PDF失败:', error)
+      Toast.error('导出PDF失败')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [currentFolder, currentFile, editor])
+
   return (
     <div
       className="editor-container"
@@ -879,7 +909,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             <span style={{ marginLeft: 10, color: 'var(--semi-color-warning)' }}>*</span>
           )}
         </div>
-        <div className="editor-actions">
+        <div className="editor-right">
           <Space>
             {AiApiConfigs.length > 0 && (
               <Select
@@ -914,6 +944,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   disabled={!currentFile}
                 >
                   保存
+                </Button>
+                <Button
+                  theme="solid"
+                  type="tertiary"
+                  icon={<IconFile />}
+                  onClick={exportToPdf}
+                  loading={isExporting}
+                  disabled={!currentFile}
+                >
+                  导出PDF
                 </Button>
                 {autoSaveStatus === 'saving' && (
                   <Typography.Text type="tertiary">自动保存...</Typography.Text>

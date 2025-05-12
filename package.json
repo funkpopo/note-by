@@ -33,6 +33,7 @@
     "axios": "^1.9.0",
     "better-sqlite3": "^11.9.1",
     "chart.js": "^4.4.9",
+    "md-to-pdf": "^5.2.4",
     "openai": "^4.97.0",
     "react-chartjs-2": "^5.3.0",
     "react-markdown": "^10.1.0",
