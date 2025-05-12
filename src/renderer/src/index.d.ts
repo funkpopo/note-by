@@ -65,6 +65,10 @@ interface Window {
         filePath: string,
         content: string
       ) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportToDocx: (
+        filePath: string,
+        content: string
+      ) => Promise<{ success: boolean; path?: string; error?: string }>
       checkFileExists: (
         filePath: string
       ) => Promise<{ success: boolean; exists: boolean; error?: string }>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Typography, Button, Space, Toast, Spin, Select } from '@douyinfe/semi-ui'
-import { IconSave, IconFile } from '@douyinfe/semi-icons'
+import { Typography, Button, Space, Toast, Spin, Select, Dropdown } from '@douyinfe/semi-ui'
+import { IconSave, IconFile, IconChevronDown } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
 import '@blocknote/core/fonts/inter.css'
@@ -58,6 +58,10 @@ interface MarkdownAPI {
     content: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>
   exportToPdf: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>
+  exportToDocx: (
     filePath: string,
     content: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>
@@ -944,6 +948,35 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [currentFolder, currentFile, editor])
 
+  // 导出DOCX文件
+  const exportToDocx = useCallback(async () => {
+    if (!currentFolder || !currentFile) {
+      Toast.warning('没有选择文件')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      // 获取编辑器内容
+      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+      const filePath = `${currentFolder}/${currentFile}`
+
+      // 调用API导出DOCX
+      const result = await (window.api.markdown as MarkdownAPI).exportToDocx(filePath, markdown)
+
+      if (result.success) {
+        Toast.success('DOCX导出成功')
+      } else {
+        Toast.error(`导出失败: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('导出DOCX失败:', error)
+      Toast.error('导出DOCX失败')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [currentFolder, currentFile, editor])
+
   return (
     <div
       className="editor-container"
@@ -994,16 +1027,25 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 >
                   保存
                 </Button>
-                <Button
-                  theme="solid"
-                  type="tertiary"
-                  icon={<IconFile />}
-                  onClick={exportToPdf}
-                  loading={isExporting}
-                  disabled={!currentFile}
+                <Dropdown
+                  render={
+                    <Dropdown.Menu>
+                      <Dropdown.Item onClick={exportToPdf}>导出PDF</Dropdown.Item>
+                      <Dropdown.Item onClick={exportToDocx}>导出DOCX</Dropdown.Item>
+                    </Dropdown.Menu>
+                  }
                 >
-                  导出PDF
-                </Button>
+                  <Button
+                    theme="solid"
+                    type="tertiary"
+                    icon={<IconFile />}
+                    suffix={<IconChevronDown />}
+                    loading={isExporting}
+                    disabled={!currentFile}
+                  >
+                    导出
+                  </Button>
+                </Dropdown>
                 {autoSaveStatus === 'saving' && (
                   <Typography.Text type="tertiary">自动保存...</Typography.Text>
                 )}

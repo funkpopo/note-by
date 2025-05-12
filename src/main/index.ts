@@ -38,6 +38,8 @@ import {
   type AnalysisCacheItem
 } from './database'
 import { mdToPdf } from 'md-to-pdf'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
+import Showdown from 'showdown'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -81,7 +83,8 @@ const IPC_CHANNELS = {
   GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
   SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
   RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
-  EXPORT_PDF: 'markdown:export-pdf'
+  EXPORT_PDF: 'markdown:export-pdf',
+  EXPORT_DOCX: 'markdown:export-docx'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -592,6 +595,89 @@ app.whenReady().then(() => {
       return { success: true, path: savePath }
     } catch (error) {
       console.error('导出PDF失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 将Markdown转换为DOCX
+  async function markdownToDocx(markdownContent: string): Promise<Buffer> {
+    // 使用Showdown将Markdown转换为HTML（用于解析结构）
+    const converter = new Showdown.Converter({
+      tables: true,
+      tasklists: true,
+      strikethrough: true
+    })
+
+    // 将Markdown转换为HTML
+    const html = converter.makeHtml(markdownContent)
+
+    // 简单解析HTML并添加内容（这是一个基本实现，实际应用可能需要更复杂的HTML解析）
+    // 移除HTML标签，获取纯文本
+    const plainText = html.replace(/<[^>]*>/g, '')
+
+    // 将纯文本按行分割，创建段落
+    const lines = plainText.split('\n').filter((line) => line.trim() !== '')
+
+    // 将每行添加为段落到第一个section
+    const paragraphs = lines.map(
+      (line) =>
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line.trim()
+            })
+          ]
+        })
+    )
+
+    // 创建一个包含所有段落的文档
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              heading: HeadingLevel.HEADING_1
+            }),
+            ...paragraphs
+          ]
+        }
+      ]
+    })
+
+    // 导出为Buffer
+    return await Packer.toBuffer(doc)
+  }
+
+  // 导出DOCX文件
+  ipcMain.handle(IPC_CHANNELS.EXPORT_DOCX, async (_, filePath, content) => {
+    try {
+      // 获取文件名（不含扩展名）
+      const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
+
+      // 打开保存对话框，让用户选择保存位置
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+        title: '导出DOCX',
+        defaultPath: join(app.getPath('documents'), `${fileName}.docx`),
+        filters: [{ name: 'DOCX文件', extensions: ['docx'] }]
+      })
+
+      if (canceled || !savePath) {
+        return { success: false, error: '用户取消了操作' }
+      }
+
+      // 将Markdown转换为DOCX
+      const buffer = await markdownToDocx(content)
+
+      // 写入文件
+      await fsPromises.writeFile(savePath, buffer)
+
+      // 转换成功后打开文件
+      shell.openPath(savePath)
+
+      return { success: true, path: savePath }
+    } catch (error) {
+      console.error('导出DOCX失败:', error)
       return { success: false, error: String(error) }
     }
   })

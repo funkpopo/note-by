@@ -33,6 +33,7 @@
     "axios": "^1.9.0",
     "better-sqlite3": "^11.9.1",
     "chart.js": "^4.4.9",
+    "docx": "^9.5.0",
     "md-to-pdf": "^5.2.4",
     "openai": "^4.97.0",
     "react-chartjs-2": "^5.3.0",
@@ -40,6 +41,9 @@
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "showdown": "^2.1.0",
+    "unified": "^11.0.5",
     "uuid": "^11.1.0",
     "webdav": "^5.3.0",
     "zustand": "^5.0.4"
