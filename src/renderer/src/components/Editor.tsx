@@ -51,6 +51,55 @@ interface AiApiConfig {
   maxTokens?: string
 }
 
+// 添加接口定义
+interface MarkdownAPI {
+  save: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>
+  exportToPdf: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>
+  checkFileExists: (
+    filePath: string
+  ) => Promise<{ success: boolean; exists: boolean; error?: string }>
+  getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
+  getFiles: (folderName: string) => Promise<{ success: boolean; files?: string[]; error?: string }>
+  readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
+  createFolder: (folderName: string) => Promise<{ success: boolean; path?: string; error?: string }>
+  deleteFolder: (folderName: string) => Promise<{ success: boolean; error?: string }>
+  renameFolder: (
+    oldFolderName: string,
+    newFolderName: string
+  ) => Promise<{ success: boolean; error?: string }>
+  createNote: (
+    folderName: string,
+    fileName: string,
+    content: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>
+  deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
+  renameFile: (
+    oldFilePath: string,
+    newFilePath: string
+  ) => Promise<{ success: boolean; error?: string }>
+  uploadFile: (
+    filePath: string,
+    fileData: string,
+    fileName: string
+  ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
+  getHistory: (filePath: string) => Promise<{
+    success: boolean
+    history?: Array<{ id: number; filePath: string; content: string; timestamp: number }>
+    error?: string
+  }>
+  getHistoryById: (historyId: number) => Promise<{
+    success: boolean
+    history?: { id: number; filePath: string; content: string; timestamp: number }
+    error?: string
+  }>
+}
+
 interface EditorProps {
   currentFolder?: string
   currentFile?: string
@@ -880,7 +929,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       const filePath = `${currentFolder}/${currentFile}`
 
       // 调用API导出PDF
-      const result = await window.api.markdown.exportToPdf(filePath, markdown)
+      const result = await (window.api.markdown as MarkdownAPI).exportToPdf(filePath, markdown)
 
       if (result.success) {
         Toast.success('PDF导出成功')
