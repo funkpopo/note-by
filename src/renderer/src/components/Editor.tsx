@@ -65,6 +65,10 @@ interface MarkdownAPI {
     filePath: string,
     content: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>
+  exportToHtml: (
+    filePath: string,
+    content: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>
   checkFileExists: (
     filePath: string
   ) => Promise<{ success: boolean; exists: boolean; error?: string }>
@@ -977,6 +981,35 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [currentFolder, currentFile, editor])
 
+  // 导出HTML文件
+  const exportToHtml = useCallback(async () => {
+    if (!currentFolder || !currentFile) {
+      Toast.warning('没有选择文件')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      // 获取编辑器内容
+      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+      const filePath = `${currentFolder}/${currentFile}`
+
+      // 调用API导出HTML
+      const result = await (window.api.markdown as MarkdownAPI).exportToHtml(filePath, markdown)
+
+      if (result.success) {
+        Toast.success('HTML导出成功')
+      } else {
+        Toast.error(`导出失败: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('导出HTML失败:', error)
+      Toast.error('导出HTML失败')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [currentFolder, currentFile, editor])
+
   return (
     <div
       className="editor-container"
@@ -1032,6 +1065,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     <Dropdown.Menu>
                       <Dropdown.Item onClick={exportToPdf}>导出PDF</Dropdown.Item>
                       <Dropdown.Item onClick={exportToDocx}>导出DOCX</Dropdown.Item>
+                      <Dropdown.Item onClick={exportToHtml}>导出HTML</Dropdown.Item>
                     </Dropdown.Menu>
                   }
                 >

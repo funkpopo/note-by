@@ -238,6 +238,18 @@ interface API {
       filePath: string,
       content: string
     ) => Promise<{ success: boolean; path?: string; error?: string }>
+    exportToPdf: (
+      filePath: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
+    exportToDocx: (
+      filePath: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
+    exportToHtml: (
+      filePath: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
     getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
     getFiles: (
       folderName: string
