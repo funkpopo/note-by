@@ -47,6 +47,7 @@ const IPC_CHANNELS = {
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
   CHECK_FOR_UPDATES: 'app:check-for-updates',
   CANCEL_SYNC: 'webdav:cancel-sync',
+  CLEAR_WEBDAV_SYNC_CACHE: 'webdav:clear-sync-cache',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
   GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id',
@@ -474,7 +475,13 @@ const api = {
     cancelSync: (): Promise<{
       success: boolean
       message: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.CANCEL_SYNC)
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CANCEL_SYNC),
+
+    // 清除同步缓存
+    clearSyncCache: (): Promise<{
+      success: boolean
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_WEBDAV_SYNC_CACHE)
   },
   // 数据分析相关API
   analytics: {

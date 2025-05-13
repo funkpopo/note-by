@@ -33,10 +33,11 @@ import {
   getUserActivityData,
   getAnalysisCache,
   saveAnalysisCache,
-  initAnalysisCacheTable,
   resetAnalysisCache,
+  initAnalysisCacheTable,
   type AnalysisCacheItem
 } from './database'
+import { clearWebDAVSyncCache } from './webdav-cache'
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import Showdown from 'showdown'
@@ -72,6 +73,7 @@ const IPC_CHANNELS = {
   SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
   CANCEL_SYNC: 'webdav:cancel-sync',
+  CLEAR_WEBDAV_SYNC_CACHE: 'webdav:clear-sync-cache',
   CHECK_FOR_UPDATES: 'app:check-for-updates',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
@@ -1268,6 +1270,17 @@ ${htmlContent}
     }
   })
 
+  // 清除WebDAV同步缓存
+  ipcMain.handle(IPC_CHANNELS.CLEAR_WEBDAV_SYNC_CACHE, async () => {
+    try {
+      const success = await clearWebDAVSyncCache()
+      return { success, message: success ? 'WebDAV同步缓存已清除' : '清除缓存失败' }
+    } catch (error) {
+      console.error('清除WebDAV同步缓存失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
   // 处理文件上传
   ipcMain.handle(IPC_CHANNELS.UPLOAD_FILE, async (_, filePath, fileData, fileName) => {
     try {
@@ -1534,7 +1547,10 @@ ${htmlContent}
           throw new Error('数据库初始化失败')
         }
       })
-      .then(() => {})
+      // 不再初始化WebDAV同步缓存表，改用文件存储
+      .then(() => {
+        console.log('所有数据库表初始化完成')
+      })
       .catch((error) => {
         console.error('数据库初始化失败:', error)
       })

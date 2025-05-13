@@ -253,6 +253,13 @@ interface Window {
         success: boolean
         message: string
       }>
+
+      // 清除同步缓存
+      clearSyncCache: () => Promise<{
+        success: boolean
+        message?: string
+        error?: string
+      }>
     }
   }
 }

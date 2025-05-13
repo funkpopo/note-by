@@ -8,6 +8,17 @@ import fsPromises from 'fs/promises'
 // 导入类型定义，即使初始化失败也能使用类型
 import type Database from 'better-sqlite3'
 
+// WebDAV同步记录类型定义
+export interface WebDAVSyncRecord {
+  filePath: string
+  remotePath: string
+  lastSyncTime: number
+  lastModifiedLocal: number
+  lastModifiedRemote: number
+  contentHash: string
+  fileSize: number
+}
+
 // 单例数据库连接
 let db: Database.Database | null = null
 
@@ -76,6 +87,158 @@ export async function initDatabase(): Promise<Database.Database | null> {
   } catch (error) {
     console.error('初始化数据库失败:', error)
     return null
+  }
+}
+
+// WebDAV同步缓存相关结构和函数
+
+// 初始化WebDAV同步缓存表
+export async function initWebDAVSyncCacheTable(): Promise<void> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法创建WebDAV同步缓存表：数据库不可用')
+      return
+    }
+
+    // 创建WebDAV同步缓存表
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS webdav_sync_cache (
+        file_path TEXT PRIMARY KEY,
+        remote_path TEXT NOT NULL,
+        last_sync_time INTEGER NOT NULL,
+        last_modified_local INTEGER NOT NULL,
+        last_modified_remote INTEGER,
+        content_hash TEXT NOT NULL,
+        file_size INTEGER NOT NULL
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
+    `)
+
+    console.log('WebDAV同步缓存表初始化成功')
+  } catch (error) {
+    console.error('创建WebDAV同步缓存表失败:', error)
+  }
+}
+
+// 保存或更新WebDAV同步记录
+export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<boolean> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法保存WebDAV同步记录：数据库不可用')
+      return false
+    }
+
+    // 检查记录是否已存在
+    const checkStmt = database.prepare(
+      'SELECT file_path FROM webdav_sync_cache WHERE file_path = ?'
+    )
+    const existingRecord = checkStmt.get(record.filePath)
+
+    if (existingRecord) {
+      // 更新现有记录
+      const updateStmt = database.prepare(`
+        UPDATE webdav_sync_cache 
+        SET remote_path = ?, 
+            last_sync_time = ?, 
+            last_modified_local = ?, 
+            last_modified_remote = ?,
+            content_hash = ?,
+            file_size = ?
+        WHERE file_path = ?
+      `)
+
+      updateStmt.run(
+        record.remotePath,
+        record.lastSyncTime,
+        record.lastModifiedLocal,
+        record.lastModifiedRemote || null,
+        record.contentHash,
+        record.fileSize,
+        record.filePath
+      )
+    } else {
+      // 插入新记录
+      const insertStmt = database.prepare(`
+        INSERT INTO webdav_sync_cache 
+        (file_path, remote_path, last_sync_time, last_modified_local, last_modified_remote, content_hash, file_size)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `)
+
+      insertStmt.run(
+        record.filePath,
+        record.remotePath,
+        record.lastSyncTime,
+        record.lastModifiedLocal,
+        record.lastModifiedRemote || null,
+        record.contentHash,
+        record.fileSize
+      )
+    }
+
+    return true
+  } catch (error) {
+    console.error('保存WebDAV同步记录失败:', error)
+    return false
+  }
+}
+
+// 获取特定文件的WebDAV同步记录
+export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncRecord | null> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法获取WebDAV同步记录：数据库不可用')
+      return null
+    }
+
+    // 查询记录
+    const stmt = database.prepare(`
+      SELECT 
+        file_path as filePath, 
+        remote_path as remotePath, 
+        last_sync_time as lastSyncTime, 
+        last_modified_local as lastModifiedLocal, 
+        last_modified_remote as lastModifiedRemote, 
+        content_hash as contentHash, 
+        file_size as fileSize
+      FROM webdav_sync_cache 
+      WHERE file_path = ?
+    `)
+
+    const record = stmt.get(filePath) as WebDAVSyncRecord | undefined
+
+    return record || null
+  } catch (error) {
+    console.error('获取WebDAV同步记录失败:', error)
+    return null
+  }
+}
+
+// 清除所有WebDAV同步缓存
+export async function clearWebDAVSyncCache(): Promise<boolean> {
+  try {
+    const database = await initDatabase()
+
+    if (!database) {
+      console.log('无法清除WebDAV同步缓存：数据库不可用')
+      return false
+    }
+
+    // 删除所有记录
+    const stmt = database.prepare('DELETE FROM webdav_sync_cache')
+    stmt.run()
+
+    console.log('WebDAV同步缓存已清除')
+    return true
+  } catch (error) {
+    console.error('清除WebDAV同步缓存失败:', error)
+    return false
   }
 }
 

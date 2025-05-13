@@ -1,8 +1,39 @@
-import { createClient, WebDAVClient, FileStat } from 'webdav'
+import { createClient, WebDAVClient, FileStat, ResponseDataDetailed } from 'webdav'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
 import * as fsTypes from 'fs'
+import {
+  getWebDAVSyncRecord,
+  saveWebDAVSyncRecord,
+  getLastGlobalSyncTime,
+  updateLastGlobalSyncTime,
+  WebDAVSyncRecord
+} from './webdav-cache'
+
+// 定义一个更兼容的 WebDAV 文件信息类型
+type WebDAVFileInfo =
+  | FileStat
+  | ResponseDataDetailed<FileStat>
+  | {
+      lastmod?: string | Date
+      data?: FileStat | { lastmod?: string | Date }
+      [key: string]: unknown
+    }
+
+// 获取远程文件修改时间(处理可能的不同返回类型)
+function getRemoteModTime(fileInfo: WebDAVFileInfo): number {
+  // 处理不同的返回类型，尝试提取 lastmod 字段
+  if (fileInfo && typeof fileInfo === 'object') {
+    if ('lastmod' in fileInfo) {
+      return new Date(fileInfo.lastmod as string).getTime()
+    } else if (fileInfo.data && 'lastmod' in fileInfo.data) {
+      return new Date(fileInfo.data.lastmod as string).getTime()
+    }
+  }
+  // 如果无法获取时间戳，返回当前时间
+  return Date.now()
+}
 
 // 同步取消标志
 let isSyncCancelled = false
@@ -90,6 +121,38 @@ async function uploadFile(localFilePath: string, remoteFilePath: string): Promis
   try {
     const fileContent = await fs.readFile(localFilePath)
     await webdavClient.putFileContents(remoteFilePath, fileContent)
+
+    // 上传成功后，更新同步缓存
+    try {
+      // 获取本地文件状态
+      const localStats = await fs.stat(localFilePath)
+      const localModTime = localStats.mtime.getTime()
+      const fileSize = localStats.size
+
+      // 计算文件哈希
+      const contentHash = await calculateFileHash(localFilePath)
+
+      // 获取远程文件最新修改时间
+      const remoteInfo = await webdavClient.stat(remoteFilePath)
+      const remoteModTime = getRemoteModTime(remoteInfo)
+
+      // 保存同步记录
+      await saveWebDAVSyncRecord({
+        filePath: localFilePath,
+        remotePath: remoteFilePath,
+        lastSyncTime: Date.now(),
+        lastModifiedLocal: localModTime,
+        lastModifiedRemote: remoteModTime,
+        contentHash,
+        fileSize
+      })
+
+      console.log(`同步缓存已更新: ${localFilePath}`)
+    } catch (cacheError) {
+      // 缓存更新失败不影响上传结果
+      console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
+    }
+
     return true
   } catch (error) {
     console.error(`上传文件失败: ${localFilePath} -> ${remoteFilePath}`, error)
@@ -112,6 +175,37 @@ async function downloadFile(remoteFilePath: string, localFilePath: string): Prom
 
     // 写入文件
     await fs.writeFile(localFilePath, content)
+
+    // 下载成功后，更新同步缓存
+    try {
+      // 获取本地文件状态
+      const localStats = await fs.stat(localFilePath)
+      const localModTime = localStats.mtime.getTime()
+      const fileSize = localStats.size
+
+      // 计算文件哈希
+      const contentHash = await calculateFileHash(localFilePath)
+
+      // 获取远程文件最新修改时间
+      const remoteInfo = await webdavClient.stat(remoteFilePath)
+      const remoteModTime = getRemoteModTime(remoteInfo)
+
+      // 保存同步记录
+      await saveWebDAVSyncRecord({
+        filePath: localFilePath,
+        remotePath: remoteFilePath,
+        lastSyncTime: Date.now(),
+        lastModifiedLocal: localModTime,
+        lastModifiedRemote: remoteModTime,
+        contentHash,
+        fileSize
+      })
+
+      console.log(`同步缓存已更新: ${localFilePath}`)
+    } catch (cacheError) {
+      // 缓存更新失败不影响下载结果
+      console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
+    }
 
     return true
   } catch (error) {
@@ -141,6 +235,38 @@ async function needUpload(
   if (!webdavClient) return false
 
   try {
+    // 获取本地文件状态
+    const localStats = await fs.stat(localFilePath)
+    const localModTime = localStats.mtime.getTime()
+    const fileSize = localStats.size
+
+    // 首先检查本地缓存
+    const syncRecord = await getWebDAVSyncRecord(localFilePath)
+
+    // 如果有缓存记录，先通过缓存判断是否需要上传
+    if (syncRecord) {
+      // 如果本地文件未修改（时间戳和大小与上次同步时相同），无需上传
+      if (localModTime === syncRecord.lastModifiedLocal && fileSize === syncRecord.fileSize) {
+        console.log(`文件未修改，跳过上传: ${localFilePath}`)
+        return false
+      }
+
+      // 如果只有时间戳变化但文件大小一致，再通过哈希比较内容
+      if (fileSize === syncRecord.fileSize) {
+        // 计算当前文件哈希值
+        const currentHash = await calculateFileHash(localFilePath)
+        if (currentHash === syncRecord.contentHash) {
+          console.log(`文件内容未变化，仅时间戳变化，跳过上传: ${localFilePath}`)
+          return false
+        }
+      }
+
+      // 到这里说明文件确实被修改了，需要上传
+      console.log(`文件已修改，需要上传: ${localFilePath}`)
+      return true
+    }
+
+    // 如果没有缓存记录，回退到原来的逻辑
     // 检查远程文件是否存在
     const remoteFile = remoteFiles.find((file) => file.filename === remoteFilePath)
     if (!remoteFile) {
@@ -148,12 +274,8 @@ async function needUpload(
       return true
     }
 
-    // 检查本地文件的最后修改时间
-    const localStats = await fs.stat(localFilePath)
-    const localModTime = localStats.mtime.getTime()
-
     // 远程文件的最后修改时间
-    const remoteModTime = new Date(remoteFile.lastmod).getTime()
+    const remoteModTime = getRemoteModTime(remoteFile)
 
     // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
     const TIME_THRESHOLD = 3000 // 毫秒
@@ -176,19 +298,70 @@ async function needUpload(
 async function needDownload(localFilePath: string, remoteFile: FileStat): Promise<boolean> {
   try {
     // 检查本地文件是否存在
+    let localExists = true
     try {
       await fs.access(localFilePath)
     } catch {
       // 本地文件不存在，需要下载
+      localExists = false
       return true
     }
 
+    // 如果本地文件存在，检查同步缓存
+    if (localExists) {
+      // 获取远程文件的修改时间和其他信息
+      const remoteModTime = getRemoteModTime(remoteFile)
+
+      // 获取本地文件状态
+      const localStats = await fs.stat(localFilePath)
+      const localModTime = localStats.mtime.getTime()
+
+      // 检查同步缓存
+      const syncRecord = await getWebDAVSyncRecord(localFilePath)
+
+      if (syncRecord) {
+        // 如果远程文件自上次同步后未修改，且本地文件也未修改，无需下载
+        if (
+          remoteModTime === syncRecord.lastModifiedRemote &&
+          localModTime === syncRecord.lastModifiedLocal
+        ) {
+          console.log(`远程与本地均未修改，跳过下载: ${localFilePath}`)
+          return false
+        }
+
+        // 如果远程未修改但本地有修改，不需要下载（应该是本地上传）
+        if (
+          remoteModTime === syncRecord.lastModifiedRemote &&
+          localModTime !== syncRecord.lastModifiedLocal
+        ) {
+          console.log(`仅本地有修改，跳过下载: ${localFilePath}`)
+          return false
+        }
+
+        // 如果远程有修改，再通过大小和内容哈希比较
+        if (remoteModTime !== syncRecord.lastModifiedRemote) {
+          // 如果远程文件大小与缓存记录一致，获取并比较内容哈希
+          if (remoteFile.size === syncRecord.fileSize) {
+            // 比较远程文件内容（现在不能直接获取远程哈希，所以这里先保守下载）
+            // 未来可以考虑获取远程内容并计算哈希后再比较
+            console.log(`远程文件时间戳变化，需要下载: ${localFilePath}`)
+            return true
+          } else {
+            // 远程文件大小变化，需要下载
+            console.log(`远程文件大小变化，需要下载: ${localFilePath}`)
+            return true
+          }
+        }
+      }
+    }
+
+    // 如果没有缓存记录或无法通过缓存确定，回退到原始逻辑
     // 检查本地文件的最后修改时间
     const localStats = await fs.stat(localFilePath)
     const localModTime = localStats.mtime.getTime()
 
     // 远程文件的最后修改时间
-    const remoteModTime = new Date(remoteFile.lastmod).getTime()
+    const remoteModTime = getRemoteModTime(remoteFile)
 
     // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
     const TIME_THRESHOLD = 3000 // 毫秒
@@ -210,11 +383,27 @@ async function needDownload(localFilePath: string, remoteFile: FileStat): Promis
 // 计算文件的MD5哈希
 async function calculateFileHash(filePath: string): Promise<string> {
   try {
-    const content = await fs.readFile(filePath)
-    return crypto.createHash('md5').update(content).digest('hex')
+    // 使用流式处理，避免一次性读取大文件导致内存问题
+    return new Promise<string>((resolve, reject) => {
+      const hash = crypto.createHash('md5')
+      const stream = fsTypes.createReadStream(filePath)
+
+      stream.on('data', (data) => {
+        hash.update(data)
+      })
+
+      stream.on('end', () => {
+        resolve(hash.digest('hex'))
+      })
+
+      stream.on('error', (err) => {
+        reject(err)
+      })
+    })
   } catch (error) {
-    console.error(`计算文件哈希失败: ${filePath}`, error)
-    return ''
+    console.error(`计算文件 ${filePath} 哈希值失败:`, error)
+    // 出错时返回时间戳作为备选哈希值
+    return Date.now().toString()
   }
 }
 
@@ -243,6 +432,46 @@ async function compareFileContent(localFilePath: string, remoteFilePath: string)
     console.error(`比较文件内容失败: ${localFilePath} vs ${remoteFilePath}`, error)
     return true // 出错时保守返回需要同步
   }
+}
+
+// 并行处理工具函数 - 用于批量并行处理文件操作
+async function processBatchesInParallel<T, R>(
+  items: T[],
+  processFn: (item: T) => Promise<R>,
+  batchSize = 10,
+  concurrency = 3
+): Promise<R[]> {
+  const results: R[] = []
+  const batches: T[][] = []
+
+  // 将项目分成批次
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize))
+  }
+
+  // 按照并行度处理批次
+  for (let i = 0; i < batches.length; i += concurrency) {
+    const batchPromises = batches.slice(i, i + concurrency).map(async (batch) => {
+      const batchResults: R[] = []
+      for (const item of batch) {
+        if (checkSyncCancelled()) {
+          throw new Error('用户取消了同步')
+        }
+        const result = await processFn(item)
+        batchResults.push(result)
+      }
+      return batchResults
+    })
+
+    // 等待当前并发批次完成
+    const batchesResults = await Promise.all(batchPromises)
+    // 合并结果
+    for (const batchResult of batchesResults) {
+      results.push(...batchResult)
+    }
+  }
+
+  return results
 }
 
 export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
@@ -493,13 +722,33 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       }
     }
 
+    // 获取上次同步时间，用于筛选文件
+    const lastSyncTime = await getLastGlobalSyncTime()
+    console.log(`上次同步时间: ${new Date(lastSyncTime).toLocaleString()}`)
+
     // 缓存远程文件列表(按目录)，在整个同步过程中共享
     const remoteFilesCache = new Map<string, FileStat[]>()
+
+    // 待处理的文件集合
+    type FileSyncInfo = {
+      localPath: string
+      remotePath: string
+      localExists: boolean
+      remoteExists: boolean
+      localModTime?: number
+      remoteModTime?: number
+      syncRecord?: WebDAVSyncRecord
+      remoteFile?: FileStat
+      action?: 'upload' | 'download' | 'compare' | 'skip'
+    }
+
+    const filesToProcess: FileSyncInfo[] = []
+
     // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
     const TIME_THRESHOLD = 3000 // 毫秒
 
-    // 递归同步函数 - 整合了双向同步
-    async function syncDirectoryBidirectional(localDir: string, remoteDir: string): Promise<void> {
+    // 收集需要同步的文件信息
+    async function collectFilesToSync(localDir: string, remoteDir: string): Promise<void> {
       // 检查是否取消同步
       if (checkSyncCancelled()) {
         throw new Error('用户取消了同步')
@@ -522,133 +771,282 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       }
       const remoteFiles = remoteFilesCache.get(remoteDir) || []
 
+      // 创建远程文件索引映射，便于快速查找
+      const remoteFilesMap = new Map<string, FileStat>()
+      for (const remoteFile of remoteFiles) {
+        const filename = path.basename(remoteFile.filename)
+        remoteFilesMap.set(filename, remoteFile)
+      }
+
       // 2. 获取本地文件列表
       const localEntries = await fs.readdir(localDir, { withFileTypes: true })
-      const localEntriesMap = new Map<string, fsTypes.Dirent>()
-      localEntries.forEach((entry) => {
-        localEntriesMap.set(entry.name, entry)
-      })
 
-      // 3. 处理远程文件 (远程 -> 本地)
-      for (const remoteEntry of remoteFiles) {
-        // 检查是否取消同步
+      // 创建本地文件索引映射
+      const localFilesMap = new Map<string, fsTypes.Dirent>()
+      for (const entry of localEntries) {
+        localFilesMap.set(entry.name, entry)
+      }
+
+      // 3. 处理所有本地文件
+      for (const [filename, entry] of localFilesMap.entries()) {
         if (checkSyncCancelled()) {
           throw new Error('用户取消了同步')
         }
 
-        const remoteFilename = path.basename(remoteEntry.filename)
-        const remoteFullPath = remoteEntry.filename
-        const localFullPath = path.join(localDir, remoteFilename)
+        const localPath = path.join(localDir, filename)
+        const remotePath = path.join(remoteDir, filename).replace(/\\/g, '/')
 
-        if (remoteEntry.type === 'directory') {
-          // 创建本地目录（如果不存在）
-          await fs.mkdir(localFullPath, { recursive: true })
-
+        if (entry.isDirectory()) {
           // 递归处理子目录
-          await syncDirectoryBidirectional(localFullPath, remoteFullPath)
+          const remoteSubDir = remoteFilesMap.has(filename)
+            ? remoteFilesMap.get(filename)!.filename
+            : remotePath
 
-          // 从本地文件映射中移除已处理的目录
-          localEntriesMap.delete(remoteFilename)
-        } else if (
-          remoteEntry.type === 'file' &&
-          (remoteFilename.endsWith('.md') || isInAssetsDir)
-        ) {
-          const localEntry = localEntriesMap.get(remoteFilename)
+          await collectFilesToSync(localPath, remoteSubDir)
 
-          if (!localEntry) {
-            // 本地不存在此文件，需要从远程下载
-            const success = await downloadFile(remoteFullPath, localFullPath)
-            if (success) {
-              downloaded++
-            } else {
-              failed++
+          // 从远程文件映射中删除已处理的目录
+          remoteFilesMap.delete(filename)
+        } else if (entry.isFile() && (filename.endsWith('.md') || isInAssetsDir)) {
+          // 处理文件
+          try {
+            // 获取本地文件状态
+            const localStats = await fs.stat(localPath)
+            const localModTime = localStats.mtime.getTime()
+
+            // 获取同步记录
+            const syncRecord = (await getWebDAVSyncRecord(localPath)) || undefined
+
+            // 检查远程是否存在此文件
+            const remoteExists = remoteFilesMap.has(filename)
+            let remoteModTime = 0
+            let remoteFile: FileStat | undefined
+
+            if (remoteExists) {
+              remoteFile = remoteFilesMap.get(filename)!
+              remoteModTime = getRemoteModTime(remoteFile)
+
+              // 从远程文件映射中删除已处理的文件
+              remoteFilesMap.delete(filename)
             }
-          } else {
-            // 本地存在此文件，需要比较修改时间
-            try {
-              const localStats = await fs.stat(localFullPath)
-              const localModTime = localStats.mtime.getTime()
-              const remoteModTime = new Date(remoteEntry.lastmod).getTime()
 
-              // 比较修改时间
-              if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
-                // 时间戳相近，通过内容比较判断
-                const needSync = await compareFileContent(localFullPath, remoteFullPath)
+            // 预判断同步行为
+            let action: 'upload' | 'download' | 'compare' | 'skip' = 'compare'
 
-                if (needSync) {
-                  // 内容不同，以最新修改时间为准
-                  if (localModTime > remoteModTime) {
-                    // 以本地为准，上传到远程
-                    const success = await uploadFile(localFullPath, remoteFullPath)
-                    if (success) uploaded++
-                    else failed++
-                  } else {
-                    // 以远程为准，下载到本地
-                    const success = await downloadFile(remoteFullPath, localFullPath)
-                    if (success) downloaded++
-                    else failed++
-                  }
-                } else {
-                  // 内容相同，不需要同步
-                  skippedUpload++
-                  skippedDownload++
-                }
-              } else if (localModTime > remoteModTime) {
-                // 本地文件更新，上传到远程
-                const success = await uploadFile(localFullPath, remoteFullPath)
-                if (success) uploaded++
-                else failed++
-              } else if (remoteModTime > localModTime) {
-                // 远程文件更新，下载到本地
-                const success = await downloadFile(remoteFullPath, localFullPath)
-                if (success) downloaded++
-                else failed++
+            if (!remoteExists) {
+              // 远程不存在，需要上传
+              if (localModTime > lastSyncTime) {
+                // 本地有修改，上传
+                action = 'upload'
               } else {
-                // 文件时间相同，不需要同步
+                // 本地没有修改，跳过
+                action = 'skip'
+                skippedUpload++
+              }
+            } else if (syncRecord) {
+              // 有同步记录
+              if (
+                localModTime > syncRecord.lastModifiedLocal &&
+                remoteModTime > syncRecord.lastModifiedRemote
+              ) {
+                // 本地和远程都有更新，需要比较内容
+                action = 'compare'
+              } else if (localModTime > syncRecord.lastModifiedLocal) {
+                // 只有本地更新
+                action = 'upload'
+              } else if (remoteModTime > syncRecord.lastModifiedRemote) {
+                // 只有远程更新
+                action = 'download'
+              } else {
+                // 双方都没更新
+                action = 'skip'
                 skippedUpload++
                 skippedDownload++
               }
-            } catch (error) {
-              console.error(`比较文件时间失败: ${localFullPath}`, error)
-              failed++
+            } else {
+              // 无同步记录，基于修改时间判断
+              if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
+                // 时间相近，需要比较内容
+                action = 'compare'
+              } else if (localModTime > remoteModTime) {
+                // 本地更新，上传
+                action = 'upload'
+              } else {
+                // 远程更新，下载
+                action = 'download'
+              }
             }
 
-            // 从本地文件映射中移除已处理的文件
-            localEntriesMap.delete(remoteFilename)
+            // 将文件信息加入处理列表
+            filesToProcess.push({
+              localPath,
+              remotePath,
+              localExists: true,
+              remoteExists,
+              localModTime,
+              remoteModTime: remoteExists ? remoteModTime : undefined,
+              syncRecord,
+              remoteFile,
+              action
+            })
+          } catch (error) {
+            console.error(`获取文件状态失败: ${localPath}`, error)
+            failed++
           }
         }
       }
 
-      // 4. 处理剩余的本地文件 (本地 -> 远程)
-      for (const [filename, entry] of localEntriesMap.entries()) {
-        // 检查是否取消同步
+      // 4. 处理仅存在于远程的文件
+      for (const [filename, remoteEntry] of remoteFilesMap.entries()) {
         if (checkSyncCancelled()) {
           throw new Error('用户取消了同步')
         }
 
-        const localFullPath = path.join(localDir, filename)
-        const remoteFullPath = path.join(remoteDir, filename).replace(/\\/g, '/')
-
-        if (entry.isDirectory()) {
-          // 确保远程目录存在
-          await ensureRemoteDirectory(remoteFullPath)
+        if (remoteEntry.type === 'directory') {
+          // 远程目录，在本地不存在
+          const localSubDir = path.join(localDir, filename)
+          await fs.mkdir(localSubDir, { recursive: true })
 
           // 递归处理子目录
-          await syncDirectoryBidirectional(localFullPath, remoteFullPath)
-        } else if (entry.isFile() && (filename.endsWith('.md') || isInAssetsDir)) {
-          // 这是一个只存在于本地的文件，上传到远程
-          const success = await uploadFile(localFullPath, remoteFullPath)
-          if (success) {
+          await collectFilesToSync(localSubDir, remoteEntry.filename)
+        } else if (remoteEntry.type === 'file' && (filename.endsWith('.md') || isInAssetsDir)) {
+          // 远程文件，本地不存在，需要下载
+          const localPath = path.join(localDir, filename)
+
+          filesToProcess.push({
+            localPath,
+            remotePath: remoteEntry.filename,
+            localExists: false,
+            remoteExists: true,
+            remoteModTime: getRemoteModTime(remoteEntry),
+            remoteFile: remoteEntry,
+            action: 'download'
+          })
+        }
+      }
+    }
+
+    // 收集所有文件信息
+    await collectFilesToSync(config.localPath, config.remotePath)
+    console.log(`收集到 ${filesToProcess.length} 个文件需要处理`)
+
+    // 并行处理文件
+    if (filesToProcess.length > 0) {
+      // 按操作类型分组处理
+      const uploadFiles = filesToProcess.filter((file) => file.action === 'upload')
+      const downloadFiles = filesToProcess.filter((file) => file.action === 'download')
+      const compareFiles = filesToProcess.filter((file) => file.action === 'compare')
+
+      console.log(
+        `需要上传: ${uploadFiles.length}, 需要下载: ${downloadFiles.length}, 需要比较: ${compareFiles.length}`
+      )
+
+      // 处理上传文件
+      if (uploadFiles.length > 0) {
+        const uploadResults = await processBatchesInParallel(
+          uploadFiles,
+          async (item) => {
+            const success = await uploadFile(item.localPath, item.remotePath)
+            return { success, item }
+          },
+          5,
+          2
+        )
+
+        for (const result of uploadResults) {
+          if (result.success) {
             uploaded++
           } else {
             failed++
           }
         }
       }
+
+      // 处理下载文件
+      if (downloadFiles.length > 0) {
+        const downloadResults = await processBatchesInParallel(
+          downloadFiles,
+          async (item) => {
+            const success = await downloadFile(item.remotePath, item.localPath)
+            return { success, item }
+          },
+          5,
+          2
+        )
+
+        for (const result of downloadResults) {
+          if (result.success) {
+            downloaded++
+          } else {
+            failed++
+          }
+        }
+      }
+
+      // 处理需要比较内容的文件
+      if (compareFiles.length > 0) {
+        const compareResults = await processBatchesInParallel(
+          compareFiles,
+          async (item) => {
+            if (!item.remotePath || !item.localPath) {
+              return {
+                action: 'skip' as const,
+                success: true,
+                item
+              }
+            }
+
+            // 比较内容
+            const needSync = await compareFileContent(item.localPath, item.remotePath)
+
+            if (needSync) {
+              // 内容不同，以最新修改时间为准
+              if ((item.localModTime || 0) > (item.remoteModTime || 0)) {
+                // 以本地为准，上传
+                const success = await uploadFile(item.localPath, item.remotePath)
+                return {
+                  action: 'upload' as const,
+                  success,
+                  item
+                }
+              } else {
+                // 以远程为准，下载
+                const success = await downloadFile(item.remotePath, item.localPath)
+                return {
+                  action: 'download' as const,
+                  success,
+                  item
+                }
+              }
+            } else {
+              // 内容相同，不需要同步
+              return {
+                action: 'skip' as const,
+                success: true,
+                item
+              }
+            }
+          },
+          3,
+          1 // 内容比较较重，降低并发
+        )
+
+        for (const result of compareResults) {
+          if (result.action === 'skip') {
+            skippedUpload++
+            skippedDownload++
+          } else if (result.action === 'upload') {
+            if (result.success) uploaded++
+            else failed++
+          } else if (result.action === 'download') {
+            if (result.success) downloaded++
+            else failed++
+          }
+        }
+      }
     }
 
-    // 开始同步
-    await syncDirectoryBidirectional(config.localPath, config.remotePath)
+    // 更新全局同步时间
+    await updateLastGlobalSyncTime()
 
     return {
       success: true,

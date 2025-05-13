@@ -359,7 +359,41 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     await saveConfig(allValues)
   }
 
-  // 显式保存配置
+  // 清除同步缓存
+  const handleClearSyncCache = async (): Promise<void> => {
+    try {
+      setLoading(true)
+
+      const result = await window.api.webdav.clearSyncCache()
+      if (result.success) {
+        Toast.success('同步缓存已清除')
+        setSyncStatus({
+          show: true,
+          type: 'success',
+          message: '同步缓存已清除，下次同步将重新同步所有文件'
+        })
+      } else {
+        Toast.error(`清除同步缓存失败: ${result.error || '未知错误'}`)
+        setSyncStatus({
+          show: true,
+          type: 'danger',
+          message: `清除同步缓存失败: ${result.error || '未知错误'}`
+        })
+      }
+    } catch (error) {
+      console.error('清除同步缓存失败:', error)
+      Toast.error(`清除同步缓存失败: ${error}`)
+      setSyncStatus({
+        show: true,
+        type: 'danger',
+        message: `清除同步缓存失败: ${error}`
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 保存配置
   const handleSaveConfig = async (): Promise<void> => {
     if (!formApi) return
 
@@ -519,6 +553,21 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                 注意: 同步会对比本地和远程文件，只传输不同的文件，避免不必要的流量消耗。
               </Text>
             </div>
+          </div>
+        </Card>
+
+        <Card style={{ marginBottom: 20 }}>
+          <Text strong style={{ fontSize: '18px', display: 'block', marginBottom: '16px' }}>
+            清除同步缓存
+          </Text>
+          <div>
+            <Button
+              type="danger"
+              onClick={handleClearSyncCache}
+              disabled={!formApi?.getValues()?.enabled}
+            >
+              清除同步缓存
+            </Button>
           </div>
         </Card>
 
