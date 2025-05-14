@@ -18,7 +18,8 @@ import {
   syncLocalToRemote,
   syncRemoteToLocal,
   syncBidirectional,
-  cancelSync
+  cancelSync,
+  clearSyncCache
 } from './webdav'
 import axios from 'axios'
 import http from 'http'
@@ -37,7 +38,6 @@ import {
   initAnalysisCacheTable,
   type AnalysisCacheItem
 } from './database'
-import { clearWebDAVSyncCache } from './webdav-cache'
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import Showdown from 'showdown'
@@ -142,9 +142,12 @@ async function ensureMarkdownFolders(folderPath: string): Promise<void> {
   }
 }
 
+// 导出mainWindow，用于在其他模块中发送事件
+export let mainWindow: BrowserWindow | null = null
+
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     minWidth: 400, // 设置最小宽度
@@ -185,7 +188,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    if (mainWindow) mainWindow.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -1273,8 +1276,8 @@ ${htmlContent}
   // 清除WebDAV同步缓存
   ipcMain.handle(IPC_CHANNELS.CLEAR_WEBDAV_SYNC_CACHE, async () => {
     try {
-      const success = await clearWebDAVSyncCache()
-      return { success, message: success ? 'WebDAV同步缓存已清除' : '清除缓存失败' }
+      const result = await clearSyncCache()
+      return result
     } catch (error) {
       console.error('清除WebDAV同步缓存失败:', error)
       return { success: false, error: String(error) }

@@ -481,7 +481,31 @@ const api = {
     clearSyncCache: (): Promise<{
       success: boolean
       error?: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_WEBDAV_SYNC_CACHE)
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_WEBDAV_SYNC_CACHE),
+
+    // 监听同步进度
+    onSyncProgress: (
+      callback: (progress: {
+        total: number
+        processed: number
+        action: 'upload' | 'download' | 'compare'
+      }) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        progress: {
+          total: number
+          processed: number
+          action: 'upload' | 'download' | 'compare'
+        }
+      ): void => {
+        callback(progress)
+      }
+      ipcRenderer.on('webdav-sync-progress', listener)
+      return () => {
+        ipcRenderer.removeListener('webdav-sync-progress', listener)
+      }
+    }
   },
   // 数据分析相关API
   analytics: {

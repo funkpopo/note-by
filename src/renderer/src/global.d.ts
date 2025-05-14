@@ -249,10 +249,7 @@ interface Window {
       }>
 
       // 取消同步
-      cancelSync: () => Promise<{
-        success: boolean
-        message: string
-      }>
+      cancelSync: () => void
 
       // 清除同步缓存
       clearSyncCache: () => Promise<{
@@ -260,6 +257,23 @@ interface Window {
         message?: string
         error?: string
       }>
+
+      // 监听同步进度
+      onSyncProgress: (
+        callback: (progress: {
+          total: number
+          processed: number
+          action: 'upload' | 'download' | 'compare'
+        }) => void
+      ) => () => void
+    }
+    // 应用程序操作API
+    app: {
+      close: () => void
+      minimize: () => void
+      maximize: () => void
+      isMaximized: () => Promise<boolean>
+      version: () => Promise<string>
     }
   }
 }

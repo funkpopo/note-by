@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Button, Form, Toast, Banner, Space, Typography, Card, Spin } from '@douyinfe/semi-ui'
+import {
+  Button,
+  Form,
+  Toast,
+  Banner,
+  Space,
+  Typography,
+  Card,
+  Spin,
+  Progress
+} from '@douyinfe/semi-ui'
 import { IconUpload, IconDownload, IconSync, IconClose } from '@douyinfe/semi-icons'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 
@@ -37,6 +47,12 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     type: 'success' | 'warning' | 'danger'
     message: string
   } | null>(null)
+  // 添加同步进度状态
+  const [syncProgress, setSyncProgress] = useState<{
+    total: number
+    processed: number
+    action: 'upload' | 'download' | 'compare'
+  } | null>(null)
 
   // 加载WebDAV配置
   const loadConfig = useCallback(async (): Promise<void> => {
@@ -57,6 +73,19 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   useEffect(() => {
     loadConfig()
   }, [loadConfig])
+
+  // 添加同步进度事件监听
+  useEffect(() => {
+    // 监听同步进度
+    const unsubscribe = window.api.webdav.onSyncProgress((progress) => {
+      setSyncProgress(progress)
+    })
+
+    return () => {
+      // 组件卸载时取消监听
+      unsubscribe()
+    }
+  }, [])
 
   // 保存WebDAV配置到设置
   const saveConfig = async (values: Partial<WebDAVConfig>): Promise<void> => {
@@ -113,6 +142,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
     try {
       setLoading(true)
+      // 重置同步进度
+      setSyncProgress(null)
       const values = (await formApi.validate()) as WebDAVConfig
       await saveConfig(values)
 
@@ -167,6 +198,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       }
     } finally {
       setLoading(false)
+      // 重置同步进度
+      setSyncProgress(null)
     }
   }
 
@@ -176,6 +209,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
     try {
       setLoading(true)
+      // 重置同步进度
+      setSyncProgress(null)
       const values = (await formApi.validate()) as WebDAVConfig
       await saveConfig(values)
 
@@ -230,6 +265,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       }
     } finally {
       setLoading(false)
+      // 重置同步进度
+      setSyncProgress(null)
     }
   }
 
@@ -239,37 +276,65 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
     try {
       setLoading(true)
+      // 重置同步进度
+      setSyncProgress(null)
       const values = (await formApi.validate()) as WebDAVConfig
       await saveConfig(values)
 
       // 显示同步中提示，带取消按钮
       const loadingToast = Toast.info({
         content: (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Space>
-              <Spin />
-              <span>正在同步中...</span>
-            </Space>
-            <Button
-              type="danger"
-              theme="borderless"
-              icon={<IconClose />}
-              size="small"
-              onClick={async (): Promise<void> => {
-                try {
-                  // 发送取消同步请求
-                  await window.api.webdav.cancelSync()
-                  Toast.info('已发送取消同步请求，正在中断...')
-                } catch (error) {
-                  console.error('取消同步失败:', error)
-                }
-              }}
-            >
-              取消
-            </Button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Space>
+                <Spin />
+                <span>正在同步中...</span>
+              </Space>
+              <Button
+                type="danger"
+                theme="borderless"
+                icon={<IconClose />}
+                size="small"
+                onClick={async (): Promise<void> => {
+                  try {
+                    // 发送取消同步请求
+                    await window.api.webdav.cancelSync()
+                    Toast.info('已发送取消同步请求，正在中断...')
+                  } catch (error) {
+                    console.error('取消同步失败:', error)
+                  }
+                }}
+              >
+                取消
+              </Button>
+            </div>
+            {syncProgress && (
+              <div style={{ marginTop: '8px' }}>
+                <Progress
+                  percent={Math.floor((syncProgress.processed / syncProgress.total) * 100)}
+                  showInfo
+                  format={() => `${syncProgress.processed}/${syncProgress.total}`}
+                  stroke={
+                    syncProgress.action === 'upload'
+                      ? '#1890ff'
+                      : syncProgress.action === 'download'
+                        ? '#52c41a'
+                        : '#faad14'
+                  }
+                />
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                  {syncProgress.action === 'upload'
+                    ? '正在上传文件...'
+                    : syncProgress.action === 'download'
+                      ? '正在下载文件...'
+                      : '正在比较文件内容...'}
+                </div>
+              </div>
+            )}
           </div>
         ),
-        duration: 0 // 不自动关闭
+        duration: 0, // 不自动关闭
+        icon: null // 移除默认图标
       })
 
       const result = await window.api.webdav.syncBidirectional(values)
@@ -344,6 +409,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       }
     } finally {
       setLoading(false)
+      // 重置同步进度
+      setSyncProgress(null)
     }
   }
 
@@ -427,6 +494,39 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           description={syncStatus.message}
           closeIcon
           onClose={() => setSyncStatus(null)}
+          style={{ marginBottom: '16px' }}
+        />
+      )}
+
+      {/* 显示当前同步进度 */}
+      {syncProgress && !loading && (
+        <Banner
+          type="info"
+          description={
+            <div style={{ marginTop: '8px' }}>
+              <Progress
+                percent={Math.floor((syncProgress.processed / syncProgress.total) * 100)}
+                showInfo
+                format={() => `${syncProgress.processed}/${syncProgress.total}`}
+                stroke={
+                  syncProgress.action === 'upload'
+                    ? '#1890ff'
+                    : syncProgress.action === 'download'
+                      ? '#52c41a'
+                      : '#faad14'
+                }
+              />
+              <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                {syncProgress.action === 'upload'
+                  ? '正在上传文件...'
+                  : syncProgress.action === 'download'
+                    ? '正在下载文件...'
+                    : '正在比较文件内容...'}
+              </div>
+            </div>
+          }
+          closeIcon
+          onClose={() => setSyncProgress(null)}
           style={{ marginBottom: '16px' }}
         />
       )}
