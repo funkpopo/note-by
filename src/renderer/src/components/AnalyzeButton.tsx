@@ -63,8 +63,6 @@ export const AnalyzeButton: React.FC = () => {
     const spaceRight = viewportWidth - buttonRect.left
     const spaceLeft = buttonRect.right
 
-    // Determine best position based on available space
-    // Need at least 300px for content width and some height for the popover
     if (spaceBelow >= 350) {
       // If there's enough space below, prefer bottom positions
       if (spaceRight >= 300) {

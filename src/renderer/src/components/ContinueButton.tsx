@@ -494,8 +494,8 @@ export const ContinueButton: React.FC = () => {
         <Button
           theme="borderless"
           type="tertiary"
+          title="AI续写"
           icon={<IconEditStroked />}
-          aria-label="AI继续写作"
           style={{
             margin: '0 4px'
           }}

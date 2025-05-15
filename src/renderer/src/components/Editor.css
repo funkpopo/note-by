@@ -332,8 +332,10 @@ body[theme-mode='dark'] .editor-header {
 
 /* 自定义AI回复窗口Popover样式 */
 .ai-response-popover.semi-popover {
-  z-index: 1030 !important;
+  z-index: 9999 !important;
   position: absolute !important;
+  transform: translateZ(0); /* 创建新的堆叠上下文 */
+  will-change: transform; /* 提高渲染层级 */
 }
 
 .ai-response-popover.semi-popover .semi-popover-content {
@@ -341,6 +343,9 @@ body[theme-mode='dark'] .editor-header {
   min-width: 200px;
   overflow: visible;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999 !important; /* 确保内容也具有高层级 */
+  transform: translateZ(0); /* 创建新的堆叠上下文 */
+  will-change: transform; /* 提高渲染层级 */
 }
 
 .ai-popover-content {
@@ -348,11 +353,18 @@ body[theme-mode='dark'] .editor-header {
   overflow-wrap: break-word;
   max-height: 400px;
   overflow-y: auto;
+  position: relative;
+  z-index: 9999; /* 确保与父容器相同的高z-index */
+  transform: translateZ(0); /* 创建新的堆叠上下文 */
+  will-change: transform; /* 提高渲染层级 */
 }
 
 /* 确保AI响应弹出窗口在不同容器内也能正确定位 */
 .bn-container .ai-response-popover {
   position: relative;
+  z-index: 9999 !important; /* 确保即使在BlockNote容器内也保持高层级 */
+  transform: translateZ(0); /* 创建新的堆叠上下文 */
+  will-change: transform; /* 提高渲染层级 */
 }
 
 /* 当编辑器宽度较小时，限制AI回复窗口的宽度 */
@@ -395,4 +407,48 @@ body[theme-mode='dark'] .editor-header {
 .ai-response-popover.semi-popover[x-placement^='left'],
 .ai-response-popover.semi-popover[x-placement^='right'] {
   visibility: visible !important;
+}
+
+/* BlockNote格式化工具栏样式 - 修复横向滚动条问题 */
+.bn-container .bn-formatting-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  overflow-x: visible;
+  padding: 4px;
+  z-index: 100; /* 确保低于popover的z-index */
+}
+
+/* 确保工具栏按钮在换行时有合适的间距 */
+.bn-container .bn-formatting-toolbar-button {
+  margin: 2px;
+}
+
+/* 确保工具栏按钮组容器也能换行 */
+.bn-container .bn-formatting-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 确保popover在任何情况下都显示在最上层 */
+body .ai-response-popover.semi-popover,
+.bn-container .ai-response-popover.semi-popover,
+.custom-blocknote-editor .ai-response-popover.semi-popover {
+  isolation: isolate; /* 创建独立的堆叠上下文 */
+  position: absolute !important;
+  z-index: 10000 !important; /* 使用更高的z-index */
+}
+
+/* 防止formatting toolbar换行时遮挡popover */
+.bn-container .bn-formatting-toolbar {
+  pointer-events: auto; /* 确保按钮可点击 */
+}
+
+/* 调整formatting toolbar的堆叠行为 */
+.ai-response-popover.semi-popover {
+  pointer-events: auto !important; /* 确保popover始终可以接收鼠标事件 */
 }
