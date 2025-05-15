@@ -1083,9 +1083,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 {autoSaveStatus === 'saving' && (
                   <Typography.Text type="tertiary">自动保存...</Typography.Text>
                 )}
-                {autoSaveStatus === 'saved' && (
-                  <Typography.Text type="success">已保存</Typography.Text>
-                )}
               </>
             )}
           </Space>
