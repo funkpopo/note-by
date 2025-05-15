@@ -1089,9 +1089,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                     transition: 'background 0.3s'
                   }}
                   onClick={(): void => {
+                    // 从itemKey中提取文件夹名称
+                    const folderName = contextMenu.itemKey.split(':')[1]
                     openConfirmDialog(
-                      '删除文件夹',
-                      '确定要删除此文件夹吗？文件夹中的所有笔记都将被删除。',
+                      `删除文件夹 "${folderName}"`,
+                      `确定要删除文件夹 "${folderName}" 吗？文件夹中的所有笔记都将被删除。`,
                       handleDelete,
                       'danger'
                     )
@@ -1133,7 +1135,19 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                     transition: 'background 0.3s'
                   }}
                   onClick={(): void => {
-                    openConfirmDialog('删除笔记', '确定要删除此笔记吗？', handleDelete, 'danger')
+                    // 从itemKey中提取笔记名称 (format: file:文件夹:文件名)
+                    const parts = contextMenu.itemKey.split(':')
+                    if (parts.length === 3) {
+                      const fileName = parts[2].replace('.md', '')
+                      openConfirmDialog(
+                        `删除笔记 "${fileName}"`,
+                        `确定要删除笔记 "${fileName}" 吗？`,
+                        handleDelete,
+                        'danger'
+                      )
+                    } else {
+                      openConfirmDialog('删除笔记', '确定要删除此笔记吗？', handleDelete, 'danger')
+                    }
                     hideContextMenu()
                   }}
                 >
