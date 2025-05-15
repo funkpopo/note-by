@@ -436,7 +436,8 @@ const DataAnalysis: React.FC = () => {
   const renderBarChart = (
     data: ChartData,
     title: string,
-    vertical: boolean = true
+    vertical: boolean = true,
+    highlightIndex?: number
   ): JSX.Element => {
     return (
       <div style={{ maxWidth: '100%', height: vertical ? 350 : 250, marginBottom: 24 }}>
@@ -446,6 +447,11 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
+        {highlightIndex !== undefined && highlightIndex >= 0 && data.labels[highlightIndex] && (
+          <Paragraph style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}>
+            最活跃时段: {data.labels[highlightIndex]} ({data.datasets[0].data[highlightIndex]}%)
+          </Paragraph>
+        )}
         <Bar
           data={data}
           options={{
@@ -823,9 +829,14 @@ const DataAnalysis: React.FC = () => {
     }
 
     // 合并活动数据中的所有活跃小时
+    let totalActiveDays = 0
     if (activityData.dailyActivity) {
       Object.values(activityData.dailyActivity).forEach((day) => {
         if (day.activeHours && Array.isArray(day.activeHours)) {
+          // 计算去重后的活跃天数（每个日期记一次）
+          totalActiveDays += 1
+          
+          // 统计每个小时的活跃天数
           day.activeHours.forEach((hour: number) => {
             activeHoursData[hour] = (activeHoursData[hour] || 0) + 1
           })
@@ -833,14 +844,57 @@ const DataAnalysis: React.FC = () => {
       })
     }
 
+    // 计算每个小时活跃的百分比
+    const activeHoursWithPercentage = Object.entries(activeHoursData).map(([hour, count]) => {
+      const percentage = totalActiveDays > 0 ? Math.round((count / totalActiveDays) * 100) : 0
+      return {
+        hour: parseInt(hour),
+        count,
+        percentage
+      }
+    })
+
+    // 按小时排序
+    activeHoursWithPercentage.sort((a, b) => a.hour - b.hour)
+
+    // 定义时段标签
+    const getTimeSlotLabel = (hour: number): string => {
+      if (hour >= 0 && hour < 6) return `凌晨${hour}点 (${hour}:00)`
+      if (hour >= 6 && hour < 12) return `上午${hour}点 (${hour}:00)`
+      if (hour === 12) return `中午${hour}点 (${hour}:00)`
+      if (hour > 12 && hour < 18) return `下午${hour-12}点 (${hour}:00)`
+      return `晚上${hour-12}点 (${hour}:00)`
+    }
+
+    // 找出活跃度最高的时段
+    const mostActiveHour = [...activeHoursWithPercentage].sort((a, b) => b.percentage - a.percentage)[0]
+
     const activeHours: ChartData = {
-      labels: Object.keys(activeHoursData).map((hour) => `${hour}:00`),
+      labels: activeHoursWithPercentage.map(item => getTimeSlotLabel(item.hour)),
       datasets: [
         {
-          label: '活跃天数',
-          data: Object.values(activeHoursData),
-          backgroundColor: 'rgba(255, 99, 132, 0.5)',
-          borderColor: 'rgba(255, 99, 132, 1)',
+          label: '活跃度(%)',
+          data: activeHoursWithPercentage.map(item => item.percentage),
+          backgroundColor: activeHoursWithPercentage.map(item => {
+            // 为最活跃时段使用特殊颜色
+            if (item.hour === mostActiveHour.hour) {
+              return 'rgba(255, 99, 132, 0.8)'
+            }
+            // 为不同时段使用不同颜色
+            if (item.hour >= 0 && item.hour < 6) return 'rgba(153, 102, 255, 0.5)' // 凌晨
+            if (item.hour >= 6 && item.hour < 12) return 'rgba(54, 162, 235, 0.5)' // 上午
+            if (item.hour >= 12 && item.hour < 18) return 'rgba(255, 206, 86, 0.5)' // 下午
+            return 'rgba(75, 192, 192, 0.5)' // 晚上
+          }),
+          borderColor: activeHoursWithPercentage.map(item => {
+            if (item.hour === mostActiveHour.hour) {
+              return 'rgba(255, 99, 132, 1)'
+            }
+            if (item.hour >= 0 && item.hour < 6) return 'rgba(153, 102, 255, 1)' // 凌晨
+            if (item.hour >= 6 && item.hour < 12) return 'rgba(54, 162, 235, 1)' // 上午
+            if (item.hour >= 12 && item.hour < 18) return 'rgba(255, 206, 86, 1)' // 下午
+            return 'rgba(75, 192, 192, 1)' // 晚上
+          }),
           borderWidth: 1
         }
       ]
@@ -1228,7 +1282,14 @@ const DataAnalysis: React.FC = () => {
                           }}
                         >
                           {prepareChartData()?.activeHours &&
-                            renderBarChart(prepareChartData()!.activeHours, '活跃时段分布')}
+                            renderBarChart(
+                              prepareChartData()!.activeHours, 
+                              '日内活跃时段分布 (占比%)',
+                              true,
+                              prepareChartData()!.activeHours.datasets[0].data.indexOf(
+                                Math.max(...prepareChartData()!.activeHours.datasets[0].data)
+                              )
+                            )}
                         </div>
                         <div
                           style={{
