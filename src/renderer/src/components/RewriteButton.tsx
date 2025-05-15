@@ -1,8 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button, Popover, Spin, Typography } from '@douyinfe/semi-ui'
 import { IconRotationStroked } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
+
+// 定义Popover的位置类型
+type PopoverPosition =
+  | 'left'
+  | 'right'
+  | 'bottomLeft'
+  | 'top'
+  | 'bottom'
+  | 'topLeft'
+  | 'topRight'
+  | 'leftTop'
+  | 'leftBottom'
+  | 'rightTop'
+  | 'rightBottom'
+  | 'bottomRight'
+  | 'leftTopOver'
+  | 'rightTopOver'
+  | 'leftBottomOver'
+  | 'rightBottomOver'
 
 // RewriteButton component for BlockNote formatting toolbar
 export const RewriteButton: React.FC = () => {
@@ -14,6 +33,76 @@ export const RewriteButton: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [popoverVisible, setPopoverVisible] = useState(false)
+  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition>('bottomLeft')
+
+  // Add resize event listener to handle window size changes
+  useEffect(() => {
+    const handleResize = (): void => {
+      updatePopoverPosition()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [popoverVisible])
+
+  // Update popover position based on button position and window size
+  const updatePopoverPosition = (): void => {
+    if (!buttonRef.current || !popoverVisible) return
+
+    const buttonRect = buttonRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate available space in different directions
+    const spaceBelow = viewportHeight - buttonRect.bottom
+    const spaceAbove = buttonRect.top
+    const spaceRight = viewportWidth - buttonRect.left
+    const spaceLeft = buttonRect.right
+
+    // Determine best position based on available space
+    // Need at least 300px for content width and some height for the popover
+    if (spaceBelow >= 350) {
+      // If there's enough space below, prefer bottom positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('bottomLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('bottomRight')
+      } else {
+        setPopoverPosition('bottom')
+      }
+    } else if (spaceAbove >= 350) {
+      // If there's enough space above, use top positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('topLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('topRight')
+      } else {
+        setPopoverPosition('top')
+      }
+    } else if (spaceRight >= 300) {
+      // If there's enough space to the right
+      setPopoverPosition('rightTop')
+    } else if (spaceLeft >= 300) {
+      // If there's enough space to the left
+      setPopoverPosition('leftTop')
+    } else {
+      // Default fallback
+      setPopoverPosition('bottom')
+    }
+  }
+
+  // Handle popover visibility change
+  const handlePopoverVisibleChange = (visible: boolean): void => {
+    setPopoverVisible(visible)
+    if (visible) {
+      // Update position when popover becomes visible
+      setTimeout(updatePopoverPosition, 0)
+    }
+  }
 
   // Function to get selected text from editor
   const getSelectedText = async (): Promise<string> => {
@@ -340,7 +429,16 @@ export const RewriteButton: React.FC = () => {
 
   // Use custom styled button
   return (
-    <Popover content={renderPopoverContent()} trigger="click" position="bottomLeft">
+    <Popover
+      content={renderPopoverContent()}
+      trigger="click"
+      position={popoverPosition}
+      visible={popoverVisible}
+      onVisibleChange={handlePopoverVisibleChange}
+      zIndex={1030}
+      getPopupContainer={() => document.querySelector('.bn-container') || document.body}
+      className="ai-response-popover"
+    >
       <div
         className="bn-formatting-toolbar-button"
         title="AI改写"
@@ -351,6 +449,8 @@ export const RewriteButton: React.FC = () => {
           cursor: 'pointer',
           padding: '4px 8px'
         }}
+        ref={buttonRef}
+        onClick={() => setPopoverVisible(!popoverVisible)}
       >
         <IconRotationStroked style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>

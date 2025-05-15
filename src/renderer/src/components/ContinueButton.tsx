@@ -1,8 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button, Popover, Spin, Typography } from '@douyinfe/semi-ui'
 import { IconEditStroked } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
+
+// 定义Popover的位置类型
+type PopoverPosition =
+  | 'left'
+  | 'right'
+  | 'bottomLeft'
+  | 'top'
+  | 'bottom'
+  | 'topLeft'
+  | 'topRight'
+  | 'leftTop'
+  | 'leftBottom'
+  | 'rightTop'
+  | 'rightBottom'
+  | 'bottomRight'
+  | 'leftTopOver'
+  | 'rightTopOver'
+  | 'leftBottomOver'
+  | 'rightBottomOver'
 
 // ContinueButton component for BlockNote formatting toolbar
 export const ContinueButton: React.FC = () => {
@@ -14,6 +33,76 @@ export const ContinueButton: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [popoverVisible, setPopoverVisible] = useState(false)
+  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition>('bottomLeft')
+
+  // Add resize event listener to handle window size changes
+  useEffect(() => {
+    const handleResize = (): void => {
+      updatePopoverPosition()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [popoverVisible])
+
+  // Update popover position based on button position and window size
+  const updatePopoverPosition = (): void => {
+    if (!buttonRef.current || !popoverVisible) return
+
+    const buttonRect = buttonRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate available space in different directions
+    const spaceBelow = viewportHeight - buttonRect.bottom
+    const spaceAbove = buttonRect.top
+    const spaceRight = viewportWidth - buttonRect.left
+    const spaceLeft = buttonRect.right
+
+    // Determine best position based on available space
+    // Need at least 300px for content width and some height for the popover
+    if (spaceBelow >= 350) {
+      // If there's enough space below, prefer bottom positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('bottomLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('bottomRight')
+      } else {
+        setPopoverPosition('bottom')
+      }
+    } else if (spaceAbove >= 350) {
+      // If there's enough space above, use top positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('topLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('topRight')
+      } else {
+        setPopoverPosition('top')
+      }
+    } else if (spaceRight >= 300) {
+      // If there's enough space to the right
+      setPopoverPosition('rightTop')
+    } else if (spaceLeft >= 300) {
+      // If there's enough space to the left
+      setPopoverPosition('leftTop')
+    } else {
+      // Default fallback
+      setPopoverPosition('bottom')
+    }
+  }
+
+  // Handle popover visibility change
+  const handlePopoverVisibleChange = (visible: boolean): void => {
+    setPopoverVisible(visible)
+    if (visible) {
+      // Update position when popover becomes visible
+      setTimeout(updatePopoverPosition, 0)
+    }
+  }
 
   // Function to get selected text from editor
   const getSelectedText = async (): Promise<string> => {
@@ -138,6 +227,8 @@ export const ContinueButton: React.FC = () => {
             setAiResponse(content)
             setLoading(false)
             setIsStreaming(false)
+            // Recalculate position after content is loaded
+            updatePopoverPosition()
           },
           onError: (error: string) => {
             setError(error)
@@ -181,6 +272,7 @@ export const ContinueButton: React.FC = () => {
         // Close popover
         setAiResponse('')
         setStreamingResponse('')
+        setPopoverVisible(false)
         return
       } catch (err) {
         console.error('Error using execCommand:', err)
@@ -231,13 +323,17 @@ export const ContinueButton: React.FC = () => {
     // Close popover by clearing response
     setAiResponse('')
     setStreamingResponse('')
+    setPopoverVisible(false)
   }
 
   // Render popover content based on state
   const renderPopoverContent = (): React.ReactNode => {
     if (loading) {
       return (
-        <div style={{ padding: '12px', minWidth: '300px', maxWidth: '300px' }}>
+        <div
+          className="ai-popover-content"
+          style={{ padding: '12px', minWidth: '300px', maxWidth: '300px' }}
+        >
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
             <Spin size="small" />
             <Typography.Text style={{ display: 'block', marginTop: '8px' }}>
@@ -275,6 +371,7 @@ export const ContinueButton: React.FC = () => {
                 onClick={() => {
                   setLoading(false)
                   setIsStreaming(false)
+                  setPopoverVisible(false)
                 }}
               >
                 取消
@@ -295,10 +392,17 @@ export const ContinueButton: React.FC = () => {
 
     if (error) {
       return (
-        <div style={{ padding: '12px', minWidth: '300px' }}>
+        <div className="ai-popover-content" style={{ padding: '12px', minWidth: '300px' }}>
           <Typography.Text type="danger">{error}</Typography.Text>
           <div style={{ marginTop: '12px', textAlign: 'right' }}>
-            <Button size="small" type="primary" onClick={() => setError(null)}>
+            <Button
+              size="small"
+              type="primary"
+              onClick={() => {
+                setError(null)
+                setPopoverVisible(false)
+              }}
+            >
               关闭
             </Button>
           </div>
@@ -309,6 +413,7 @@ export const ContinueButton: React.FC = () => {
     if (aiResponse) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -335,7 +440,14 @@ export const ContinueButton: React.FC = () => {
             </Typography.Paragraph>
           </div>
           <div style={{ marginTop: '12px', textAlign: 'right' }}>
-            <Button size="small" type="tertiary" onClick={() => setAiResponse('')}>
+            <Button
+              size="small"
+              type="tertiary"
+              onClick={() => {
+                setAiResponse('')
+                setPopoverVisible(false)
+              }}
+            >
               取消
             </Button>
             <Button
@@ -352,7 +464,7 @@ export const ContinueButton: React.FC = () => {
     }
 
     return (
-      <div style={{ padding: '12px', minWidth: '200px' }}>
+      <div className="ai-popover-content" style={{ padding: '12px', minWidth: '200px' }}>
         <Typography.Paragraph>
           使用AI继续生成选中文本的后续内容。
           <br />
@@ -368,16 +480,28 @@ export const ContinueButton: React.FC = () => {
   }
 
   return (
-    <Popover content={renderPopoverContent()} trigger="click" position="bottomLeft" showArrow>
-      <Button
-        theme="borderless"
-        type="tertiary"
-        icon={<IconEditStroked />}
-        aria-label="AI继续写作"
-        style={{
-          margin: '0 4px'
-        }}
-      />
+    <Popover
+      content={renderPopoverContent()}
+      trigger="click"
+      position={popoverPosition}
+      visible={popoverVisible}
+      onVisibleChange={handlePopoverVisibleChange}
+      zIndex={1030}
+      getPopupContainer={() => document.querySelector('.bn-container') || document.body}
+      className="ai-response-popover"
+    >
+      <div ref={buttonRef} style={{ display: 'inline-block' }}>
+        <Button
+          theme="borderless"
+          type="tertiary"
+          icon={<IconEditStroked />}
+          aria-label="AI继续写作"
+          style={{
+            margin: '0 4px'
+          }}
+          onClick={() => setPopoverVisible(!popoverVisible)}
+        />
+      </div>
     </Popover>
   )
 }

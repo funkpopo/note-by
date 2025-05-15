@@ -1,8 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button, Popover, Spin, Typography } from '@douyinfe/semi-ui'
 import { IconSearchStroked } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
+
+// 定义Popover的位置类型
+type PopoverPosition =
+  | 'left'
+  | 'right'
+  | 'bottomLeft'
+  | 'top'
+  | 'bottom'
+  | 'topLeft'
+  | 'topRight'
+  | 'leftTop'
+  | 'leftBottom'
+  | 'rightTop'
+  | 'rightBottom'
+  | 'bottomRight'
+  | 'leftTopOver'
+  | 'rightTopOver'
+  | 'leftBottomOver'
+  | 'rightBottomOver'
 
 // AnalyzeButton component for BlockNote formatting toolbar
 export const AnalyzeButton: React.FC = () => {
@@ -14,6 +33,76 @@ export const AnalyzeButton: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [popoverVisible, setPopoverVisible] = useState(false)
+  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition>('bottomLeft')
+
+  // Add resize event listener to handle window size changes
+  useEffect(() => {
+    const handleResize = (): void => {
+      updatePopoverPosition()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [popoverVisible])
+
+  // Update popover position based on button position and window size
+  const updatePopoverPosition = (): void => {
+    if (!buttonRef.current || !popoverVisible) return
+
+    const buttonRect = buttonRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate available space in different directions
+    const spaceBelow = viewportHeight - buttonRect.bottom
+    const spaceAbove = buttonRect.top
+    const spaceRight = viewportWidth - buttonRect.left
+    const spaceLeft = buttonRect.right
+
+    // Determine best position based on available space
+    // Need at least 300px for content width and some height for the popover
+    if (spaceBelow >= 350) {
+      // If there's enough space below, prefer bottom positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('bottomLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('bottomRight')
+      } else {
+        setPopoverPosition('bottom')
+      }
+    } else if (spaceAbove >= 350) {
+      // If there's enough space above, use top positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('topLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('topRight')
+      } else {
+        setPopoverPosition('top')
+      }
+    } else if (spaceRight >= 300) {
+      // If there's enough space to the right
+      setPopoverPosition('rightTop')
+    } else if (spaceLeft >= 300) {
+      // If there's enough space to the left
+      setPopoverPosition('leftTop')
+    } else {
+      // Default fallback
+      setPopoverPosition('bottom')
+    }
+  }
+
+  // Handle popover visibility change
+  const handlePopoverVisibleChange = (visible: boolean): void => {
+    setPopoverVisible(visible)
+    if (visible) {
+      // Update position when popover becomes visible
+      setTimeout(updatePopoverPosition, 0)
+    }
+  }
 
   // Function to get selected text from editor
   const getSelectedText = async (): Promise<string> => {
@@ -138,6 +227,8 @@ export const AnalyzeButton: React.FC = () => {
             setAiResponse(content)
             setLoading(false)
             setIsStreaming(false)
+            // Recalculate position after content is loaded
+            updatePopoverPosition()
           },
           onError: (error: string) => {
             setError(error)
@@ -164,6 +255,7 @@ export const AnalyzeButton: React.FC = () => {
     if (loading) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -209,6 +301,7 @@ export const AnalyzeButton: React.FC = () => {
                 onClick={() => {
                   setLoading(false)
                   setIsStreaming(false)
+                  setPopoverVisible(false)
                 }}
               >
                 取消
@@ -221,9 +314,16 @@ export const AnalyzeButton: React.FC = () => {
 
     if (error) {
       return (
-        <div style={{ padding: '12px' }}>
+        <div className="ai-popover-content" style={{ padding: '12px' }}>
           <Typography.Text type="danger">{error}</Typography.Text>
-          <Button size="small" style={{ marginTop: '8px' }} onClick={() => setError(null)}>
+          <Button
+            size="small"
+            style={{ marginTop: '8px' }}
+            onClick={() => {
+              setError(null)
+              setPopoverVisible(false)
+            }}
+          >
             关闭
           </Button>
         </div>
@@ -233,6 +333,7 @@ export const AnalyzeButton: React.FC = () => {
     if (aiResponse) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -259,7 +360,13 @@ export const AnalyzeButton: React.FC = () => {
             </Typography.Paragraph>
           </div>
           <div style={{ marginTop: '12px', textAlign: 'right' }}>
-            <Button size="small" onClick={() => setAiResponse('')}>
+            <Button
+              size="small"
+              onClick={() => {
+                setAiResponse('')
+                setPopoverVisible(false)
+              }}
+            >
               关闭
             </Button>
           </div>
@@ -268,9 +375,9 @@ export const AnalyzeButton: React.FC = () => {
     }
 
     return (
-      <div style={{ padding: '12px', width: '250px' }}>
+      <div className="ai-popover-content" style={{ padding: '12px', width: '250px' }}>
         <Typography.Text style={{ display: 'block', marginBottom: '12px' }}>
-          使用AI分析选中的内容，提供关键点、主题和情感倾向等分析
+          使用AI分析选中的内容，提供重点、摘要和见解
         </Typography.Text>
         <Button size="small" type="primary" onClick={processWithAI}>
           开始分析
@@ -281,8 +388,18 @@ export const AnalyzeButton: React.FC = () => {
 
   // Use custom styled button
   return (
-    <Popover content={renderPopoverContent()} trigger="click" position="bottomLeft">
+    <Popover
+      content={renderPopoverContent()}
+      trigger="click"
+      position={popoverPosition}
+      visible={popoverVisible}
+      onVisibleChange={handlePopoverVisibleChange}
+      zIndex={1030}
+      getPopupContainer={() => document.querySelector('.bn-container') || document.body}
+      className="ai-response-popover"
+    >
       <div
+        ref={buttonRef}
         className="bn-formatting-toolbar-button"
         title="AI分析"
         style={{
@@ -292,6 +409,7 @@ export const AnalyzeButton: React.FC = () => {
           cursor: 'pointer',
           padding: '4px 8px'
         }}
+        onClick={() => setPopoverVisible(!popoverVisible)}
       >
         <IconSearchStroked style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>

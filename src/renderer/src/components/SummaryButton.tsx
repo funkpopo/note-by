@@ -1,8 +1,27 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button, Popover, Spin, Typography, Select } from '@douyinfe/semi-ui'
 import { IconCommand } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
+
+// 定义Popover的位置类型
+type PopoverPosition =
+  | 'left'
+  | 'right'
+  | 'bottomLeft'
+  | 'top'
+  | 'bottom'
+  | 'topLeft'
+  | 'topRight'
+  | 'leftTop'
+  | 'leftBottom'
+  | 'rightTop'
+  | 'rightBottom'
+  | 'bottomRight'
+  | 'leftTopOver'
+  | 'rightTopOver'
+  | 'leftBottomOver'
+  | 'rightBottomOver'
 
 // 摘要长度选项
 interface SummaryLengthOption {
@@ -27,6 +46,76 @@ export const SummaryButton: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [summaryLength, setSummaryLength] = useState<string>('medium')
   const contentRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [popoverVisible, setPopoverVisible] = useState(false)
+  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition>('bottomLeft')
+
+  // Add resize event listener to handle window size changes
+  useEffect(() => {
+    const handleResize = (): void => {
+      updatePopoverPosition()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [popoverVisible])
+
+  // Update popover position based on button position and window size
+  const updatePopoverPosition = (): void => {
+    if (!buttonRef.current || !popoverVisible) return
+
+    const buttonRect = buttonRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate available space in different directions
+    const spaceBelow = viewportHeight - buttonRect.bottom
+    const spaceAbove = buttonRect.top
+    const spaceRight = viewportWidth - buttonRect.left
+    const spaceLeft = buttonRect.right
+
+    // Determine best position based on available space
+    // Need at least 300px for content width and some height for the popover
+    if (spaceBelow >= 350) {
+      // If there's enough space below, prefer bottom positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('bottomLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('bottomRight')
+      } else {
+        setPopoverPosition('bottom')
+      }
+    } else if (spaceAbove >= 350) {
+      // If there's enough space above, use top positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('topLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('topRight')
+      } else {
+        setPopoverPosition('top')
+      }
+    } else if (spaceRight >= 300) {
+      // If there's enough space to the right
+      setPopoverPosition('rightTop')
+    } else if (spaceLeft >= 300) {
+      // If there's enough space to the left
+      setPopoverPosition('leftTop')
+    } else {
+      // Default fallback
+      setPopoverPosition('bottom')
+    }
+  }
+
+  // Handle popover visibility change
+  const handlePopoverVisibleChange = (visible: boolean): void => {
+    setPopoverVisible(visible)
+    if (visible) {
+      // Update position when popover becomes visible
+      setTimeout(updatePopoverPosition, 0)
+    }
+  }
 
   // 加载保存的摘要长度偏好
   React.useEffect(() => {
@@ -191,6 +280,8 @@ export const SummaryButton: React.FC = () => {
             setAiResponse(content)
             setLoading(false)
             setIsStreaming(false)
+            // 重新计算位置，内容加载后
+            updatePopoverPosition()
           },
           onError: (error: string) => {
             setError(error)
@@ -232,6 +323,7 @@ export const SummaryButton: React.FC = () => {
         // 关闭弹出窗口
         setAiResponse('')
         setStreamingResponse('')
+        setPopoverVisible(false)
         return
       } catch (err) {
         console.error('使用execCommand出错:', err)
@@ -261,6 +353,7 @@ export const SummaryButton: React.FC = () => {
     // 通过清除响应关闭弹出窗口
     setAiResponse('')
     setStreamingResponse('')
+    setPopoverVisible(false)
   }
 
   // 处理摘要长度变化
@@ -274,6 +367,7 @@ export const SummaryButton: React.FC = () => {
     if (loading) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -319,6 +413,7 @@ export const SummaryButton: React.FC = () => {
                 onClick={() => {
                   setLoading(false)
                   setIsStreaming(false)
+                  setPopoverVisible(false)
                 }}
               >
                 取消
@@ -339,9 +434,16 @@ export const SummaryButton: React.FC = () => {
 
     if (error) {
       return (
-        <div style={{ padding: '12px' }}>
+        <div className="ai-popover-content" style={{ padding: '12px' }}>
           <Typography.Text type="danger">{error}</Typography.Text>
-          <Button size="small" style={{ marginTop: '8px' }} onClick={() => setError(null)}>
+          <Button
+            size="small"
+            style={{ marginTop: '8px' }}
+            onClick={() => {
+              setError(null)
+              setPopoverVisible(false)
+            }}
+          >
             关闭
           </Button>
         </div>
@@ -351,6 +453,7 @@ export const SummaryButton: React.FC = () => {
     if (aiResponse) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -377,7 +480,13 @@ export const SummaryButton: React.FC = () => {
             </Typography.Paragraph>
           </div>
           <div style={{ marginTop: '12px', textAlign: 'right' }}>
-            <Button size="small" onClick={() => setAiResponse('')}>
+            <Button
+              size="small"
+              onClick={() => {
+                setAiResponse('')
+                setPopoverVisible(false)
+              }}
+            >
               取消
             </Button>
             <Button
@@ -394,9 +503,9 @@ export const SummaryButton: React.FC = () => {
     }
 
     return (
-      <div style={{ padding: '12px', width: '300px' }}>
+      <div className="ai-popover-content" style={{ padding: '12px', width: '300px' }}>
         <Typography.Text style={{ display: 'block', marginBottom: '8px' }}>
-          摘要设置
+          摘要选项
         </Typography.Text>
 
         <div style={{ marginBottom: '12px' }}>
@@ -422,20 +531,27 @@ export const SummaryButton: React.FC = () => {
           </Select>
         </div>
 
-        <Typography.Text style={{ display: 'block', marginBottom: '12px' }}>
-          使用AI为选中的内容生成摘要，仅输出精炼后的关键信息
-        </Typography.Text>
         <Button size="small" type="primary" onClick={processWithAI} style={{ marginTop: '8px' }}>
-          生成摘要
+          开始生成摘要
         </Button>
       </div>
     )
   }
 
-  // 使用自定义样式的按钮
+  // Use custom styled button
   return (
-    <Popover content={renderPopoverContent()} trigger="click" position="bottomLeft">
+    <Popover
+      content={renderPopoverContent()}
+      trigger="click"
+      position={popoverPosition}
+      visible={popoverVisible}
+      onVisibleChange={handlePopoverVisibleChange}
+      zIndex={1030}
+      getPopupContainer={() => document.querySelector('.bn-container') || document.body}
+      className="ai-response-popover"
+    >
       <div
+        ref={buttonRef}
         className="bn-formatting-toolbar-button"
         title="AI摘要"
         style={{
@@ -445,6 +561,7 @@ export const SummaryButton: React.FC = () => {
           cursor: 'pointer',
           padding: '4px 8px'
         }}
+        onClick={() => setPopoverVisible(!popoverVisible)}
       >
         <IconCommand style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>

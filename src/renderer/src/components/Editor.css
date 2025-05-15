@@ -329,3 +329,70 @@ body[theme-mode='dark'] .editor-header {
   background-color: var(--semi-color-primary-light-active);
   color: var(--semi-color-primary-light);
 }
+
+/* 自定义AI回复窗口Popover样式 */
+.ai-response-popover.semi-popover {
+  z-index: 1030 !important;
+  position: absolute !important;
+}
+
+.ai-response-popover.semi-popover .semi-popover-content {
+  max-width: 450px;
+  min-width: 200px;
+  overflow: visible;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ai-popover-content {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 确保AI响应弹出窗口在不同容器内也能正确定位 */
+.bn-container .ai-response-popover {
+  position: relative;
+}
+
+/* 当编辑器宽度较小时，限制AI回复窗口的宽度 */
+@media (max-width: 600px) {
+  .ai-response-popover.semi-popover .semi-popover-content {
+    max-width: 300px;
+  }
+
+  .ai-popover-content {
+    max-height: 300px;
+  }
+}
+
+/* 当编辑器宽度更小时，进一步限制AI回复窗口的宽度 */
+@media (max-width: 400px) {
+  .ai-response-popover.semi-popover .semi-popover-content {
+    max-width: 250px;
+  }
+
+  .ai-popover-content {
+    max-height: 250px;
+  }
+}
+
+/* 确保Popover内容始终在可视区域内 */
+.ai-response-popover.semi-popover .semi-popover-content:not(.semi-popover-content-hidden) {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* 防止超出边界 */
+.bn-container {
+  position: relative;
+  overflow: visible;
+}
+
+/* 强制使Popover在视口内显示 */
+.ai-response-popover.semi-popover[x-placement^='top'],
+.ai-response-popover.semi-popover[x-placement^='bottom'],
+.ai-response-popover.semi-popover[x-placement^='left'],
+.ai-response-popover.semi-popover[x-placement^='right'] {
+  visibility: visible !important;
+}

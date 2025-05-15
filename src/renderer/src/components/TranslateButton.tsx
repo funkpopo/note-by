@@ -4,6 +4,25 @@ import { IconLanguage } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
 
+// 定义Popover的位置类型
+type PopoverPosition =
+  | 'left'
+  | 'right'
+  | 'bottomLeft'
+  | 'top'
+  | 'bottom'
+  | 'topLeft'
+  | 'topRight'
+  | 'leftTop'
+  | 'leftBottom'
+  | 'rightTop'
+  | 'rightBottom'
+  | 'bottomRight'
+  | 'leftTopOver'
+  | 'rightTopOver'
+  | 'leftBottomOver'
+  | 'rightBottomOver'
+
 // Language options for translation
 interface LanguageOption {
   value: string
@@ -38,6 +57,9 @@ export const TranslateButton: React.FC = () => {
   const [sourceLanguage, setSourceLanguage] = useState<string>('auto')
   const [targetLanguage, setTargetLanguage] = useState<string>('zh')
   const contentRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const [popoverVisible, setPopoverVisible] = useState(false)
+  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition>('bottomLeft')
 
   // Load saved language preference
   useEffect(() => {
@@ -57,6 +79,73 @@ export const TranslateButton: React.FC = () => {
 
     loadLanguagePreference()
   }, [])
+
+  // Add resize event listener to handle window size changes
+  useEffect(() => {
+    const handleResize = (): void => {
+      updatePopoverPosition()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [popoverVisible])
+
+  // Update popover position based on button position and window size
+  const updatePopoverPosition = (): void => {
+    if (!buttonRef.current || !popoverVisible) return
+
+    const buttonRect = buttonRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate available space in different directions
+    const spaceBelow = viewportHeight - buttonRect.bottom
+    const spaceAbove = buttonRect.top
+    const spaceRight = viewportWidth - buttonRect.left
+    const spaceLeft = buttonRect.right
+
+    // Determine best position based on available space
+    // Need at least 300px for content width and some height for the popover
+    if (spaceBelow >= 350) {
+      // If there's enough space below, prefer bottom positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('bottomLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('bottomRight')
+      } else {
+        setPopoverPosition('bottom')
+      }
+    } else if (spaceAbove >= 350) {
+      // If there's enough space above, use top positions
+      if (spaceRight >= 300) {
+        setPopoverPosition('topLeft')
+      } else if (spaceLeft >= 300) {
+        setPopoverPosition('topRight')
+      } else {
+        setPopoverPosition('top')
+      }
+    } else if (spaceRight >= 300) {
+      // If there's enough space to the right
+      setPopoverPosition('rightTop')
+    } else if (spaceLeft >= 300) {
+      // If there's enough space to the left
+      setPopoverPosition('leftTop')
+    } else {
+      // Default fallback
+      setPopoverPosition('bottom')
+    }
+  }
+
+  // Handle popover visibility change
+  const handlePopoverVisibleChange = (visible: boolean): void => {
+    setPopoverVisible(visible)
+    if (visible) {
+      // Update position when popover becomes visible
+      setTimeout(updatePopoverPosition, 0)
+    }
+  }
 
   // Save language preferences
   const saveLanguagePreferences = async (source: string, target: string): Promise<void> => {
@@ -208,6 +297,8 @@ export const TranslateButton: React.FC = () => {
             setAiResponse(content)
             setLoading(false)
             setIsStreaming(false)
+            // Recalculate position after content is loaded
+            updatePopoverPosition()
           },
           onError: (error: string) => {
             setError(error)
@@ -249,6 +340,7 @@ export const TranslateButton: React.FC = () => {
         // Close popover
         setAiResponse('')
         setStreamingResponse('')
+        setPopoverVisible(false)
         return
       } catch (err) {
         console.error('Error using execCommand:', err)
@@ -278,6 +370,7 @@ export const TranslateButton: React.FC = () => {
     // Close popover by clearing response
     setAiResponse('')
     setStreamingResponse('')
+    setPopoverVisible(false)
   }
 
   // Handle source language change
@@ -297,6 +390,7 @@ export const TranslateButton: React.FC = () => {
     if (loading) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -342,6 +436,7 @@ export const TranslateButton: React.FC = () => {
                 onClick={() => {
                   setLoading(false)
                   setIsStreaming(false)
+                  setPopoverVisible(false)
                 }}
               >
                 取消
@@ -362,9 +457,16 @@ export const TranslateButton: React.FC = () => {
 
     if (error) {
       return (
-        <div style={{ padding: '12px' }}>
+        <div className="ai-popover-content" style={{ padding: '12px' }}>
           <Typography.Text type="danger">{error}</Typography.Text>
-          <Button size="small" style={{ marginTop: '8px' }} onClick={() => setError(null)}>
+          <Button
+            size="small"
+            style={{ marginTop: '8px' }}
+            onClick={() => {
+              setError(null)
+              setPopoverVisible(false)
+            }}
+          >
             关闭
           </Button>
         </div>
@@ -374,6 +476,7 @@ export const TranslateButton: React.FC = () => {
     if (aiResponse) {
       return (
         <div
+          className="ai-popover-content"
           style={{
             padding: '12px',
             minWidth: '300px',
@@ -400,7 +503,13 @@ export const TranslateButton: React.FC = () => {
             </Typography.Paragraph>
           </div>
           <div style={{ marginTop: '12px', textAlign: 'right' }}>
-            <Button size="small" onClick={() => setAiResponse('')}>
+            <Button
+              size="small"
+              onClick={() => {
+                setAiResponse('')
+                setPopoverVisible(false)
+              }}
+            >
               取消
             </Button>
             <Button
@@ -417,7 +526,7 @@ export const TranslateButton: React.FC = () => {
     }
 
     return (
-      <div style={{ padding: '12px', width: '300px' }}>
+      <div className="ai-popover-content" style={{ padding: '12px', width: '300px' }}>
         <Typography.Text style={{ display: 'block', marginBottom: '8px' }}>
           翻译设置
         </Typography.Text>
@@ -477,8 +586,18 @@ export const TranslateButton: React.FC = () => {
 
   // Use custom styled button since FormattingToolbarButton is not available
   return (
-    <Popover content={renderPopoverContent()} trigger="click" position="bottomLeft">
+    <Popover
+      content={renderPopoverContent()}
+      trigger="click"
+      position={popoverPosition}
+      visible={popoverVisible}
+      onVisibleChange={handlePopoverVisibleChange}
+      zIndex={1030}
+      getPopupContainer={() => document.querySelector('.bn-container') || document.body}
+      className="ai-response-popover"
+    >
       <div
+        ref={buttonRef}
         className="bn-formatting-toolbar-button"
         title="AI翻译"
         style={{
@@ -488,6 +607,7 @@ export const TranslateButton: React.FC = () => {
           cursor: 'pointer',
           padding: '4px 8px'
         }}
+        onClick={() => setPopoverVisible(!popoverVisible)}
       >
         <IconLanguage style={{ color: isDarkMode ? '#dedede' : undefined }} />
       </div>
