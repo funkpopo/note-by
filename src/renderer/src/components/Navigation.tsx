@@ -282,6 +282,56 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     }
   }
 
+  // 计算右键菜单位置，确保不超出窗口边界
+  const calculateMenuPosition = (
+    x: number,
+    y: number,
+    isFolder: boolean,
+    isEmpty: boolean
+  ): { x: number; y: number } => {
+    // 获取窗口宽高
+    const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
+
+    // 根据菜单类型估算高度 - 使用大致估算值
+    let menuHeight = 0
+    if (isFolder) {
+      menuHeight = 220 // 文件夹菜单较高
+    } else if (isEmpty) {
+      menuHeight = 120 // 空白区域菜单
+    } else {
+      menuHeight = 120 // 文件菜单
+    }
+
+    // 菜单宽度固定
+    const menuWidth = 180
+
+    // 计算右侧和底部边界
+    let finalX = x
+    let finalY = y
+
+    // 检查右侧边界
+    if (x + menuWidth > windowWidth) {
+      finalX = windowWidth - menuWidth - 10 // 10px的安全边距
+    }
+
+    // 检查底部边界
+    if (y + menuHeight > windowHeight) {
+      finalY = windowHeight - menuHeight - 10 // 10px的安全边距
+    }
+
+    // 确保不会超出左侧和顶部边界
+    if (finalX < 0) finalX = 10
+    if (finalY < 0) finalY = 10
+
+    return { x: finalX, y: finalY }
+  }
+
+  // 隐藏右键菜单
+  const hideContextMenu = (): void => {
+    setContextMenu((prev) => ({ ...prev, visible: false }))
+  }
+
   // 处理右键菜单事件
   const handleContextMenu = (e: React.MouseEvent, itemKey: string, isFolder: boolean): void => {
     e.preventDefault()
@@ -293,11 +343,14 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       position: { x: e.clientX, y: e.clientY }
     })
 
+    // 计算菜单位置，确保不超出窗口边界
+    const { x, y } = calculateMenuPosition(e.clientX, e.clientY, isFolder, false)
+
     // 设置右键菜单位置和信息
     setContextMenu({
       visible: true,
-      x: e.clientX,
-      y: e.clientY,
+      x,
+      y,
       itemKey,
       isFolder,
       isEmpty: false
@@ -316,20 +369,18 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       secondaryNavRef.current &&
       (target === secondaryNavRef.current || target.classList.contains('empty-area'))
     ) {
+      // 计算菜单位置，确保不超出窗口边界
+      const { x, y } = calculateMenuPosition(e.clientX, e.clientY, false, true)
+
       setContextMenu({
         visible: true,
-        x: e.clientX,
-        y: e.clientY,
+        x,
+        y,
         itemKey: '',
         isFolder: false,
         isEmpty: true
       })
     }
-  }
-
-  // 隐藏右键菜单
-  const hideContextMenu = (): void => {
-    setContextMenu((prev) => ({ ...prev, visible: false }))
   }
 
   // 删除项目
@@ -608,15 +659,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   // 在特定文件夹下创建笔记
   const handleCreateNoteInFolder = (): void => {
     const { itemKey } = contextMenu
-
-    // 从itemKey中提取文件夹名
-    if (itemKey.startsWith('folder:')) {
-      const folderName = itemKey.split(':')[1]
-      // 先关闭右键菜单
-      setContextMenu({ visible: false, x: 0, y: 0, itemKey: '', isFolder: false, isEmpty: false })
-      // 然后打开创建对话框
-      openCreateDialog('新建笔记', 'note', undefined, folderName)
-    }
+    const folder = itemKey.split(':')[1]
+    openCreateDialog('新建笔记', 'note', folder)
+    setContextMenu({ visible: false, x: 0, y: 0, itemKey: '', isFolder: false, isEmpty: false })
   }
 
   // 在特定文件夹下创建子文件夹
