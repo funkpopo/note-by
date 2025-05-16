@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Typography,
   Card,
@@ -27,6 +27,26 @@ import {
 import { Pie, Bar, Line } from 'react-chartjs-2'
 import { useTheme } from '../context/theme/useTheme'
 import { useAnalysisStore } from '../context/analysis/analysisService'
+import ForceGraph2D from 'react-force-graph-2d'
+
+// 图谱数据接口定义
+interface GraphNode {
+  id: string
+  name: string
+  val: number // 节点大小，基于标签使用频率
+  color?: string // 节点颜色
+}
+
+interface GraphLink {
+  source: string
+  target: string
+  value: number // 连接强度，基于标签共现频率
+}
+
+interface GraphData {
+  nodes: GraphNode[]
+  links: GraphLink[]
+}
 
 // 注册Chart.js组件
 ChartJS.register(
@@ -198,6 +218,7 @@ const DataAnalysis: React.FC = () => {
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string }>>([])
   const analysisContainerRef = useRef<HTMLDivElement>(null)
   const [cacheDate, setCacheDate] = useState<string | null>(null)
+  const [useKnowledgeGraph, setUseKnowledgeGraph] = useState<boolean>(true) // 是否使用知识图谱
 
   // 使用分析服务的状态
   const {
@@ -448,7 +469,9 @@ const DataAnalysis: React.FC = () => {
           {title}
         </Title>
         {highlightIndex !== undefined && highlightIndex >= 0 && data.labels[highlightIndex] && (
-          <Paragraph style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}>
+          <Paragraph
+            style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+          >
             最活跃时段: {data.labels[highlightIndex]} ({data.datasets[0].data[highlightIndex]}%)
           </Paragraph>
         )}
@@ -710,6 +733,128 @@ const DataAnalysis: React.FC = () => {
     return colors
   }
 
+  // 将标签关系数据转换为知识图谱数据格式
+  const convertTagRelationsToGraphData = useCallback(
+    (
+      relations: { source: string; target: string; strength: number }[],
+      topTags?: Array<{ tag: string; count: number }>
+    ): GraphData => {
+      // 创建标签节点映射，以计算节点的值和颜色
+      const tagMap = new Map<string, { count: number; color: string }>()
+
+      // 将所有标签添加到映射中
+      relations.forEach((rel) => {
+        if (!tagMap.has(rel.source)) {
+          tagMap.set(rel.source, {
+            count: 0,
+            color: `hsla(${Math.floor(Math.random() * 360)}, 70%, 60%, 0.8)`
+          })
+        }
+
+        if (!tagMap.has(rel.target)) {
+          tagMap.set(rel.target, {
+            count: 0,
+            color: `hsla(${Math.floor(Math.random() * 360)}, 70%, 60%, 0.8)`
+          })
+        }
+
+        // 累加标签出现次数
+        tagMap.get(rel.source)!.count += rel.strength
+        tagMap.get(rel.target)!.count += rel.strength
+      })
+
+      // 如果有topTags数据，使用它来获取更准确的计数和颜色
+      if (topTags) {
+        topTags.forEach((tag, index) => {
+          const hue = (index * 137.5) % 360 // 使用黄金角分布颜色
+          if (tagMap.has(tag.tag)) {
+            tagMap.set(tag.tag, {
+              count: tag.count,
+              color: `hsla(${hue}, 70%, 60%, 0.8)`
+            })
+          }
+        })
+      }
+
+      // 创建节点数组
+      const nodes: GraphNode[] = Array.from(tagMap.keys()).map((tag) => ({
+        id: tag,
+        name: tag,
+        val: tagMap.get(tag)!.count, // 节点大小基于标签计数
+        color: tagMap.get(tag)!.color // 节点颜色
+      }))
+
+      // 创建链接数组
+      const links: GraphLink[] = relations.map((rel) => ({
+        source: rel.source,
+        target: rel.target,
+        value: rel.strength // 连接强度
+      }))
+
+      return { nodes, links }
+    },
+    []
+  )
+
+  // 渲染知识图谱
+  const renderKnowledgeGraph = useCallback(
+    (
+      data: { source: string; target: string; strength: number }[],
+      title: string,
+      topTags?: Array<{ tag: string; count: number }>
+    ): JSX.Element => {
+      const graphData = convertTagRelationsToGraphData(data, topTags)
+
+      // 创建一个响应式的高度，确保在移动设备上有良好的体验
+      const graphHeight = window.innerWidth < 768 ? 450 : 550
+
+      return (
+        <div style={{ maxWidth: '100%', height: graphHeight + 50, marginBottom: 24 }}>
+          <div
+            style={{
+              height: `${graphHeight}px`,
+              border: '1px solid var(--semi-color-border)',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+            }}
+          >
+            <ForceGraph2D
+              graphData={graphData}
+              nodeRelSize={6}
+              // @ts-ignore - 正在使用外部库的不确定类型
+              nodeVal={(node) => Math.sqrt(node.val || 1) * 2}
+              // @ts-ignore - 正在使用外部库的不确定类型
+              nodeColor={(node) => node.color || 'rgba(75, 192, 192, 0.8)'}
+              // @ts-ignore - 正在使用外部库的不确定类型
+              nodeLabel={(node) => `${node.name}: ${node.val || 0} 次使用`}
+              // @ts-ignore - 正在使用外部库的不确定类型
+              linkWidth={(link) => Math.min(link.value / 5 + 1, 6)}
+              // @ts-ignore - 正在使用外部库的不确定类型
+              linkDirectionalParticles={(link) => Math.ceil(link.value / 5)}
+              linkDirectionalParticleWidth={2}
+              cooldownTicks={200}
+              warmupTicks={100}
+              backgroundColor={isDarkMode ? '#1c1c1c' : '#f8f8f8'}
+              onNodeHover={(node) => {
+                document.body.style.cursor = node ? 'pointer' : 'default'
+              }}
+              onNodeClick={(node) => {
+                // @ts-ignore - 只在开发环境使用
+                if (node && process.env.NODE_ENV !== 'production') {
+                  console.log(`标签详情:`, node)
+                }
+              }}
+              width={window.innerWidth < 768 ? window.innerWidth - 40 : undefined}
+              height={graphHeight}
+            />
+          </div>
+        </div>
+      )
+    },
+    [isDarkMode, convertTagRelationsToGraphData]
+  )
+
   // 准备图表数据
   const prepareChartData = (): {
     hourlyDistribution: ChartData
@@ -835,7 +980,7 @@ const DataAnalysis: React.FC = () => {
         if (day.activeHours && Array.isArray(day.activeHours)) {
           // 计算去重后的活跃天数（每个日期记一次）
           totalActiveDays += 1
-          
+
           // 统计每个小时的活跃天数
           day.activeHours.forEach((hour: number) => {
             activeHoursData[hour] = (activeHoursData[hour] || 0) + 1
@@ -862,20 +1007,22 @@ const DataAnalysis: React.FC = () => {
       if (hour >= 0 && hour < 6) return `凌晨${hour}点 (${hour}:00)`
       if (hour >= 6 && hour < 12) return `上午${hour}点 (${hour}:00)`
       if (hour === 12) return `中午${hour}点 (${hour}:00)`
-      if (hour > 12 && hour < 18) return `下午${hour-12}点 (${hour}:00)`
-      return `晚上${hour-12}点 (${hour}:00)`
+      if (hour > 12 && hour < 18) return `下午${hour - 12}点 (${hour}:00)`
+      return `晚上${hour - 12}点 (${hour}:00)`
     }
 
     // 找出活跃度最高的时段
-    const mostActiveHour = [...activeHoursWithPercentage].sort((a, b) => b.percentage - a.percentage)[0]
+    const mostActiveHour = [...activeHoursWithPercentage].sort(
+      (a, b) => b.percentage - a.percentage
+    )[0]
 
     const activeHours: ChartData = {
-      labels: activeHoursWithPercentage.map(item => getTimeSlotLabel(item.hour)),
+      labels: activeHoursWithPercentage.map((item) => getTimeSlotLabel(item.hour)),
       datasets: [
         {
           label: '活跃度(%)',
-          data: activeHoursWithPercentage.map(item => item.percentage),
-          backgroundColor: activeHoursWithPercentage.map(item => {
+          data: activeHoursWithPercentage.map((item) => item.percentage),
+          backgroundColor: activeHoursWithPercentage.map((item) => {
             // 为最活跃时段使用特殊颜色
             if (item.hour === mostActiveHour.hour) {
               return 'rgba(255, 99, 132, 0.8)'
@@ -886,7 +1033,7 @@ const DataAnalysis: React.FC = () => {
             if (item.hour >= 12 && item.hour < 18) return 'rgba(255, 206, 86, 0.5)' // 下午
             return 'rgba(75, 192, 192, 0.5)' // 晚上
           }),
-          borderColor: activeHoursWithPercentage.map(item => {
+          borderColor: activeHoursWithPercentage.map((item) => {
             if (item.hour === mostActiveHour.hour) {
               return 'rgba(255, 99, 132, 1)'
             }
@@ -1283,7 +1430,7 @@ const DataAnalysis: React.FC = () => {
                         >
                           {prepareChartData()?.activeHours &&
                             renderBarChart(
-                              prepareChartData()!.activeHours, 
+                              prepareChartData()!.activeHours,
                               '日内活跃时段分布 (占比%)',
                               true,
                               prepareChartData()!.activeHours.datasets[0].data.indexOf(
@@ -1334,29 +1481,46 @@ const DataAnalysis: React.FC = () => {
 
                       {/* 添加标签关系图 */}
                       {statsData.tagRelations && statsData.tagRelations.length > 0 && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'space-between',
-                            gap: '24px',
-                            marginBottom: '24px'
-                          }}
-                        >
-                          <div style={{ width: '100%', marginRight: '0' }}>
-                            {renderTagRelations(statsData.tagRelations, '标签关联关系')}
+                        <div style={{ width: '100%', marginBottom: '24px' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '16px'
+                            }}
+                          >
+                            <Title
+                              heading={6}
+                              style={{ margin: 0, color: 'var(--semi-color-text-0)' }}
+                            >
+                              标签关联分析
+                            </Title>
+                            <Button
+                              size="small"
+                              type="tertiary"
+                              onClick={() => setUseKnowledgeGraph(!useKnowledgeGraph)}
+                            >
+                              {useKnowledgeGraph ? '切换为饼图展示' : '切换为知识图谱'}
+                            </Button>
                           </div>
-
                           <div style={{ width: '100%', marginRight: '0' }}>
-                            {statsData.tagRelations &&
-                              statsData.tagRelations.length > 0 &&
-                              renderTagRelations(
-                                statsData.tagRelations.slice(
-                                  0,
-                                  Math.min(10, statsData.tagRelations.length)
-                                ),
-                                '标签关联关系'
-                              )}
+                            {useKnowledgeGraph
+                              ? renderKnowledgeGraph(
+                                  statsData.tagRelations.slice(
+                                    0,
+                                    Math.min(50, statsData.tagRelations.length)
+                                  ),
+                                  '标签关联知识图谱',
+                                  statsData.topTags
+                                )
+                              : renderTagRelations(
+                                  statsData.tagRelations.slice(
+                                    0,
+                                    Math.min(50, statsData.tagRelations.length)
+                                  ),
+                                  '标签关联饼图'
+                                )}
                           </div>
                         </div>
                       )}

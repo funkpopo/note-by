@@ -21,6 +21,7 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@antv/g6": "^5.0.0-beta.4",
     "@blocknote/code-block": "^0.29.1",
     "@blocknote/core": "^0.30.0",
     "@blocknote/mantine": "^0.30.0",
@@ -33,10 +34,13 @@
     "axios": "^1.9.0",
     "better-sqlite3": "^11.9.1",
     "chart.js": "^4.4.9",
+    "d3": "^7.9.0",
     "docx": "^9.5.0",
     "md-to-pdf": "^5.2.4",
     "openai": "^4.98.0",
     "react-chartjs-2": "^5.3.0",
+    "react-force-graph": "^1.47.6",
+    "react-force-graph-2d": "^1.27.1",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
