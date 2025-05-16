@@ -48,6 +48,9 @@ const IPC_CHANNELS = {
   CHECK_FOR_UPDATES: 'app:check-for-updates',
   CANCEL_SYNC: 'webdav:cancel-sync',
   CLEAR_WEBDAV_SYNC_CACHE: 'webdav:clear-sync-cache',
+  // 添加主密码验证相关IPC通道
+  VERIFY_MASTER_PASSWORD: 'webdav:verify-master-password',
+  SET_MASTER_PASSWORD: 'webdav:set-master-password',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
   GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id',
@@ -482,6 +485,25 @@ const api = {
       success: boolean
       error?: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_WEBDAV_SYNC_CACHE),
+
+    // 验证主密码
+    verifyMasterPassword: (
+      password: string
+    ): Promise<{
+      success: boolean
+      message?: string
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VERIFY_MASTER_PASSWORD, password),
+
+    // 设置主密码
+    setMasterPassword: (config: {
+      password: string
+      webdavConfig: Record<string, unknown>
+    }): Promise<{
+      success: boolean
+      message?: string
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SET_MASTER_PASSWORD, config),
 
     // 监听同步进度
     onSyncProgress: (

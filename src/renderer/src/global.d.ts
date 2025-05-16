@@ -207,6 +207,8 @@ interface Window {
         password: string
         remotePath: string
         localPath?: string
+        useCustomEncryption?: boolean // 是否使用自定义加密
+        masterPassword?: string // 主密码，仅在useCustomEncryption为true时需要
       }) => Promise<{
         success: boolean
         message: string
@@ -222,6 +224,8 @@ interface Window {
         password: string
         remotePath: string
         localPath?: string
+        useCustomEncryption?: boolean // 是否使用自定义加密
+        masterPassword?: string // 主密码，仅在useCustomEncryption为true时需要
       }) => Promise<{
         success: boolean
         message: string
@@ -237,6 +241,8 @@ interface Window {
         password: string
         remotePath: string
         localPath?: string
+        useCustomEncryption?: boolean // 是否使用自定义加密
+        masterPassword?: string // 主密码，仅在useCustomEncryption为true时需要
       }) => Promise<{
         success: boolean
         message: string
@@ -266,6 +272,23 @@ interface Window {
           action: 'upload' | 'download' | 'compare'
         }) => void
       ) => () => void
+
+      // 验证主密码
+      verifyMasterPassword: (password: string) => Promise<{
+        success: boolean
+        message?: string
+        error?: string
+      }>
+
+      // 设置主密码
+      setMasterPassword: (config: {
+        password: string
+        webdavConfig: Record<string, unknown>
+      }) => Promise<{
+        success: boolean
+        message?: string
+        error?: string
+      }>
     }
     // 应用程序操作API
     app: {

@@ -2,7 +2,13 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { is } from '@electron-toolkit/utils'
-import { encrypt, decrypt } from './encryption'
+import {
+  encrypt,
+  decrypt,
+  encryptWithPassword,
+  decryptWithPassword,
+  generateEncryptionTest
+} from './encryption'
 
 // 获取settings.json的存储路径
 // 在开发环境中，文件位于项目根目录下
@@ -41,6 +47,10 @@ export interface WebDAVConfig {
   syncOnStartup: boolean // 是否在应用启动时自动同步
   syncDirection: 'localToRemote' | 'remoteToLocal' | 'bidirectional' // 同步方向
   localPath?: string // 本地路径，在运行时由主进程提供
+  // 添加加密相关字段
+  useCustomEncryption?: boolean // 是否使用自定义加密
+  encryptionTest?: string // 用于验证主密码的测试字符串
+  encryptionTestPlain?: string // 加密前的原始字符串
 }
 
 // 默认设置
@@ -65,7 +75,10 @@ const defaultSettings = {
     remotePath: '/markdown',
     enabled: false,
     syncOnStartup: false,
-    syncDirection: 'bidirectional'
+    syncDirection: 'bidirectional',
+    useCustomEncryption: false, // 默认不使用自定义加密
+    encryptionTest: '',
+    encryptionTestPlain: ''
   } as WebDAVConfig,
   // 默认更新设置
   checkUpdatesOnStartup: true,
@@ -179,4 +192,63 @@ export function updateWebDAVConfig(config: WebDAVConfig): void {
   const settings = readSettings()
   settings.webdav = config
   writeSettings(settings)
+}
+
+// 使用主密码重新加密WebDAV密码
+export function encryptWebDAVWithMasterPassword(
+  config: WebDAVConfig,
+  masterPassword: string
+): WebDAVConfig {
+  // 创建配置副本以免修改原始对象
+  const newConfig = { ...config }
+
+  if (newConfig.useCustomEncryption && newConfig.password) {
+    // 使用主密码加密WebDAV密码
+    newConfig.password = encryptWithPassword(newConfig.password, masterPassword)
+
+    // 生成测试字符串，并使用主密码加密
+    if (!newConfig.encryptionTestPlain) {
+      newConfig.encryptionTestPlain = generateEncryptionTest()
+    }
+    newConfig.encryptionTest = encryptWithPassword(newConfig.encryptionTestPlain, masterPassword)
+  }
+
+  return newConfig
+}
+
+// 验证主密码
+export function verifyMasterPassword(config: WebDAVConfig, masterPassword: string): boolean {
+  if (!config.useCustomEncryption || !config.encryptionTest || !config.encryptionTestPlain) {
+    return false
+  }
+
+  try {
+    // 使用主密码解密测试字符串，并与原始值比较
+    const decrypted = decryptWithPassword(config.encryptionTest, masterPassword)
+    return decrypted === config.encryptionTestPlain
+  } catch (error) {
+    console.error('验证主密码失败:', error)
+    return false
+  }
+}
+
+// 使用主密码解密WebDAV配置
+export function decryptWebDAVWithMasterPassword(
+  config: WebDAVConfig,
+  masterPassword: string
+): WebDAVConfig {
+  // 创建配置副本以免修改原始对象
+  const newConfig = { ...config }
+
+  if (newConfig.useCustomEncryption && newConfig.password) {
+    try {
+      // 使用主密码解密WebDAV密码
+      newConfig.password = decryptWithPassword(newConfig.password, masterPassword)
+    } catch (error) {
+      console.error('使用主密码解密WebDAV配置失败:', error)
+      // 解密失败时保留原值
+    }
+  }
+
+  return newConfig
 }

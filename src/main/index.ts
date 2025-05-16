@@ -9,7 +9,10 @@ import {
   updateSetting,
   getSetting,
   AiApiConfig,
-  getWebDAVConfig
+  getWebDAVConfig,
+  updateWebDAVConfig,
+  verifyMasterPassword,
+  encryptWebDAVWithMasterPassword
 } from './settings'
 import { testOpenAIConnection, generateContent, streamGenerateContent } from './openai'
 import { promises as fsPromises } from 'fs'
@@ -74,6 +77,9 @@ const IPC_CHANNELS = {
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
   CANCEL_SYNC: 'webdav:cancel-sync',
   CLEAR_WEBDAV_SYNC_CACHE: 'webdav:clear-sync-cache',
+  // 添加主密码验证相关IPC通道
+  VERIFY_MASTER_PASSWORD: 'webdav:verify-master-password',
+  SET_MASTER_PASSWORD: 'webdav:set-master-password',
   CHECK_FOR_UPDATES: 'app:check-for-updates',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
@@ -1281,6 +1287,81 @@ ${htmlContent}
     } catch (error) {
       console.error('清除WebDAV同步缓存失败:', error)
       return { success: false, error: String(error) }
+    }
+  })
+
+  // 验证主密码
+  ipcMain.handle(IPC_CHANNELS.VERIFY_MASTER_PASSWORD, async (_, password) => {
+    try {
+      const webdavConfig = getWebDAVConfig()
+
+      // 如果未启用自定义加密，返回错误
+      if (!webdavConfig.useCustomEncryption) {
+        return {
+          success: false,
+          message: '未启用自定义加密',
+          error: '未启用自定义加密'
+        }
+      }
+
+      // 验证主密码
+      const isValid = verifyMasterPassword(webdavConfig, password)
+
+      if (isValid) {
+        return {
+          success: true,
+          message: '密码验证成功'
+        }
+      } else {
+        return {
+          success: false,
+          message: '密码验证失败',
+          error: '密码不正确'
+        }
+      }
+    } catch (error) {
+      console.error('验证主密码失败:', error)
+      return {
+        success: false,
+        message: '验证过程中发生错误',
+        error: String(error)
+      }
+    }
+  })
+
+  // 设置主密码
+  ipcMain.handle(IPC_CHANNELS.SET_MASTER_PASSWORD, async (_, config) => {
+    try {
+      const { password, webdavConfig } = config
+
+      if (!password || !webdavConfig) {
+        return {
+          success: false,
+          message: '无效的主密码或WebDAV配置',
+          error: '缺少必要参数'
+        }
+      }
+
+      // 设置useCustomEncryption为true
+      webdavConfig.useCustomEncryption = true
+
+      // 使用主密码加密配置
+      const encryptedConfig = encryptWebDAVWithMasterPassword(webdavConfig, password)
+
+      // 保存加密后的配置
+      updateWebDAVConfig(encryptedConfig)
+
+      return {
+        success: true,
+        message: '主密码设置成功'
+      }
+    } catch (error) {
+      console.error('设置主密码失败:', error)
+      return {
+        success: false,
+        message: '设置过程中发生错误',
+        error: String(error)
+      }
     }
   })
 
