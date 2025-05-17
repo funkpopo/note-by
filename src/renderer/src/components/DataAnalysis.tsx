@@ -810,6 +810,12 @@ const DataAnalysis: React.FC = () => {
 
       return (
         <div style={{ maxWidth: '100%', height: graphHeight + 50, marginBottom: 24 }}>
+          <Title
+            heading={6}
+            style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+          >
+            {title}
+          </Title>
           <div
             style={{
               height: `${graphHeight}px`,
@@ -822,15 +828,10 @@ const DataAnalysis: React.FC = () => {
             <ForceGraph2D
               graphData={graphData}
               nodeRelSize={6}
-              // @ts-ignore - 正在使用外部库的不确定类型
               nodeVal={(node) => Math.sqrt(node.val || 1) * 2}
-              // @ts-ignore - 正在使用外部库的不确定类型
               nodeColor={(node) => node.color || 'rgba(75, 192, 192, 0.8)'}
-              // @ts-ignore - 正在使用外部库的不确定类型
               nodeLabel={(node) => `${node.name}: ${node.val || 0} 次使用`}
-              // @ts-ignore - 正在使用外部库的不确定类型
               linkWidth={(link) => Math.min(link.value / 5 + 1, 6)}
-              // @ts-ignore - 正在使用外部库的不确定类型
               linkDirectionalParticles={(link) => Math.ceil(link.value / 5)}
               linkDirectionalParticleWidth={2}
               cooldownTicks={200}

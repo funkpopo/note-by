@@ -1,6 +1,6 @@
 {
   "name": "note-by",
-  "version": "1.3.0",
+  "version": "1.3.3",
   "description": "An Note application built with React, TypeScript, and Electron",
   "main": "./out/main/index.js",
   "author": "https://github.com/funkpopo",
