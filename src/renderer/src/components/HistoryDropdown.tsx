@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   Dropdown,
   List,
@@ -37,14 +37,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
   const [dropdownVisible, setDropdownVisible] = useState<boolean>(false)
 
   // 加载历史记录
-  useEffect(() => {
-    if (dropdownVisible && filePath) {
-      loadHistory()
-    }
-  }, [dropdownVisible, filePath])
-
-  // 加载历史记录
-  const loadHistory = async (): Promise<void> => {
+  const loadHistory = useCallback(async (): Promise<void> => {
     if (!filePath) return
 
     setLoading(true)
@@ -62,7 +55,14 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
     } finally {
       setLoading(false)
     }
-  }
+  }, [filePath])
+
+  // 加载历史记录
+  useEffect(() => {
+    if (dropdownVisible && filePath) {
+      loadHistory()
+    }
+  }, [dropdownVisible, filePath, loadHistory])
 
   // 查看历史记录详情
   const handleViewHistory = async (historyId: number): Promise<void> => {

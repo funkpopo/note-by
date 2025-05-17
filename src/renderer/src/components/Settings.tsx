@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Typography,
   Card,
@@ -95,36 +95,8 @@ const Settings: React.FC = () => {
     maxDays: 7
   })
 
-  // 加载所有设置
-  useEffect(() => {
-    loadSettings()
-
-    // 捕获当前的ref值
-    const timers = testResultTimersRef.current
-
-    // 组件卸载时清除所有定时器
-    return (): void => {
-      Object.values(timers).forEach((timerId) => {
-        clearTimeout(timerId)
-      })
-    }
-  }, [])
-
-  // 监听formApi变化，确保表单值正确设置
-  useEffect(() => {
-    if (formApi && aiPrompts) {
-      formApi.setValues({
-        rewrite: aiPrompts.rewrite || '',
-        continue: aiPrompts.continue || '',
-        translate: aiPrompts.translate || '',
-        analyze: aiPrompts.analyze || '',
-        writingAnalysis: aiPrompts.writingAnalysis || ''
-      })
-    }
-  }, [formApi, aiPrompts])
-
   // 加载设置函数
-  const loadSettings = async (): Promise<void> => {
+  const loadSettings = useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true)
       const settings = await window.api.settings.getAll()
@@ -207,7 +179,35 @@ const Settings: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [formApi])
+
+  // 加载所有设置
+  useEffect(() => {
+    loadSettings()
+
+    // 捕获当前的ref值
+    const timers = testResultTimersRef.current
+
+    // 组件卸载时清除所有定时器
+    return (): void => {
+      Object.values(timers).forEach((timerId) => {
+        clearTimeout(timerId)
+      })
+    }
+  }, [loadSettings])
+
+  // 监听formApi变化，确保表单值正确设置
+  useEffect(() => {
+    if (formApi && aiPrompts) {
+      formApi.setValues({
+        rewrite: aiPrompts.rewrite || '',
+        continue: aiPrompts.continue || '',
+        translate: aiPrompts.translate || '',
+        analyze: aiPrompts.analyze || '',
+        writingAnalysis: aiPrompts.writingAnalysis || ''
+      })
+    }
+  }, [formApi, aiPrompts])
 
   // 打开添加新配置的模态框
   const handleAddConfig = (): void => {
