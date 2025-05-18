@@ -267,16 +267,38 @@ export const ContinueButton: React.FC = () => {
         const range = domSelection.getRangeAt(0)
         // Move selection to end
         range.collapse(false)
-        // Insert text at cursor position
-        document.execCommand('insertText', false, responseToApply.trim())
+
+        // 处理文本并保留换行格式
+        const textToInsert = responseToApply.trim()
+
+        // 使用HTML Fragment插入内容，确保换行被正确处理
+        const tempDiv = document.createElement('div')
+        // 使用pre标签包装内容以保留格式
+        tempDiv.innerHTML = `<span style="white-space: pre-wrap;">${textToInsert.replace(/\n/g, '<br>')}</span>`
+
+        // 创建DocumentFragment以便一次性插入所有内容
+        const fragment = document.createDocumentFragment()
+        while (tempDiv.firstChild) {
+          fragment.appendChild(tempDiv.firstChild)
+        }
+
+        // 插入处理后的内容
+        range.insertNode(fragment)
+
+        // 将光标移动到插入内容之后
+        range.collapse(false)
+
+        // 日志记录应用的文本
+        console.log('Applied text via Range API:', responseToApply.trim())
+
         // Close popover
         setAiResponse('')
         setStreamingResponse('')
         setPopoverVisible(false)
         return
       } catch (err) {
-        console.error('Error using execCommand:', err)
-        // Fallback to BlockNote replacement if execCommand fails
+        console.error('Error using Range API:', err)
+        // Fallback to BlockNote replacement if Range API fails
       }
     }
 
@@ -303,21 +325,59 @@ export const ContinueButton: React.FC = () => {
             editor.insertBlocks(blocks, editor.document[editor.document.length - 1], 'after')
           }
         } else {
-          // Fallback if parsing fails
-          editor.insertBlocks(
-            [
-              {
-                type: 'paragraph',
-                content: responseToApply
-              }
-            ],
-            selection.blocks[selection.blocks.length - 1],
-            'after'
-          )
+          console.log('Failed to parse markdown, using fallback paragraph method')
+          // Fallback if parsing fails: manually split by double newlines to create multiple paragraphs
+          const paragraphs = responseToApply.split(/\n\s*\n/).filter((p) => p.trim() !== '')
+
+          if (paragraphs.length > 1) {
+            console.log('Multiple paragraphs detected:', paragraphs.length)
+            // Create a block for each paragraph
+            const paragraphBlocks = paragraphs.map((p) => ({
+              type: 'paragraph' as const, // 使用const断言确保类型是字面量类型
+              content: p.trim()
+            }))
+
+            editor.insertBlocks(
+              paragraphBlocks,
+              selection.blocks[selection.blocks.length - 1],
+              'after'
+            )
+          } else {
+            // Single paragraph case
+            editor.insertBlocks(
+              [
+                {
+                  type: 'paragraph' as const, // 使用const断言确保类型是字面量类型
+                  content: responseToApply.trim()
+                }
+              ],
+              selection.blocks[selection.blocks.length - 1],
+              'after'
+            )
+          }
         }
       })
     } catch (err) {
       console.error('Error appending blocks:', err)
+
+      // 最终备用方法：如果其他方法都失败，尝试基本的段落插入
+      try {
+        const paragraphs = responseToApply.split(/\n\s*\n/).filter((p) => p.trim() !== '')
+        const paragraphBlocks = paragraphs.map((p) => ({
+          type: 'paragraph' as const, // 使用const断言确保类型是字面量类型
+          content: p.trim()
+        }))
+
+        editor.insertBlocks(
+          paragraphBlocks.length > 0
+            ? paragraphBlocks
+            : [{ type: 'paragraph' as const, content: responseToApply.trim() }],
+          selection.blocks[selection.blocks.length - 1],
+          'after'
+        )
+      } catch (finalErr) {
+        console.error('Final fallback method also failed:', finalErr)
+      }
     }
 
     // Close popover by clearing response
