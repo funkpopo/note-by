@@ -70,6 +70,17 @@ body[theme-mode='dark'] .editor-header {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* 导出按钮组样式 */
+.export-button-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.export-button-group .export-more-button {
+  min-width: 32px;
+  margin-left: -1px; /* 使按钮连接在一起 */
+}
+
 /* 当宽度小于600px时，对按钮和标题做调整 */
 @media (max-width: 600px) {
   .editor-header {
@@ -89,6 +100,15 @@ body[theme-mode='dark'] .editor-header {
   .editor-actions .semi-select {
     width: 120px !important;
   }
+
+  /* 调整导出按钮组在小屏幕的显示 */
+  .export-button-group .semi-button {
+    padding: 0 6px;
+  }
+
+  .export-button-group .semi-button > span:not(.semi-icon) {
+    font-size: 12px;
+  }
 }
 
 /* 当宽度非常小时，仅显示图标按钮 */
@@ -106,6 +126,22 @@ body[theme-mode='dark'] .editor-header {
   /* 在极小屏幕上进一步调整下拉菜单 */
   .editor-actions .semi-select {
     width: 100px !important;
+  }
+
+  /* 调整导出按钮组在超小屏幕上的显示 */
+  .export-button-group .semi-button > span:not(.semi-icon) {
+    display: none; /* 隐藏文本，只保留图标 */
+  }
+
+  .export-button-group .semi-button {
+    min-width: 32px;
+    width: 32px;
+    padding: 0;
+  }
+
+  .export-button-group .export-more-button {
+    min-width: 26px;
+    width: 26px;
   }
 }
 

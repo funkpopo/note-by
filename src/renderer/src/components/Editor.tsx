@@ -139,6 +139,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // 添加自动保存相关引用
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastUserActionRef = useRef<number>(Date.now())
+  // 添加编辑器容器引用，用于定位下拉菜单
+  const editorContainerRef = useRef<HTMLDivElement>(null)
 
   // 添加API配置和选中模型状态
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
@@ -1014,6 +1016,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     <div
       className="editor-container"
       tabIndex={0} // 确保div可以接收键盘事件
+      ref={editorContainerRef}
     >
       <div className="editor-header">
         <div className="editor-title-container">
@@ -1068,6 +1071,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                       <Dropdown.Item onClick={exportToHtml}>导出HTML</Dropdown.Item>
                     </Dropdown.Menu>
                   }
+                  position="leftBottom"
+                  autoAdjustOverflow={false}
+                  trigger="click"
+                  getPopupContainer={() => editorContainerRef.current || document.body}
                 >
                   <Button
                     theme="solid"
