@@ -103,3 +103,28 @@ code {
   /* 选中高亮透明度 */
   opacity: 0.8 !important;
 }
+
+/* 确保 semi-portal-inner 显示在 data-floating-ui-focusable 的上层 */
+.semi-portal-inner {
+  z-index: 10050 !important; /* 设置一个比已有最高值 10000 更高的值 */
+  isolation: isolate; /* 创建独立的堆叠上下文 */
+  width: auto !important; /* 确保不会覆盖原有宽度 */
+  height: auto !important; /* 确保不会覆盖原有高度 */
+  max-width: none !important; /* 不限制最大宽度 */
+  max-height: none !important; /* 不限制最大高度 */
+  transform: none !important; /* 移除可能影响尺寸的变换 */
+  will-change: auto; /* 使用默认值，避免创建额外的渲染层 */
+}
+
+/* 当 semi-portal-inner 中包含弹出内容时，确保更高的优先级，但不影响尺寸 */
+.semi-portal-inner .semi-popover-content,
+.semi-portal-inner .semi-modal-content,
+.semi-portal-inner .semi-dropdown-menu {
+  z-index: 10051 !important;
+  position: relative;
+}
+
+/* 针对 data-floating-ui-focusable 元素调整 z-index，确保不会遮挡弹出层 */
+[data-floating-ui-focusable] {
+  z-index: 1000 !important; /* 设置一个比 semi-portal-inner 低的值 */
+}

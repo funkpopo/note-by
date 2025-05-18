@@ -314,9 +314,6 @@ export const RewriteButton: React.FC = () => {
         >
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
             <Spin size="small" />
-            <Typography.Text style={{ display: 'block', marginTop: '8px' }}>
-              AI正在{isStreaming ? '生成' : '处理'}...
-            </Typography.Text>
           </div>
 
           {isStreaming && streamingResponse && (
