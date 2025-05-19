@@ -3,6 +3,7 @@ import { Button, Popover, Spin, Typography, Select } from '@douyinfe/semi-ui'
 import { IconCommand } from '@douyinfe/semi-icons'
 import { useBlockNoteEditor } from '@blocknote/react'
 import { useTheme } from '../context/theme/useTheme'
+import { filterThinkingContent } from '../utils/filterThinking'
 
 // 定义Popover的位置类型
 type PopoverPosition =
@@ -267,8 +268,11 @@ export const SummaryButton: React.FC = () => {
         },
         {
           onData: (chunk: string) => {
-            // 更新流式响应，添加新的文本块
-            setStreamingResponse((prev) => prev + chunk)
+            // 过滤思维标签内容
+            const filteredChunk = filterThinkingContent(chunk)
+
+            // 更新流式响应，添加新的过滤后的文本块
+            setStreamingResponse((prev) => prev + filteredChunk)
 
             // 自动滚动到底部
             if (contentRef.current) {
@@ -276,8 +280,8 @@ export const SummaryButton: React.FC = () => {
             }
           },
           onDone: (content: string) => {
-            // 完成时设置最终响应
-            setAiResponse(content)
+            // 完成时设置过滤后的最终响应
+            setAiResponse(filterThinkingContent(content))
             setLoading(false)
             setIsStreaming(false)
             // 重新计算位置，内容加载后

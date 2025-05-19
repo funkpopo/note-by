@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { filterThinkingContent } from '../../utils/filterThinking'
 
 // 分析状态接口
 export interface AnalysisResult {
@@ -294,11 +295,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         throw new Error(aiResponse.error || '分析失败，未返回结果')
       }
 
+      // 过滤思维标签内容
+      const filteredContent = filterThinkingContent(aiResponse.content)
+
       // 解析JSON结果
       try {
         // 尝试提取JSON部分
-        const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/)
-        const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse.content
+        const jsonMatch = filteredContent.match(/\{[\s\S]*\}/)
+        const jsonStr = jsonMatch ? jsonMatch[0] : filteredContent
         result = JSON.parse(jsonStr) as AnalysisResult
 
         // 保存分析结果
@@ -320,7 +324,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           })
         }
       } catch (jsonError) {
-        console.error('解析AI返回的JSON失败:', jsonError, aiResponse.content)
+        console.error('解析AI返回的JSON失败:', jsonError, filteredContent)
         throw new Error('处理AI返回的数据格式失败')
       }
     } catch (error) {
