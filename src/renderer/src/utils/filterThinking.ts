@@ -1,6 +1,7 @@
 export function filterThinkingContent(text: string): string {
   if (!text) return ''
-  return text.replace(/<think>[\s\S]*?<\/think>/g, '')
+  // 修改正则表达式，匹配<think></think>标签及其内容，以及紧跟其后的空行
+  return text.replace(/<think>[\s\S]*?<\/think>(\r?\n)?/g, '')
 }
 
 export function containsThinkingTags(text: string): boolean {
