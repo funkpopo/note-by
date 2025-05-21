@@ -26,9 +26,7 @@ import {
   FileReplaceButton,
   FormattingToolbar,
   FormattingToolbarController,
-  NestBlockButton,
   TextAlignButton,
-  UnnestBlockButton,
   SuggestionMenuController,
   getDefaultReactSlashMenuItems
 } from '@blocknote/react'
@@ -1086,10 +1084,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
             <TextAlignButton textAlignment="right" key="textAlignRightButton" />
             <ColorStyleButton key="colorStyleButton" />
-            <NestBlockButton key="nestBlockButton" />
-            <UnnestBlockButton key="unnestBlockButton" />
             <CreateLinkButton key="createLinkButton" />
-            {/* 添加AI按钮 */}
             {currentAiModel && <AIToolbarButton key="aiToolbarButton" />}
           </FormattingToolbar>
         )}
