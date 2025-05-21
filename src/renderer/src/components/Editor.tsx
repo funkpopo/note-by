@@ -43,6 +43,8 @@ import {
   postprocessBlocksForTags,
   extractTagsFromMarkdown
 } from './TagUtils'
+import { LanguageModelV1 } from '@ai-sdk/provider'
+import { zh as aiLocales } from '@blocknote/xl-ai/locales'
 
 // 添加一个接口定义API配置
 interface AiApiConfig {
@@ -149,9 +151,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // 添加API配置和选中模型状态
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string>('')
-
-  // 添加OpenAI模型引用
-  const openAIModelRef = useRef<ReturnType<typeof createOpenAI> | null>(null)
+  const [currentAiModel, setCurrentAiModel] = useState<LanguageModelV1 | null>(null)
 
   // 存储标签列表的状态
   const [tagList, setTagList] = useState<string[]>([])
@@ -226,138 +226,170 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   }, [selectedModelId])
 
   // Create a new editor instance with custom schema
-  const editor = useCreateBlockNote({
-    schema, // 使用自定义schema
-    // 添加中文本地化支持和AI扩展的本地化
-    dictionary: {
-      ...zhCN
-    },
-    // 添加AI扩展
-    extensions: [
-      // 如果有可用的OpenAI模型，则添加AI扩展
-      ...(openAIModelRef.current
-        ? [
-            createAIExtension({
-              model: openAIModelRef.current as any,
-              defaultModelSettings: {
-                temperature: 0.7,
-                maxTokens: 16384
-              }
-            })
-          ]
-        : [])
-    ],
-    // Enable code block syntax highlighting with configuration
-    codeBlock: {
-      ...codeBlock,
-      // Default language for new code blocks
-      defaultLanguage: 'javascript',
-      // Allow indenting with Tab key
-      indentLineWithTab: true,
-      // Define supported languages
-      supportedLanguages: {
-        javascript: {
-          name: 'JavaScript',
-          aliases: ['js']
-        },
-        typescript: {
-          name: 'TypeScript',
-          aliases: ['ts']
-        },
-        python: {
-          name: 'Python',
-          aliases: ['py']
-        },
-        java: {
-          name: 'Java'
-        },
-        csharp: {
-          name: 'C#',
-          aliases: ['cs']
-        },
-        cpp: {
-          name: 'C++',
-          aliases: ['c++', 'cpp']
-        },
-        go: {
-          name: 'Go'
-        },
-        rust: {
-          name: 'Rust',
-          aliases: ['rs']
-        },
-        php: {
-          name: 'PHP'
-        },
-        css: {
-          name: 'CSS'
-        },
-        html: {
-          name: 'HTML'
-        },
-        json: {
-          name: 'JSON'
-        },
-        xml: {
-          name: 'XML'
-        },
-        markdown: {
-          name: 'Markdown',
-          aliases: ['md']
-        },
-        sql: {
-          name: 'SQL'
-        },
-        bash: {
-          name: 'Bash',
-          aliases: ['sh', 'shell']
-        }
-      }
-    },
-    // 自定义配置，通过CSS处理图片尺寸
-    domAttributes: {
-      // 添加自定义CSS类，用于设置图片尺寸
-      editor: {
-        class: 'custom-blocknote-editor'
-      }
-    },
-    // 添加uploadFile函数，用于处理文件上传
-    uploadFile: async (file: File): Promise<string> => {
-      try {
-        console.log('正在上传文件:', file.name)
-
-        // 创建图片元素以获取原始尺寸信息
-        const getImageDimensions = (
-          imageFile: File
-        ): Promise<{ width: number; height: number }> => {
-          return new Promise((resolve) => {
-            const img = new Image()
-            img.onload = () => {
-              // 获取原始尺寸
-              resolve({
-                width: img.naturalWidth,
-                height: img.naturalHeight
+  const editor = useCreateBlockNote(
+    {
+      schema,
+      dictionary: {
+        ...zhCN,
+        ai: aiLocales
+      },
+      extensions: [
+        ...(currentAiModel
+          ? [
+              createAIExtension({
+                model: currentAiModel
               })
-              // 清理URL对象
-              URL.revokeObjectURL(img.src)
+            ]
+          : [])
+      ],
+      // Enable code block syntax highlighting with configuration
+      codeBlock: {
+        ...codeBlock,
+        // Default language for new code blocks
+        defaultLanguage: 'javascript',
+        // Allow indenting with Tab key
+        indentLineWithTab: true,
+        // Define supported languages
+        supportedLanguages: {
+          javascript: {
+            name: 'JavaScript',
+            aliases: ['js']
+          },
+          typescript: {
+            name: 'TypeScript',
+            aliases: ['ts']
+          },
+          python: {
+            name: 'Python',
+            aliases: ['py']
+          },
+          java: {
+            name: 'Java'
+          },
+          csharp: {
+            name: 'C#',
+            aliases: ['cs']
+          },
+          cpp: {
+            name: 'C++',
+            aliases: ['c++', 'cpp']
+          },
+          go: {
+            name: 'Go'
+          },
+          rust: {
+            name: 'Rust',
+            aliases: ['rs']
+          },
+          php: {
+            name: 'PHP'
+          },
+          css: {
+            name: 'CSS'
+          },
+          html: {
+            name: 'HTML'
+          },
+          json: {
+            name: 'JSON'
+          },
+          xml: {
+            name: 'XML'
+          },
+          markdown: {
+            name: 'Markdown',
+            aliases: ['md']
+          },
+          sql: {
+            name: 'SQL'
+          },
+          bash: {
+            name: 'Bash',
+            aliases: ['sh', 'shell']
+          }
+        }
+      },
+      // 自定义配置，通过CSS处理图片尺寸
+      domAttributes: {
+        // 添加自定义CSS类，用于设置图片尺寸
+        editor: {
+          class: 'custom-blocknote-editor'
+        }
+      },
+      // 添加uploadFile函数，用于处理文件上传
+      uploadFile: async (file: File): Promise<string> => {
+        try {
+          console.log('正在上传文件:', file.name)
+
+          // 创建图片元素以获取原始尺寸信息
+          const getImageDimensions = (
+            imageFile: File
+          ): Promise<{ width: number; height: number }> => {
+            return new Promise((resolve) => {
+              const img = new Image()
+              img.onload = () => {
+                // 获取原始尺寸
+                resolve({
+                  width: img.naturalWidth,
+                  height: img.naturalHeight
+                })
+                // 清理URL对象
+                URL.revokeObjectURL(img.src)
+              }
+              // 创建临时URL用于加载图片
+              img.src = URL.createObjectURL(imageFile)
+            })
+          }
+
+          // 如果是图片文件，获取其原始尺寸
+          let imageDimensions: { width: number; height: number } | null = null
+          if (file.type.startsWith('image/')) {
+            imageDimensions = await getImageDimensions(file)
+            console.log('原始图片尺寸:', imageDimensions)
+          }
+
+          // 确保有当前文件夹和文件
+          if (!currentFolder || !currentFile) {
+            console.log('未选择文件，使用根目录临时文件')
+            // 构造默认文件路径（使用纯文件名，不包含目录部分）
+            const filePath = 'temp_assets.md'
+
+            // 使用FileReader读取文件内容
+            const fileContent = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = (e) => {
+                if (e.target?.result) {
+                  resolve(e.target.result as string)
+                } else {
+                  reject(new Error('读取文件失败'))
+                }
+              }
+              reader.onerror = () => reject(reader.error)
+              reader.readAsDataURL(file) // 读取为Data URL (base64格式)
+            })
+
+            // 通过IPC调用上传文件
+            const result = await window.api.markdown.uploadFile(filePath, fileContent, file.name)
+
+            if (!result.success) {
+              throw new Error(result.error || '文件上传失败')
             }
-            // 创建临时URL用于加载图片
-            img.src = URL.createObjectURL(imageFile)
-          })
-        }
 
-        // 如果是图片文件，获取其原始尺寸
-        let imageDimensions: { width: number; height: number } | null = null
-        if (file.type.startsWith('image/')) {
-          imageDimensions = await getImageDimensions(file)
-          console.log('原始图片尺寸:', imageDimensions)
-        }
+            console.log('文件上传成功，URL:', result.url)
 
-        // 确保有当前文件夹和文件
-        if (!currentFolder || !currentFile) {
-          console.log('未选择文件，使用根目录临时文件')
-          // 构造默认文件路径（使用纯文件名，不包含目录部分）
-          const filePath = 'temp_assets.md'
+            // 确保URL格式正确
+            const imageUrl = result.url
+            if (!imageUrl) {
+              throw new Error('上传成功但未返回URL')
+            }
+            // 记录实际路径信息，帮助调试
+            console.log('图片保存到:', imageUrl)
+
+            return imageUrl
+          }
+
+          // 构造文件路径（当前打开的markdown文件路径）
+          const filePath = `${currentFolder}/${currentFile}`
 
           // 使用FileReader读取文件内容
           const fileContent = await new Promise<string>((resolve, reject) => {
@@ -379,7 +411,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           if (!result.success) {
             throw new Error(result.error || '文件上传失败')
           }
-
           console.log('文件上传成功，URL:', result.url)
 
           // 确保URL格式正确
@@ -391,201 +422,167 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           console.log('图片保存到:', imageUrl)
 
           return imageUrl
+        } catch (error) {
+          console.error('文件上传失败:', error)
+          Toast.error(`文件上传失败: ${error instanceof Error ? error.message : String(error)}`)
+          throw error
+        }
+      },
+      // 添加 resolveFileUrl 函数以确保图片 URL 能正确解析
+      resolveFileUrl: async (url: string): Promise<string> => {
+        console.log('正在解析文件 URL:', url)
+
+        // 如果 URL 已经是 http/https/data 格式，直接返回
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+          return url
         }
 
-        // 构造文件路径（当前打开的markdown文件路径）
-        const filePath = `${currentFolder}/${currentFile}`
-
-        // 使用FileReader读取文件内容
-        const fileContent = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            if (e.target?.result) {
-              resolve(e.target.result as string)
-            } else {
-              reject(new Error('读取文件失败'))
+        // 如果已经是 file:// 协议，尝试修复可能的编码问题
+        if (url.startsWith('file://')) {
+          try {
+            // 首先解码URL以处理百分比编码字符
+            let decodedUrl = url
+            try {
+              // 尝试解码URL
+              decodedUrl = decodeURI(url)
+              console.log('解码URL:', decodedUrl)
+            } catch (e) {
+              // 解码失败，尝试不解码的方式
+              console.warn('解码URL失败，尝试其他方式:', e)
             }
+
+            // 处理编码的反斜杠 %5C
+            if (url.includes('%5C')) {
+              try {
+                // 先将%5C替换为/
+                const fixedUrl = url.replace(/%5C/g, '/')
+                console.log('解析文件 URL 中的 %5C:', url)
+                console.log('解码并修正 file:// URL:', fixedUrl)
+
+                // 检查是否包含双斜杠问题
+                const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
+                if (doubleDriveSlashRegex.test(fixedUrl)) {
+                  const correctedUrl = fixedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
+                  console.log('修正Windows盘符后的双斜杠问题:', correctedUrl)
+                  return correctedUrl
+                }
+
+                return fixedUrl
+              } catch (e) {
+                console.error('处理编码的反斜杠失败:', e)
+              }
+            }
+
+            // 确保使用正斜杠
+            const normalizedUrl = decodedUrl.replace(/\\/g, '/')
+
+            // 修复Windows盘符路径格式
+            // 如果URL格式是 file:///D: 需要确保是 file:///D:/
+            const windowsDriveRegex = /file:\/\/\/([A-Za-z]:)\//
+            if (windowsDriveRegex.test(normalizedUrl)) {
+              return normalizedUrl
+            }
+
+            // 修复Windows盘符后的双斜杠问题
+            const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
+            if (doubleDriveSlashRegex.test(normalizedUrl)) {
+              const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
+              console.log('修正Windows盘符后的双斜杠问题:', fixedUrl)
+              return fixedUrl
+            }
+
+            // 修复可能的错误格式
+            const badDrivePathRegex = /file:\/\/\/([A-Za-z]:)([^/])/
+            const match = badDrivePathRegex.exec(normalizedUrl)
+            if (match) {
+              const fixedUrl = normalizedUrl.replace(badDrivePathRegex, 'file:///$1/$2')
+              console.log('修复Windows盘符路径:', fixedUrl)
+              return fixedUrl
+            }
+
+            console.log('使用标准化的 file:// URL:', normalizedUrl)
+            return normalizedUrl
+          } catch (e) {
+            console.error('处理 file:// URL 时出错:', e)
+            return url
           }
-          reader.onerror = () => reject(reader.error)
-          reader.readAsDataURL(file) // 读取为Data URL (base64格式)
-        })
-
-        // 通过IPC调用上传文件
-        const result = await window.api.markdown.uploadFile(filePath, fileContent, file.name)
-
-        if (!result.success) {
-          throw new Error(result.error || '文件上传失败')
         }
-        console.log('文件上传成功，URL:', result.url)
 
-        // 确保URL格式正确
-        const imageUrl = result.url
-        if (!imageUrl) {
-          throw new Error('上传成功但未返回URL')
+        // 检查URL中是否包含 .assets 路径
+        if (url.includes('.assets/') || url.includes('.assets\\')) {
+          try {
+            // 确保使用正确的 file:// 路径格式
+            // 1. 移除前导斜杠
+            let cleanPath = url.replace(/^\/+/, '')
+            // 2. 替换所有反斜杠为正斜杠
+            cleanPath = cleanPath.replace(/\\/g, '/')
+            // 3. 处理盘符格式，确保是 file:///D:/path 格式
+            if (cleanPath.match(/^[A-Za-z]:/)) {
+              const fileUrl = `file:///${cleanPath}`
+              console.log('处理 .assets 资源文件绝对路径 URL:', fileUrl)
+              return fileUrl
+            } else {
+              // 没有盘符，可能是相对路径
+              const fileUrl = `file:///${cleanPath}`
+              console.log('处理 .assets 资源文件相对路径 URL:', fileUrl)
+              return fileUrl
+            }
+          } catch (e) {
+            console.error('处理 .assets 路径失败:', e)
+            return url
+          }
         }
-        // 记录实际路径信息，帮助调试
-        console.log('图片保存到:', imageUrl)
 
-        return imageUrl
-      } catch (error) {
-        console.error('文件上传失败:', error)
-        Toast.error(`文件上传失败: ${error instanceof Error ? error.message : String(error)}`)
-        throw error
-      }
-    },
-    // 添加 resolveFileUrl 函数以确保图片 URL 能正确解析
-    resolveFileUrl: async (url: string): Promise<string> => {
-      console.log('正在解析文件 URL:', url)
+        // 处理绝对路径 (包括 Windows 盘符路径)
+        if (url.match(/^[A-Za-z]:/) || url.startsWith('/')) {
+          try {
+            // 移除前导斜杠并统一使用正斜杠
+            let cleanPath = url.replace(/^\/+/, '')
+            cleanPath = cleanPath.replace(/\\/g, '/')
+            const fileUrl = `file:///${cleanPath}`
+            console.log('将绝对路径转换为标准 file:// URL:', fileUrl)
+            return fileUrl
+          } catch (e) {
+            console.error('处理绝对路径失败:', e)
+            return url
+          }
+        }
 
-      // 如果 URL 已经是 http/https/data 格式，直接返回
-      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+        // 处理相对路径
+        if (url.startsWith('./') || url.startsWith('../')) {
+          try {
+            // 移除前导的 ./ 并转换为正斜杠格式
+            let cleanPath = url.replace(/^\.\//, '')
+            cleanPath = cleanPath.replace(/\\/g, '/')
+            const fileUrl = `file:///${cleanPath}`
+            console.log('将相对路径转换为 file:// URL:', fileUrl)
+            return fileUrl
+          } catch (e) {
+            console.error('处理相对路径失败:', e)
+            return url
+          }
+        }
+
+        // 默认情况：假设是不带协议的路径，添加 file:// 协议
+        if (!url.includes('://')) {
+          try {
+            // 转换为正斜杠格式
+            const cleanPath = url.replace(/\\/g, '/')
+            const fileUrl = `file:///${cleanPath}`
+            console.log('将普通路径转换为 file:// URL:', fileUrl)
+            return fileUrl
+          } catch (e) {
+            console.error('处理普通路径失败:', e)
+            return url
+          }
+        }
+
+        // 其他情况返回原始 URL
         return url
       }
-
-      // 如果已经是 file:// 协议，尝试修复可能的编码问题
-      if (url.startsWith('file://')) {
-        try {
-          // 首先解码URL以处理百分比编码字符
-          let decodedUrl = url
-          try {
-            // 尝试解码URL
-            decodedUrl = decodeURI(url)
-            console.log('解码URL:', decodedUrl)
-          } catch (e) {
-            // 解码失败，尝试不解码的方式
-            console.warn('解码URL失败，尝试其他方式:', e)
-          }
-
-          // 处理编码的反斜杠 %5C
-          if (url.includes('%5C')) {
-            try {
-              // 先将%5C替换为/
-              const fixedUrl = url.replace(/%5C/g, '/')
-              console.log('解析文件 URL 中的 %5C:', url)
-              console.log('解码并修正 file:// URL:', fixedUrl)
-
-              // 检查是否包含双斜杠问题
-              const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
-              if (doubleDriveSlashRegex.test(fixedUrl)) {
-                const correctedUrl = fixedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
-                console.log('修正Windows盘符后的双斜杠问题:', correctedUrl)
-                return correctedUrl
-              }
-
-              return fixedUrl
-            } catch (e) {
-              console.error('处理编码的反斜杠失败:', e)
-            }
-          }
-
-          // 确保使用正斜杠
-          const normalizedUrl = decodedUrl.replace(/\\/g, '/')
-
-          // 修复Windows盘符路径格式
-          // 如果URL格式是 file:///D: 需要确保是 file:///D:/
-          const windowsDriveRegex = /file:\/\/\/([A-Za-z]:)\//
-          if (windowsDriveRegex.test(normalizedUrl)) {
-            return normalizedUrl
-          }
-
-          // 修复Windows盘符后的双斜杠问题
-          const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
-          if (doubleDriveSlashRegex.test(normalizedUrl)) {
-            const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
-            console.log('修正Windows盘符后的双斜杠问题:', fixedUrl)
-            return fixedUrl
-          }
-
-          // 修复可能的错误格式
-          const badDrivePathRegex = /file:\/\/\/([A-Za-z]:)([^/])/
-          const match = badDrivePathRegex.exec(normalizedUrl)
-          if (match) {
-            const fixedUrl = normalizedUrl.replace(badDrivePathRegex, 'file:///$1/$2')
-            console.log('修复Windows盘符路径:', fixedUrl)
-            return fixedUrl
-          }
-
-          console.log('使用标准化的 file:// URL:', normalizedUrl)
-          return normalizedUrl
-        } catch (e) {
-          console.error('处理 file:// URL 时出错:', e)
-          return url
-        }
-      }
-
-      // 检查URL中是否包含 .assets 路径
-      if (url.includes('.assets/') || url.includes('.assets\\')) {
-        try {
-          // 确保使用正确的 file:// 路径格式
-          // 1. 移除前导斜杠
-          let cleanPath = url.replace(/^\/+/, '')
-          // 2. 替换所有反斜杠为正斜杠
-          cleanPath = cleanPath.replace(/\\/g, '/')
-          // 3. 处理盘符格式，确保是 file:///D:/path 格式
-          if (cleanPath.match(/^[A-Za-z]:/)) {
-            const fileUrl = `file:///${cleanPath}`
-            console.log('处理 .assets 资源文件绝对路径 URL:', fileUrl)
-            return fileUrl
-          } else {
-            // 没有盘符，可能是相对路径
-            const fileUrl = `file:///${cleanPath}`
-            console.log('处理 .assets 资源文件相对路径 URL:', fileUrl)
-            return fileUrl
-          }
-        } catch (e) {
-          console.error('处理 .assets 路径失败:', e)
-          return url
-        }
-      }
-
-      // 处理绝对路径 (包括 Windows 盘符路径)
-      if (url.match(/^[A-Za-z]:/) || url.startsWith('/')) {
-        try {
-          // 移除前导斜杠并统一使用正斜杠
-          let cleanPath = url.replace(/^\/+/, '')
-          cleanPath = cleanPath.replace(/\\/g, '/')
-          const fileUrl = `file:///${cleanPath}`
-          console.log('将绝对路径转换为标准 file:// URL:', fileUrl)
-          return fileUrl
-        } catch (e) {
-          console.error('处理绝对路径失败:', e)
-          return url
-        }
-      }
-
-      // 处理相对路径
-      if (url.startsWith('./') || url.startsWith('../')) {
-        try {
-          // 移除前导的 ./ 并转换为正斜杠格式
-          let cleanPath = url.replace(/^\.\//, '')
-          cleanPath = cleanPath.replace(/\\/g, '/')
-          const fileUrl = `file:///${cleanPath}`
-          console.log('将相对路径转换为 file:// URL:', fileUrl)
-          return fileUrl
-        } catch (e) {
-          console.error('处理相对路径失败:', e)
-          return url
-        }
-      }
-
-      // 默认情况：假设是不带协议的路径，添加 file:// 协议
-      if (!url.includes('://')) {
-        try {
-          // 转换为正斜杠格式
-          const cleanPath = url.replace(/\\/g, '/')
-          const fileUrl = `file:///${cleanPath}`
-          console.log('将普通路径转换为 file:// URL:', fileUrl)
-          return fileUrl
-        } catch (e) {
-          console.error('处理普通路径失败:', e)
-          return url
-        }
-      }
-
-      // 其他情况返回原始 URL
-      return url
-    }
-  })
+    },
+    [currentAiModel, schema]
+  )
 
   // 清空编辑器内容的辅助函数
   const clearEditor = useCallback(() => {
@@ -830,7 +827,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // 获取当前选中模型的详细信息
   const getSelectedModel = useCallback(() => {
     if (!selectedModelId || AiApiConfigs.length === 0) return null
-    return AiApiConfigs.find((config) => config.id === selectedModelId) || null
+    return AiApiConfigs.find((config) => config.id === selectedModelId) || AiApiConfigs[0]
   }, [selectedModelId, AiApiConfigs])
 
   // 将选中的模型信息存储到本地存储，以便AI功能组件获取
@@ -1035,7 +1032,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   }, [currentFolder, currentFile, editor])
 
   // 创建OpenAI模型实例
-  const createOpenAIModel = useCallback((): any => {
+  const createOpenAIModel = useCallback((): LanguageModelV1 | null => {
     // 如果没有选中的模型或API配置为空，则返回null
     if (!selectedModelId || AiApiConfigs.length === 0) {
       return null
@@ -1055,29 +1052,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         baseURL: selectedConfig.apiUrl
       })
 
-      // 解析温度和最大令牌数
-      const temperature = selectedConfig.temperature ? parseFloat(selectedConfig.temperature) : 0.7
-
-      const maxTokens = selectedConfig.maxTokens
-        ? parseInt(selectedConfig.maxTokens, 10)
-        : undefined
-
-      const model = provider(selectedConfig.modelName as any)
-
-      // 存储模型配置到本地存储，让AI组件可以访问
-      localStorage.setItem(
-        'aiModelConfig',
-        JSON.stringify({
-          modelName: selectedConfig.modelName,
-          temperature,
-          maxTokens
-        })
-      )
-
-      console.log('已创建OpenAI模型实例:', selectedConfig.name, {
-        temperature,
-        maxTokens
-      })
+      const model = provider(selectedConfig.modelName as string)
 
       return model
     } catch (error) {
@@ -1089,7 +1064,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // 当选中的模型ID或API配置变更时，更新OpenAI模型实例
   useEffect(() => {
-    openAIModelRef.current = createOpenAIModel()
+    const model = createOpenAIModel()
+    setCurrentAiModel(model)
   }, [selectedModelId, AiApiConfigs, createOpenAIModel])
 
   // 创建包含AI按钮的格式工具栏组件
@@ -1114,7 +1090,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             <UnnestBlockButton key="unnestBlockButton" />
             <CreateLinkButton key="createLinkButton" />
             {/* 添加AI按钮 */}
-            {openAIModelRef.current && <AIToolbarButton key="aiToolbarButton" />}
+            {currentAiModel && <AIToolbarButton key="aiToolbarButton" />}
           </FormattingToolbar>
         )}
       />
@@ -1144,7 +1120,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           })
 
           // 添加AI菜单项（如果有可用的OpenAI模型）
-          const menuItems = openAIModelRef.current
+          const menuItems = currentAiModel
             ? [...filteredItems, ...getAISlashMenuItems(editor)]
             : filteredItems
 
@@ -1400,7 +1376,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             style={{ height: '100%' }}
           >
             {/* 添加AI菜单控制器 */}
-            {openAIModelRef.current && <AIMenuController />}
+            {currentAiModel && <AIMenuController />}
             <FormattingToolbarWithAI />
             {/* 恢复标签功能的@菜单 */}
             <SuggestionMenuController
