@@ -298,9 +298,10 @@ const DataAnalysis: React.FC = () => {
       }
     } catch (error) {
       console.error('加载缓存的分析结果失败:', error)
-      Toast.error(
-        `加载缓存的分析结果失败: ${error instanceof Error ? error.message : String(error)}`
-      )
+      Toast.error({
+        content: `加载缓存的分析结果失败: ${error instanceof Error ? error.message : String(error)}`,
+        duration: 0 // 不自动关闭
+      })
     } finally {
       // 无论成功失败，都结束加载状态
       setIsLoading(false)
@@ -337,7 +338,9 @@ const DataAnalysis: React.FC = () => {
       }
     } catch (error) {
       console.error('加载AI模型失败:', error)
-      Toast.error('加载AI模型失败')
+      Toast.error({
+        content: '加载AI模型失败'
+      })
     }
   }
 
@@ -348,7 +351,9 @@ const DataAnalysis: React.FC = () => {
       // 获取笔记统计数据
       const statsResult = await window.api.analytics.getNoteHistoryStats()
       if (!statsResult.success) {
-        Toast.error(`加载统计数据失败: ${statsResult.error}`)
+        Toast.error({
+          content: `加载统计数据失败: ${statsResult.error}`
+        })
         setIsLoading(false)
         return
       }
@@ -357,14 +362,18 @@ const DataAnalysis: React.FC = () => {
       // 获取用户活动数据
       const activityResult = await window.api.analytics.getUserActivityData(30) // 获取30天的数据
       if (!activityResult.success) {
-        Toast.error(`加载活动数据失败: ${activityResult.error}`)
+        Toast.error({
+          content: `加载活动数据失败: ${activityResult.error}`
+        })
         setIsLoading(false)
         return
       }
       setActivityData(activityResult.activityData)
     } catch (error) {
       console.error('加载数据失败:', error)
-      Toast.error(`加载数据失败: ${error instanceof Error ? error.message : String(error)}`)
+      Toast.error({
+        content: `加载数据失败: ${error instanceof Error ? error.message : String(error)}`
+      })
     } finally {
       setIsLoading(false)
     }
@@ -373,18 +382,26 @@ const DataAnalysis: React.FC = () => {
   // 执行分析的包装函数
   const handlePerformAnalysis = async (forceUpdate: boolean = false): Promise<void> => {
     if (!selectedModelId) {
-      Toast.error('请先选择AI模型')
+      Toast.error({
+        content: '请先选择AI模型'
+      })
       return
     }
 
     try {
       // 显示开始分析的提示
       if (forceUpdate) {
-        Toast.info('开始重新分析...')
+        Toast.info({
+          content: '开始重新分析...',
+          duration: 0 // 不自动关闭
+        })
         // 如果是重新分析，先清除缓存日期显示
         setCacheDate(null)
       } else {
-        Toast.info('开始分析，检查缓存...')
+        Toast.info({
+          content: '开始分析，检查缓存...',
+          duration: 0 // 不自动关闭
+        })
       }
 
       await startAnalysis(selectedModelId, forceUpdate)
@@ -401,14 +418,20 @@ const DataAnalysis: React.FC = () => {
 
       if (!error) {
         if (analysisCached && !forceUpdate) {
-          Toast.success('已加载缓存的分析结果')
+          Toast.success({
+            content: '已加载缓存的分析结果'
+          })
         } else {
-          Toast.success('分析完成')
+          Toast.success({
+            content: '分析完成'
+          })
         }
       }
     } catch (err) {
       console.error('分析出错:', err)
-      Toast.error(`分析失败: ${err instanceof Error ? err.message : String(err)}`)
+      Toast.error({
+        content: `分析失败: ${err instanceof Error ? err.message : String(err)}`
+      })
     }
   }
 
@@ -1130,10 +1153,14 @@ const DataAnalysis: React.FC = () => {
                 onClick={async () => {
                   try {
                     await (window.api.analytics as AnalyticsAPI).resetAnalysisCache?.()
-                    Toast.success('分析缓存已重置')
+                    Toast.success({
+                      content: '分析缓存已重置'
+                    })
                   } catch (error) {
                     console.error('重置缓存失败:', error)
-                    Toast.error('重置缓存失败')
+                    Toast.error({
+                      content: '重置缓存失败'
+                    })
                   }
                 }}
               >

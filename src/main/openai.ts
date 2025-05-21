@@ -148,10 +148,6 @@ export async function generateContent(
       return { success: false, error: '模型名称未设置' }
     }
 
-    if (!prompt || prompt.trim() === '') {
-      return { success: false, error: '提示词不能为空' }
-    }
-
     // 处理并规范化API URL
     const normalizedApiUrl = normalizeApiUrl(apiUrl)
 
@@ -259,12 +255,6 @@ export async function streamGenerateContent(
       if (!modelName) {
         console.error(`[OpenAI服务:${requestId}] 错误: 模型名称未设置`)
         eventEmitter.emit('error', '模型名称未设置')
-        return
-      }
-
-      if (!prompt || prompt.trim() === '') {
-        console.error(`[OpenAI服务:${requestId}] 错误: 提示词不能为空`)
-        eventEmitter.emit('error', '提示词不能为空')
         return
       }
 

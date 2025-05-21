@@ -25,7 +25,6 @@ import {
   IconEdit,
   IconRefresh
 } from '@douyinfe/semi-icons'
-import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import { useTheme } from '../context/theme/useTheme'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
@@ -41,15 +40,6 @@ interface AiApiConfig {
   modelName: string
   temperature?: string
   maxTokens?: string
-}
-
-// AI提示配置接口
-interface AIPrompts {
-  rewrite: string
-  continue: string
-  translate: string
-  analyze: string
-  writingAnalysis: string
 }
 
 interface UpdateResult {
@@ -78,14 +68,7 @@ const Settings: React.FC = () => {
     Record<string, { success: boolean; message: string }>
   >({})
   const testResultTimersRef = React.useRef<Record<string, NodeJS.Timeout>>({})
-  const [aiPrompts, setAiPrompts] = useState<AIPrompts>({
-    rewrite: '',
-    continue: '',
-    translate: '',
-    analyze: '',
-    writingAnalysis: ''
-  })
-  const [formApi, setFormApi] = useState<FormApi<AIPrompts> | null>(null)
+
   const [checkUpdatesOnStartup, setCheckUpdatesOnStartup] = useState<boolean>(true)
   const [isCheckingUpdates, setIsCheckingUpdates] = useState<boolean>(false)
   const [updateResult, setUpdateResult] = useState<UpdateResult | null>(null)
@@ -106,64 +89,6 @@ const Settings: React.FC = () => {
         setApiConfigs(settings.AiApiConfigs as AiApiConfig[])
       }
 
-      // 设置AI提示配置
-      if (settings.aiPrompts) {
-        const loadedPrompts = settings.aiPrompts as AIPrompts
-
-        // 如果没有translate字段，但有旧的翻译字段，进行迁移
-        const oldPrompts = loadedPrompts as unknown as Record<string, string>
-        if (!loadedPrompts.translate && oldPrompts.translateToZh) {
-          loadedPrompts.translate =
-            '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}'
-        }
-
-        setAiPrompts(loadedPrompts)
-
-        // 如果表单API已经初始化，设置表单值
-        if (formApi) {
-          formApi.setValues({
-            rewrite: loadedPrompts.rewrite || '',
-            continue: loadedPrompts.continue || '',
-            translate:
-              loadedPrompts.translate ||
-              '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}',
-            analyze: loadedPrompts.analyze || '',
-            writingAnalysis: loadedPrompts.writingAnalysis || ''
-          })
-        }
-      } else {
-        // 如果没有任何AI提示设置，设置默认值
-        const defaultPrompts = {
-          rewrite: '重写以下内容，保持原意但改进表达，使其更流畅、更清晰：\n\n${content}',
-          continue: '继续以下内容，保持风格和逻辑连贯：\n\n${content}',
-          translate: '请将以下${sourceLanguage}文本翻译成${targetLanguage}：\n\n${content}',
-          analyze: '分析以下内容，提供关键点、主题、情感倾向等分析：\n\n${content}',
-          writingAnalysis: `我有以下笔记应用使用数据，请分析我的写作习惯并给出改进建议：
-
-- 总笔记数量: \${totalNotes}
-- 总编辑次数: \${totalEdits}
-- 平均编辑长度: \${averageEditLength} 字符
-- 最常编辑的前3个笔记: \${mostEditedNotes}
-- 每日笔记数量趋势: \${notesByDate}
-- 每日编辑次数趋势: \${editsByDate}
-- 编辑时间分布: \${editTimeDistribution}
-
-请提供以下详细分析：
-1. 写作习惯概述：分析我的整体写作模式、频率和时间分布
-2. 写作节奏和时间管理：识别我的高效写作时段、写作连贯性和持续时间
-3. 主题和内容偏好：基于编辑模式推断我最关注的内容领域
-4. 写作行为分析：分析我的修改习惯、编辑深度和完善程度
-5. 个性化改进建议：提供3-5条具体可行的改进建议，包括时间安排、内容组织和写作技巧
-6. 效率提升策略：如何更有效地利用笔记应用功能提高写作效率
-7. 建议的写作目标：根据当前习惯，提出合理的短期写作目标`
-        }
-        setAiPrompts(defaultPrompts)
-
-        if (formApi) {
-          formApi.setValues(defaultPrompts)
-        }
-      }
-
       // 加载更新检查设置
       if (settings.checkUpdatesOnStartup !== undefined) {
         setCheckUpdatesOnStartup(settings.checkUpdatesOnStartup as boolean)
@@ -179,7 +104,7 @@ const Settings: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [formApi])
+  }, [])
 
   // 加载所有设置
   useEffect(() => {
@@ -195,19 +120,6 @@ const Settings: React.FC = () => {
       })
     }
   }, [loadSettings])
-
-  // 监听formApi变化，确保表单值正确设置
-  useEffect(() => {
-    if (formApi && aiPrompts) {
-      formApi.setValues({
-        rewrite: aiPrompts.rewrite || '',
-        continue: aiPrompts.continue || '',
-        translate: aiPrompts.translate || '',
-        analyze: aiPrompts.analyze || '',
-        writingAnalysis: aiPrompts.writingAnalysis || ''
-      })
-    }
-  }, [formApi, aiPrompts])
 
   // 打开添加新配置的模态框
   const handleAddConfig = (): void => {
@@ -503,41 +415,6 @@ const Settings: React.FC = () => {
 
   // 添加WebDAV同步完成回调
   const handleSyncComplete = (): void => {}
-
-  // 保存AI提示设置
-  const saveAIPrompts = async (): Promise<void> => {
-    try {
-      setIsLoading(true)
-      const settings = await window.api.settings.getAll()
-
-      // 更新AI提示设置
-      const updatedSettings = {
-        ...settings,
-        aiPrompts
-      }
-
-      const success = await window.api.settings.setAll(updatedSettings)
-
-      if (success) {
-        Toast.success('AI提示设置已保存')
-      } else {
-        Toast.error('保存AI提示设置失败')
-      }
-    } catch (error) {
-      console.error('保存AI提示设置失败:', error)
-      Toast.error('保存AI提示设置失败')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // 处理AI提示变化
-  const handleAIPromptChange = (key: keyof AIPrompts, value: string): void => {
-    setAiPrompts((prev) => ({
-      ...prev,
-      [key]: value
-    }))
-  }
 
   // 处理更新检查设置变更
   const handleUpdateCheckingChange = async (checked: boolean): Promise<void> => {
@@ -927,97 +804,6 @@ const Settings: React.FC = () => {
                     : `系统将自动清理 ${historyManagement.maxDays} 天前的历史记录。`}
                 </Paragraph>
               </Form>
-            </Card>
-          </div>
-        </TabPane>
-
-        <TabPane tab="AI提示设置" itemKey="ai-prompts">
-          <div className="settings-scroll-container">
-            <Card style={{ marginTop: 20, marginBottom: 20 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 5
-                }}
-              >
-                <Title heading={5}>AI提示模板设置</Title>
-                <Button
-                  type="primary"
-                  theme="solid"
-                  size="small"
-                  onClick={saveAIPrompts}
-                  loading={isLoading}
-                >
-                  保存设置
-                </Button>
-              </div>
-              <Divider />
-              <Paragraph style={{ marginBottom: 5 }}>
-                在下面设置各种AI操作的提示模板，使用 ${'{content}'} 表示要处理的文本内容。
-              </Paragraph>
-
-              <Form<AIPrompts>
-                labelPosition="top"
-                getFormApi={(api) => setFormApi(api)}
-                initValues={aiPrompts}
-              >
-                <Form.TextArea
-                  field="rewrite"
-                  label="风格改写提示"
-                  placeholder="请设置风格改写的提示模板"
-                  onChange={(value) => handleAIPromptChange('rewrite', value)}
-                  rows={3}
-                  showClear
-                  style={{ marginBottom: 0 }}
-                />
-
-                <Form.TextArea
-                  field="continue"
-                  label="内容续写提示"
-                  placeholder="请设置内容续写的提示模板"
-                  onChange={(value) => handleAIPromptChange('continue', value)}
-                  rows={3}
-                  showClear
-                  style={{ marginBottom: 0 }}
-                />
-
-                <Form.TextArea
-                  field="translate"
-                  label="翻译提示: 使用 ${sourceLanguage} 表示原语言，${targetLanguage} 表示目标语言。"
-                  placeholder="请设置翻译的提示模板，例如：请将以下${sourceLanguage}文本翻译成${targetLanguage}: ${content}"
-                  onChange={(value) => handleAIPromptChange('translate', value)}
-                  rows={3}
-                  showClear
-                  style={{ marginBottom: 0 }}
-                />
-
-                <Form.TextArea
-                  field="analyze"
-                  label="分析提示"
-                  placeholder="请设置分析的提示模板"
-                  onChange={(value) => handleAIPromptChange('analyze', value)}
-                  rows={3}
-                  showClear
-                  style={{ marginBottom: 0 }}
-                />
-
-                <Form.TextArea
-                  field="writingAnalysis"
-                  label="写作分析提示"
-                  placeholder="请设置写作分析的提示模板"
-                  onChange={(value) => handleAIPromptChange('writingAnalysis', value)}
-                  rows={3}
-                  showClear
-                  style={{ marginBottom: 0 }}
-                />
-              </Form>
-
-              <Divider />
-              <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
-                AI提示设置会保存在settings.json文件中，应用启动时会自动载入
-              </Paragraph>
             </Card>
           </div>
         </TabPane>
