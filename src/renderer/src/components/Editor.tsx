@@ -6,6 +6,15 @@ import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@bloc
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import { codeBlock } from '@blocknote/code-block'
+// 导入 AI 相关组件
+import {
+  AIMenuController,
+  AIToolbarButton,
+  createAIExtension,
+  getAISlashMenuItems
+} from '@blocknote/xl-ai'
+import '@blocknote/xl-ai/style.css'
+import { createOpenAI } from '@ai-sdk/openai'
 import './Editor.css'
 import { zhCN } from '../locales'
 import {
@@ -24,11 +33,6 @@ import {
   getDefaultReactSlashMenuItems
 } from '@blocknote/react'
 import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core'
-import { TranslateButton } from './TranslateButton'
-import { AnalyzeButton } from './AnalyzeButton'
-import { ContinueButton } from './ContinueButton'
-import { RewriteButton } from './RewriteButton'
-import { SummaryButton } from './SummaryButton'
 import CreateDialog from './CreateDialog'
 import HistoryDropdown from './HistoryDropdown'
 import { Tag } from './Tag'
@@ -146,6 +150,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string>('')
 
+  // 添加OpenAI模型引用
+  const openAIModelRef = useRef<ReturnType<typeof createOpenAI> | null>(null)
+
   // 存储标签列表的状态
   const [tagList, setTagList] = useState<string[]>([])
 
@@ -221,8 +228,25 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // Create a new editor instance with custom schema
   const editor = useCreateBlockNote({
     schema, // 使用自定义schema
-    // 添加中文本地化支持
-    dictionary: zhCN,
+    // 添加中文本地化支持和AI扩展的本地化
+    dictionary: {
+      ...zhCN
+    },
+    // 添加AI扩展
+    extensions: [
+      // 如果有可用的OpenAI模型，则添加AI扩展
+      ...(openAIModelRef.current
+        ? [
+            createAIExtension({
+              model: openAIModelRef.current as any,
+              defaultModelSettings: {
+                temperature: 0.7,
+                maxTokens: 16384
+              }
+            })
+          ]
+        : [])
+    ],
     // Enable code block syntax highlighting with configuration
     codeBlock: {
       ...codeBlock,
@@ -878,8 +902,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const handleRestoreHistory = async (content: string): Promise<void> => {
     if (editor && content) {
       try {
-        // 直接重新加载编辑器，而不是尝试修改内容
-        // 创建新的编辑器实例以刷新内容
         setEditorContent(content)
         const timestamp = Date.now()
         setEditorKey(`editor-${timestamp}`)
@@ -1011,6 +1033,138 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       setIsExporting(false)
     }
   }, [currentFolder, currentFile, editor])
+
+  // 创建OpenAI模型实例
+  const createOpenAIModel = useCallback((): any => {
+    // 如果没有选中的模型或API配置为空，则返回null
+    if (!selectedModelId || AiApiConfigs.length === 0) {
+      return null
+    }
+
+    // 根据选中的ID查找配置
+    const selectedConfig = AiApiConfigs.find((config) => config.id === selectedModelId)
+    if (!selectedConfig) {
+      console.error('找不到选中的API配置')
+      return null
+    }
+
+    try {
+      // 创建OpenAI实例
+      const provider = createOpenAI({
+        apiKey: selectedConfig.apiKey,
+        baseURL: selectedConfig.apiUrl
+      })
+
+      // 解析温度和最大令牌数
+      const temperature = selectedConfig.temperature ? parseFloat(selectedConfig.temperature) : 0.7
+
+      const maxTokens = selectedConfig.maxTokens
+        ? parseInt(selectedConfig.maxTokens, 10)
+        : undefined
+
+      const model = provider(selectedConfig.modelName as any)
+
+      // 存储模型配置到本地存储，让AI组件可以访问
+      localStorage.setItem(
+        'aiModelConfig',
+        JSON.stringify({
+          modelName: selectedConfig.modelName,
+          temperature,
+          maxTokens
+        })
+      )
+
+      console.log('已创建OpenAI模型实例:', selectedConfig.name, {
+        temperature,
+        maxTokens
+      })
+
+      return model
+    } catch (error) {
+      console.error('创建OpenAI模型实例失败:', error)
+      Toast.error(`创建AI模型实例失败: ${error instanceof Error ? error.message : String(error)}`)
+      return null
+    }
+  }, [selectedModelId, AiApiConfigs])
+
+  // 当选中的模型ID或API配置变更时，更新OpenAI模型实例
+  useEffect(() => {
+    openAIModelRef.current = createOpenAIModel()
+  }, [selectedModelId, AiApiConfigs, createOpenAIModel])
+
+  // 创建包含AI按钮的格式工具栏组件
+  const FormattingToolbarWithAI = (): JSX.Element => {
+    return (
+      <FormattingToolbarController
+        formattingToolbar={() => (
+          <FormattingToolbar>
+            <BlockTypeSelect key="blockTypeSelect" />
+            <FileCaptionButton key="fileCaptionButton" />
+            <FileReplaceButton key="replaceFileButton" />
+            <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
+            <BasicTextStyleButton basicTextStyle="italic" key="italicStyleButton" />
+            <BasicTextStyleButton basicTextStyle="underline" key="underlineStyleButton" />
+            <BasicTextStyleButton basicTextStyle="strike" key="strikeStyleButton" />
+            <BasicTextStyleButton basicTextStyle="code" key="codeStyleButton" />
+            <TextAlignButton textAlignment="left" key="textAlignLeftButton" />
+            <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
+            <TextAlignButton textAlignment="right" key="textAlignRightButton" />
+            <ColorStyleButton key="colorStyleButton" />
+            <NestBlockButton key="nestBlockButton" />
+            <UnnestBlockButton key="unnestBlockButton" />
+            <CreateLinkButton key="createLinkButton" />
+            {/* 添加AI按钮 */}
+            {openAIModelRef.current && <AIToolbarButton key="aiToolbarButton" />}
+          </FormattingToolbar>
+        )}
+      />
+    )
+  }
+
+  // 创建包含AI选项的斜杠菜单组件
+  const SuggestionMenuWithAI = (): JSX.Element => {
+    return (
+      <SuggestionMenuController
+        triggerCharacter="/"
+        getItems={async (query) => {
+          // 获取默认斜杠菜单项
+          const defaultItems = getDefaultReactSlashMenuItems(editor)
+
+          // 过滤掉Video、Audio和File插入选项，只保留Image和其他选项
+          const filteredItems = defaultItems.filter((item) => {
+            return !(
+              (item.title.includes('Video') ||
+                item.title.includes('视频') ||
+                item.title.includes('Audio') ||
+                item.title.includes('音频') ||
+                item.title.includes('File') ||
+                item.title.includes('文件')) &&
+              !(item.title.includes('Image') || item.title.includes('图片'))
+            )
+          })
+
+          // 添加AI菜单项（如果有可用的OpenAI模型）
+          const menuItems = openAIModelRef.current
+            ? [...filteredItems, ...getAISlashMenuItems(editor)]
+            : filteredItems
+
+          // 根据用户输入的查询过滤菜单项
+          return menuItems.filter((item) => {
+            const itemTitle = item.title.toLowerCase()
+            const itemSubtext = (item.subtext || '').toLowerCase()
+            const itemAliases = item.aliases || []
+            const queryLower = query.toLowerCase()
+
+            return (
+              itemTitle.includes(queryLower) ||
+              itemSubtext.includes(queryLower) ||
+              itemAliases.some((alias) => alias.toLowerCase().includes(queryLower))
+            )
+          })
+        }}
+      />
+    )
+  }
 
   return (
     <div
@@ -1219,7 +1373,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   使用 <Typography.Text code>Ctrl+S</Typography.Text> 保存文件
                 </li>
                 <li>支持代码块高亮和Markdown格式化</li>
-                <li>可以使用AI功能辅助内容创作</li>
+                <li>
+                  {AiApiConfigs.length > 0 ? (
+                    <>
+                      可以使用AI功能辅助内容创作，选中文本后点击AI按钮或输入{' '}
+                      <Typography.Text code>/ai</Typography.Text> 使用AI
+                    </>
+                  ) : (
+                    <>在设置中配置OpenAI API后可以使用AI功能辅助内容创作</>
+                  )}
+                </li>
                 <li>使用@符号可以添加标签</li>
               </ul>
             </div>
@@ -1236,32 +1399,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             onChange={handleEditorChange}
             style={{ height: '100%' }}
           >
-            <FormattingToolbarController
-              formattingToolbar={() => (
-                <FormattingToolbar>
-                  <BlockTypeSelect key="blockTypeSelect" />
-                  <SummaryButton key="summaryButton" />
-                  <TranslateButton key="translateButton" />
-                  <AnalyzeButton key="analyzeButton" />
-                  <ContinueButton key="continueButton" />
-                  <RewriteButton key="rewriteButton" />
-                  <FileCaptionButton key="fileCaptionButton" />
-                  <FileReplaceButton key="replaceFileButton" />
-                  <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
-                  <BasicTextStyleButton basicTextStyle="italic" key="italicStyleButton" />
-                  <BasicTextStyleButton basicTextStyle="underline" key="underlineStyleButton" />
-                  <BasicTextStyleButton basicTextStyle="strike" key="strikeStyleButton" />
-                  <BasicTextStyleButton basicTextStyle="code" key="codeStyleButton" />
-                  <TextAlignButton textAlignment="left" key="textAlignLeftButton" />
-                  <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
-                  <TextAlignButton textAlignment="right" key="textAlignRightButton" />
-                  <ColorStyleButton key="colorStyleButton" />
-                  <NestBlockButton key="nestBlockButton" />
-                  <UnnestBlockButton key="unnestBlockButton" />
-                  <CreateLinkButton key="createLinkButton" />
-                </FormattingToolbar>
-              )}
-            />
+            {/* 添加AI菜单控制器 */}
+            {openAIModelRef.current && <AIMenuController />}
+            <FormattingToolbarWithAI />
+            {/* 恢复标签功能的@菜单 */}
             <SuggestionMenuController
               triggerCharacter="@"
               getItems={async (query) => {
@@ -1269,40 +1410,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 return getTagMenuItems(editor, tagList, query)
               }}
             />
-            <SuggestionMenuController
-              triggerCharacter="/"
-              getItems={async (query) => {
-                // 获取默认斜杠菜单项
-                const defaultItems = getDefaultReactSlashMenuItems(editor)
-
-                // 过滤掉Video、Audio和File插入选项，只保留Image和其他选项
-                const filteredItems = defaultItems.filter((item) => {
-                  return !(
-                    (item.title.includes('Video') ||
-                      item.title.includes('视频') ||
-                      item.title.includes('Audio') ||
-                      item.title.includes('音频') ||
-                      item.title.includes('File') ||
-                      item.title.includes('文件')) &&
-                    !(item.title.includes('Image') || item.title.includes('图片'))
-                  )
-                })
-
-                // 根据用户输入的查询过滤菜单项
-                return filteredItems.filter((item) => {
-                  const itemTitle = item.title.toLowerCase()
-                  const itemSubtext = (item.subtext || '').toLowerCase()
-                  const itemAliases = item.aliases || []
-                  const queryLower = query.toLowerCase()
-
-                  return (
-                    itemTitle.includes(queryLower) ||
-                    itemSubtext.includes(queryLower) ||
-                    itemAliases.some((alias) => alias.toLowerCase().includes(queryLower))
-                  )
-                })
-              }}
-            />
+            <SuggestionMenuWithAI />
           </BlockNoteView>
         )}
       </div>

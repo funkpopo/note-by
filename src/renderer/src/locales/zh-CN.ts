@@ -198,8 +198,7 @@ export const zhCN: Dictionary = {
     background_color_menuitem: '背景颜色'
   },
   suggestion_menu: {
-    no_items_title: '未找到项目',
-    loading: '加载中…'
+    no_items_title: '未找到项目'
   },
   color_picker: {
     text_title: '文本',

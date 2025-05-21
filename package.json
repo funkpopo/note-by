@@ -21,10 +21,12 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
-    "@blocknote/code-block": "^0.29.1",
-    "@blocknote/core": "^0.30.0",
-    "@blocknote/mantine": "^0.30.0",
-    "@blocknote/react": "^0.30.0",
+    "@ai-sdk/openai": "^1.2.9",
+    "@blocknote/code-block": "^0.31.0",
+    "@blocknote/core": "^0.31.0",
+    "@blocknote/mantine": "^0.31.0",
+    "@blocknote/react": "^0.31.0",
+    "@blocknote/xl-ai": "^0.31.0",
     "@douyinfe/semi-icons": "^2.79.0",
     "@douyinfe/semi-icons-lab": "^2.79.0",
     "@douyinfe/semi-ui": "^2.79.0",
