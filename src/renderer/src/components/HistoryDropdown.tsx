@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, RefObject } from 'react'
 import {
   Dropdown,
   List,
@@ -23,12 +23,14 @@ interface HistoryDropdownProps {
   filePath?: string
   onRestore?: (content: string) => void
   disabled?: boolean
+  containerRef?: RefObject<HTMLElement>
 }
 
 const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
   filePath,
   onRestore,
-  disabled = false
+  disabled = false,
+  containerRef
 }) => {
   const [historyList, setHistoryList] = useState<HistoryItem[]>([])
   const [loading, setLoading] = useState<boolean>(false)
@@ -86,8 +88,20 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
     }
   }
 
-  // 格式化时间戳
+  // 格式化时间戳 - 使用更紧凑的格式
   const formatTimestamp = (timestamp: number): string => {
+    const date = new Date(timestamp)
+    return (
+      date.toLocaleDateString('zh-CN') +
+      ' ' +
+      date.getHours().toString().padStart(2, '0') +
+      ':' +
+      date.getMinutes().toString().padStart(2, '0')
+    )
+  }
+
+  // 在侧边栏显示完整时间戳
+  const formatFullTimestamp = (timestamp: number): string => {
     const date = new Date(timestamp)
     return date.toLocaleString('zh-CN', {
       year: 'numeric',
@@ -106,39 +120,48 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
         visible={dropdownVisible}
         onVisibleChange={setDropdownVisible}
         disabled={disabled}
-        position="bottomRight"
+        position="leftBottom"
+        autoAdjustOverflow={false}
+        getPopupContainer={() => containerRef?.current || document.body}
         render={
-          <div>
+          <div style={{ minWidth: '180px', maxWidth: '220px' }}>
             {loading ? (
-              <div style={{ padding: '20px', textAlign: 'center', minWidth: '200px' }}>
+              <div style={{ padding: '12px', textAlign: 'center' }}>
                 <Spin size="middle" />
               </div>
             ) : historyList.length === 0 ? (
-              <div style={{ padding: '20px', textAlign: 'center', minWidth: '200px' }}>
+              <div style={{ padding: '12px', textAlign: 'center' }}>
                 <Empty description="暂无历史记录" />
               </div>
             ) : (
               <List
                 dataSource={historyList}
-                style={{ width: '300px', maxHeight: '400px', overflow: 'auto' }}
+                style={{ maxHeight: '300px', overflow: 'auto' }}
                 renderItem={(item) => (
                   <List.Item
+                    style={{ padding: '8px 12px' }}
                     main={
-                      <div>
-                        <Typography.Text strong style={{ marginRight: '8px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Typography.Text style={{ fontSize: '13px', flexGrow: 1 }}>
                           {formatTimestamp(item.timestamp)}
                         </Typography.Text>
+                        <Button
+                          type="tertiary"
+                          icon={<IconChevronRight />}
+                          onClick={() => handleViewHistory(item.id)}
+                          size="small"
+                          style={{ padding: '4px 8px', marginLeft: '8px' }}
+                        >
+                          查看
+                        </Button>
                       </div>
-                    }
-                    extra={
-                      <Button
-                        type="tertiary"
-                        icon={<IconChevronRight />}
-                        onClick={() => handleViewHistory(item.id)}
-                        size="small"
-                      >
-                        查看
-                      </Button>
                     }
                   />
                 )}
@@ -172,7 +195,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
             style={{ padding: '0 16px', whiteSpace: 'pre-wrap', height: '100%', overflow: 'auto' }}
           >
             <Typography.Title heading={5}>
-              {formatTimestamp(selectedHistory.timestamp)}
+              {formatFullTimestamp(selectedHistory.timestamp)}
             </Typography.Title>
             <div
               style={{

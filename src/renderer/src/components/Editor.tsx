@@ -1,14 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import {
-  Typography,
-  Button,
-  Space,
-  Toast,
-  Spin,
-  Select,
-  Dropdown,
-  Tooltip
-} from '@douyinfe/semi-ui'
+import { Typography, Button, Space, Toast, Spin, Select, Dropdown } from '@douyinfe/semi-ui'
 import { IconSave, IconFile, IconChevronDown } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
@@ -1041,7 +1032,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // 添加AI状态相关状态
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
-  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
 
   // 创建OpenAI模型实例
   const createOpenAIModel = useCallback((): LanguageModelV1 | null => {
@@ -1055,7 +1045,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     if (!selectedConfig) {
       console.error('找不到选中的API配置')
       setAiStatus('error')
-      setAiErrorMessage('找不到选中的API配置')
       return null
     }
 
@@ -1097,14 +1086,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 测试连接是否正常
       console.log(`[编辑器] 模型实例创建成功，设置状态为ready`)
       setAiStatus('ready')
-      setAiErrorMessage(null)
 
       return model
     } catch (error) {
       console.error('[编辑器] 创建OpenAI模型实例失败:', error)
       setAiStatus('error')
       const errorMessage = error instanceof Error ? error.message : String(error)
-      setAiErrorMessage(errorMessage)
       Toast.error(`创建AI模型实例失败: ${errorMessage}`)
       return null
     }
@@ -1126,7 +1113,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     // 如果实例创建失败但状态未更新（可能是由于异步原因），进行检查
     if (!model && aiStatus !== 'error') {
       setAiStatus('error')
-      setAiErrorMessage('无法创建AI模型实例')
     }
   }, [selectedModelId, AiApiConfigs, createOpenAIModel, aiStatus])
 
@@ -1233,21 +1219,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                     </Select.Option>
                   ))}
                 </Select>
-                {selectedModelId && (
-                  <div className="ai-status-indicator">
-                    {aiStatus === 'loading' && <Spin size="small" />}
-                    {aiStatus === 'error' && (
-                      <Tooltip content={aiErrorMessage || '连接错误'}>
-                        <span className="ai-status-error">●</span>
-                      </Tooltip>
-                    )}
-                    {aiStatus === 'ready' && (
-                      <Tooltip content="AI模型已就绪">
-                        <span className="ai-status-ready">●</span>
-                      </Tooltip>
-                    )}
-                  </div>
-                )}
               </>
             )}
             {currentFile && (
@@ -1258,6 +1229,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   }
                   onRestore={handleRestoreHistory}
                   disabled={!currentFile}
+                  containerRef={editorContainerRef}
                 />
                 <Button
                   theme="solid"
