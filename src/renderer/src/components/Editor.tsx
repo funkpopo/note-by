@@ -43,6 +43,7 @@ import {
 } from './TagUtils'
 import { LanguageModelV1 } from '@ai-sdk/provider'
 import { zh as aiLocales } from '@blocknote/xl-ai/locales'
+import { CustomAIMenu } from './AICustomCommands'
 
 // 添加一个接口定义API配置
 interface AiApiConfig {
@@ -1371,7 +1372,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             style={{ height: '100%' }}
           >
             {/* 添加AI菜单控制器 */}
-            {currentAiModel && <AIMenuController />}
+            {currentAiModel && <AIMenuController aiMenu={CustomAIMenu} />}
             <FormattingToolbarWithAI />
             {/* 恢复标签功能的@菜单 */}
             <SuggestionMenuController
