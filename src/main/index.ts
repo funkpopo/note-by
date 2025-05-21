@@ -472,32 +472,115 @@ app.whenReady().then(() => {
   // 流式内容生成
   ipcMain.handle(IPC_CHANNELS.STREAM_GENERATE_CONTENT, async (event, request) => {
     try {
+      console.log(`[主进程] 接收到流式内容生成请求: 模型=${request.modelName}`)
       const emitter = await streamGenerateContent(request)
       const sender = event.sender
 
       // 为每个流式数据块分配唯一ID
       const streamId = Date.now().toString()
+      console.log(`[主进程] 为请求创建streamId=${streamId}`)
+
+      // 用于跟踪事件监听器，确保能正确清理
+      const listeners = {
+        data: null as ((chunk: string) => void) | null,
+        done: null as ((fullContent: string) => void) | null,
+        error: null as ((error: string) => void) | null
+      }
+
+      // 创建清理函数，移除所有事件监听器
+      const cleanupListeners = (): void => {
+        console.log(`[主进程] 清理streamId=${streamId}的事件监听器`)
+        if (listeners.data) {
+          try {
+            emitter.removeListener('data', listeners.data)
+            console.log(`[主进程] 已移除数据监听器`)
+          } catch (err) {
+            console.error(`[主进程] 移除数据监听器失败:`, err)
+          }
+        }
+
+        if (listeners.done) {
+          try {
+            emitter.removeListener('done', listeners.done)
+            console.log(`[主进程] 已移除完成监听器`)
+          } catch (err) {
+            console.error(`[主进程] 移除完成监听器失败:`, err)
+          }
+        }
+
+        if (listeners.error) {
+          try {
+            emitter.removeListener('error', listeners.error)
+            console.log(`[主进程] 已移除错误监听器`)
+          } catch (err) {
+            console.error(`[主进程] 移除错误监听器失败:`, err)
+          }
+        }
+      }
+
+      // 添加超时机制
+      const timeoutMs = 60000 // 60秒超时
+      const timeoutId = setTimeout(() => {
+        console.error(`[主进程] 流式请求超时 (${timeoutMs}ms), streamId=${streamId}`)
+
+        if (!sender.isDestroyed()) {
+          sender.send(`stream-error-${streamId}`, {
+            error: `生成超时 (${timeoutMs / 1000}秒). 请检查网络连接或API服务状态。`
+          })
+        }
+
+        cleanupListeners()
+      }, timeoutMs)
 
       // 监听数据事件
-      emitter.on('data', (chunk) => {
-        if (!sender.isDestroyed()) {
-          sender.send(`stream-data-${streamId}`, { chunk })
+      listeners.data = (chunk) => {
+        if (sender.isDestroyed()) {
+          console.log(`[主进程] WebContents已销毁，无法发送数据块, streamId=${streamId}`)
+          cleanupListeners()
+          clearTimeout(timeoutId)
+          return
         }
-      })
+
+        console.log(`[主进程] 发送数据块: ${chunk.length} 字符, streamId=${streamId}`)
+        sender.send(`stream-data-${streamId}`, { chunk })
+      }
+      emitter.on('data', listeners.data)
 
       // 监听完成事件
-      emitter.on('done', (fullContent) => {
-        if (!sender.isDestroyed()) {
-          sender.send(`stream-done-${streamId}`, { content: fullContent })
+      listeners.done = (fullContent) => {
+        clearTimeout(timeoutId)
+
+        if (sender.isDestroyed()) {
+          console.log(`[主进程] WebContents已销毁，无法发送完成事件, streamId=${streamId}`)
+          cleanupListeners()
+          return
         }
-      })
+
+        console.log(`[主进程] 发送完成事件: ${fullContent.length} 字符, streamId=${streamId}`)
+        sender.send(`stream-done-${streamId}`, { content: fullContent })
+
+        // 完成后清理监听器
+        cleanupListeners()
+      }
+      emitter.on('done', listeners.done)
 
       // 监听错误事件
-      emitter.on('error', (error) => {
-        if (!sender.isDestroyed()) {
-          sender.send(`stream-error-${streamId}`, { error })
+      listeners.error = (error) => {
+        clearTimeout(timeoutId)
+
+        if (sender.isDestroyed()) {
+          console.log(`[主进程] WebContents已销毁，无法发送错误, streamId=${streamId}`)
+          cleanupListeners()
+          return
         }
-      })
+
+        console.error(`[主进程] 发送错误事件: ${error}, streamId=${streamId}`)
+        sender.send(`stream-error-${streamId}`, { error })
+
+        // 错误后清理监听器
+        cleanupListeners()
+      }
+      emitter.on('error', listeners.error)
 
       // 返回流ID供客户端使用
       return { success: true, streamId }

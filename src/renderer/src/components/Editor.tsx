@@ -1,5 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Typography, Button, Space, Toast, Spin, Select, Dropdown } from '@douyinfe/semi-ui'
+import {
+  Typography,
+  Button,
+  Space,
+  Toast,
+  Spin,
+  Select,
+  Dropdown,
+  Tooltip
+} from '@douyinfe/semi-ui'
 import { IconSave, IconFile, IconChevronDown } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
@@ -1030,6 +1039,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [currentFolder, currentFile, editor])
 
+  // 添加AI状态相关状态
+  const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
+
   // 创建OpenAI模型实例
   const createOpenAIModel = useCallback((): LanguageModelV1 | null => {
     // 如果没有选中的模型或API配置为空，则返回null
@@ -1041,31 +1054,81 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     const selectedConfig = AiApiConfigs.find((config) => config.id === selectedModelId)
     if (!selectedConfig) {
       console.error('找不到选中的API配置')
+      setAiStatus('error')
+      setAiErrorMessage('找不到选中的API配置')
       return null
     }
 
     try {
+      console.log(
+        `[编辑器] 创建OpenAI模型实例: 模型=${selectedConfig.modelName}, URL=${selectedConfig.apiUrl.substring(0, 20)}...`
+      )
+      setAiStatus('loading')
+
       // 创建OpenAI实例
       const provider = createOpenAI({
         apiKey: selectedConfig.apiKey,
-        baseURL: selectedConfig.apiUrl
+        baseURL: selectedConfig.apiUrl,
+        fetch: async (url, options) => {
+          console.log(`[编辑器] 发送AI请求: ${url}`)
+
+          // 使用系统fetch并记录结果
+          try {
+            const response = await fetch(url, options)
+
+            // 记录状态码
+            console.log(`[编辑器] AI请求返回状态码: ${response.status}`)
+
+            if (!response.ok) {
+              console.error(`[编辑器] AI请求失败: ${response.statusText}`)
+              // 不抛出错误，让ai-sdk处理
+            }
+
+            return response
+          } catch (error) {
+            console.error(`[编辑器] AI请求网络错误:`, error)
+            throw error
+          }
+        }
       })
 
       const model = provider(selectedConfig.modelName as string)
 
+      // 测试连接是否正常
+      console.log(`[编辑器] 模型实例创建成功，设置状态为ready`)
+      setAiStatus('ready')
+      setAiErrorMessage(null)
+
       return model
     } catch (error) {
-      console.error('创建OpenAI模型实例失败:', error)
-      Toast.error(`创建AI模型实例失败: ${error instanceof Error ? error.message : String(error)}`)
+      console.error('[编辑器] 创建OpenAI模型实例失败:', error)
+      setAiStatus('error')
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      setAiErrorMessage(errorMessage)
+      Toast.error(`创建AI模型实例失败: ${errorMessage}`)
       return null
     }
   }, [selectedModelId, AiApiConfigs])
 
   // 当选中的模型ID或API配置变更时，更新OpenAI模型实例
   useEffect(() => {
+    // 如果没有选择模型，不进行任何操作
+    if (!selectedModelId) {
+      setCurrentAiModel(null)
+      setAiStatus('idle')
+      return
+    }
+
+    console.log(`[编辑器] 选择了新的AI模型: ${selectedModelId}`)
     const model = createOpenAIModel()
     setCurrentAiModel(model)
-  }, [selectedModelId, AiApiConfigs, createOpenAIModel])
+
+    // 如果实例创建失败但状态未更新（可能是由于异步原因），进行检查
+    if (!model && aiStatus !== 'error') {
+      setAiStatus('error')
+      setAiErrorMessage('无法创建AI模型实例')
+    }
+  }, [selectedModelId, AiApiConfigs, createOpenAIModel, aiStatus])
 
   // 创建包含AI按钮的格式工具栏组件
   const FormattingToolbarWithAI = (): JSX.Element => {
@@ -1156,19 +1219,36 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         <div className="editor-right">
           <Space>
             {AiApiConfigs.length > 0 && (
-              <Select
-                value={selectedModelId}
-                onChange={(value) => setSelectedModelId(value as string)}
-                style={{ width: 150 }}
-                placeholder="选择AI模型"
-                disabled={AiApiConfigs.length === 0}
-              >
-                {AiApiConfigs.map((config) => (
-                  <Select.Option key={config.id} value={config.id}>
-                    {config.name}
-                  </Select.Option>
-                ))}
-              </Select>
+              <>
+                <Select
+                  value={selectedModelId}
+                  onChange={(value) => setSelectedModelId(value as string)}
+                  style={{ width: 150 }}
+                  placeholder="选择AI模型"
+                  disabled={AiApiConfigs.length === 0 || aiStatus === 'loading'}
+                >
+                  {AiApiConfigs.map((config) => (
+                    <Select.Option key={config.id} value={config.id}>
+                      {config.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+                {selectedModelId && (
+                  <div className="ai-status-indicator">
+                    {aiStatus === 'loading' && <Spin size="small" />}
+                    {aiStatus === 'error' && (
+                      <Tooltip content={aiErrorMessage || '连接错误'}>
+                        <span className="ai-status-error">●</span>
+                      </Tooltip>
+                    )}
+                    {aiStatus === 'ready' && (
+                      <Tooltip content="AI模型已就绪">
+                        <span className="ai-status-ready">●</span>
+                      </Tooltip>
+                    )}
+                  </div>
+                )}
+              </>
             )}
             {currentFile && (
               <>

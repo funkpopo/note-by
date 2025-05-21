@@ -488,3 +488,25 @@ body .ai-response-popover.semi-popover,
 .ai-response-popover.semi-popover {
   pointer-events: auto !important; /* 确保popover始终可以接收鼠标事件 */
 }
+
+/* AI状态指示器样式 */
+.ai-status-indicator {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.ai-status-ready {
+  color: var(--semi-color-success);
+  font-size: 16px;
+}
+
+.ai-status-error {
+  color: var(--semi-color-danger);
+  font-size: 16px;
+}
+
+/* 在AI下拉菜单后调整间距 */
+.editor-right .semi-select + .ai-status-indicator {
+  margin-left: -5px;
+}
