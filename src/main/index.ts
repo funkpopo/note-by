@@ -187,7 +187,7 @@ function createWindow(): void {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://ark.cn-beijing.volces.com;"
+          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*; connect-src 'self' http://*"
         ]
       }
     })
