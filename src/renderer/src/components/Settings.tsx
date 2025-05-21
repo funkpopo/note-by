@@ -300,6 +300,16 @@ const Settings: React.FC = () => {
     })
   }
 
+  // 开始拖动滑块时阻止文本选中
+  const handleSliderDragStart = (): void => {
+    document.body.style.userSelect = 'none'
+  }
+
+  // 结束拖动滑块时恢复文本选中
+  const handleSliderDragEnd = (): void => {
+    document.body.style.userSelect = ''
+  }
+
   // 测试连接
   const handleTestConnection = async (config: AiApiConfig): Promise<void> => {
     try {
@@ -1073,17 +1083,29 @@ const Settings: React.FC = () => {
           <div style={{ marginBottom: 20 }}>
             <Form.Label>温度 (Temperature)</Form.Label>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '85%', marginRight: 10 }}>
-                <Form.Slider
-                  field="temperature"
-                  initValue={parseFloat(currentConfig?.temperature || '0.7')}
-                  onChange={(value) => handleConfigChange('temperature', (value || 0).toString())}
-                  max={2}
-                  min={0}
-                  step={0.1}
-                  marks={{ 0: '0', 1: '1', 2: '2' }}
-                />
+              <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
+                <div
+                  style={{ paddingTop: '8px' }}
+                  onMouseDown={handleSliderDragStart}
+                  onMouseUp={handleSliderDragEnd}
+                  onMouseLeave={handleSliderDragEnd}
+                >
+                  <Form.Slider
+                    field="temperature"
+                    initValue={parseFloat(currentConfig?.temperature || '0.7')}
+                    onChange={(value) => handleConfigChange('temperature', (value || 0).toString())}
+                    max={2}
+                    min={0}
+                    step={0.1}
+                    marks={{ 0: '0', 1: '1', 2: '2' }}
+                    tipFormatter={() => null}
+                    tooltipVisible={false}
+                  />
+                </div>
               </div>
+              <Text style={{ width: '50px', textAlign: 'right', marginLeft: '10px' }}>
+                {currentConfig?.temperature}
+              </Text>
             </div>
             <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
               较低的值使输出更确定，较高的值使输出更随机、创造性
@@ -1092,17 +1114,29 @@ const Settings: React.FC = () => {
           <div style={{ marginBottom: 10 }}>
             <Form.Label>最大Token数 (Max Tokens)</Form.Label>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '85%', marginRight: 10 }}>
-                <Form.Slider
-                  field="maxTokens"
-                  initValue={parseInt(currentConfig?.maxTokens || '2000')}
-                  onChange={(value) => handleConfigChange('maxTokens', (value || 100).toString())}
-                  max={16000}
-                  min={100}
-                  step={100}
-                  marks={{ 100: '100', 4000: '4k', 8000: '8k', 16000: '16k' }}
-                />
+              <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
+                <div
+                  style={{ paddingTop: '8px' }}
+                  onMouseDown={handleSliderDragStart}
+                  onMouseUp={handleSliderDragEnd}
+                  onMouseLeave={handleSliderDragEnd}
+                >
+                  <Form.Slider
+                    field="maxTokens"
+                    initValue={parseInt(currentConfig?.maxTokens || '2000')}
+                    onChange={(value) => handleConfigChange('maxTokens', (value || 100).toString())}
+                    max={65535}
+                    min={100}
+                    step={100}
+                    marks={{ 100: '100', 8000: '8k', 16000: '16k', 32000: '32k', 65535: '65k' }}
+                    tipFormatter={() => null}
+                    tooltipVisible={false}
+                  />
+                </div>
               </div>
+              <Text style={{ width: '50px', textAlign: 'right', marginLeft: '10px' }}>
+                {currentConfig?.maxTokens}
+              </Text>
             </div>
             <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
               限制模型生成的最大token数量
