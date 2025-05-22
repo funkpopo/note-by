@@ -12,54 +12,45 @@ import {
   TabPane,
   Progress
 } from '@douyinfe/semi-ui'
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip as ChartTooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title as ChartTitle,
-  PointElement,
-  LineElement
-} from 'chart.js'
-import { Pie, Bar, Line } from 'react-chartjs-2'
 import { useTheme } from '../context/theme/useTheme'
 import { useAnalysisStore } from '../context/analysis/analysisService'
-import ForceGraph2D from 'react-force-graph-2d'
+import ReactECharts from 'echarts-for-react'
+import 'echarts-wordcloud'
 
 // 图谱数据接口定义
 interface GraphNode {
   id: string
   name: string
-  val: number // 节点大小，基于标签使用频率
-  color?: string // 节点颜色
+  val: number // 节点大小，基于标签使用频率（保留原有字段兼容性）
+  value?: number // ECharts使用value表示数值
+  symbolSize?: number // ECharts节点大小
+  itemStyle?: {
+    // ECharts样式
+    color: string
+  }
+  label?: {
+    // ECharts标签
+    show: boolean
+    formatter: string
+  }
+  color?: string // 原有字段（保留兼容性）
 }
 
 interface GraphLink {
   source: string
   target: string
   value: number // 连接强度，基于标签共现频率
+  lineStyle?: {
+    // ECharts线条样式
+    width: number
+    color: string | 'source' | 'target'
+  }
 }
 
 interface GraphData {
   nodes: GraphNode[]
   links: GraphLink[]
 }
-
-// 注册Chart.js组件
-ChartJS.register(
-  ArcElement,
-  ChartTooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ChartTitle,
-  PointElement,
-  LineElement
-)
 
 // 图表数据集接口
 interface ChartDataset {
@@ -75,6 +66,178 @@ interface ChartDataset {
 interface ChartData {
   labels: string[]
   datasets: ChartDataset[]
+}
+
+// ECharts数据格式接口
+interface EChartsOption {
+  title?: {
+    text: string
+    left?: string | number
+    textStyle?: {
+      color?: string
+      fontSize?: number
+    }
+  }
+  tooltip?: {
+    trigger?: 'item' | 'axis'
+    formatter?: string | Function
+    backgroundColor?: string
+    borderColor?: string
+    textStyle?: {
+      color?: string
+    }
+    axisPointer?: {
+      type?: 'line' | 'shadow' | 'cross'
+    }
+    show?: boolean
+  }
+  legend?: {
+    type?: 'plain' | 'scroll'
+    orient?: 'horizontal' | 'vertical'
+    left?: string | number
+    right?: string | number
+    top?: string | number
+    bottom?: string | number
+    data?: string[]
+    textStyle?: {
+      color?: string
+    }
+  }
+  grid?: {
+    left?: string | number
+    right?: string | number
+    top?: string | number
+    bottom?: string | number
+    containLabel?: boolean
+  }
+  xAxis?: {
+    type?: 'category' | 'value' | 'time'
+    data?: any[]
+    axisLabel?: {
+      color?: string
+      formatter?: string | Function
+      rotate?: number
+    }
+    axisLine?: {
+      lineStyle?: {
+        color?: string
+      }
+    }
+    axisTick?: {
+      alignWithLabel?: boolean
+    }
+    splitLine?: {
+      lineStyle?: {
+        color?: string | string[]
+        type?: 'solid' | 'dashed' | 'dotted'
+      }
+    }
+  }
+  yAxis?: {
+    type?: 'category' | 'value'
+    data?: any[]
+    axisLabel?: {
+      color?: string
+      formatter?: string | Function
+    }
+    axisLine?: {
+      lineStyle?: {
+        color?: string
+      }
+    }
+    splitLine?: {
+      lineStyle?: {
+        color?: string | string[]
+        type?: 'solid' | 'dashed' | 'dotted'
+      }
+    }
+  }
+  series?: Array<{
+    name?: string
+    type: 'bar' | 'line' | 'pie' | 'scatter' | 'graph' | 'wordCloud'
+    data?: any[]
+    radius?: string | string[]
+    center?: string[]
+    roseType?: boolean | string
+    avoidLabelOverlap?: boolean
+    label?: {
+      show?: boolean
+      position?: string
+      formatter?: string | Function
+      color?: string
+    }
+    emphasis?: {
+      itemStyle?: {
+        shadowBlur?: number
+        shadowOffsetX?: number
+        shadowColor?: string
+      }
+    }
+    areaStyle?: {
+      color?: string
+      opacity?: number
+    }
+    lineStyle?: {
+      width?: number
+      type?: string
+      color?: string | Function
+    }
+    itemStyle?: {
+      color?: string | Function
+      borderColor?: string
+      borderWidth?: number
+    }
+    smooth?: boolean
+    symbolSize?: number
+    showSymbol?: boolean
+    stack?: string
+    barWidth?: string | number
+    barCategoryGap?: string
+    animation?: boolean
+    animationDuration?: number
+    animationEasing?: string
+    // 力导向图特有
+    layout?: 'none' | 'circular' | 'force'
+    force?: {
+      repulsion?: number
+      gravity?: number
+      edgeLength?: number | number[]
+      friction?: number
+    }
+    links?: Array<{
+      source: string | number
+      target: string | number
+      value?: number
+      lineStyle?: {
+        width?: number
+        curveness?: number
+        color?: string | 'source' | 'target'
+      }
+    }>
+    // 词云特有
+    sizeRange?: number[]
+    rotationRange?: number[]
+    rotationStep?: number
+    gridSize?: number
+    shape?: string
+    textStyle?: {
+      fontWeight?: string | number
+      color?: string | Function
+    }
+    left?: string | number
+    top?: string | number
+    right?: string | number
+    bottom?: string | number
+    width?: string | number
+    height?: string | number
+  }>
+  color?: string[]
+  backgroundColor?: string
+  textStyle?: {
+    color?: string
+  }
+  animationDuration?: number
+  animationEasing?: string
 }
 
 // 可视化分析结果接口
@@ -437,6 +600,76 @@ const DataAnalysis: React.FC = () => {
 
   // 渲染饼图
   const renderPieChart = (data: ChartData, title: string): JSX.Element => {
+    // 将ChartData格式转换为ECharts所需的格式
+    const seriesData = data.labels.map((label, index) => {
+      return {
+        name: label,
+        value: data.datasets[0].data[index]
+      }
+    })
+
+    // 设置饼图颜色，如果提供了backgroundColor则使用，否则使用默认颜色方案
+    const colors = Array.isArray(data.datasets[0].backgroundColor)
+      ? data.datasets[0].backgroundColor
+      : [data.datasets[0].backgroundColor]
+
+    // 构建ECharts配置
+    const option: EChartsOption = {
+      title: {
+        text: '',
+        left: 'center'
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)',
+        backgroundColor: isDarkMode ? '#333' : '#fff',
+        borderColor: isDarkMode ? '#555' : '#ddd',
+        textStyle: {
+          color: isDarkMode ? '#fff' : '#333'
+        }
+      },
+      legend: {
+        orient: 'horizontal',
+        bottom: 0,
+        data: data.labels,
+        textStyle: {
+          color: isDarkMode ? '#e9e9e9' : '#333'
+        }
+      },
+      series: [
+        {
+          name: data.datasets[0].label,
+          type: 'pie',
+          radius: '70%',
+          center: ['50%', '45%'],
+          data: seriesData,
+          label: {
+            show: true,
+            formatter: '{b}: {d}%',
+            color: isDarkMode ? '#e9e9e9' : '#333'
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          itemStyle: {
+            borderWidth: data.datasets[0].borderWidth || 1,
+            borderColor: isDarkMode ? '#1c1c1c' : '#fff'
+          },
+          animationDuration: 1000,
+          animationEasing: 'cubicOut'
+        }
+      ],
+      color: colors,
+      backgroundColor: 'transparent',
+      textStyle: {
+        color: isDarkMode ? '#e9e9e9' : '#333'
+      }
+    }
+
     return (
       <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
         <Title
@@ -445,33 +678,7 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <Pie
-          data={data}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  color: isDarkMode ? '#e9e9e9' : '#333',
-                  padding: 16,
-                  font: {
-                    size: 12
-                  }
-                }
-              },
-              tooltip: {
-                backgroundColor: isDarkMode ? '#333' : '#fff',
-                titleColor: isDarkMode ? '#fff' : '#333',
-                bodyColor: isDarkMode ? '#fff' : '#333',
-                borderColor: isDarkMode ? '#555' : '#ddd',
-                borderWidth: 1,
-                padding: 12
-              }
-            }
-          }}
-        />
+        <ReactECharts option={option} style={{ height: 300 }} opts={{ renderer: 'canvas' }} />
       </div>
     )
   }
@@ -483,6 +690,143 @@ const DataAnalysis: React.FC = () => {
     vertical: boolean = true,
     highlightIndex?: number
   ): JSX.Element => {
+    // 准备系列数据
+    const seriesData = data.datasets.map((dataset) => {
+      return {
+        name: dataset.label,
+        type: 'bar' as 'bar', // 显式类型转换
+        data: dataset.data,
+        itemStyle: {
+          color: (params) => {
+            // 如果有高亮索引，则高亮显示该索引的数据点
+            if (highlightIndex !== undefined && params.dataIndex === highlightIndex) {
+              return 'rgba(255, 99, 132, 0.8)' // 高亮颜色
+            }
+
+            // 使用数据集提供的颜色
+            if (Array.isArray(dataset.backgroundColor)) {
+              return dataset.backgroundColor[params.dataIndex] || dataset.backgroundColor[0]
+            }
+            return dataset.backgroundColor
+          }
+        },
+        barWidth: vertical ? '60%' : undefined,
+        barCategoryGap: '30%',
+        label: {
+          show: false
+        }
+      }
+    })
+
+    // 构建ECharts配置
+    const option: EChartsOption = {
+      title: {
+        text: '',
+        left: 'center'
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
+        },
+        backgroundColor: isDarkMode ? '#333' : '#fff',
+        borderColor: isDarkMode ? '#555' : '#ddd',
+        textStyle: {
+          color: isDarkMode ? '#fff' : '#333'
+        }
+      },
+      legend: {
+        data: data.datasets.map((dataset) => dataset.label),
+        top: 0,
+        textStyle: {
+          color: isDarkMode ? '#e9e9e9' : '#333'
+        }
+      },
+      grid: {
+        left: vertical ? '3%' : '15%',
+        right: '4%',
+        bottom: vertical ? '10%' : '3%',
+        top: vertical ? '15%' : '10%',
+        containLabel: true
+      },
+      xAxis: vertical
+        ? {
+            type: 'category',
+            data: data.labels,
+            axisLabel: {
+              color: isDarkMode ? '#e9e9e9' : '#333',
+              rotate: data.labels.length > 10 ? 45 : 0
+            },
+            axisLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+              }
+            },
+            splitLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }
+        : {
+            type: 'value',
+            axisLabel: {
+              color: isDarkMode ? '#e9e9e9' : '#333'
+            },
+            axisLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+              }
+            },
+            splitLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          },
+      yAxis: vertical
+        ? {
+            type: 'value',
+            axisLabel: {
+              color: isDarkMode ? '#e9e9e9' : '#333'
+            },
+            axisLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+              }
+            },
+            splitLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          }
+        : {
+            type: 'category',
+            data: data.labels,
+            axisLabel: {
+              color: isDarkMode ? '#e9e9e9' : '#333'
+            },
+            axisLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+              }
+            },
+            splitLine: {
+              lineStyle: {
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          },
+      series: seriesData,
+      backgroundColor: 'transparent',
+      textStyle: {
+        color: isDarkMode ? '#e9e9e9' : '#333'
+      },
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
+    }
+
     return (
       <div style={{ maxWidth: '100%', height: vertical ? 350 : 250, marginBottom: 24 }}>
         <Title
@@ -498,51 +842,10 @@ const DataAnalysis: React.FC = () => {
             最活跃时段: {data.labels[highlightIndex]} ({data.datasets[0].data[highlightIndex]}%)
           </Paragraph>
         )}
-        <Bar
-          data={data}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: vertical ? 'x' : 'y',
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  color: isDarkMode ? '#e9e9e9' : '#333',
-                  padding: 12,
-                  font: {
-                    size: 12
-                  }
-                }
-              },
-              tooltip: {
-                backgroundColor: isDarkMode ? '#333' : '#fff',
-                titleColor: isDarkMode ? '#fff' : '#333',
-                bodyColor: isDarkMode ? '#fff' : '#333',
-                borderColor: isDarkMode ? '#555' : '#ddd',
-                borderWidth: 1,
-                padding: 12
-              }
-            },
-            scales: {
-              x: {
-                ticks: {
-                  color: isDarkMode ? '#e9e9e9' : '#333'
-                },
-                grid: {
-                  color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                }
-              },
-              y: {
-                ticks: {
-                  color: isDarkMode ? '#e9e9e9' : '#333'
-                },
-                grid: {
-                  color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                }
-              }
-            }
-          }}
+        <ReactECharts
+          option={option}
+          style={{ height: vertical ? 300 : 200 }}
+          opts={{ renderer: 'canvas' }}
         />
       </div>
     )
@@ -550,6 +853,105 @@ const DataAnalysis: React.FC = () => {
 
   // 渲染折线图
   const renderLineChart = (data: ChartData, title: string): JSX.Element => {
+    // 准备系列数据
+    const seriesData = data.datasets.map((dataset) => {
+      return {
+        name: dataset.label,
+        type: 'line' as 'line', // 显式类型转换
+        data: dataset.data,
+        itemStyle: {
+          color: Array.isArray(dataset.borderColor) ? dataset.borderColor[0] : dataset.borderColor
+        },
+        lineStyle: {
+          width: dataset.borderWidth || 2,
+          type: 'solid',
+          color: Array.isArray(dataset.borderColor) ? dataset.borderColor[0] : dataset.borderColor
+        },
+        areaStyle: dataset.backgroundColor
+          ? {
+              color: Array.isArray(dataset.backgroundColor)
+                ? dataset.backgroundColor[0]
+                : dataset.backgroundColor,
+              opacity: 0.3
+            }
+          : undefined,
+        smooth: dataset.tension ? true : false,
+        symbol: 'circle',
+        symbolSize: 6,
+        showSymbol: false // 只在鼠标悬停或数据点较少时显示标记
+      }
+    })
+
+    // 构建ECharts配置
+    const option: EChartsOption = {
+      title: {
+        text: '',
+        left: 'center'
+      },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: isDarkMode ? '#333' : '#fff',
+        borderColor: isDarkMode ? '#555' : '#ddd',
+        textStyle: {
+          color: isDarkMode ? '#fff' : '#333'
+        }
+      },
+      legend: {
+        data: data.datasets.map((dataset) => dataset.label),
+        top: 0,
+        textStyle: {
+          color: isDarkMode ? '#e9e9e9' : '#333'
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: data.labels,
+        axisLabel: {
+          color: isDarkMode ? '#e9e9e9' : '#333',
+          rotate: data.labels.length > 15 ? 45 : 0
+        },
+        axisLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: isDarkMode ? '#e9e9e9' : '#333'
+        },
+        axisLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+          }
+        }
+      },
+      series: seriesData,
+      backgroundColor: 'transparent',
+      textStyle: {
+        color: isDarkMode ? '#e9e9e9' : '#333'
+      },
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
+    }
+
     return (
       <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
         <Title
@@ -558,57 +960,69 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <Line
-          data={data}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  color: isDarkMode ? '#e9e9e9' : '#333',
-                  padding: 12,
-                  font: {
-                    size: 12
-                  }
-                }
-              },
-              tooltip: {
-                backgroundColor: isDarkMode ? '#333' : '#fff',
-                titleColor: isDarkMode ? '#fff' : '#333',
-                bodyColor: isDarkMode ? '#fff' : '#333',
-                borderColor: isDarkMode ? '#555' : '#ddd',
-                borderWidth: 1,
-                padding: 12
-              }
-            },
-            scales: {
-              x: {
-                ticks: {
-                  color: isDarkMode ? '#e9e9e9' : '#333'
-                },
-                grid: {
-                  color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                }
-              },
-              y: {
-                ticks: {
-                  color: isDarkMode ? '#e9e9e9' : '#333'
-                },
-                grid: {
-                  color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                }
-              }
-            }
-          }}
-        />
+        <ReactECharts option={option} style={{ height: 300 }} opts={{ renderer: 'canvas' }} />
       </div>
     )
   }
 
   // 渲染标签云
   const renderTagCloud = (data: ChartData, title: string): JSX.Element => {
+    // 准备词云数据，保持对原始数据格式的兼容性
+    const cloudData = data.labels.map((label, index) => {
+      return {
+        name: label,
+        value: data.datasets[0].data[index]
+      }
+    })
+
+    // 提取颜色列表
+    const colors = Array.isArray(data.datasets[0].backgroundColor)
+      ? data.datasets[0].backgroundColor
+      : [data.datasets[0].backgroundColor]
+
+    // 构建ECharts配置
+    const option: EChartsOption = {
+      tooltip: {
+        show: true,
+        formatter: (params: any) => {
+          return `${params.name}: ${params.value}`
+        },
+        backgroundColor: isDarkMode ? '#333' : '#fff',
+        textStyle: {
+          color: isDarkMode ? '#fff' : '#333'
+        }
+      },
+      series: [
+        {
+          type: 'wordCloud' as 'wordCloud',
+          shape: 'circle',
+          left: 'center',
+          top: 'center',
+          width: '90%',
+          height: '90%',
+          sizeRange: [12, 28], // 字体大小范围
+          rotationRange: [-45, 45], // 旋转角度范围
+          rotationStep: 15, // 旋转步进角度
+          gridSize: 20, // 词之间的间距
+          textStyle: {
+            color: function () {
+              // 随机返回颜色数组中的一种颜色
+              return colors[Math.floor(Math.random() * colors.length)]
+            },
+            fontWeight: 'bold'
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          data: cloudData
+        }
+      ],
+      backgroundColor: 'transparent'
+    }
+
     return (
       <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
         <Title
@@ -617,49 +1031,7 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '80%',
-            padding: '20px'
-          }}
-        >
-          {data.labels.map((label, index) => {
-            // 计算标签的字体大小，基于数值的相对大小
-            const maxSize = 28
-            const minSize = 12
-            const maxValue = Math.max(...data.datasets[0].data)
-            const value = data.datasets[0].data[index]
-            const fontSize = minSize + ((maxSize - minSize) * value) / maxValue
-
-            // 使用数据集的颜色
-            const color = Array.isArray(data.datasets[0].backgroundColor)
-              ? data.datasets[0].backgroundColor[index]
-              : data.datasets[0].backgroundColor
-
-            return (
-              <span
-                key={label}
-                style={{
-                  fontSize: `${fontSize}px`,
-                  color: typeof color === 'string' ? color : 'var(--semi-color-primary)',
-                  margin: '8px',
-                  padding: '4px 8px',
-                  background: 'var(--semi-color-primary-light-default)',
-                  borderRadius: '4px',
-                  display: 'inline-block',
-                  cursor: 'default'
-                }}
-                title={`${label}: ${value}`}
-              >
-                {label}
-              </span>
-            )
-          })}
-        </div>
+        <ReactECharts option={option} style={{ height: '300px' }} opts={{ renderer: 'canvas' }} />
       </div>
     )
   }
@@ -673,18 +1045,75 @@ const DataAnalysis: React.FC = () => {
     const relationLabels = data.map((relation) => `${relation.source} ↔ ${relation.target}`)
     const relationValues = data.map((relation) => relation.strength)
 
-    // 创建一个Chart.js数据对象
-    const chartData: ChartData = {
-      labels: relationLabels,
-      datasets: [
-        {
-          label: '关联强度',
-          data: relationValues,
-          backgroundColor: generateColors(relationLabels.length),
-          borderColor: generateColors(relationLabels.length, 1),
-          borderWidth: 1
+    // 为每个关系生成颜色
+    const colors = generateColors(relationLabels.length)
+
+    // 创建ECharts饼图数据
+    const seriesData = relationLabels.map((label, index) => {
+      return {
+        name: label,
+        value: relationValues[index],
+        itemStyle: {
+          color: colors[index]
         }
-      ]
+      }
+    })
+
+    // 构建ECharts配置
+    const option: EChartsOption = {
+      title: {
+        text: '',
+        left: 'center'
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: any) => {
+          return `${params.name}: ${params.value} 次共现`
+        },
+        backgroundColor: isDarkMode ? '#333' : '#fff',
+        borderColor: isDarkMode ? '#555' : '#ddd',
+        textStyle: {
+          color: isDarkMode ? '#fff' : '#333'
+        }
+      },
+      legend: {
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+        type: 'scroll',
+        data: relationLabels.map((label) => {
+          // 限制标签长度，避免过长
+          return label.length > 25 ? label.substring(0, 22) + '...' : label
+        }),
+        textStyle: {
+          color: isDarkMode ? '#e9e9e9' : '#333'
+        }
+      },
+      series: [
+        {
+          name: '关联强度',
+          type: 'pie' as 'pie', // 显式类型转换
+          radius: '70%',
+          center: ['40%', '50%'],
+          data: seriesData,
+          label: {
+            show: false
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          animationDuration: 1000,
+          animationEasing: 'cubicOut'
+        }
+      ],
+      backgroundColor: 'transparent',
+      textStyle: {
+        color: isDarkMode ? '#e9e9e9' : '#333'
+      }
     }
 
     return (
@@ -696,51 +1125,7 @@ const DataAnalysis: React.FC = () => {
           {title}
         </Title>
         <div style={{ height: '380px', overflowY: 'auto' }}>
-          <Pie
-            data={chartData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: 'right',
-                  labels: {
-                    color: isDarkMode ? '#e9e9e9' : '#333',
-                    padding: 16,
-                    font: {
-                      size: 12
-                    },
-                    // 限制标签长度，避免过长
-                    generateLabels: (chart) => {
-                      const originalLabels =
-                        ChartJS.defaults.plugins.legend.labels.generateLabels!(chart)
-                      return originalLabels.map((label) => {
-                        if (label.text && label.text.length > 25) {
-                          label.text = label.text.substring(0, 22) + '...'
-                        }
-                        return label
-                      })
-                    }
-                  }
-                },
-                tooltip: {
-                  backgroundColor: isDarkMode ? '#333' : '#fff',
-                  titleColor: isDarkMode ? '#fff' : '#333',
-                  bodyColor: isDarkMode ? '#fff' : '#333',
-                  borderColor: isDarkMode ? '#555' : '#ddd',
-                  borderWidth: 1,
-                  padding: 12,
-                  callbacks: {
-                    label: (context) => {
-                      const label = context.label || ''
-                      const value = context.raw as number
-                      return `${label}: ${value} 次共现`
-                    }
-                  }
-                }
-              }
-            }}
-          />
+          <ReactECharts option={option} style={{ height: '100%' }} opts={{ renderer: 'canvas' }} />
         </div>
       </div>
     )
@@ -756,7 +1141,7 @@ const DataAnalysis: React.FC = () => {
     return colors
   }
 
-  // 将标签关系数据转换为知识图谱数据格式
+  // 将标签关系数据转换为知识图谱数据格式（适配ECharts）
   const convertTagRelationsToGraphData = useCallback(
     (
       relations: { source: string; target: string; strength: number }[],
@@ -799,19 +1184,35 @@ const DataAnalysis: React.FC = () => {
         })
       }
 
-      // 创建节点数组
-      const nodes: GraphNode[] = Array.from(tagMap.keys()).map((tag) => ({
-        id: tag,
-        name: tag,
-        val: tagMap.get(tag)!.count, // 节点大小基于标签计数
-        color: tagMap.get(tag)!.color // 节点颜色
-      }))
+      // 创建节点数组 - 适配ECharts格式
+      const nodes: GraphNode[] = Array.from(tagMap.keys()).map((tag) => {
+        const count = tagMap.get(tag)!.count
+        const color = tagMap.get(tag)!.color
+        return {
+          id: tag,
+          name: tag,
+          val: count, // 保持原有字段兼容性
+          value: count, // ECharts使用value属性
+          symbolSize: Math.sqrt(count) * 5, // 根据数量设置节点大小
+          itemStyle: {
+            color: color // 设置节点颜色
+          },
+          label: {
+            show: true,
+            formatter: '{b}: {c}' // 显示名称和值
+          }
+        }
+      })
 
-      // 创建链接数组
+      // 创建链接数组 - 适配ECharts格式
       const links: GraphLink[] = relations.map((rel) => ({
         source: rel.source,
         target: rel.target,
-        value: rel.strength // 连接强度
+        value: rel.strength, // 连接强度
+        lineStyle: {
+          width: Math.min(rel.strength / 5 + 1, 6), // 根据强度设置线宽
+          color: 'source' // 使用源节点的颜色
+        }
       }))
 
       return { nodes, links }
@@ -831,6 +1232,58 @@ const DataAnalysis: React.FC = () => {
       // 创建一个响应式的高度，确保在移动设备上有良好的体验
       const graphHeight = window.innerWidth < 768 ? 450 : 550
 
+      // 构建ECharts图表配置
+      const option = {
+        tooltip: {
+          trigger: 'item',
+          formatter: (params) => {
+            if (params.dataType === 'node') {
+              return `${params.name}: ${params.value} 次使用`
+            }
+            if (params.dataType === 'edge') {
+              return `${params.data.source} → ${params.data.target}: ${params.data.value} 次共现`
+            }
+            return ''
+          }
+        },
+        series: [
+          {
+            type: 'graph',
+            layout: 'force',
+            data: graphData.nodes,
+            links: graphData.links,
+            roam: true, // 启用缩放和平移
+            draggable: true, // 节点可拖拽
+            label: {
+              show: true,
+              position: 'right',
+              color: isDarkMode ? '#e9e9e9' : '#333',
+              fontSize: 12
+            },
+            lineStyle: {
+              color: 'source',
+              curveness: 0.3 // 添加一点曲率，使线条更美观
+            },
+            // 力导向图相关配置
+            force: {
+              repulsion: 120, // 节点之间的斥力
+              gravity: 0.1, // 向心力
+              edgeLength: 100, // 连接线长度
+              friction: 0.6 // 摩擦力
+            },
+            // 是否启用缩放和平移的极限控制
+            scaleLimit: {
+              min: 0.3, // 最小缩放比例
+              max: 5 // 最大缩放比例
+            },
+            // 添加动画效果
+            animationDuration: 1500,
+            animationEasingUpdate: 'quinticInOut'
+          }
+        ],
+        backgroundColor: isDarkMode ? '#1c1c1c' : '#f8f8f8'
+      }
+
       return (
         <div style={{ maxWidth: '100%', height: graphHeight + 50, marginBottom: 24 }}>
           <Title
@@ -848,29 +1301,17 @@ const DataAnalysis: React.FC = () => {
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}
           >
-            <ForceGraph2D
-              graphData={graphData}
-              nodeRelSize={6}
-              nodeVal={(node) => Math.sqrt(node.val || 1) * 2}
-              nodeColor={(node) => node.color || 'rgba(75, 192, 192, 0.8)'}
-              nodeLabel={(node) => `${node.name}: ${node.val || 0} 次使用`}
-              linkWidth={(link) => Math.min(link.value / 5 + 1, 6)}
-              linkDirectionalParticles={(link) => Math.ceil(link.value / 5)}
-              linkDirectionalParticleWidth={2}
-              cooldownTicks={200}
-              warmupTicks={100}
-              backgroundColor={isDarkMode ? '#1c1c1c' : '#f8f8f8'}
-              onNodeHover={(node) => {
-                document.body.style.cursor = node ? 'pointer' : 'default'
-              }}
-              onNodeClick={(node) => {
-                // @ts-ignore - 只在开发环境使用
-                if (node && process.env.NODE_ENV !== 'production') {
-                  console.log(`标签详情:`, node)
+            <ReactECharts
+              option={option}
+              style={{ height: '100%', width: '100%' }}
+              onEvents={{
+                click: (params) => {
+                  if (params.dataType === 'node' && process.env.NODE_ENV !== 'production') {
+                    console.log(`标签详情:`, params.data)
+                  }
                 }
               }}
-              width={window.innerWidth < 768 ? window.innerWidth - 40 : undefined}
-              height={graphHeight}
+              opts={{ renderer: 'canvas' }} // 使用canvas渲染器提高性能
             />
           </div>
         </div>
