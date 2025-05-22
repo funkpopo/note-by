@@ -1,3 +1,5 @@
+import globalTagManager from '../utils/GlobalTagManager'
+
 export interface Editor {
   insertInlineContent: (content: unknown) => void
 }
@@ -16,6 +18,8 @@ export interface InlineContent {
 export interface TagMenuItem {
   title: string
   onItemClick: () => void
+  isGlobal?: boolean // 标识是否为全局标签
+  count?: number // 标签使用次数
 }
 
 export const getTagMenuItems = (
@@ -24,33 +28,67 @@ export const getTagMenuItems = (
   existingTags: string[] = [],
   query?: string
 ): TagMenuItem[] => {
-  // 根据查询过滤标签
-  let filteredTags = existingTags
+  const tagItems: TagMenuItem[] = []
+
+  // 获取全局标签数据
+  const globalTags = globalTagManager.filterTags(query || '', 10)
+  
+  // 创建全局标签菜单项
+  globalTags.forEach((globalTag) => {
+    // 检查是否已经在当前文档标签中
+    const isInCurrentDoc = existingTags.some(tag => tag.toLowerCase() === globalTag.tag.toLowerCase())
+    
+    tagItems.push({
+      title: isInCurrentDoc ? `${globalTag.tag} (已使用)` : globalTag.tag,
+      count: globalTag.count,
+      isGlobal: true,
+      onItemClick: () => {
+        editor.insertInlineContent([
+          {
+            type: 'tag',
+            props: {
+              name: globalTag.tag
+            }
+          },
+          ' ' // 在标签后添加空格
+        ])
+      }
+    })
+  })
+
+  // 添加当前文档中的标签（如果不在全局标签中）
   if (query) {
-    filteredTags = existingTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
+    const filteredLocalTags = existingTags.filter((tag) => 
+      tag.toLowerCase().includes(query.toLowerCase()) &&
+      !globalTags.some(globalTag => globalTag.tag.toLowerCase() === tag.toLowerCase())
+    )
+    
+    filteredLocalTags.forEach((tag) => {
+      tagItems.push({
+        title: `${tag} (本文档)`,
+        isGlobal: false,
+        onItemClick: () => {
+          editor.insertInlineContent([
+            {
+              type: 'tag',
+              props: {
+                name: tag
+              }
+            },
+            ' ' // 在标签后添加空格
+          ])
+        }
+      })
+    })
   }
 
-  // 创建从过滤后的标签生成的菜单项
-  const tagItems = filteredTags.map((tag) => ({
-    title: tag,
-    onItemClick: () => {
-      editor.insertInlineContent([
-        {
-          type: 'tag',
-          props: {
-            name: tag
-          }
-        },
-        ' ' // 在标签后添加空格
-      ])
-    }
-  }))
-
-  // 如果有查询文本，且不完全匹配任何现有标签
-  if (query && !existingTags.some((tag) => tag.toLowerCase() === query.toLowerCase())) {
-    // 添加"创建新标签"选项
+  // 如果有查询文本，且不完全匹配任何现有标签，添加"创建新标签"选项
+  if (query && 
+      !existingTags.some((tag) => tag.toLowerCase() === query.toLowerCase()) &&
+      !globalTags.some((globalTag) => globalTag.tag.toLowerCase() === query.toLowerCase())) {
     tagItems.unshift({
       title: `创建新标签: "${query}"`,
+      isGlobal: false,
       onItemClick: () => {
         // 插入新标签
         editor.insertInlineContent([
@@ -66,7 +104,24 @@ export const getTagMenuItems = (
     })
   }
 
-  return tagItems
+  // 按优先级排序：创建新标签 > 全局标签（按使用次数） > 本文档标签
+  return tagItems.sort((a, b) => {
+    // 创建新标签选项优先
+    if (a.title.startsWith('创建新标签')) return -1
+    if (b.title.startsWith('创建新标签')) return 1
+    
+    // 全局标签按使用次数排序
+    if (a.isGlobal && b.isGlobal) {
+      return (b.count || 0) - (a.count || 0)
+    }
+    
+    // 全局标签优先于本文档标签
+    if (a.isGlobal && !b.isGlobal) return -1
+    if (!a.isGlobal && b.isGlobal) return 1
+    
+    // 其他情况按字母顺序
+    return a.title.localeCompare(b.title)
+  })
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -225,4 +280,48 @@ export const postprocessBlocksForTags = (blocks: any): any => {
   processedBlocks.forEach(processBlock)
 
   return processedBlocks
+}
+
+// 新增: 获取全局标签建议（用于编辑器集成）
+export const getGlobalTagSuggestions = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  editor: any,
+  query: string = ''
+): Promise<TagMenuItem[]> => {
+  try {
+    // 确保全局标签数据已加载
+    await globalTagManager.getGlobalTags()
+    
+    // 获取全局标签建议
+    const globalTags = globalTagManager.filterTags(query, 15)
+    
+    return globalTags.map((tag) => ({
+      title: `@${tag.tag}`,
+      count: tag.count,
+      isGlobal: true,
+      onItemClick: () => {
+        editor.insertInlineContent([
+          {
+            type: 'tag',
+            props: {
+              name: tag.tag
+            }
+          },
+          ' ' // 在标签后添加空格
+        ])
+      }
+    }))
+  } catch (error) {
+    console.error('获取全局标签建议失败:', error)
+    return []
+  }
+}
+
+// 新增: 刷新全局标签缓存
+export const refreshGlobalTagCache = async (): Promise<void> => {
+  try {
+    await globalTagManager.refreshGlobalTags()
+  } catch (error) {
+    console.error('刷新全局标签缓存失败:', error)
+  }
 }

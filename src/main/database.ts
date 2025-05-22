@@ -22,15 +22,14 @@ export interface WebDAVSyncRecord {
 // 单例数据库连接
 let db: Database.Database | null = null
 
-// 获取数据库文件路径，与settings.json在同一目录
+// 获取数据库文件路径，存储在markdown/.assets文件夹下
 function getDatabasePath(): string {
-  // 使用与settings.ts相同的逻辑确定数据库文件位置
   if (is.dev) {
-    // 开发环境，使用项目根目录
-    return path.join(process.cwd(), 'note_history.db')
+    // 开发环境，使用项目根目录下的markdown/.assets文件夹
+    return path.join(process.cwd(), 'markdown', '.assets', 'note_history.db')
   } else {
-    // 生产环境，使用应用程序所在目录
-    return path.join(path.dirname(app.getPath('exe')), 'note_history.db')
+    // 生产环境，使用应用程序所在目录下的markdown/.assets文件夹
+    return path.join(path.dirname(app.getPath('exe')), 'markdown', '.assets', 'note_history.db')
   }
 }
 

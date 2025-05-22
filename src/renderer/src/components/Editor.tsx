@@ -39,8 +39,11 @@ import {
   extractTags,
   preprocessMarkdownForTags,
   postprocessBlocksForTags,
-  extractTagsFromMarkdown
+  extractTagsFromMarkdown,
+  getGlobalTagSuggestions,
+  refreshGlobalTagCache
 } from './TagUtils'
+import globalTagManager from '../utils/GlobalTagManager'
 import { LanguageModelV1 } from '@ai-sdk/provider'
 import { zh as aiLocales } from '@blocknote/xl-ai/locales'
 import { CustomAIMenu } from './AICustomCommands'
@@ -223,6 +226,20 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
     loadApiConfigs()
   }, [selectedModelId])
+
+  // 预加载全局标签数据
+  useEffect(() => {
+    const preloadGlobalTags = async (): Promise<void> => {
+      try {
+        // 预加载全局标签数据，不阻塞界面
+        globalTagManager.preloadTags()
+      } catch (error) {
+        console.error('预加载全局标签失败:', error)
+      }
+    }
+
+    preloadGlobalTags()
+  }, [])
 
   // Create a new editor instance with custom schema
   const editor = useCreateBlockNote(
@@ -763,6 +780,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         if (onFileChanged) {
           onFileChanged()
         }
+
+        // 刷新全局标签缓存（异步执行，不阻塞保存流程）
+        refreshGlobalTagCache().catch(error => {
+          console.warn('刷新全局标签缓存失败:', error)
+        })
 
         // 5秒后清除"已保存"状态
         setTimeout(() => {
@@ -1426,12 +1448,35 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             {/* 添加AI菜单控制器 */}
             {currentAiModel && <AIMenuController aiMenu={CustomAIMenu} />}
             <FormattingToolbarWithAI />
-            {/* 恢复标签功能的@菜单 */}
+            {/* 恢复标签功能的@菜单 - 支持全局标签 */}
             <SuggestionMenuController
               triggerCharacter="@"
               getItems={async (query) => {
-                // 获取标签菜单项，传递查询文本进行过滤和创建新标签
-                return getTagMenuItems(editor, tagList, query)
+                try {
+                  // 获取全局标签建议
+                  const globalTagItems = await getGlobalTagSuggestions(editor, query)
+                  
+                  // 获取当前文档的标签建议
+                  const localTagItems = getTagMenuItems(editor, tagList, query)
+                  
+                  // 合并全局标签和本地标签，去重并排序
+                  const allItems = [...globalTagItems, ...localTagItems]
+                  
+                  // 去重：如果全局标签和本地标签有重复，优先显示全局标签
+                  const uniqueItems = allItems.filter((item, index, arr) => {
+                    const itemName = item.title.replace('@', '').replace(' (已使用)', '').replace(' (本文档)', '')
+                    return arr.findIndex(i => {
+                      const iName = i.title.replace('@', '').replace(' (已使用)', '').replace(' (本文档)', '')
+                      return iName === itemName
+                    }) === index
+                  })
+                  
+                  return uniqueItems
+                } catch (error) {
+                  console.error('获取标签建议失败:', error)
+                  // 降级到仅使用本地标签
+                  return getTagMenuItems(editor, tagList, query)
+                }
               }}
             />
             <SuggestionMenuWithAI />

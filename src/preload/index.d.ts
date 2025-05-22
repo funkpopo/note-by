@@ -227,6 +227,31 @@ interface AnalyticsAPI {
   }>
 }
 
+// 全局标签API接口定义
+interface TagsAPI {
+  // 获取全局标签数据
+  getGlobalTags: () => Promise<{
+    success: boolean
+    tagsData?: {
+      topTags: Array<{ tag: string; count: number }>
+      tagRelations: Array<{ source: string; target: string; strength: number }>
+      documentTags: Array<{ filePath: string; tags: string[] }>
+    }
+    error?: string
+  }>
+
+  // 刷新全局标签数据
+  refreshGlobalTags: () => Promise<{
+    success: boolean
+    tagsData?: {
+      topTags: Array<{ tag: string; count: number }>
+      tagRelations: Array<{ source: string; target: string; strength: number }>
+      documentTags: Array<{ filePath: string; tags: string[] }>
+    }
+    error?: string
+  }>
+}
+
 // 全局API接口定义
 interface API {
   settings: SettingsAPI
@@ -309,6 +334,7 @@ interface API {
     ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
   }
   analytics: AnalyticsAPI
+  tags: TagsAPI
 }
 
 declare global {

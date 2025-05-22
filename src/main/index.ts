@@ -39,6 +39,7 @@ import {
   saveAnalysisCache,
   resetAnalysisCache,
   initAnalysisCacheTable,
+  getDocumentTagsData,
   type AnalysisCacheItem
 } from './database'
 import { mdToPdf } from 'md-to-pdf'
@@ -93,7 +94,10 @@ const IPC_CHANNELS = {
   RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
   EXPORT_PDF: 'markdown:export-pdf',
   EXPORT_DOCX: 'markdown:export-docx',
-  EXPORT_HTML: 'markdown:export-html'
+  EXPORT_HTML: 'markdown:export-html',
+  // 添加全局标签相关IPC通道
+  GET_GLOBAL_TAGS: 'tags:get-global-tags',
+  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -1690,6 +1694,30 @@ ${htmlContent}
     } catch (error) {
       console.error('重置分析缓存失败:', error)
       return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取全局标签数据
+  ipcMain.handle(IPC_CHANNELS.GET_GLOBAL_TAGS, async () => {
+    try {
+      const markdownPath = getMarkdownFolderPath()
+      const tagsData = await getDocumentTagsData(markdownPath)
+      return { success: true, tagsData }
+    } catch (error) {
+      console.error('获取全局标签数据失败:', error)
+      return { success: false, error: String(error), tagsData: null }
+    }
+  })
+
+  // 刷新全局标签数据
+  ipcMain.handle(IPC_CHANNELS.REFRESH_GLOBAL_TAGS, async () => {
+    try {
+      const markdownPath = getMarkdownFolderPath()
+      const tagsData = await getDocumentTagsData(markdownPath)
+      return { success: true, tagsData }
+    } catch (error) {
+      console.error('刷新全局标签数据失败:', error)
+      return { success: false, error: String(error), tagsData: null }
     }
   })
 

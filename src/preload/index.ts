@@ -59,7 +59,10 @@ const IPC_CHANNELS = {
   GET_USER_ACTIVITY_DATA: 'analytics:get-user-activity-data',
   GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
   SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
-  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache'
+  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
+  // 添加全局标签相关IPC通道
+  GET_GLOBAL_TAGS: 'tags:get-global-tags',
+  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags'
 }
 
 // 内容生成请求接口
@@ -743,6 +746,30 @@ const api = {
       success: boolean
       error?: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.RESET_ANALYSIS_CACHE)
+  },
+  // 全局标签相关API
+  tags: {
+    // 获取全局标签数据
+    getGlobalTags: (): Promise<{
+      success: boolean
+      tagsData?: {
+        topTags: Array<{ tag: string; count: number }>
+        tagRelations: Array<{ source: string; target: string; strength: number }>
+        documentTags: Array<{ filePath: string; tags: string[] }>
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_GLOBAL_TAGS),
+
+    // 刷新全局标签数据
+    refreshGlobalTags: (): Promise<{
+      success: boolean
+      tagsData?: {
+        topTags: Array<{ tag: string; count: number }>
+        tagRelations: Array<{ source: string; target: string; strength: number }>
+        documentTags: Array<{ filePath: string; tags: string[] }>
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.REFRESH_GLOBAL_TAGS)
   }
 }
 
