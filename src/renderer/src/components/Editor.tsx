@@ -611,6 +611,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     setEditorContent('')
     lastSavedContentRef.current = ''
     setIsEditing(false)
+    
+    // 清除所有定时器
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+      autoSaveTimerRef.current = null
+    }
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
   }, [editor])
 
   // Load file content
@@ -664,8 +674,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
         // 存储内容
         setEditorContent(contentWithoutTags)
-        // 保存初始内容以供比较
-        lastSavedContentRef.current = contentWithoutTags
 
         // 生成新的key强制重新挂载编辑器
         setEditorKey(`editor-${Date.now()}`)
@@ -689,6 +697,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 使用处理后的块更新编辑器
             editor.replaceBlocks(editor.document, blocks)
             setIsEditing(false)
+
+            // 延迟设置正确的比较基准，确保与handleEditorChange中的格式一致
+            setTimeout(async () => {
+              try {
+                const standardizedContent = await editor.blocksToMarkdownLossy(editor.document)
+                lastSavedContentRef.current = standardizedContent
+              } catch (err) {
+                console.error('设置基准失败:', err)
+              }
+            }, 100)
           } catch (err) {
             console.error('解析Markdown内容失败:', err)
           }
@@ -734,8 +752,36 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current)
       }
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
     }
   }, [])
+
+  // 添加新的useEffect来处理编辑器内容稳定后的状态同步
+  useEffect(() => {
+    if (editor && currentFile && lastLoadedFileRef.current) {
+      // 延迟检查编辑器状态，确保内容已完全加载
+      const timer = setTimeout(async () => {
+        try {
+          const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
+          const normalizedCurrent = currentMarkdown.trim()
+          const normalizedSaved = lastSavedContentRef.current.trim()
+          
+          // 如果内容一致，确保编辑状态为false
+          if (normalizedCurrent === normalizedSaved) {
+            setIsEditing(false)
+          }
+        } catch (error) {
+          console.error('状态检查失败:', error)
+        }
+      }, 500)
+
+      return () => clearTimeout(timer)
+    }
+    
+    return undefined
+  }, [editor, currentFile, lastLoadedFileRef.current])
 
   // Save file content
   const saveFileContent = useCallback(async () => {
@@ -822,26 +868,44 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [currentFile, isEditing, saveFileContent])
 
+  // 添加防抖定时器引用
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Handler for when the editor's content changes
   const handleEditorChange = useCallback(async () => {
     try {
       // 更新最后用户操作时间
       lastUserActionRef.current = Date.now()
 
-      // Convert current blocks to Markdown for comparison
-      const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
-
-      // Only set editing state if content actually changed
-      if (currentMarkdown !== lastSavedContentRef.current) {
-        setIsEditing(true)
-
-        // 触发自动保存计时
-        triggerAutoSave()
-      } else {
-        setIsEditing(false)
+      // 清除之前的防抖定时器
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
       }
+
+      // 使用防抖机制，避免频繁的内容比较
+      debounceTimerRef.current = setTimeout(async () => {
+        try {
+          // Convert current blocks to Markdown for comparison
+          const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
+
+          // 标准化内容比较：去除首尾空白字符
+          const normalizedCurrent = currentMarkdown.trim()
+          const normalizedSaved = lastSavedContentRef.current.trim()
+
+          // Only set editing state if content actually changed
+          if (normalizedCurrent !== normalizedSaved) {
+            setIsEditing(true)
+            // 触发自动保存计时
+            triggerAutoSave()
+          } else {
+            setIsEditing(false)
+          }
+        } catch (error) {
+          console.error('内容比较失败:', error)
+        }
+      }, 300) // 300ms防抖延迟
     } catch (error) {
-      console.error('比较内容变化失败:', error)
+      console.error('处理变化失败:', error)
     }
   }, [editor, triggerAutoSave])
 
