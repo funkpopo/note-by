@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Nav, Typography, Tree, Toast, Input, Button, Spin, Space } from '@douyinfe/semi-ui'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { Nav, Typography, Tree, Toast, Input, Button, Spin, Space, Tooltip } from '@douyinfe/semi-ui'
 import {
   IconFolder,
   IconFile,
@@ -100,8 +100,168 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const navWidth = '180px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
 
+  // 使用 useCallback 记忆化这些函数
+  const handleCollapseChange = useCallback((status: boolean): void => {
+    setCollapsed(status)
+  }, [])
+
+  const toggleSecondaryNav = useCallback((): void => {
+    const newShowState = !showSecondaryNav
+    setShowSecondaryNav(newShowState)
+    if (newShowState) {
+      setCollapsed(true)
+      setExpandedKeys([])
+    }
+  }, [showSecondaryNav])
+
+  const processedNavItems = useMemo(() => {
+    const mainNavDefinition = [
+      {
+        itemKey: 'Editor',
+        text: '笔记',
+        icon: <IconFolder size="large" />,
+        onClick: (): void => {
+          toggleSecondaryNav()
+          onNavChange('Editor')
+          setSelectedKeys(['Editor'])
+        }
+      },
+      {
+        itemKey: 'DataAnalysis',
+        text: '数据分析',
+        icon: <IconSearchStroked size="large" />,
+        onClick: (): void => {
+          setShowSecondaryNav(false)
+          onNavChange('DataAnalysis')
+          setSelectedKeys(['DataAnalysis'])
+        }
+      },
+      {
+        itemKey: 'Settings',
+        text: '设置',
+        icon: <IconSetting size="large" />,
+        onClick: (): void => {
+          setShowSecondaryNav(false)
+          onNavChange('Settings')
+          setSelectedKeys(['Settings'])
+        }
+      },
+      {
+        itemKey: 'Sync',
+        text: '同步',
+        icon: <IconSync />,
+        onClick: async (): Promise<void> => {
+          try {
+            const settings = await window.api.settings.getAll()
+            const webdavConfig = settings.webdav as
+              | {
+                  url: string
+                  username: string
+                  password: string
+                  remotePath: string
+                  enabled?: boolean
+                  syncDirection?: string
+                  localPath?: string
+                }
+              | undefined
+
+            if (
+              !webdavConfig ||
+              !webdavConfig.enabled ||
+              !webdavConfig.url ||
+              !webdavConfig.username ||
+              !webdavConfig.password
+            ) {
+              Toast.warning('请先在设置中配置并启用WebDAV同步')
+              onNavChange('Settings')
+              setSelectedKeys(['Settings'])
+              return
+            }
+            const loadingToast = Toast.info({
+              content: (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <Space>
+                    <Spin />
+                    <span>正在同步中...</span>
+                  </Space>
+                  <Button
+                    type="danger"
+                    theme="borderless"
+                    icon={<IconClose />}
+                    size="small"
+                    onClick={async (): Promise<void> => {
+                      try {
+                        await (
+                          window.api.webdav as unknown as {
+                            cancelSync: () => Promise<{ success: boolean; message: string }>
+                          }
+                        ).cancelSync()
+                        Toast.info('已发送取消同步请求，正在中断...')
+                      } catch (error) {
+                        console.error('取消同步失败:', error)
+                      }
+                    }}
+                  >
+                    取消
+                  </Button>
+                </div>
+              ),
+              duration: 0
+            })
+            const result = await window.api.webdav.syncBidirectional({
+              url: webdavConfig.url,
+              username: webdavConfig.username,
+              password: webdavConfig.password,
+              remotePath: webdavConfig.remotePath || '/markdown'
+            })
+            Toast.close(loadingToast)
+            if (result.success) {
+              const message = `同步成功`
+              Toast.success(message)
+            } else if ((result as { cancelled?: boolean }).cancelled) {
+              Toast.warning('同步已被中断')
+            } else {
+              Toast.error(`同步失败: ${result.message}`)
+            }
+          } catch (error) {
+            console.error('同步失败:', error)
+            Toast.error(`同步失败: ${error}`)
+          }
+        }
+      }
+    ]
+
+    return mainNavDefinition.map((item) => {
+      if (collapsed) {
+        return {
+          ...item,
+          text: '',
+          icon: (
+            <Tooltip
+              content={item.text}
+              position="right"
+              arrowPointAtCenter={true}
+              spacing={5}
+              zIndex={1070}
+              showArrow={false}
+            >
+              {item.icon}
+            </Tooltip>
+          )
+        }
+      }
+      return item
+    })
+  }, [collapsed, onNavChange, toggleSecondaryNav])
+
   // 加载markdown文件夹和文件
-  const loadMarkdownFolders = async (): Promise<void> => {
+  const loadMarkdownFolders = useCallback(async (): Promise<void> => {
     setIsLoading(true)
     try {
       // 获取文件夹列表
@@ -245,7 +405,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [setIsLoading, setNavItems]) // 依赖项调整
 
   useEffect(() => {
     // 组件挂载时加载文件夹和文件
@@ -257,30 +417,14 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     return (): void => {
       setExpandedKeys([])
     }
-  }, [showSecondaryNav])
+  }, [showSecondaryNav, loadMarkdownFolders]) // 添加 loadMarkdownFolders
 
   // 当fileListVersion变化时重新加载文件列表
   useEffect(() => {
     if (showSecondaryNav && fileListVersion !== undefined) {
       loadMarkdownFolders()
     }
-  }, [showSecondaryNav, fileListVersion])
-
-  const handleCollapseChange = (status: boolean): void => {
-    setCollapsed(status)
-  }
-
-  const toggleSecondaryNav = (): void => {
-    const newShowState = !showSecondaryNav
-    setShowSecondaryNav(newShowState)
-
-    // 如果二级导航栏展开，则自动折叠一级导航栏
-    if (newShowState) {
-      setCollapsed(true)
-      // 当打开二级侧边栏时，重置展开的节点状态（保持所有文件夹收起）
-      setExpandedKeys([])
-    }
-  }
+  }, [showSecondaryNav, fileListVersion, loadMarkdownFolders]) // 添加 loadMarkdownFolders
 
   // 计算右键菜单位置，确保不超出窗口边界
   const calculateMenuPosition = (
@@ -800,138 +944,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         collapsed={collapsed}
         onCollapseChange={handleCollapseChange}
         isCollapsed={collapsed}
-        items={[
-          {
-            itemKey: 'Editor',
-            text: '笔记',
-            icon: <IconFolder size="large" />,
-            onClick: (): void => {
-              toggleSecondaryNav()
-              onNavChange('Editor')
-              setSelectedKeys(['Editor'])
-            }
-          },
-          {
-            itemKey: 'DataAnalysis',
-            text: '数据分析',
-            icon: <IconSearchStroked size="large" />,
-            onClick: (): void => {
-              setShowSecondaryNav(false)
-              onNavChange('DataAnalysis')
-              setSelectedKeys(['DataAnalysis'])
-            }
-          },
-          {
-            itemKey: 'Settings',
-            text: '设置',
-            icon: <IconSetting size="large" />,
-            onClick: (): void => {
-              setShowSecondaryNav(false)
-              onNavChange('Settings')
-              setSelectedKeys(['Settings'])
-            }
-          },
-          {
-            itemKey: 'Sync',
-            text: '同步',
-            icon: <IconSync />,
-            onClick: async (): Promise<void> => {
-              try {
-                // 获取WebDAV配置
-                const settings = await window.api.settings.getAll()
-                const webdavConfig = settings.webdav as
-                  | {
-                      url: string
-                      username: string
-                      password: string
-                      remotePath: string
-                      enabled?: boolean
-                      syncDirection?: string
-                      localPath?: string
-                    }
-                  | undefined
-
-                // 检查是否启用了WebDAV
-                if (
-                  !webdavConfig ||
-                  !webdavConfig.enabled ||
-                  !webdavConfig.url ||
-                  !webdavConfig.username ||
-                  !webdavConfig.password
-                ) {
-                  Toast.warning('请先在设置中配置并启用WebDAV同步')
-                  onNavChange('Settings')
-                  setSelectedKeys(['Settings'])
-                  return
-                }
-
-                // 显示同步中提示
-                const loadingToast = Toast.info({
-                  content: (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}
-                    >
-                      <Space>
-                        <Spin />
-                        <span>正在同步中...</span>
-                      </Space>
-                      <Button
-                        type="danger"
-                        theme="borderless"
-                        icon={<IconClose />}
-                        size="small"
-                        onClick={async (): Promise<void> => {
-                          try {
-                            // 发送取消同步请求
-                            await (
-                              window.api.webdav as unknown as {
-                                cancelSync: () => Promise<{ success: boolean; message: string }>
-                              }
-                            ).cancelSync()
-                            Toast.info('已发送取消同步请求，正在中断...')
-                          } catch (error) {
-                            console.error('取消同步失败:', error)
-                          }
-                        }}
-                      >
-                        取消
-                      </Button>
-                    </div>
-                  ),
-                  duration: 0 // 不自动关闭
-                })
-
-                // 执行双向同步
-                const result = await window.api.webdav.syncBidirectional({
-                  url: webdavConfig.url,
-                  username: webdavConfig.username,
-                  password: webdavConfig.password,
-                  remotePath: webdavConfig.remotePath || '/markdown'
-                })
-
-                // 关闭加载提示
-                Toast.close(loadingToast)
-
-                // 显示同步结果
-                if (result.success) {
-                  const message = `同步成功`
-                  Toast.success(message)
-                } else if ((result as { cancelled?: boolean }).cancelled) {
-                  Toast.warning('同步已被中断')
-                } else {
-                  Toast.error(`同步失败: ${result.message}`)
-                }
-              } catch (error) {
-                console.error('同步失败:', error)
-                Toast.error(`同步失败: ${error}`)
-              }
-            }
-          }
-        ]}
+        items={processedNavItems}
         footer={{
           collapseButton: true
         }}
