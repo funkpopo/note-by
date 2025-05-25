@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { Nav, Typography, Tree, Toast, Input, Button, Spin, Space, Tooltip } from '@douyinfe/semi-ui'
+import { Nav, Typography, Tree, Toast, Input, Button, Spin, Space } from '@douyinfe/semi-ui'
 import {
   IconFolder,
   IconFile,
@@ -10,7 +10,9 @@ import {
   IconSync,
   IconSearch,
   IconSearchStroked,
-  IconClose
+  IconClose,
+  IconChevronRight,
+  IconChevronLeft
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
@@ -149,7 +151,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       {
         itemKey: 'Sync',
         text: '同步',
-        icon: <IconSync />,
+        icon: <IconSync size="large" />,
         onClick: async (): Promise<void> => {
           try {
             const settings = await window.api.settings.getAll()
@@ -240,20 +242,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     return mainNavDefinition.map((item) => {
       if (collapsed) {
         return {
-          ...item,
-          text: '',
-          icon: (
-            <Tooltip
-              content={item.text}
-              position="right"
-              arrowPointAtCenter={true}
-              spacing={5}
-              zIndex={1070}
-              showArrow={false}
-            >
-              {item.icon}
-            </Tooltip>
-          )
+          ...item
         }
       }
       return item
@@ -946,7 +935,16 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         isCollapsed={collapsed}
         items={processedNavItems}
         footer={{
-          collapseButton: true
+          collapseButton: (
+              <Button
+                icon={collapsed ? <IconChevronRight /> : <IconChevronLeft />}
+                onClick={(): void => handleCollapseChange(!collapsed)}
+                type="tertiary"
+                theme="borderless"
+                style={{ display: 'block', margin: '12px auto' }}
+                aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+              />
+          )
         }}
       />
 
