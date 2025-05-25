@@ -12,7 +12,8 @@ import {
   IconSearchStroked,
   IconClose,
   IconChevronRight,
-  IconChevronLeft
+  IconChevronLeft,
+  IconMoreStroked
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
@@ -136,6 +137,16 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           setShowSecondaryNav(false)
           onNavChange('DataAnalysis')
           setSelectedKeys(['DataAnalysis'])
+        }
+      },
+      {
+        itemKey: 'MindMap',
+        text: '思维导图',
+        icon: <IconMoreStroked size="large" />,
+        onClick: (): void => {
+          setShowSecondaryNav(false)
+          onNavChange('MindMap')
+          setSelectedKeys(['MindMap'])
         }
       },
       {

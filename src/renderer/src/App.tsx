@@ -4,6 +4,7 @@ import Navigation from './components/Navigation'
 import Settings from './components/Settings'
 import EditorComponent from './components/Editor'
 import DataAnalysis from './components/DataAnalysis'
+import MindMapPage from './components/MindMapPage'
 
 const App: React.FC = () => {
   const { Content } = Layout
@@ -42,6 +43,8 @@ const App: React.FC = () => {
         )
       case 'DataAnalysis':
         return <DataAnalysis />
+      case 'MindMap':
+        return <MindMapPage />
       default:
         return <div>分组管理内容</div>
     }

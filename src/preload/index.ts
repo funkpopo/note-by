@@ -62,7 +62,13 @@ const IPC_CHANNELS = {
   RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
   // 添加全局标签相关IPC通道
   GET_GLOBAL_TAGS: 'tags:get-global-tags',
-  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags'
+  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
+  // + Mindmap IPC Channels
+  MINDMAP_SAVE_FILE: 'mindmap:save-file',
+  MINDMAP_LOAD_FILE: 'mindmap:load-file',
+  MINDMAP_EXPORT_HTML: 'mindmap:export-html',
+  DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
+  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog'  // Re-using if a generic one is better, or make specific
 }
 
 // 内容生成请求接口
@@ -750,26 +756,23 @@ const api = {
   // 全局标签相关API
   tags: {
     // 获取全局标签数据
-    getGlobalTags: (): Promise<{
-      success: boolean
-      tagsData?: {
-        topTags: Array<{ tag: string; count: number }>
-        tagRelations: Array<{ source: string; target: string; strength: number }>
-        documentTags: Array<{ filePath: string; tags: string[] }>
-      }
-      error?: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.GET_GLOBAL_TAGS),
+    getGlobalTags: (): Promise<string[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_GLOBAL_TAGS),
 
     // 刷新全局标签数据
-    refreshGlobalTags: (): Promise<{
-      success: boolean
-      tagsData?: {
-        topTags: Array<{ tag: string; count: number }>
-        tagRelations: Array<{ source: string; target: string; strength: number }>
-        documentTags: Array<{ filePath: string; tags: string[] }>
-      }
-      error?: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.REFRESH_GLOBAL_TAGS)
+    refreshGlobalTags: (): Promise<string[]> => ipcRenderer.invoke(IPC_CHANNELS.REFRESH_GLOBAL_TAGS)
+  },
+  // + Mindmap API
+  mindmap: {
+    save: (content: string): Promise<{ success: boolean; path?: string; error?: string }> => 
+      ipcRenderer.invoke(IPC_CHANNELS.MINDMAP_SAVE_FILE, content),
+    load: (): Promise<{ success: boolean; data?: string; cancelled?: boolean; error?: string }> => 
+      ipcRenderer.invoke(IPC_CHANNELS.MINDMAP_LOAD_FILE),
+    exportHtml: (imageDataUrl: string): Promise<{ success: boolean; path?: string; error?: string }> => 
+      ipcRenderer.invoke(IPC_CHANNELS.MINDMAP_EXPORT_HTML, imageDataUrl),
+    showSaveDialog: (options: Electron.SaveDialogOptions): Promise<string | undefined> => 
+      ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_SAVE, options),
+    showOpenDialog: (options: Electron.OpenDialogOptions): Promise<string | undefined> => 
+      ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_OPEN, options)
   }
 }
 

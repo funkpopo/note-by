@@ -97,7 +97,14 @@ const IPC_CHANNELS = {
   EXPORT_HTML: 'markdown:export-html',
   // 添加全局标签相关IPC通道
   GET_GLOBAL_TAGS: 'tags:get-global-tags',
-  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags'
+  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
+  // 添加对话框相关IPC通道
+  DIALOG_SHOW_SAVE: 'dialog:showSaveDialog',
+  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog',
+  // 添加思维导图相关IPC通道
+  MINDMAP_SAVE_FILE: 'mindmap:save-file',
+  MINDMAP_LOAD_FILE: 'mindmap:load-file',
+  MINDMAP_EXPORT_HTML: 'mindmap:export-html'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -1718,6 +1725,166 @@ ${htmlContent}
     } catch (error) {
       console.error('刷新全局标签数据失败:', error)
       return { success: false, error: String(error), tagsData: null }
+    }
+  })
+
+  // 显示保存对话框
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_SAVE, async (_, options: Electron.SaveDialogOptions) => {
+    try {
+      if (!mainWindow) {
+        console.error('主窗口未初始化')
+        return undefined
+      }
+      const result = await dialog.showSaveDialog(mainWindow, options)
+      return result.canceled ? undefined : result.filePath
+    } catch (error) {
+      console.error('显示保存对话框失败:', error)
+      return undefined
+    }
+  })
+
+  // 显示打开对话框
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_OPEN, async (_, options: Electron.OpenDialogOptions) => {
+    try {
+      if (!mainWindow) {
+        console.error('主窗口未初始化')
+        return undefined
+      }
+      const result = await dialog.showOpenDialog(mainWindow, options)
+      return result.canceled ? undefined : result.filePaths[0]
+    } catch (error) {
+      console.error('显示打开对话框失败:', error)
+      return undefined
+    }
+  })
+
+  // 保存思维导图文件
+  ipcMain.handle(IPC_CHANNELS.MINDMAP_SAVE_FILE, async (_, content: string) => {
+    try {
+      if (!mainWindow) {
+        console.error('主窗口未初始化')
+        return { success: false, error: '主窗口未初始化' }
+      }
+
+      // 显示保存对话框
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog(mainWindow, {
+        title: '保存思维导图',
+        defaultPath: path.join(app.getPath('documents'), 'mindmap.json'),
+        filters: [{ name: '思维导图文件', extensions: ['json'] }]
+      })
+
+      if (canceled || !savePath) {
+        return { success: false, error: '用户取消保存' }
+      }
+
+      await fsPromises.writeFile(savePath, content, 'utf-8')
+      return { success: true, path: savePath }
+    } catch (error) {
+      console.error('保存思维导图文件失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 加载思维导图文件
+  ipcMain.handle(IPC_CHANNELS.MINDMAP_LOAD_FILE, async () => {
+    try {
+      if (!mainWindow) {
+        console.error('主窗口未初始化')
+        return { success: false, error: '主窗口未初始化' }
+      }
+
+      // 显示打开对话框
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: '加载思维导图',
+        filters: [{ name: '思维导图文件', extensions: ['json'] }],
+        properties: ['openFile']
+      })
+
+      if (canceled || !filePaths || filePaths.length === 0) {
+        return { success: false, cancelled: true }
+      }
+
+      const filePath = filePaths[0]
+      const content = await fsPromises.readFile(filePath, 'utf-8')
+      return { success: true, data: content }
+    } catch (error) {
+      console.error('加载思维导图文件失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 导出思维导图HTML
+  ipcMain.handle(IPC_CHANNELS.MINDMAP_EXPORT_HTML, async (_, imageDataUrl: string) => {
+    try {
+      if (!mainWindow) {
+        console.error('主窗口未初始化')
+        return { success: false, error: '主窗口未初始化' }
+      }
+
+      // 显示保存对话框
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog(mainWindow, {
+        title: '导出思维导图HTML',
+        defaultPath: path.join(app.getPath('documents'), 'mindmap.html'),
+        filters: [{ name: 'HTML文件', extensions: ['html'] }]
+      })
+
+      if (canceled || !savePath) {
+        return { success: false, error: '用户取消导出' }
+      }
+
+      // 创建HTML内容，嵌入图片
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思维导图</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .mindmap-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .mindmap-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mindmap-container">
+        <h1 class="title">思维导图</h1>
+        <img src="${imageDataUrl}" alt="思维导图" class="mindmap-image">
+    </div>
+</body>
+</html>`
+
+      // 保存HTML内容
+      await fsPromises.writeFile(savePath, htmlContent, 'utf-8')
+      return { success: true, path: savePath }
+    } catch (error) {
+      console.error('导出思维导图HTML失败:', error)
+      return { success: false, error: String(error) }
     }
   })
 
