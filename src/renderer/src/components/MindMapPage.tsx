@@ -23,8 +23,7 @@ import {
   Input, 
   Modal, 
   Typography, 
-  Select, 
-  ColorPicker,
+  Select,
   Slider
 } from '@douyinfe/semi-ui'
 import { 
@@ -107,17 +106,16 @@ const MindMapFlow: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [nodeId, setNodeId] = useState(2)
   const [isLoading, setIsLoading] = useState(false)
-  const [editingNode, setEditingNode] = useState<{ 
-    id: string; 
-    label: string; 
+  const [editingNode, setEditingNode] = useState<{
+    id: string;
+    label: string;
     nodeType: string;
-    customColor?: string;
     fontSize?: number;
   } | null>(null)
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const { getViewport, setViewport, getNodes, getEdges, deleteElements } = useReactFlow()
+  const { getViewport, setViewport, getNodes, getEdges, deleteElements, screenToFlowPosition } = useReactFlow()
 
   // 键盘快捷键
   const deletePressed = useKeyPress('Delete')
@@ -187,7 +185,49 @@ const MindMapFlow: React.FC = () => {
     Toast.success('节点添加成功')
   }, [nodeId, setNodes, saveToHistory])
 
+  // 在连接线拖拽结束时添加节点
+  const handleConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, connectionState: any) => {
+      if (!connectionState.isValid && connectionState.fromNode) {
+        const targetIsPane = (event.target as HTMLElement).classList.contains('react-flow__pane');
+        if (targetIsPane) {
+          const newNodeIdStr = nodeId.toString()
+          const { clientX, clientY } =
+            'changedTouches' in event ? event.changedTouches[0] : event
+          
+          const position = screenToFlowPosition({
+            x: clientX,
+            y: clientY,
+          })
 
+          const newNode: Node = {
+            id: newNodeIdStr,
+            type: 'default',
+            position,
+            data: {
+              label: `新节点 ${newNodeIdStr}`,
+              nodeType: 'default',
+            },
+            style: nodeStyles.default,
+            origin: [0.5, 0.0] 
+          }
+
+          const newEdge: Edge = {
+            id: `e${connectionState.fromNode.id}-${newNodeIdStr}`,
+            source: connectionState.fromNode.id,
+            target: newNodeIdStr,
+          }
+
+          setNodes((nds) => nds.concat(newNode))
+          setEdges((eds) => eds.concat(newEdge))
+          setNodeId((id) => id + 1)
+          saveToHistory()
+          Toast.success('通过拖拽添加节点成功')
+        }
+      }
+    },
+    [screenToFlowPosition, nodeId, setNodes, setEdges, setNodeId, saveToHistory]
+  )
 
   // 删除选中的节点和边
   const deleteSelected = useCallback(() => {
@@ -206,11 +246,14 @@ const MindMapFlow: React.FC = () => {
 
   // 节点双击编辑
   const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    setEditingNode({ 
-      id: node.id, 
+    let nodeTypeToEdit = (node.data.nodeType as string) || 'default';
+    if (nodeTypeToEdit === 'custom') {
+      nodeTypeToEdit = 'default';
+    }
+    setEditingNode({
+      id: node.id,
       label: String(node.data.label),
-      nodeType: (node.data.nodeType as string) || 'default',
-      customColor: node.data.customColor as string | undefined,
+      nodeType: nodeTypeToEdit,
       fontSize: (node.data.fontSize as number) || 14
     })
   }, [])
@@ -219,17 +262,11 @@ const MindMapFlow: React.FC = () => {
   const saveNodeEdit = useCallback(() => {
     if (!editingNode) return
     
-    const style = editingNode.nodeType === 'custom' && editingNode.customColor
-      ? {
-          ...nodeStyles.default,
-          background: editingNode.customColor,
-          color: '#fff',
-          fontSize: `${editingNode.fontSize}px`
-        }
-      : {
-          ...nodeStyles[editingNode.nodeType as keyof typeof nodeStyles],
-          fontSize: `${editingNode.fontSize}px`
-        }
+    const effectiveNodeType = (editingNode.nodeType === 'custom' ? 'default' : editingNode.nodeType) as keyof typeof nodeStyles;
+    const style = {
+      ...nodeStyles[effectiveNodeType],
+      fontSize: `${editingNode.fontSize}px`
+    }
     
     setNodes((nds) =>
       nds.map((node) =>
@@ -239,8 +276,7 @@ const MindMapFlow: React.FC = () => {
               data: { 
                 ...node.data, 
                 label: editingNode.label,
-                nodeType: editingNode.nodeType,
-                customColor: editingNode.customColor,
+                nodeType: effectiveNodeType,
                 fontSize: editingNode.fontSize
               },
               style
@@ -256,9 +292,6 @@ const MindMapFlow: React.FC = () => {
   // MiniMap节点颜色映射
   const nodeColor = useCallback((node: Node): string => {
     const nodeType = (node.data.nodeType as string) || 'default'
-    if (nodeType === 'custom' && node.data.customColor) {
-      return node.data.customColor as string
-    }
     
     switch (nodeType) {
       case 'primary': return '#1890ff'
@@ -428,6 +461,7 @@ const MindMapFlow: React.FC = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onConnectEnd={handleConnectEnd}
           onNodeDoubleClick={onNodeDoubleClick}
           fitView
           multiSelectionKeyCode="Shift"
@@ -536,20 +570,8 @@ const MindMapFlow: React.FC = () => {
               <Option value="success">成功</Option>
               <Option value="warning">警告</Option>
               <Option value="danger">危险</Option>
-              <Option value="custom">自定义</Option>
             </Select>
           </div>
-
-          {editingNode?.nodeType === 'custom' && (
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>自定义颜色</label>
-              <ColorPicker
-                value={(editingNode?.customColor || '#1890ff') as any}
-                alpha={false}
-                onChange={(value) => setEditingNode(prev => prev ? { ...prev, customColor: String(value) } : null)}
-              />
-            </div>
-          )}
 
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>字体大小: {editingNode?.fontSize || 14}px</label>
