@@ -158,6 +158,64 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   // 存储标签列表的状态
   const [tagList, setTagList] = useState<string[]>([])
 
+  // 添加复制事件监听，处理代码块复制问题
+  useEffect(() => {
+    const handleCodeCopy = (e: ClipboardEvent) => {
+      // 检查是否是代码块的复制操作
+      if (isCodeBlockSelection()) {
+        // 获取选中的内容
+        const selection = document.getSelection()
+        if (selection && selection.toString()) {
+          // 清除每行末尾的反斜杠
+          const cleanedText = removeTrailingBackslashes(selection.toString())
+          
+          // 将处理后的文本放入剪贴板
+          e.preventDefault()
+          e.clipboardData?.setData('text/plain', cleanedText)
+        }
+      }
+    }
+    
+    // 检查当前选中内容是否在代码块中
+    const isCodeBlockSelection = (): boolean => {
+      const selection = document.getSelection()
+      if (!selection || !selection.anchorNode) return false
+      
+      // 查找最近的代码块容器
+      let node: Node | null = selection.anchorNode
+      while (node && node.nodeName !== 'BODY') {
+        if (node.nodeName === 'PRE' || 
+            (node instanceof HTMLElement && 
+             (node.classList.contains('bn-code-block') || 
+              node.closest('.bn-code-block')))) {
+          return true
+        }
+        node = node.parentNode
+      }
+      return false
+    }
+    
+    // 清除每行末尾的反斜杠
+    const removeTrailingBackslashes = (text: string): string => {
+      return text.split('\n')
+        .map(line => {
+          if (line.endsWith('\\')) {
+            return line.slice(0, -1)
+          }
+          return line
+        })
+        .join('\n')
+    }
+    
+    // 添加复制事件监听器
+    document.addEventListener('copy', handleCodeCopy)
+    
+    // 组件卸载时移除事件监听器
+    return () => {
+      document.removeEventListener('copy', handleCodeCopy)
+    }
+  }, [])
+
   // Create custom light theme with enhanced selection colors
   const customLightTheme: Theme = {
     ...lightDefaultTheme,
