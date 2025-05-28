@@ -177,7 +177,10 @@ export const extractTagsFromMarkdown = (markdown: string): string[] => {
   if (!markdown) return []
 
   // 匹配Markdown中的@标签模式 @tagname
-  const tagRegex = /@([a-zA-Z0-9_\u4e00-\u9fa5]+)/g
+  // 修改正则表达式，排除电子邮件地址格式
+  // 1. 使用(?<![a-zA-Z0-9_\u4e00-\u9fa5])@表示@前不能是字母、数字等（必须是空格、标点或行首）
+  // 2. 使用(?![a-zA-Z0-9_\u4e00-\u9fa5]+\.[a-zA-Z0-9_\u4e00-\u9fa5]+)排除域名格式
+  const tagRegex = /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g
   const matches = markdown.matchAll(tagRegex)
   const tags: string[] = []
 
@@ -197,7 +200,11 @@ export const preprocessMarkdownForTags = (markdown: string): string => {
 
   // 将@tag格式转换为特殊格式，以便BlockNote在解析时能正确识别
   // 使用特殊标记 {{@tag}} 来标识标签
-  return markdown.replace(/@([a-zA-Z0-9_\u4e00-\u9fa5]+)/g, '{{@$1}}')
+  // 使用与extractTagsFromMarkdown相同的正则表达式
+  return markdown.replace(
+    /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g, 
+    '{{@$1}}'
+  )
 }
 
 // 新增: 后处理编辑器内容，查找并将特殊标记转换为正确的Tag组件
