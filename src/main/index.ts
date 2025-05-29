@@ -235,24 +235,22 @@ async function performAutoSync(): Promise<void> {
     const markdownPath = getMarkdownFolderPath()
 
     // 根据配置的同步方向执行同步
-    let result
-
     switch (webdavConfig.syncDirection) {
       case 'localToRemote':
-        result = await syncLocalToRemote({
+        await syncLocalToRemote({
           ...webdavConfig,
           localPath: markdownPath
         })
         break
       case 'remoteToLocal':
-        result = await syncRemoteToLocal({
+        await syncRemoteToLocal({
           ...webdavConfig,
           localPath: markdownPath
         })
         break
       case 'bidirectional':
       default:
-        result = await syncBidirectional({
+        await syncBidirectional({
           ...webdavConfig,
           localPath: markdownPath
         })
