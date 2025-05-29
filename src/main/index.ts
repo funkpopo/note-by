@@ -78,6 +78,7 @@ const IPC_CHANNELS = {
   SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
   CANCEL_SYNC: 'webdav:cancel-sync',
   CLEAR_WEBDAV_SYNC_CACHE: 'webdav:clear-sync-cache',
+  WEBDAV_CONFIG_CHANGED: 'webdav:config-changed',
   // 添加主密码验证相关IPC通道
   VERIFY_MASTER_PASSWORD: 'webdav:verify-master-password',
   SET_MASTER_PASSWORD: 'webdav:set-master-password',
@@ -1454,6 +1455,33 @@ ${htmlContent}
       return {
         success: false,
         message: '设置过程中发生错误',
+        error: String(error)
+      }
+    }
+  })
+
+  // WebDAV配置变更通知
+  ipcMain.handle(IPC_CHANNELS.WEBDAV_CONFIG_CHANGED, async () => {
+    try {
+      console.log('收到WebDAV配置变更通知，准备重新初始化客户端...')
+      
+      // 从webdav模块导入配置变更处理函数
+      const { handleConfigChanged } = await import('./webdav')
+      
+      // 重新初始化WebDAV客户端
+      const result = await handleConfigChanged()
+      
+      console.log('WebDAV客户端重新初始化结果:', result)
+      
+      return {
+        success: result.success,
+        message: result.message || 'WebDAV配置已更新'
+      }
+    } catch (error) {
+      console.error('处理WebDAV配置变更失败:', error)
+      return {
+        success: false,
+        message: '配置更新失败',
         error: String(error)
       }
     }

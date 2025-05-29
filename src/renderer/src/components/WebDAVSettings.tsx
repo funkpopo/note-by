@@ -76,6 +76,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   const [newPassword, setNewPassword] = useState<string>('')
   const [confirmNewPassword, setConfirmNewPassword] = useState<string>('')
   const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false)
+  const [showDisableEncryptionModal, setShowDisableEncryptionModal] = useState<boolean>(false)
 
   // 加载WebDAV配置
   const loadConfig = useCallback(async (): Promise<void> => {
@@ -117,6 +118,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       // 保存到主进程设置
       await window.api.settings.set('webdav', values)
+      // 通知主进程WebDAV配置已变更，立即生效
+      await window.api.webdav.notifyConfigChanged()
     } catch (error) {
       console.error('保存WebDAV配置失败:', error)
       Toast.error('保存WebDAV配置失败')
@@ -711,22 +714,47 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
   // 处理自定义加密切换
   const handleEncryptionToggle = (value: boolean): void => {
-    setCustomEncryptionEnabled(value)
-
-    if (value && formApi) {
+    if (value && !customEncryptionEnabled) {
       // 启用自定义加密，显示密码设置对话框
       setShowSetPasswordModal(true)
-    } else if (!value && formApi) {
-      // 禁用自定义加密，重置相关配置
+    } else if (!value && customEncryptionEnabled) {
+      // 禁用自定义加密，显示确认对话框
+      setShowDisableEncryptionModal(true)
+    }
+  }
+
+  // 处理关闭加密确认
+  const handleDisableEncryptionConfirm = async (): Promise<void> => {
+    if (!formApi) return
+
+    try {
+      // 获取当前配置
       const values = formApi.getValues()
-      formApi.setValues({
+      
+      // 重置加密相关配置
+      const updatedValues = {
         ...values,
         useCustomEncryption: false,
         encryptionTest: '',
         encryptionTestPlain: ''
-      })
-      // 保存更新后的配置
-      handleConfigChange()
+      }
+      
+      // 更新表单值
+      formApi.setValues(updatedValues)
+      
+      // 更新本地状态
+      setCustomEncryptionEnabled(false)
+      
+      // 保存配置
+      await saveConfig(updatedValues)
+      
+      // 关闭对话框
+      setShowDisableEncryptionModal(false)
+      
+      Toast.success('已关闭自定义加密')
+    } catch (error) {
+      console.error('关闭加密失败:', error)
+      Toast.error('关闭加密失败')
     }
   }
 
@@ -870,7 +898,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                 field="useCustomEncryption"
                 label="使用自定义加密"
                 noLabel
-                disabled={customEncryptionEnabled}
                 onChange={handleEncryptionToggle}
               />
               <Text style={{ marginLeft: '16px' }}>使用自定义主密码加密同步数据</Text>
@@ -884,8 +911,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
             )}
             <Text type="tertiary">
               {customEncryptionEnabled
-                ? '已启用自定义加密，同步时需要输入主密码。'
-                : '启用此选项后，您需要设置一个主密码，用于加密同步数据。请务必记住此密码，忘记将无法恢复数据。'}
+                ? '已启用自定义加密，同步时需要输入主密码。您可以随时关闭此功能。'
+                : '启用此选项后，您需要设置一个主密码，用于加密同步数据。请务必记住此密码，忘记将无法恢复数据。您可以随时关闭此功能。'}
             </Text>
           </div>
         </Card>
@@ -1213,6 +1240,50 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                 更改密码
               </Button>
             </Space>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 关闭加密确认对话框 */}
+      <Modal
+        title="关闭自定义加密"
+        visible={showDisableEncryptionModal}
+        onCancel={() => setShowDisableEncryptionModal(false)}
+        footer={null}
+        width={480}
+      >
+        <div style={{ padding: '0 0 20px' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <Text type="warning" strong style={{ fontSize: '16px', display: 'block', marginBottom: '12px' }}>
+              ⚠️ 重要提醒
+            </Text>
+            <div style={{ backgroundColor: '#fff7e6', padding: '12px', borderRadius: '6px', border: '1px solid #ffd666' }}>
+              <Text>关闭自定义加密将会：</Text>
+              <ul style={{ marginLeft: '16px', marginTop: '8px', marginBottom: '8px' }}>
+                <li>移除当前的主密码设置</li>
+                <li>清除所有加密相关的配置</li>
+                <li>后续同步将不再使用自定义加密</li>
+              </ul>
+              <Text type="warning">
+                <strong>注意：</strong>这不会影响已经同步的文件，但新的同步操作将不再加密。
+              </Text>
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <Text>确认关闭自定义加密功能吗？</Text>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <Button onClick={() => setShowDisableEncryptionModal(false)}>
+              取消
+            </Button>
+            <Button 
+              type="danger" 
+              onClick={handleDisableEncryptionConfirm}
+            >
+              确认关闭
+            </Button>
           </div>
         </div>
       </Modal>

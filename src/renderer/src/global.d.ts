@@ -289,6 +289,13 @@ interface Window {
         message?: string
         error?: string
       }>
+
+      // 通知WebDAV配置已变更
+      notifyConfigChanged: () => Promise<{
+        success: boolean
+        message?: string
+        error?: string
+      }>
     }
     // 应用程序操作API
     app: {

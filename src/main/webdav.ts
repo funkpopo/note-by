@@ -134,7 +134,23 @@ export async function testWebDAVConnection(
 
     // 尝试列出根目录
     await client.getDirectoryContents('/')
-    return { success: true, message: '连接成功' }
+    
+    // 检查远程目标目录的访问权限
+    try {
+      const remotePathExists = await client.exists(config.remotePath)
+      if (!remotePathExists) {
+        // 尝试创建远程目录
+        await client.createDirectory(config.remotePath)
+        return { success: true, message: `连接成功，已创建远程目录: ${config.remotePath}` }
+      } else {
+        // 尝试列出远程目录内容以验证访问权限
+        await client.getDirectoryContents(config.remotePath)
+        return { success: true, message: `连接成功，远程目录访问正常: ${config.remotePath}` }
+      }
+    } catch (remotePathError) {
+      console.error('远程目录检查失败:', remotePathError)
+      return { success: false, message: `连接成功但无法访问远程目录 ${config.remotePath}: ${remotePathError}` }
+    }
   } catch (error) {
     console.error('测试WebDAV连接失败:', error)
     return { success: false, message: `连接失败: ${error}` }
@@ -190,7 +206,6 @@ async function uploadFile(localFilePath: string, remoteFilePath: string): Promis
         fileSize
       })
 
-      console.log(`同步缓存已更新: ${localFilePath}`)
     } catch (cacheError) {
       // 缓存更新失败不影响上传结果
       console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
@@ -244,7 +259,6 @@ async function downloadFile(remoteFilePath: string, localFilePath: string): Prom
         fileSize
       })
 
-      console.log(`同步缓存已更新: ${localFilePath}`)
     } catch (cacheError) {
       // 缓存更新失败不影响下载结果
       console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
@@ -290,7 +304,6 @@ async function needUpload(
     if (syncRecord) {
       // 如果本地文件未修改（时间戳和大小与上次同步时相同），无需上传
       if (localModTime === syncRecord.lastModifiedLocal && fileSize === syncRecord.fileSize) {
-        console.log(`文件未修改，跳过上传: ${localFilePath}`)
         return false
       }
 
@@ -299,13 +312,9 @@ async function needUpload(
         // 计算当前文件哈希值
         const currentHash = await calculateFileHash(localFilePath)
         if (currentHash === syncRecord.contentHash) {
-          console.log(`文件内容未变化，仅时间戳变化，跳过上传: ${localFilePath}`)
           return false
         }
       }
-
-      // 到这里说明文件确实被修改了，需要上传
-      console.log(`文件已修改，需要上传: ${localFilePath}`)
       return true
     }
 
@@ -341,81 +350,38 @@ async function needUpload(
 async function needDownload(localFilePath: string, remoteFile: FileStat): Promise<boolean> {
   try {
     // 检查本地文件是否存在
-    let localExists = true
     try {
       await fs.access(localFilePath)
     } catch {
       // 本地文件不存在，需要下载
-      localExists = false
       return true
     }
 
-    // 如果本地文件存在，检查同步缓存
-    if (localExists) {
-      // 获取远程文件的修改时间和其他信息
-      const remoteModTime = getRemoteModTime(remoteFile)
-
-      // 获取本地文件状态
-      const localStats = await fs.stat(localFilePath)
-      const localModTime = localStats.mtime.getTime()
-
-      // 检查同步缓存
-      const syncRecord = await getWebDAVSyncRecord(localFilePath)
-
-      if (syncRecord) {
-        // 如果远程文件自上次同步后未修改，且本地文件也未修改，无需下载
-        if (
-          remoteModTime === syncRecord.lastModifiedRemote &&
-          localModTime === syncRecord.lastModifiedLocal
-        ) {
-          console.log(`远程与本地均未修改，跳过下载: ${localFilePath}`)
-          return false
-        }
-
-        // 如果远程未修改但本地有修改，不需要下载（应该是本地上传）
-        if (
-          remoteModTime === syncRecord.lastModifiedRemote &&
-          localModTime !== syncRecord.lastModifiedLocal
-        ) {
-          console.log(`仅本地有修改，跳过下载: ${localFilePath}`)
-          return false
-        }
-
-        // 如果远程有修改，再通过大小和内容哈希比较
-        if (remoteModTime !== syncRecord.lastModifiedRemote) {
-          // 如果远程文件大小与缓存记录一致，获取并比较内容哈希
-          if (remoteFile.size === syncRecord.fileSize) {
-            // 比较远程文件内容（现在不能直接获取远程哈希，所以这里先保守下载）
-            // 未来可以考虑获取远程内容并计算哈希后再比较
-            console.log(`远程文件时间戳变化，需要下载: ${localFilePath}`)
-            return true
-          } else {
-            // 远程文件大小变化，需要下载
-            console.log(`远程文件大小变化，需要下载: ${localFilePath}`)
-            return true
-          }
-        }
-      }
-    }
-
-    // 如果没有缓存记录或无法通过缓存确定，回退到原始逻辑
-    // 检查本地文件的最后修改时间
+    // 如果本地文件存在，比较修改时间和文件大小
     const localStats = await fs.stat(localFilePath)
     const localModTime = localStats.mtime.getTime()
-
-    // 远程文件的最后修改时间
     const remoteModTime = getRemoteModTime(remoteFile)
 
-    // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
-    const TIME_THRESHOLD = 3000 // 毫秒
+    // 比较文件大小
+    if (remoteFile.size !== localStats.size) {
+      return true
+    }
 
-    // 如果时间戳相近，通过内容比较判断
-    if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
-      return await compareFileContent(localFilePath, remoteFile.filename)
+    // 时间戳阈值，用于判断时间戳相近的情况（5秒内认为是同步的）
+    const TIME_THRESHOLD = 5000 // 毫秒
+
+    // 如果时间戳相近且文件大小相同，认为文件未变化
+    if (Math.abs(localModTime - remoteModTime) <= TIME_THRESHOLD) {
+      return false
     }
 
     // 如果远程文件更新，则需要下载
-    return remoteModTime > localModTime
+    if (remoteModTime > localModTime) {
+      return true
+    }
+
+    // 本地文件更新或相同，不需要下载
+    return false
   } catch (error) {
     console.error(`检查文件是否需要下载失败: ${localFilePath}`, error)
     // 出错时保守处理，下载文件
@@ -705,6 +671,18 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
   let processedFiles = 0
 
   try {
+    // 确保远程根目录存在
+    const remoteRootExists = await ensureRemoteDirectory(config.remotePath)
+    if (!remoteRootExists) {
+      return {
+        success: false,
+        message: `无法确保远程目录存在: ${config.remotePath}`,
+        downloaded,
+        failed,
+        skipped
+      }
+    }
+
     // 确保本地根目录存在
     await fs.mkdir(config.localPath, { recursive: true })
 
@@ -747,9 +725,6 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
 
     // 递归同步函数 - 第二阶段：处理文件
     async function syncDirectory(remotePath: string, localPath: string): Promise<void> {
-      // 确保本地目录存在
-      await fs.mkdir(localPath, { recursive: true })
-
       // 获取远程文件列表
       const remoteEntries = await getRemoteFiles(remotePath)
 
@@ -875,7 +850,6 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
     // 获取上次同步时间，用于筛选文件
     const lastSyncTime = await getLastGlobalSyncTime()
-    console.log(`上次同步时间: ${new Date(lastSyncTime).toLocaleString()}`)
 
     // 缓存远程文件列表(按目录)，在整个同步过程中共享
     const remoteFilesCache = new Map<string, FileStat[]>()
@@ -1078,7 +1052,6 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
     // 收集所有文件信息
     await collectFilesToSync(config.localPath, config.remotePath)
-    console.log(`收集到 ${filesToProcess.length} 个文件需要处理`)
 
     // 通知总文件数
     notifySyncProgress({
@@ -1093,10 +1066,6 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       const uploadFiles = filesToProcess.filter((file) => file.action === 'upload')
       const downloadFiles = filesToProcess.filter((file) => file.action === 'download')
       const compareFiles = filesToProcess.filter((file) => file.action === 'compare')
-
-      console.log(
-        `需要上传: ${uploadFiles.length}, 需要下载: ${downloadFiles.length}, 需要比较: ${compareFiles.length}`
-      )
 
       // 处理上传文件
       if (uploadFiles.length > 0) {
@@ -1289,6 +1258,54 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       failed,
       skippedUpload,
       skippedDownload
+    }
+  }
+}
+
+// 处理WebDAV配置变更
+export async function handleConfigChanged(): Promise<{ success: boolean; message: string }> {
+  try {    
+    // 从设置中获取最新的WebDAV配置
+    const { getWebDAVConfig } = await import('./settings')
+    const settingsConfig = getWebDAVConfig()
+    
+    // 重置当前客户端
+    webdavClient = null
+    
+    // 如果WebDAV未启用，不需要初始化客户端
+    if (!settingsConfig.enabled) {
+      return {
+        success: true,
+        message: 'WebDAV已禁用，客户端已清除'
+      }
+    }
+    
+    // 创建符合webdav模块要求的配置对象（添加localPath字段）
+    const webdavConfig: WebDAVConfig = {
+      ...settingsConfig,
+      localPath: '' // 这里暂时设为空字符串，实际使用时会由调用方提供
+    }
+    
+    // 使用新配置初始化客户端
+    const initSuccess = initWebDAVClient(webdavConfig)
+    
+    if (initSuccess) {
+      return {
+        success: true,
+        message: 'WebDAV配置已更新，客户端重新初始化成功'
+      }
+    } else {
+      console.error('WebDAV客户端重新初始化失败')
+      return {
+        success: false,
+        message: 'WebDAV客户端重新初始化失败，请检查配置'
+      }
+    }
+  } catch (error) {
+    console.error('处理WebDAV配置变更失败:', error)
+    return {
+      success: false,
+      message: `配置变更处理失败: ${error}`
     }
   }
 }
