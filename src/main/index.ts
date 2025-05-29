@@ -133,14 +133,12 @@ function getMarkdownFolderPath(): string {
   // 确保markdown根目录存在
   try {
     if (!fsSync.existsSync(markdownPath)) {
-      console.log('创建markdown根目录:', markdownPath)
       fsSync.mkdirSync(markdownPath, { recursive: true })
     }
 
     // 在开发环境和生产环境都创建根目录下的.assets文件夹
     const defaultAssetsFolderPath = path.join(markdownPath, '.assets')
     if (!fsSync.existsSync(defaultAssetsFolderPath)) {
-      console.log('创建.assets文件夹:', defaultAssetsFolderPath)
       fsSync.mkdirSync(defaultAssetsFolderPath, { recursive: true })
     }
   } catch (error) {
@@ -226,16 +224,12 @@ function createWindow(): void {
 // 执行WebDAV自动同步
 async function performAutoSync(): Promise<void> {
   try {
-    console.log('检查WebDAV自动同步设置...')
     const webdavConfig = getWebDAVConfig()
 
     // 检查是否启用了自动同步
     if (!webdavConfig.enabled || !webdavConfig.syncOnStartup) {
-      console.log('WebDAV自动同步未启用')
       return
     }
-
-    console.log('开始WebDAV自动同步，方向:', webdavConfig.syncDirection)
 
     // 设置本地路径
     const markdownPath = getMarkdownFolderPath()
@@ -249,14 +243,12 @@ async function performAutoSync(): Promise<void> {
           ...webdavConfig,
           localPath: markdownPath
         })
-        console.log('自动同步本地到远程完成:', result.message)
         break
       case 'remoteToLocal':
         result = await syncRemoteToLocal({
           ...webdavConfig,
           localPath: markdownPath
         })
-        console.log('自动同步远程到本地完成:', result.message)
         break
       case 'bidirectional':
       default:
@@ -264,7 +256,6 @@ async function performAutoSync(): Promise<void> {
           ...webdavConfig,
           localPath: markdownPath
         })
-        console.log('自动双向同步完成:', result.message)
         break
     }
   } catch (error) {
@@ -429,8 +420,6 @@ app.whenReady().then(() => {
         console.error(`安全警告: 尝试访问应用数据目录外的文件: ${normalizedPath}`)
         return callback({ error: -2 }) // 文件不存在或无权限
       }
-
-      console.log(`通过notebyfileprotocol协议加载文件: ${normalizedPath}`)
       callback({ path: normalizedPath })
     } catch (error) {
       console.error('处理notebyfileprotocol协议请求时出错:', error)
@@ -484,13 +473,11 @@ app.whenReady().then(() => {
   // 流式内容生成
   ipcMain.handle(IPC_CHANNELS.STREAM_GENERATE_CONTENT, async (event, request) => {
     try {
-      console.log(`[主进程] 接收到流式内容生成请求: 模型=${request.modelName}`)
       const emitter = await streamGenerateContent(request)
       const sender = event.sender
 
       // 为每个流式数据块分配唯一ID
       const streamId = Date.now().toString()
-      console.log(`[主进程] 为请求创建streamId=${streamId}`)
 
       // 用于跟踪事件监听器，确保能正确清理
       const listeners = {
@@ -501,11 +488,9 @@ app.whenReady().then(() => {
 
       // 创建清理函数，移除所有事件监听器
       const cleanupListeners = (): void => {
-        console.log(`[主进程] 清理streamId=${streamId}的事件监听器`)
         if (listeners.data) {
           try {
             emitter.removeListener('data', listeners.data)
-            console.log(`[主进程] 已移除数据监听器`)
           } catch (err) {
             console.error(`[主进程] 移除数据监听器失败:`, err)
           }
@@ -514,7 +499,6 @@ app.whenReady().then(() => {
         if (listeners.done) {
           try {
             emitter.removeListener('done', listeners.done)
-            console.log(`[主进程] 已移除完成监听器`)
           } catch (err) {
             console.error(`[主进程] 移除完成监听器失败:`, err)
           }
@@ -523,7 +507,6 @@ app.whenReady().then(() => {
         if (listeners.error) {
           try {
             emitter.removeListener('error', listeners.error)
-            console.log(`[主进程] 已移除错误监听器`)
           } catch (err) {
             console.error(`[主进程] 移除错误监听器失败:`, err)
           }
@@ -547,13 +530,11 @@ app.whenReady().then(() => {
       // 监听数据事件
       listeners.data = (chunk) => {
         if (sender.isDestroyed()) {
-          console.log(`[主进程] WebContents已销毁，无法发送数据块, streamId=${streamId}`)
           cleanupListeners()
           clearTimeout(timeoutId)
           return
         }
 
-        console.log(`[主进程] 发送数据块: ${chunk.length} 字符, streamId=${streamId}`)
         sender.send(`stream-data-${streamId}`, { chunk })
       }
       emitter.on('data', listeners.data)
@@ -563,12 +544,10 @@ app.whenReady().then(() => {
         clearTimeout(timeoutId)
 
         if (sender.isDestroyed()) {
-          console.log(`[主进程] WebContents已销毁，无法发送完成事件, streamId=${streamId}`)
           cleanupListeners()
           return
         }
 
-        console.log(`[主进程] 发送完成事件: ${fullContent.length} 字符, streamId=${streamId}`)
         sender.send(`stream-done-${streamId}`, { content: fullContent })
 
         // 完成后清理监听器
@@ -581,7 +560,6 @@ app.whenReady().then(() => {
         clearTimeout(timeoutId)
 
         if (sender.isDestroyed()) {
-          console.log(`[主进程] WebContents已销毁，无法发送错误, streamId=${streamId}`)
           cleanupListeners()
           return
         }
@@ -1043,8 +1021,9 @@ ${htmlContent}
       // 检查文件夹是否存在
       try {
         await fsPromises.access(folderPath)
-      } catch {
-        console.log(`文件夹 ${folderName} 不存在，已创建`)
+      } catch (error) {
+        console.error(`检查文件夹 ${folderName} 失败:`, error)
+        return { success: false, error: String(error), files: [] }
       }
 
       const entries = await fsPromises.readdir(folderPath, { withFileTypes: true })
@@ -1085,8 +1064,6 @@ ${htmlContent}
 
   // 创建新文件夹
   ipcMain.handle(IPC_CHANNELS.CREATE_MARKDOWN_FOLDER, async (_, folderName) => {
-    console.log('接收到创建文件夹请求:', folderName)
-
     try {
       // 验证文件夹名称
       if (!folderName || folderName.trim() === '') {
@@ -1105,17 +1082,10 @@ ${htmlContent}
       // 重新组合路径
       const sanitizedFolderName = sanitizedParts.join('/')
 
-      if (sanitizedFolderName !== folderName) {
-        console.log(`文件夹名称包含非法字符，已净化: ${folderName} -> ${sanitizedFolderName}`)
-      }
-
       const fullPath = resolve(markdownRoot, sanitizedFolderName)
-
-      console.log('将要创建的文件夹完整路径:', fullPath)
 
       // 检查markdown根目录是否存在，如果不存在则创建
       if (!fsSync.existsSync(markdownRoot)) {
-        console.log('创建主markdown目录')
         await fsPromises.mkdir(markdownRoot, { recursive: true })
       }
 
@@ -1123,20 +1093,15 @@ ${htmlContent}
       try {
         const stat = await fsPromises.stat(fullPath)
         if (stat.isDirectory()) {
-          console.log('文件夹已存在')
           return { success: false, error: '文件夹已存在' }
         } else {
           console.error('路径存在但不是文件夹')
           return { success: false, error: '该名称已被文件占用' }
         }
-      } catch {
-        // 错误表示路径不存在，可以创建
-        console.log('开始创建文件夹')
-      }
+      } catch {}
 
       // 创建文件夹
       await fsPromises.mkdir(fullPath, { recursive: true })
-      console.log('文件夹创建成功:', fullPath)
 
       return { success: true, path: fullPath }
     } catch (error) {
@@ -1462,16 +1427,12 @@ ${htmlContent}
 
   // WebDAV配置变更通知
   ipcMain.handle(IPC_CHANNELS.WEBDAV_CONFIG_CHANGED, async () => {
-    try {
-      console.log('收到WebDAV配置变更通知，准备重新初始化客户端...')
-      
+    try {      
       // 从webdav模块导入配置变更处理函数
       const { handleConfigChanged } = await import('./webdav')
       
       // 重新初始化WebDAV客户端
       const result = await handleConfigChanged()
-      
-      console.log('WebDAV客户端重新初始化结果:', result)
       
       return {
         success: result.success,
@@ -1509,7 +1470,6 @@ ${htmlContent}
           try {
             if (cleanPath.includes('%')) {
               const decodedPath = decodeURI(cleanPath)
-              console.log('解码路径:', decodedPath)
               cleanPath = decodedPath
             }
           } catch (decodeError) {
@@ -1521,10 +1481,7 @@ ${htmlContent}
           if (cleanPath.match(/^[A-Za-z]:\/{2,}/)) {
             // 修复Windows盘符后可能的多斜杠问题
             cleanPath = cleanPath.replace(/^([A-Za-z]:)\/{2,}/, '$1/')
-            console.log('修复Windows盘符路径格式:', cleanPath)
           }
-
-          console.log(`检测到可能的文件路径，尝试读取: ${cleanPath}`)
 
           try {
             // 尝试读取文件
@@ -1532,7 +1489,6 @@ ${htmlContent}
             // 转换为base64
             const base64Data = `data:image/${path.extname(cleanPath).substring(1)};base64,${fileBuffer.toString('base64')}`
             fileData = base64Data
-            console.log('成功读取本地文件并转换为base64')
           } catch (readError) {
             console.error('读取文件失败，可能不是有效的本地文件路径:', readError)
             // 如果读取失败，保持原始数据
@@ -1556,7 +1512,6 @@ ${htmlContent}
 
       // 统一使用markdown/.assets目录存储上传的文件
       const assetsDir = path.join(markdownRoot, '.assets')
-      console.log(`使用统一的资源目录: ${assetsDir}`)
 
       // 确保资源目录存在
       await ensureMarkdownFolders(assetsDir)
@@ -1587,8 +1542,6 @@ ${htmlContent}
       const assetRelativePath = `.assets${path.posix.sep}${uniqueFileName}`
       const markdownImagePath = `${absoluteDirPath}${path.posix.sep}${assetRelativePath}`
 
-      console.log(`文件上传成功: ${markdownImagePath}`)
-
       // 确保路径使用正斜杠，这对于 file:// URL 是必需的
       let fileUrl = ''
 
@@ -1613,17 +1566,11 @@ ${htmlContent}
             // 确保有一个斜杠分隔盘符和路径
             fileUrl = `file:///${driveLetter}/${cleanPathPart.replace(/^\/+/, '')}`
           }
-
-          console.log(`Windows路径处理 - 原始路径: ${assetsPath}`)
-          console.log(`Windows路径处理 - 盘符: ${driveLetter}, 路径部分: ${pathPart}`)
-          console.log(`Windows路径处理 - 清理后路径部分: ${cleanPathPart}`)
-          console.log(`Windows路径处理 - 最终URL: ${fileUrl}`)
         } else {
           // 非Windows路径，直接转换斜杠
           fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`
         }
 
-        console.log(`修正后的文件URL: ${fileUrl}`)
       } catch (error) {
         console.error('生成文件URL时出错:', error)
         // 使用备用方法生成URL
@@ -1930,16 +1877,11 @@ ${htmlContent}
     initDatabase()
       .then((db) => {
         if (db) {
-          console.log('历史记录数据库初始化成功')
           // 立即初始化分析缓存表，并返回Promise以继续链式操作
           return initAnalysisCacheTable()
         } else {
           throw new Error('数据库初始化失败')
         }
-      })
-      // 不再初始化WebDAV同步缓存表，改用文件存储
-      .then(() => {
-        console.log('所有数据库表初始化完成')
       })
       .catch((error) => {
         console.error('数据库初始化失败:', error)
