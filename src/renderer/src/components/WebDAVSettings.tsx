@@ -730,7 +730,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       // 获取当前配置
       const values = formApi.getValues()
-      
+
       // 重置加密相关配置
       const updatedValues = {
         ...values,
@@ -738,19 +738,19 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         encryptionTest: '',
         encryptionTestPlain: ''
       }
-      
+
       // 更新表单值
       formApi.setValues(updatedValues)
-      
+
       // 更新本地状态
       setCustomEncryptionEnabled(false)
-      
+
       // 保存配置
       await saveConfig(updatedValues)
-      
+
       // 关闭对话框
       setShowDisableEncryptionModal(false)
-      
+
       Toast.success('已关闭自定义加密')
     } catch (error) {
       console.error('关闭加密失败:', error)
@@ -1254,10 +1254,21 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       >
         <div style={{ padding: '0 0 20px' }}>
           <div style={{ marginBottom: '20px' }}>
-            <Text type="warning" strong style={{ fontSize: '16px', display: 'block', marginBottom: '12px' }}>
+            <Text
+              type="warning"
+              strong
+              style={{ fontSize: '16px', display: 'block', marginBottom: '12px' }}
+            >
               ⚠️ 重要提醒
             </Text>
-            <div style={{ backgroundColor: '#fff7e6', padding: '12px', borderRadius: '6px', border: '1px solid #ffd666' }}>
+            <div
+              style={{
+                backgroundColor: '#fff7e6',
+                padding: '12px',
+                borderRadius: '6px',
+                border: '1px solid #ffd666'
+              }}
+            >
               <Text>关闭自定义加密将会：</Text>
               <ul style={{ marginLeft: '16px', marginTop: '8px', marginBottom: '8px' }}>
                 <li>移除当前的主密码设置</li>
@@ -1269,19 +1280,14 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               </Text>
             </div>
           </div>
-          
+
           <div style={{ marginBottom: '20px' }}>
             <Text>确认关闭自定义加密功能吗？</Text>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            <Button onClick={() => setShowDisableEncryptionModal(false)}>
-              取消
-            </Button>
-            <Button 
-              type="danger" 
-              onClick={handleDisableEncryptionConfirm}
-            >
+            <Button onClick={() => setShowDisableEncryptionModal(false)}>取消</Button>
+            <Button type="danger" onClick={handleDisableEncryptionConfirm}>
               确认关闭
             </Button>
           </div>

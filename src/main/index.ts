@@ -1425,13 +1425,13 @@ ${htmlContent}
 
   // WebDAV配置变更通知
   ipcMain.handle(IPC_CHANNELS.WEBDAV_CONFIG_CHANGED, async () => {
-    try {      
+    try {
       // 从webdav模块导入配置变更处理函数
       const { handleConfigChanged } = await import('./webdav')
-      
+
       // 重新初始化WebDAV客户端
       const result = await handleConfigChanged()
-      
+
       return {
         success: result.success,
         message: result.message || 'WebDAV配置已更新'
@@ -1568,7 +1568,6 @@ ${htmlContent}
           // 非Windows路径，直接转换斜杠
           fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`
         }
-
       } catch (error) {
         console.error('生成文件URL时出错:', error)
         // 使用备用方法生成URL

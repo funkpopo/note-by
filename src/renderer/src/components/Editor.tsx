@@ -168,37 +168,39 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         if (selection && selection.toString()) {
           // 清除每行末尾的反斜杠
           const cleanedText = removeTrailingBackslashes(selection.toString())
-          
+
           // 将处理后的文本放入剪贴板
           e.preventDefault()
           e.clipboardData?.setData('text/plain', cleanedText)
         }
       }
     }
-    
+
     // 检查当前选中内容是否在代码块中
     const isCodeBlockSelection = (): boolean => {
       const selection = document.getSelection()
       if (!selection || !selection.anchorNode) return false
-      
+
       // 查找最近的代码块容器
       let node: Node | null = selection.anchorNode
       while (node && node.nodeName !== 'BODY') {
-        if (node.nodeName === 'PRE' || 
-            (node instanceof HTMLElement && 
-             (node.classList.contains('bn-code-block') || 
-              node.closest('.bn-code-block')))) {
+        if (
+          node.nodeName === 'PRE' ||
+          (node instanceof HTMLElement &&
+            (node.classList.contains('bn-code-block') || node.closest('.bn-code-block')))
+        ) {
           return true
         }
         node = node.parentNode
       }
       return false
     }
-    
+
     // 清除每行末尾的反斜杠
     const removeTrailingBackslashes = (text: string): string => {
-      return text.split('\n')
-        .map(line => {
+      return text
+        .split('\n')
+        .map((line) => {
           if (line.endsWith('\\')) {
             return line.slice(0, -1)
           }
@@ -206,10 +208,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         })
         .join('\n')
     }
-    
+
     // 添加复制事件监听器
     document.addEventListener('copy', handleCodeCopy)
-    
+
     // 组件卸载时移除事件监听器
     return () => {
       document.removeEventListener('copy', handleCodeCopy)
@@ -669,7 +671,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     setEditorContent('')
     lastSavedContentRef.current = ''
     setIsEditing(false)
-    
+
     // 清除所有定时器
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current)
@@ -825,7 +827,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
           const normalizedCurrent = currentMarkdown.trim()
           const normalizedSaved = lastSavedContentRef.current.trim()
-          
+
           // 如果内容一致，确保编辑状态为false
           if (normalizedCurrent === normalizedSaved) {
             setIsEditing(false)
@@ -837,7 +839,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       return () => clearTimeout(timer)
     }
-    
+
     return undefined
   }, [editor, currentFile, lastLoadedFileRef.current])
 
@@ -886,7 +888,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
 
         // 刷新全局标签缓存（异步执行，不阻塞保存流程）
-        refreshGlobalTagCache().catch(error => {
+        refreshGlobalTagCache().catch((error) => {
           console.warn('刷新全局标签缓存失败:', error)
         })
 
@@ -1577,22 +1579,30 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 try {
                   // 获取全局标签建议
                   const globalTagItems = await getGlobalTagSuggestions(editor, query)
-                  
+
                   // 获取当前文档的标签建议
                   const localTagItems = getTagMenuItems(editor, tagList, query)
-                  
+
                   // 合并全局标签和本地标签，去重并排序
                   const allItems = [...globalTagItems, ...localTagItems]
-                  
+
                   // 去重：如果全局标签和本地标签有重复，优先显示全局标签
                   const uniqueItems = allItems.filter((item, index, arr) => {
-                    const itemName = item.title.replace('@', '').replace(' (已使用)', '').replace(' (本文档)', '')
-                    return arr.findIndex(i => {
-                      const iName = i.title.replace('@', '').replace(' (已使用)', '').replace(' (本文档)', '')
-                      return iName === itemName
-                    }) === index
+                    const itemName = item.title
+                      .replace('@', '')
+                      .replace(' (已使用)', '')
+                      .replace(' (本文档)', '')
+                    return (
+                      arr.findIndex((i) => {
+                        const iName = i.title
+                          .replace('@', '')
+                          .replace(' (已使用)', '')
+                          .replace(' (本文档)', '')
+                        return iName === itemName
+                      }) === index
+                    )
                   })
-                  
+
                   return uniqueItems
                 } catch (error) {
                   console.error('获取标签建议失败:', error)

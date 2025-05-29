@@ -947,14 +947,14 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         items={processedNavItems}
         footer={{
           collapseButton: (
-              <Button
-                icon={collapsed ? <IconChevronRight /> : <IconChevronLeft />}
-                onClick={(): void => handleCollapseChange(!collapsed)}
-                type="tertiary"
-                theme="borderless"
-                style={{ display: 'block', margin: '12px auto' }}
-                aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
-              />
+            <Button
+              icon={collapsed ? <IconChevronRight /> : <IconChevronLeft />}
+              onClick={(): void => handleCollapseChange(!collapsed)}
+              type="tertiary"
+              theme="borderless"
+              style={{ display: 'block', margin: '12px auto' }}
+              aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+            />
           )
         }}
       />

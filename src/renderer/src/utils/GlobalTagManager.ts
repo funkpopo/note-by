@@ -70,7 +70,7 @@ class GlobalTagManager {
     if (!this.cache) {
       return []
     }
-    return this.cache.data.topTags.map(tag => tag.tag)
+    return this.cache.data.topTags.map((tag) => tag.tag)
   }
 
   /**
@@ -82,7 +82,7 @@ class GlobalTagManager {
     if (!this.cache) {
       return false
     }
-    return this.cache.data.topTags.some(tag => tag.tag === tagName)
+    return this.cache.data.topTags.some((tag) => tag.tag === tagName)
   }
 
   /**
@@ -94,7 +94,7 @@ class GlobalTagManager {
     if (!this.cache) {
       return 0
     }
-    const tag = this.cache.data.topTags.find(tag => tag.tag === tagName)
+    const tag = this.cache.data.topTags.find((tag) => tag.tag === tagName)
     return tag ? tag.count : 0
   }
 
@@ -111,15 +111,15 @@ class GlobalTagManager {
 
     const lowerQuery = query.toLowerCase()
     return this.cache.data.topTags
-      .filter(tag => tag.tag.toLowerCase().includes(lowerQuery))
+      .filter((tag) => tag.tag.toLowerCase().includes(lowerQuery))
       .sort((a, b) => {
         // 优先显示以查询开头的标签
         const aStartsWith = a.tag.toLowerCase().startsWith(lowerQuery)
         const bStartsWith = b.tag.toLowerCase().startsWith(lowerQuery)
-        
+
         if (aStartsWith && !bStartsWith) return -1
         if (!aStartsWith && bStartsWith) return 1
-        
+
         // 然后按使用次数排序
         return b.count - a.count
       })
@@ -155,7 +155,7 @@ class GlobalTagManager {
    */
   preloadTags(): void {
     // 异步加载，不等待结果
-    this.getGlobalTags().catch(error => {
+    this.getGlobalTags().catch((error) => {
       console.warn('预加载标签数据失败:', error)
     })
   }
@@ -174,11 +174,13 @@ class GlobalTagManager {
     }
 
     const now = Date.now()
-    return (now - this.cache.timestamp) < this.CACHE_DURATION
+    return now - this.cache.timestamp < this.CACHE_DURATION
   }
 
-    /**   * 从API加载标签数据   */  private async loadTagsFromAPI(): Promise<GlobalTagsData> {    try {      const response = await (window.api as any).tags.getGlobalTags()
-      
+  /**   * 从API加载标签数据   */ private async loadTagsFromAPI(): Promise<GlobalTagsData> {
+    try {
+      const response = await (window.api as any).tags.getGlobalTags()
+
       if (!response.success) {
         throw new Error(response.error || '获取全局标签数据失败')
       }
@@ -252,7 +254,7 @@ class GlobalTagManager {
    * 通知所有监听器
    */
   private notifyListeners(data: GlobalTagsData): void {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(data)
       } catch (error) {
@@ -267,4 +269,4 @@ export const globalTagManager = new GlobalTagManager()
 
 // 导出类型和实例
 export default globalTagManager
-export { GlobalTagManager } 
+export { GlobalTagManager }

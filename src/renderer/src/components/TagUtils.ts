@@ -32,12 +32,14 @@ export const getTagMenuItems = (
 
   // 获取全局标签数据
   const globalTags = globalTagManager.filterTags(query || '', 10)
-  
+
   // 创建全局标签菜单项
   globalTags.forEach((globalTag) => {
     // 检查是否已经在当前文档标签中
-    const isInCurrentDoc = existingTags.some(tag => tag.toLowerCase() === globalTag.tag.toLowerCase())
-    
+    const isInCurrentDoc = existingTags.some(
+      (tag) => tag.toLowerCase() === globalTag.tag.toLowerCase()
+    )
+
     tagItems.push({
       title: isInCurrentDoc ? `${globalTag.tag} (已使用)` : globalTag.tag,
       count: globalTag.count,
@@ -58,11 +60,12 @@ export const getTagMenuItems = (
 
   // 添加当前文档中的标签（如果不在全局标签中）
   if (query) {
-    const filteredLocalTags = existingTags.filter((tag) => 
-      tag.toLowerCase().includes(query.toLowerCase()) &&
-      !globalTags.some(globalTag => globalTag.tag.toLowerCase() === tag.toLowerCase())
+    const filteredLocalTags = existingTags.filter(
+      (tag) =>
+        tag.toLowerCase().includes(query.toLowerCase()) &&
+        !globalTags.some((globalTag) => globalTag.tag.toLowerCase() === tag.toLowerCase())
     )
-    
+
     filteredLocalTags.forEach((tag) => {
       tagItems.push({
         title: `${tag} (本文档)`,
@@ -83,9 +86,11 @@ export const getTagMenuItems = (
   }
 
   // 如果有查询文本，且不完全匹配任何现有标签，添加"创建新标签"选项
-  if (query && 
-      !existingTags.some((tag) => tag.toLowerCase() === query.toLowerCase()) &&
-      !globalTags.some((globalTag) => globalTag.tag.toLowerCase() === query.toLowerCase())) {
+  if (
+    query &&
+    !existingTags.some((tag) => tag.toLowerCase() === query.toLowerCase()) &&
+    !globalTags.some((globalTag) => globalTag.tag.toLowerCase() === query.toLowerCase())
+  ) {
     tagItems.unshift({
       title: `创建新标签: "${query}"`,
       isGlobal: false,
@@ -109,16 +114,16 @@ export const getTagMenuItems = (
     // 创建新标签选项优先
     if (a.title.startsWith('创建新标签')) return -1
     if (b.title.startsWith('创建新标签')) return 1
-    
+
     // 全局标签按使用次数排序
     if (a.isGlobal && b.isGlobal) {
       return (b.count || 0) - (a.count || 0)
     }
-    
+
     // 全局标签优先于本文档标签
     if (a.isGlobal && !b.isGlobal) return -1
     if (!a.isGlobal && b.isGlobal) return 1
-    
+
     // 其他情况按字母顺序
     return a.title.localeCompare(b.title)
   })
@@ -180,7 +185,8 @@ export const extractTagsFromMarkdown = (markdown: string): string[] => {
   // 修改正则表达式，排除电子邮件地址格式
   // 1. 使用(?<![a-zA-Z0-9_\u4e00-\u9fa5])@表示@前不能是字母、数字等（必须是空格、标点或行首）
   // 2. 使用(?![a-zA-Z0-9_\u4e00-\u9fa5]+\.[a-zA-Z0-9_\u4e00-\u9fa5]+)排除域名格式
-  const tagRegex = /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g
+  const tagRegex =
+    /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g
   const matches = markdown.matchAll(tagRegex)
   const tags: string[] = []
 
@@ -202,7 +208,7 @@ export const preprocessMarkdownForTags = (markdown: string): string => {
   // 使用特殊标记 {{@tag}} 来标识标签
   // 使用与extractTagsFromMarkdown相同的正则表达式
   return markdown.replace(
-    /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g, 
+    /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g,
     '{{@$1}}'
   )
 }
@@ -298,10 +304,10 @@ export const getGlobalTagSuggestions = async (
   try {
     // 确保全局标签数据已加载
     await globalTagManager.getGlobalTags()
-    
+
     // 获取全局标签建议
     const globalTags = globalTagManager.filterTags(query, 15)
-    
+
     return globalTags.map((tag) => ({
       title: `@${tag.tag}`,
       count: tag.count,

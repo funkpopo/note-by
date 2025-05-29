@@ -69,7 +69,7 @@ const IPC_CHANNELS = {
   MINDMAP_LOAD_FILE: 'mindmap:load-file',
   MINDMAP_EXPORT_HTML: 'mindmap:export-html',
   DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
-  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog'  // Re-using if a generic one is better, or make specific
+  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog' // Re-using if a generic one is better, or make specific
 }
 
 // 内容生成请求接口
@@ -771,15 +771,17 @@ const api = {
   },
   // + Mindmap API
   mindmap: {
-    save: (content: string): Promise<{ success: boolean; path?: string; error?: string }> => 
+    save: (content: string): Promise<{ success: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MINDMAP_SAVE_FILE, content),
-    load: (): Promise<{ success: boolean; data?: string; cancelled?: boolean; error?: string }> => 
+    load: (): Promise<{ success: boolean; data?: string; cancelled?: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MINDMAP_LOAD_FILE),
-    exportHtml: (imageDataUrl: string): Promise<{ success: boolean; path?: string; error?: string }> => 
+    exportHtml: (
+      imageDataUrl: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MINDMAP_EXPORT_HTML, imageDataUrl),
-    showSaveDialog: (options: Electron.SaveDialogOptions): Promise<string | undefined> => 
+    showSaveDialog: (options: Electron.SaveDialogOptions): Promise<string | undefined> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_SAVE, options),
-    showOpenDialog: (options: Electron.OpenDialogOptions): Promise<string | undefined> => 
+    showOpenDialog: (options: Electron.OpenDialogOptions): Promise<string | undefined> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_OPEN, options)
   }
 }

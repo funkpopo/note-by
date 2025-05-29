@@ -16,21 +16,12 @@ import {
   Panel,
   useKeyPress
 } from '@xyflow/react'
-import { 
-  Button, 
-  Space, 
-  Toast, 
-  Input, 
-  Modal, 
-  Typography, 
-  Select,
-  Slider
-} from '@douyinfe/semi-ui'
-import { 
-  IconPlus, 
-  IconSave, 
-  IconUpload, 
-  IconDownload, 
+import { Button, Space, Toast, Input, Modal, Typography, Select, Slider } from '@douyinfe/semi-ui'
+import {
+  IconPlus,
+  IconSave,
+  IconUpload,
+  IconDownload,
   IconUndo,
   IconRedo
 } from '@douyinfe/semi-icons'
@@ -90,7 +81,7 @@ const initialNodes: Node[] = [
     id: '1',
     type: 'default',
     position: { x: 400, y: 200 },
-    data: { 
+    data: {
       label: '中心主题',
       nodeType: 'primary'
     },
@@ -107,15 +98,16 @@ const MindMapFlow: React.FC = () => {
   const [nodeId, setNodeId] = useState(2)
   const [isLoading, setIsLoading] = useState(false)
   const [editingNode, setEditingNode] = useState<{
-    id: string;
-    label: string;
-    nodeType: string;
-    fontSize?: number;
+    id: string
+    label: string
+    nodeType: string
+    fontSize?: number
   } | null>(null)
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const { getViewport, setViewport, getNodes, getEdges, deleteElements, screenToFlowPosition } = useReactFlow()
+  const { getViewport, setViewport, getNodes, getEdges, deleteElements, screenToFlowPosition } =
+    useReactFlow()
 
   // 键盘快捷键
   const deletePressed = useKeyPress('Delete')
@@ -128,12 +120,12 @@ const MindMapFlow: React.FC = () => {
   // 保存历史状态
   const saveToHistory = useCallback(() => {
     const currentState = { nodes: getNodes(), edges: getEdges() }
-    setHistory(prev => {
+    setHistory((prev) => {
       const newHistory = prev.slice(0, historyIndex + 1)
       newHistory.push(currentState)
       return newHistory.slice(-20) // 保留最近20个状态
     })
-    setHistoryIndex(prev => Math.min(prev + 1, 19))
+    setHistoryIndex((prev) => Math.min(prev + 1, 19))
   }, [getNodes, getEdges, historyIndex])
 
   // 撤销
@@ -142,7 +134,7 @@ const MindMapFlow: React.FC = () => {
       const prevState = history[historyIndex - 1]
       setNodes(prevState.nodes)
       setEdges(prevState.edges)
-      setHistoryIndex(prev => prev - 1)
+      setHistoryIndex((prev) => prev - 1)
       Toast.success('已撤销')
     }
   }, [history, historyIndex, setNodes, setEdges])
@@ -153,7 +145,7 @@ const MindMapFlow: React.FC = () => {
       const nextState = history[historyIndex + 1]
       setNodes(nextState.nodes)
       setEdges(nextState.edges)
-      setHistoryIndex(prev => prev + 1)
+      setHistoryIndex((prev) => prev + 1)
       Toast.success('已重做')
     }
   }, [history, historyIndex, setNodes, setEdges])
@@ -173,7 +165,7 @@ const MindMapFlow: React.FC = () => {
       id: nodeId.toString(),
       type: 'default',
       position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
-      data: { 
+      data: {
         label: `新节点 ${nodeId}`,
         nodeType: 'default'
       },
@@ -189,15 +181,14 @@ const MindMapFlow: React.FC = () => {
   const handleConnectEnd = useCallback(
     (event: MouseEvent | TouchEvent, connectionState: any) => {
       if (!connectionState.isValid && connectionState.fromNode) {
-        const targetIsPane = (event.target as HTMLElement).classList.contains('react-flow__pane');
+        const targetIsPane = (event.target as HTMLElement).classList.contains('react-flow__pane')
         if (targetIsPane) {
           const newNodeIdStr = nodeId.toString()
-          const { clientX, clientY } =
-            'changedTouches' in event ? event.changedTouches[0] : event
-          
+          const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event
+
           const position = screenToFlowPosition({
             x: clientX,
-            y: clientY,
+            y: clientY
           })
 
           const newNode: Node = {
@@ -206,16 +197,16 @@ const MindMapFlow: React.FC = () => {
             position,
             data: {
               label: `新节点 ${newNodeIdStr}`,
-              nodeType: 'default',
+              nodeType: 'default'
             },
             style: nodeStyles.default,
-            origin: [0.5, 0.0] 
+            origin: [0.5, 0.0]
           }
 
           const newEdge: Edge = {
             id: `e${connectionState.fromNode.id}-${newNodeIdStr}`,
             source: connectionState.fromNode.id,
-            target: newNodeIdStr,
+            target: newNodeIdStr
           }
 
           setNodes((nds) => nds.concat(newNode))
@@ -231,9 +222,9 @@ const MindMapFlow: React.FC = () => {
 
   // 删除选中的节点和边
   const deleteSelected = useCallback(() => {
-    const selectedNodes = nodes.filter(node => node.selected)
-    const selectedEdges = edges.filter(edge => edge.selected)
-    
+    const selectedNodes = nodes.filter((node) => node.selected)
+    const selectedEdges = edges.filter((edge) => edge.selected)
+
     if (selectedNodes.length === 0 && selectedEdges.length === 0) {
       Toast.warning('请先选择要删除的节点或连线')
       return
@@ -246,9 +237,9 @@ const MindMapFlow: React.FC = () => {
 
   // 节点双击编辑
   const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    let nodeTypeToEdit = (node.data.nodeType as string) || 'default';
+    let nodeTypeToEdit = (node.data.nodeType as string) || 'default'
     if (nodeTypeToEdit === 'custom') {
-      nodeTypeToEdit = 'default';
+      nodeTypeToEdit = 'default'
     }
     setEditingNode({
       id: node.id,
@@ -261,20 +252,22 @@ const MindMapFlow: React.FC = () => {
   // 保存节点编辑
   const saveNodeEdit = useCallback(() => {
     if (!editingNode) return
-    
-    const effectiveNodeType = (editingNode.nodeType === 'custom' ? 'default' : editingNode.nodeType) as keyof typeof nodeStyles;
+
+    const effectiveNodeType = (
+      editingNode.nodeType === 'custom' ? 'default' : editingNode.nodeType
+    ) as keyof typeof nodeStyles
     const style = {
       ...nodeStyles[effectiveNodeType],
       fontSize: `${editingNode.fontSize}px`
     }
-    
+
     setNodes((nds) =>
       nds.map((node) =>
         node.id === editingNode.id
-          ? { 
-              ...node, 
-              data: { 
-                ...node.data, 
+          ? {
+              ...node,
+              data: {
+                ...node.data,
                 label: editingNode.label,
                 nodeType: effectiveNodeType,
                 fontSize: editingNode.fontSize
@@ -292,13 +285,18 @@ const MindMapFlow: React.FC = () => {
   // MiniMap节点颜色映射
   const nodeColor = useCallback((node: Node): string => {
     const nodeType = (node.data.nodeType as string) || 'default'
-    
+
     switch (nodeType) {
-      case 'primary': return '#1890ff'
-      case 'success': return '#52c41a'
-      case 'warning': return '#faad14'
-      case 'danger': return '#ff4d4f'
-      default: return '#ddd'
+      case 'primary':
+        return '#1890ff'
+      case 'success':
+        return '#52c41a'
+      case 'warning':
+        return '#faad14'
+      case 'danger':
+        return '#ff4d4f'
+      default:
+        return '#ddd'
     }
   }, [])
 
@@ -311,12 +309,12 @@ const MindMapFlow: React.FC = () => {
         edges: getEdges(),
         viewport: getViewport()
       }
-      
+
       if (flowData.nodes.length === 0) {
         Toast.warning('思维导图为空，无法保存')
         return
       }
-      
+
       // 调用主进程保存文件
       const result = await window.api.mindmap.save(JSON.stringify(flowData, null, 2))
       if (result.success) {
@@ -390,7 +388,7 @@ const MindMapFlow: React.FC = () => {
           height: reactFlowWrapper.current.offsetHeight,
           quality: 1.0
         })
-        
+
         // 调用主进程导出HTML
         const result = await window.api.mindmap.exportHtml(dataUrl)
         if (result.success) {
@@ -469,7 +467,7 @@ const MindMapFlow: React.FC = () => {
           proOptions={{ hideAttribution: true }}
         >
           <Controls />
-          <MiniMap 
+          <MiniMap
             nodeColor={nodeColor}
             style={{
               background: 'rgba(255, 255, 255, 0.9)',
@@ -479,24 +477,14 @@ const MindMapFlow: React.FC = () => {
             maskColor="rgba(0, 0, 0, 0.1)"
           />
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-          
+
           {/* 工具栏 */}
           <Panel position="top-left">
             <Space>
-              <Button
-                icon={<IconPlus />}
-                onClick={addNode}
-                type="primary"
-                size="small"
-              >
+              <Button icon={<IconPlus />} onClick={addNode} type="primary" size="small">
                 添加节点
               </Button>
-              <Button
-                icon={<IconUndo />}
-                onClick={undo}
-                size="small"
-                disabled={historyIndex <= 0}
-              >
+              <Button icon={<IconUndo />} onClick={undo} size="small" disabled={historyIndex <= 0}>
                 撤销
               </Button>
               <Button
@@ -507,20 +495,10 @@ const MindMapFlow: React.FC = () => {
               >
                 重做
               </Button>
-              <Button
-                icon={<IconSave />}
-                onClick={saveMindMap}
-                loading={isLoading}
-                size="small"
-              >
+              <Button icon={<IconSave />} onClick={saveMindMap} loading={isLoading} size="small">
                 保存
               </Button>
-              <Button
-                icon={<IconUpload />}
-                onClick={loadMindMap}
-                loading={isLoading}
-                size="small"
-              >
+              <Button icon={<IconUpload />} onClick={loadMindMap} loading={isLoading} size="small">
                 加载
               </Button>
               <Button
@@ -548,21 +526,29 @@ const MindMapFlow: React.FC = () => {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>节点内容</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              节点内容
+            </label>
             <Input
               value={editingNode?.label || ''}
-              onChange={(value) => setEditingNode(prev => prev ? { ...prev, label: value } : null)}
+              onChange={(value) =>
+                setEditingNode((prev) => (prev ? { ...prev, label: value } : null))
+              }
               placeholder="请输入节点内容"
               autoFocus
               onEnterPress={saveNodeEdit}
             />
           </div>
-          
+
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>节点样式</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              节点样式
+            </label>
             <Select
               value={editingNode?.nodeType || 'default'}
-              onChange={(value) => setEditingNode(prev => prev ? { ...prev, nodeType: value as string } : null)}
+              onChange={(value) =>
+                setEditingNode((prev) => (prev ? { ...prev, nodeType: value as string } : null))
+              }
               style={{ width: '100%' }}
             >
               <Option value="default">默认</Option>
@@ -574,10 +560,14 @@ const MindMapFlow: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>字体大小: {editingNode?.fontSize || 14}px</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              字体大小: {editingNode?.fontSize || 14}px
+            </label>
             <Slider
               value={editingNode?.fontSize || 14}
-              onChange={(value) => setEditingNode(prev => prev ? { ...prev, fontSize: value as number } : null)}
+              onChange={(value) =>
+                setEditingNode((prev) => (prev ? { ...prev, fontSize: value as number } : null))
+              }
               min={10}
               max={24}
               step={1}
@@ -595,7 +585,9 @@ const MindMapPage: React.FC = () => {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '16px 0', borderBottom: '1px solid #e8e8e8' }}>
-        <Title heading={3} style={{ margin: 0 }}>思维导图</Title>
+        <Title heading={3} style={{ margin: 0 }}>
+          思维导图
+        </Title>
         <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
           双击节点编辑内容 | 拖拽连接节点 | 支持多选和快捷键操作
         </div>

@@ -1030,7 +1030,9 @@ export async function getDocumentTagsData(markdownPath: string): Promise<{
         // 修改正则表达式，排除电子邮件地址格式
         // 1. 使用(?<![a-zA-Z0-9_\u4e00-\u9fa5])@表示@前不能是字母、数字等（必须是空格、标点或行首）
         // 2. 使用(?![a-zA-Z0-9_\u4e00-\u9fa5]+\.[a-zA-Z0-9_\u4e00-\u9fa5]+)排除域名格式
-        const atTagsMatches = content.matchAll(/(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g)
+        const atTagsMatches = content.matchAll(
+          /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g
+        )
         for (const match of atTagsMatches) {
           if (match[1] && !fileTags.includes(match[1])) {
             fileTags.push(match[1])

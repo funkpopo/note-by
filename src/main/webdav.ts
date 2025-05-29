@@ -134,7 +134,7 @@ export async function testWebDAVConnection(
 
     // 尝试列出根目录
     await client.getDirectoryContents('/')
-    
+
     // 检查远程目标目录的访问权限
     try {
       const remotePathExists = await client.exists(config.remotePath)
@@ -149,7 +149,10 @@ export async function testWebDAVConnection(
       }
     } catch (remotePathError) {
       console.error('远程目录检查失败:', remotePathError)
-      return { success: false, message: `连接成功但无法访问远程目录 ${config.remotePath}: ${remotePathError}` }
+      return {
+        success: false,
+        message: `连接成功但无法访问远程目录 ${config.remotePath}: ${remotePathError}`
+      }
     }
   } catch (error) {
     console.error('测试WebDAV连接失败:', error)
@@ -205,7 +208,6 @@ async function uploadFile(localFilePath: string, remoteFilePath: string): Promis
         contentHash,
         fileSize
       })
-
     } catch (cacheError) {
       // 缓存更新失败不影响上传结果
       console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
@@ -258,7 +260,6 @@ async function downloadFile(remoteFilePath: string, localFilePath: string): Prom
         contentHash,
         fileSize
       })
-
     } catch (cacheError) {
       // 缓存更新失败不影响下载结果
       console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
@@ -1264,14 +1265,14 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
 // 处理WebDAV配置变更
 export async function handleConfigChanged(): Promise<{ success: boolean; message: string }> {
-  try {    
+  try {
     // 从设置中获取最新的WebDAV配置
     const { getWebDAVConfig } = await import('./settings')
     const settingsConfig = getWebDAVConfig()
-    
+
     // 重置当前客户端
     webdavClient = null
-    
+
     // 如果WebDAV未启用，不需要初始化客户端
     if (!settingsConfig.enabled) {
       return {
@@ -1279,16 +1280,16 @@ export async function handleConfigChanged(): Promise<{ success: boolean; message
         message: 'WebDAV已禁用，客户端已清除'
       }
     }
-    
+
     // 创建符合webdav模块要求的配置对象（添加localPath字段）
     const webdavConfig: WebDAVConfig = {
       ...settingsConfig,
       localPath: '' // 这里暂时设为空字符串，实际使用时会由调用方提供
     }
-    
+
     // 使用新配置初始化客户端
     const initSuccess = initWebDAVClient(webdavConfig)
-    
+
     if (initSuccess) {
       return {
         success: true,
