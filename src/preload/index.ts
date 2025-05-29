@@ -61,6 +61,7 @@ const IPC_CHANNELS = {
   GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
   SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
   RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
+  CHECK_DATABASE_STATUS: 'analytics:check-database-status',
   // 添加全局标签相关IPC通道
   GET_GLOBAL_TAGS: 'tags:get-global-tags',
   REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
@@ -759,7 +760,14 @@ const api = {
     resetAnalysisCache: (): Promise<{
       success: boolean
       error?: string
-    }> => ipcRenderer.invoke(IPC_CHANNELS.RESET_ANALYSIS_CACHE)
+    }> => ipcRenderer.invoke(IPC_CHANNELS.RESET_ANALYSIS_CACHE),
+
+    // 检查数据库状态
+    checkDatabaseStatus: (): Promise<{
+      success: boolean
+      status: string
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CHECK_DATABASE_STATUS)
   },
   // 全局标签相关API
   tags: {

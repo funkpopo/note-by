@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { getSetting } from './settings'
 import fsPromises from 'fs/promises'
+import { resolve } from 'path'
 
 // 导入类型定义，即使初始化失败也能使用类型
 import type Database from 'better-sqlite3'
@@ -22,15 +23,18 @@ export interface WebDAVSyncRecord {
 // 单例数据库连接
 let db: Database.Database | null = null
 
-// 获取数据库文件路径，存储在markdown/.assets文件夹下
 function getDatabasePath(): string {
+  let markdownPath
   if (is.dev) {
-    // 开发环境，使用项目根目录下的markdown/.assets文件夹
-    return path.join(process.cwd(), 'markdown', '.assets', 'note_history.db')
+    // 开发环境，使用项目根目录下的markdown文件夹
+    markdownPath = resolve(app.getAppPath(), 'markdown')
   } else {
-    // 生产环境，使用应用程序所在目录下的markdown/.assets文件夹
-    return path.join(path.dirname(app.getPath('exe')), 'markdown', '.assets', 'note_history.db')
+    // 生产环境，使用应用程序所在目录的上级目录下的markdown文件夹
+    markdownPath = resolve(app.getPath('exe'), '..', 'markdown')
   }
+  
+  // 返回数据库文件的完整路径
+  return path.join(markdownPath, '.assets', 'note_history.db')
 }
 
 // 初始化数据库
@@ -41,11 +45,24 @@ export async function initDatabase(): Promise<Database.Database | null> {
   }
 
   const dbPath = getDatabasePath()
+  console.log('数据库初始化：尝试使用路径', dbPath)
 
   // 确保数据库目录存在
   const dbDir = path.dirname(dbPath)
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true })
+  console.log('数据库目录:', dbDir)
+  
+  try {
+    if (!fs.existsSync(dbDir)) {
+      console.log('数据库目录不存在，开始创建:', dbDir)
+      fs.mkdirSync(dbDir, { recursive: true })
+      console.log('数据库目录创建成功')
+    } else {
+      console.log('数据库目录已存在')
+    }
+  } catch (dirError) {
+    console.error('创建数据库目录失败:', dirError)
+    console.error('目录路径:', dbDir)
+    return null
   }
 
   try {
@@ -60,9 +77,12 @@ export async function initDatabase(): Promise<Database.Database | null> {
       return null
     }
 
+    console.log('开始创建数据库连接:', dbPath)
     db = new SqliteDatabase(dbPath)
 
     if (db) {      
+      console.log('数据库连接创建成功，开始创建表结构')
+      
       // 创建文档历史记录表
       db.exec(`
         CREATE TABLE IF NOT EXISTS note_history (
@@ -84,6 +104,8 @@ export async function initDatabase(): Promise<Database.Database | null> {
         console.error('验证失败：note_history表未找到')
         return null
       }
+      
+      console.log('数据库初始化完成，note_history表已创建')
     } else {
       console.error('数据库连接创建失败')
       return null
@@ -94,7 +116,9 @@ export async function initDatabase(): Promise<Database.Database | null> {
     console.error('初始化数据库失败:', error)
     console.error('错误详情:', {
       message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      dbPath: dbPath,
+      dbDir: path.dirname(dbPath)
     })
     return null
   }
@@ -281,8 +305,11 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
   try {
     const database = await initDatabase()
 
-    // 如果数据库不可用，直接返回
+    // 如果数据库不可用，记录警告并返回
     if (!database) {
+      console.warn('历史记录功能不可用：数据库初始化失败')
+      console.warn('文件路径:', params.filePath)
+      console.warn('请检查数据库目录权限和磁盘空间')
       return
     }
 
@@ -343,14 +370,17 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
       `)
 
       const result = cleanStmt.run(params.filePath, timeThreshold)
-      if (result.changes > 0) {}
+      if (result.changes > 0) {
+        console.log(`清理了 ${result.changes} 条旧历史记录（基于时间）`)
+      }
     }
   } catch (error) {
     console.error('添加历史记录失败:', error)
     console.error('错误详情:', {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      filePath: params.filePath
+      filePath: params.filePath,
+      contentLength: params.content.length
     })
   }
 }
@@ -1205,29 +1235,100 @@ export async function checkDatabaseStatus(): Promise<{
   lastError: string | null
   details: {
     dbPath: string
+    dbDirExists: boolean
+    dbFileExists: boolean
+    hasWritePermission: boolean
+    markdownPath: string
+    pathConsistency: boolean
     tables: string[]
     tableInfo: Record<string, any>
+    recommendations: string[]
   }
 }> {
+  const dbPath = getDatabasePath()
+  const dbDir = path.dirname(dbPath)
+  
+  // 获取markdown根目录路径用于一致性检查
+  let markdownPath
+  if (is.dev) {
+    markdownPath = resolve(app.getAppPath(), 'markdown')
+  } else {
+    markdownPath = resolve(app.getPath('exe'), '..', 'markdown')
+  }
+  
   const result = {
     isInitialized: false,
     tablesExist: false,
     recordCount: 0,
     lastError: null as string | null,
     details: {
-      dbPath: getDatabasePath(),
+      dbPath: dbPath,
+      dbDirExists: false,
+      dbFileExists: false,
+      hasWritePermission: false,
+      markdownPath: markdownPath,
+      pathConsistency: false,
       tables: [] as string[],
-      tableInfo: {} as Record<string, any>
+      tableInfo: {} as Record<string, any>,
+      recommendations: [] as string[]
     }
   }
 
   try {
     console.log('开始数据库状态检查...')
+    console.log('数据库路径:', dbPath)
+    console.log('Markdown路径:', markdownPath)
+    
+    // 检查目录是否存在
+    result.details.dbDirExists = fs.existsSync(dbDir)
+    result.details.dbFileExists = fs.existsSync(dbPath)
+    
+    // 检查路径一致性（数据库应该位于markdown/.assets目录下）
+    const expectedDbPath = path.join(markdownPath, '.assets', 'note_history.db')
+    result.details.pathConsistency = (dbPath === expectedDbPath)
+    
+    if (!result.details.pathConsistency) {
+      result.details.recommendations.push(`路径不一致：期望 ${expectedDbPath}，实际 ${dbPath}`)
+    }
+    
+    // 检查写入权限
+    try {
+      if (result.details.dbDirExists) {
+        // 如果目录存在，测试写入权限
+        const testFile = path.join(dbDir, 'test_write_permission.tmp')
+        await fsPromises.writeFile(testFile, 'test')
+        await fsPromises.unlink(testFile)
+        result.details.hasWritePermission = true
+      } else {
+        // 如果目录不存在，测试是否可以创建
+        await fsPromises.mkdir(dbDir, { recursive: true })
+        result.details.dbDirExists = true
+        result.details.hasWritePermission = true
+        result.details.recommendations.push('已自动创建数据库目录')
+      }
+    } catch (permError) {
+      result.details.hasWritePermission = false
+      result.details.recommendations.push(`权限问题：无法写入目录 ${dbDir}`)
+      result.details.recommendations.push('请检查应用程序是否有足够的文件系统权限')
+    }
+    
+    // 如果基础条件不满足，提供建议
+    if (!result.details.dbDirExists) {
+      result.details.recommendations.push('数据库目录不存在，请确保应用有权限创建目录')
+    }
+    
+    if (!result.details.hasWritePermission) {
+      result.details.recommendations.push('没有写入权限，历史记录功能将无法工作')
+      result.lastError = '数据库目录权限不足'
+      return result
+    }
     
     // 检查数据库是否已初始化
     const database = await initDatabase()
     if (!database) {
       result.lastError = '数据库初始化失败'
+      result.details.recommendations.push('数据库初始化失败，请检查SQLite模块是否正确安装')
+      result.details.recommendations.push('尝试重启应用程序以重新初始化数据库')
       return result
     }
 
@@ -1251,6 +1352,14 @@ export async function checkDatabaseStatus(): Promise<{
       const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
       const tableInfo = tableInfoStmt.all()
       result.details.tableInfo.note_history = tableInfo
+      
+      if (result.recordCount === 0) {
+        result.details.recommendations.push('历史记录表存在但为空，这可能是正常的（如果是首次使用）')
+      } else {
+        result.details.recommendations.push(`历史记录表包含 ${result.recordCount} 条记录，功能正常`)
+      }
+    } else {
+      result.details.recommendations.push('note_history表不存在，可能需要重新初始化数据库')
     }
 
     // 检查其他表
@@ -1259,11 +1368,18 @@ export async function checkDatabaseStatus(): Promise<{
       const webdavCount = webdavCountStmt.get() as { count: number }
       result.details.tableInfo.webdav_sync_cache = { recordCount: webdavCount.count }
     }
+    
+    // 如果一切正常，提供积极反馈
+    if (result.isInitialized && result.tablesExist && result.details.hasWritePermission && result.details.pathConsistency) {
+      result.details.recommendations.push('数据库状态良好，历史记录功能应该正常工作')
+    }
 
     return result
   } catch (error) {
     console.error('数据库状态检查失败:', error)
     result.lastError = error instanceof Error ? error.message : String(error)
+    result.details.recommendations.push('数据库状态检查过程中发生错误')
+    result.details.recommendations.push('请查看控制台日志获取详细错误信息')
     return result
   }
 }
