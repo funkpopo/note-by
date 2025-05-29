@@ -35,11 +35,13 @@ import {
   getNoteHistoryById,
   getNoteHistoryStats,
   getUserActivityData,
+  initWebDAVSyncCacheTable,
   getAnalysisCache,
   saveAnalysisCache,
   resetAnalysisCache,
   initAnalysisCacheTable,
   getDocumentTagsData,
+  checkDatabaseStatus,
   type AnalysisCacheItem
 } from './database'
 import { mdToPdf } from 'md-to-pdf'
@@ -93,6 +95,7 @@ const IPC_CHANNELS = {
   GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
   SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
   RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
+  CHECK_DATABASE_STATUS: 'analytics:check-database-status',
   EXPORT_PDF: 'markdown:export-pdf',
   EXPORT_DOCX: 'markdown:export-docx',
   EXPORT_HTML: 'markdown:export-html',
@@ -1676,6 +1679,17 @@ ${htmlContent}
     }
   })
 
+  // 检查数据库状态
+  ipcMain.handle(IPC_CHANNELS.CHECK_DATABASE_STATUS, async () => {
+    try {
+      const status = await checkDatabaseStatus()
+      return { success: true, status }
+    } catch (error) {
+      console.error('检查数据库状态失败:', error)
+      return { success: false, error: String(error), status: null }
+    }
+  })
+
   // 获取全局标签数据
   ipcMain.handle(IPC_CHANNELS.GET_GLOBAL_TAGS, async () => {
     try {
@@ -1879,6 +1893,10 @@ ${htmlContent}
         } else {
           throw new Error('数据库初始化失败')
         }
+      })
+      .then(() => {
+        // 初始化WebDAV同步缓存表
+        return initWebDAVSyncCacheTable()
       })
       .catch((error) => {
         console.error('数据库初始化失败:', error)

@@ -375,52 +375,28 @@ const { Title, Paragraph, Text } = Typography
 
 const DataAnalysis: React.FC = () => {
   const { isDarkMode } = useTheme()
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const {
+    isAnalyzing,
+    analysisCached,
+    analysisResult,
+    error,
+    progress,
+    selectedModelId,
+    startAnalysis,
+    setSelectedModelId,
+    setAnalysisResult
+  } = useAnalysisStore()
+  
+  // Toast实例引用，用于管理Toast消息的生命周期
+  const currentToastRef = useRef<any>(null)
+
+  const [isLoading, setIsLoading] = useState(false)
   const [statsData, setStatsData] = useState<StatsData | null>(null)
   const [activityData, setActivityData] = useState<ActivityData | null>(null)
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string }>>([])
   const analysisContainerRef = useRef<HTMLDivElement>(null)
   const [cacheDate, setCacheDate] = useState<string | null>(null)
   const [useKnowledgeGraph, setUseKnowledgeGraph] = useState<boolean>(true) // 是否使用知识图谱
-
-  // 使用分析服务的状态
-  const {
-    isAnalyzing,
-    analysisResult,
-    analysisCached,
-    selectedModelId,
-    progress,
-    error,
-    startAnalysis,
-    setSelectedModelId,
-    setAnalysisResult
-  } = useAnalysisStore()
-
-  // 格式化日期函数，将YYYY-MM-DD格式转为更友好的显示
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return '未知日期'
-
-    try {
-      const date = new Date(dateString)
-      // 检查是否为今天
-      const today = new Date()
-      if (date.toDateString() === today.toDateString()) {
-        return '今天'
-      }
-
-      // 检查是否为昨天
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      if (date.toDateString() === yesterday.toDateString()) {
-        return '昨天'
-      }
-
-      // 否则返回完整日期
-      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-    } catch {
-      return dateString // 如果解析失败，返回原始日期字符串
-    }
-  }
 
   // 初始化
   useEffect(() => {
@@ -430,6 +406,25 @@ const DataAnalysis: React.FC = () => {
     // 添加自动加载缓存的分析结果
     loadCachedAnalysisResult()
   }, [])
+
+  // 添加useEffect监听分析状态变化，管理Toast消息
+  useEffect(() => {
+    // 当分析状态变为false（完成或停止）时，关闭当前的Toast
+    if (!isAnalyzing && currentToastRef.current) {
+      try {
+        // 尝试关闭Toast（Semi Design的Toast可能有destroy方法）
+        if (typeof currentToastRef.current === 'function') {
+          currentToastRef.current()
+        } else if (currentToastRef.current.destroy) {
+          currentToastRef.current.destroy()
+        }
+      } catch (error) {
+        console.warn('关闭Toast失败:', error)
+      } finally {
+        currentToastRef.current = null
+      }
+    }
+  }, [isAnalyzing])
 
   // 加载缓存的分析结果
   const loadCachedAnalysisResult = async (): Promise<void> => {
@@ -552,16 +547,30 @@ const DataAnalysis: React.FC = () => {
     }
 
     try {
-      // 显示开始分析的提示
+      // 关闭之前的Toast（如果存在）
+      if (currentToastRef.current) {
+        try {
+          if (typeof currentToastRef.current === 'function') {
+            currentToastRef.current()
+          } else if (currentToastRef.current.destroy) {
+            currentToastRef.current.destroy()
+          }
+        } catch (error) {
+          console.warn('关闭之前的Toast失败:', error)
+        }
+        currentToastRef.current = null
+      }
+
+      // 显示开始分析的提示，并保存Toast实例
       if (forceUpdate) {
-        Toast.info({
+        currentToastRef.current = Toast.info({
           content: '开始重新分析...',
           duration: 0 // 不自动关闭
         })
         // 如果是重新分析，先清除缓存日期显示
         setCacheDate(null)
       } else {
-        Toast.info({
+        currentToastRef.current = Toast.info({
           content: '开始分析，检查缓存...',
           duration: 0 // 不自动关闭
         })
@@ -579,21 +588,55 @@ const DataAnalysis: React.FC = () => {
         analysisContainerRef.current.scrollTop = 0
       }
 
+      // 关闭进度Toast
+      if (currentToastRef.current) {
+        try {
+          if (typeof currentToastRef.current === 'function') {
+            currentToastRef.current()
+          } else if (currentToastRef.current.destroy) {
+            currentToastRef.current.destroy()
+          }
+        } catch (error) {
+          console.warn('关闭进度Toast失败:', error)
+        }
+        currentToastRef.current = null
+      }
+
+      // 显示结果Toast
       if (!error) {
         if (analysisCached && !forceUpdate) {
           Toast.success({
-            content: '已加载缓存的分析结果'
+            content: '已加载缓存的分析结果',
+            duration: 3000 // 3秒后自动关闭
           })
         } else {
           Toast.success({
-            content: '分析完成'
+            content: '分析完成',
+            duration: 3000 // 3秒后自动关闭
           })
         }
       }
     } catch (err) {
       console.error('分析出错:', err)
+      
+      // 关闭进度Toast
+      if (currentToastRef.current) {
+        try {
+          if (typeof currentToastRef.current === 'function') {
+            currentToastRef.current()
+          } else if (currentToastRef.current.destroy) {
+            currentToastRef.current.destroy()
+          }
+        } catch (error) {
+          console.warn('关闭进度Toast失败:', error)
+        }
+        currentToastRef.current = null
+      }
+
+      // 显示错误Toast
       Toast.error({
-        content: `分析失败: ${err instanceof Error ? err.message : String(err)}`
+        content: `分析失败: ${err instanceof Error ? err.message : String(err)}`,
+        duration: 5000 // 5秒后自动关闭
       })
     }
   }
@@ -1537,6 +1580,32 @@ const DataAnalysis: React.FC = () => {
       topFolders,
       activeHours,
       topTags
+    }
+  }
+
+  // 格式化日期函数，将YYYY-MM-DD格式转为更友好的显示
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return '未知日期'
+
+    try {
+      const date = new Date(dateString)
+      // 检查是否为今天
+      const today = new Date()
+      if (date.toDateString() === today.toDateString()) {
+        return '今天'
+      }
+
+      // 检查是否为昨天
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      if (date.toDateString() === yesterday.toDateString()) {
+        return '昨天'
+      }
+
+      // 否则返回完整日期
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
+    } catch {
+      return dateString // 如果解析失败，返回原始日期字符串
     }
   }
 

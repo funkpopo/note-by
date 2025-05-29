@@ -40,11 +40,7 @@ export async function initDatabase(): Promise<Database.Database | null> {
     return db
   }
 
-  // 即使之前失败过，也总是尝试初始化
-  // 移除对isDatabaseAvailable的检查，每次都尝试初始化
-
   const dbPath = getDatabasePath()
-  console.log('数据库路径:', dbPath)
 
   // 确保数据库目录存在
   const dbDir = path.dirname(dbPath)
@@ -66,7 +62,7 @@ export async function initDatabase(): Promise<Database.Database | null> {
 
     db = new SqliteDatabase(dbPath)
 
-    if (db) {
+    if (db) {      
       // 创建文档历史记录表
       db.exec(`
         CREATE TABLE IF NOT EXISTS note_history (
@@ -79,12 +75,27 @@ export async function initDatabase(): Promise<Database.Database | null> {
         CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
         CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
       `)
+      
+      // 验证表是否创建成功
+      const tableCheckStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='note_history'")
+      const tableExists = tableCheckStmt.get()
+      
+      if (!tableExists) {
+        console.error('验证失败：note_history表未找到')
+        return null
+      }
+    } else {
+      console.error('数据库连接创建失败')
+      return null
     }
 
-    console.log('数据库初始化成功')
     return db
   } catch (error) {
     console.error('初始化数据库失败:', error)
+    console.error('错误详情:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return null
   }
 }
@@ -272,7 +283,6 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
 
     // 如果数据库不可用，直接返回
     if (!database) {
-      console.log('无法添加历史记录：数据库不可用')
       return
     }
 
@@ -299,10 +309,11 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
       maxDays: 7
     }
 
-    const historyManagement = (await getSetting(
+    // 同步调用getSetting，移除await
+    const historyManagement = getSetting(
       'historyManagement',
       defaultSettings
-    )) as HistoryManagementSettings
+    ) as HistoryManagementSettings
 
     // 根据设置清理历史记录
     if (historyManagement.type === 'count') {
@@ -317,7 +328,10 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
         )
       `)
 
-      cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
+      const result = cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
+      if (result.changes > 0) {
+        console.log(`清理了 ${result.changes} 条旧历史记录（基于数量）`)
+      }
     } else if (historyManagement.type === 'time') {
       // 基于时间的清理策略
       // 计算时间阈值（当前时间减去maxDays天）
@@ -328,10 +342,16 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
         WHERE file_path = ? AND timestamp < ?
       `)
 
-      cleanStmt.run(params.filePath, timeThreshold)
+      const result = cleanStmt.run(params.filePath, timeThreshold)
+      if (result.changes > 0) {}
     }
   } catch (error) {
     console.error('添加历史记录失败:', error)
+    console.error('错误详情:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      filePath: params.filePath
+    })
   }
 }
 
@@ -454,15 +474,35 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
     const totalNotesStmt = database.prepare(
       'SELECT COUNT(DISTINCT file_path) as count FROM note_history'
     )
-    const totalNotes = (totalNotesStmt.get() as { count: number }).count
+    const totalNotesResult = totalNotesStmt.get() as { count: number } | undefined
+    const totalNotes = totalNotesResult?.count || 0
 
     // 2. 获取编辑次数总计
     const totalEditsStmt = database.prepare('SELECT COUNT(*) as count FROM note_history')
-    const totalEdits = (totalEditsStmt.get() as { count: number }).count
+    const totalEditsResult = totalEditsStmt.get() as { count: number } | undefined
+    const totalEdits = totalEditsResult?.count || 0
+
+    // 如果没有任何历史记录，返回默认的空统计对象
+    if (totalEdits === 0) {
+      return {
+        totalNotes: 0,
+        totalEdits: 0,
+        averageEditLength: 0,
+        mostEditedNotes: [],
+        notesByDate: [],
+        editsByDate: [],
+        editTimeDistribution: [],
+        topFolders: [],
+        topTags: [],
+        tagRelations: [],
+        documentTags: []
+      }
+    }
 
     // 3. 计算平均编辑长度
     const avgLengthStmt = database.prepare('SELECT AVG(LENGTH(content)) as avg FROM note_history')
-    const avgLength = (avgLengthStmt.get() as { avg: number }).avg || 0
+    const avgLengthResult = avgLengthStmt.get() as { avg: number } | undefined
+    const avgLength = avgLengthResult?.avg || 0
 
     // 4. 获取编辑最频繁的笔记（前5个）
     const mostEditedStmt = database.prepare(`
@@ -565,24 +605,41 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       // 继续执行，即使标签分析失败
     }
 
-    // 返回完整的统计数据
+    // 返回完整的统计数据，确保所有字段都有默认值
     return {
       totalNotes,
       totalEdits,
       averageEditLength: Math.round(avgLength),
-      mostEditedNotes,
-      notesByDate,
-      editsByDate,
-      editTimeDistribution,
-      topFolders,
-      // 添加标签分析数据
-      topTags: tagData?.topTags,
-      tagRelations: tagData?.tagRelations,
-      documentTags: tagData?.documentTags
+      mostEditedNotes: mostEditedNotes || [],
+      notesByDate: notesByDate || [],
+      editsByDate: editsByDate || [],
+      editTimeDistribution: editTimeDistribution || [],
+      topFolders: topFolders || [],
+      // 添加标签分析数据，提供默认空数组
+      topTags: tagData?.topTags || [],
+      tagRelations: tagData?.tagRelations || [],
+      documentTags: tagData?.documentTags || []
     }
   } catch (error) {
     console.error('获取历史记录统计失败:', error)
-    return null
+    console.error('错误详情:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    // 发生错误时，返回默认的空统计对象而不是null
+    return {
+      totalNotes: 0,
+      totalEdits: 0,
+      averageEditLength: 0,
+      mostEditedNotes: [],
+      notesByDate: [],
+      editsByDate: [],
+      editTimeDistribution: [],
+      topFolders: [],
+      topTags: [],
+      tagRelations: [],
+      documentTags: []
+    }
   }
 }
 
@@ -1138,4 +1195,75 @@ async function getAllMarkdownFiles(dir: string): Promise<string[]> {
 
   await traverse(dir)
   return files
+}
+
+// 数据库状态检查函数
+export async function checkDatabaseStatus(): Promise<{
+  isInitialized: boolean
+  tablesExist: boolean
+  recordCount: number
+  lastError: string | null
+  details: {
+    dbPath: string
+    tables: string[]
+    tableInfo: Record<string, any>
+  }
+}> {
+  const result = {
+    isInitialized: false,
+    tablesExist: false,
+    recordCount: 0,
+    lastError: null as string | null,
+    details: {
+      dbPath: getDatabasePath(),
+      tables: [] as string[],
+      tableInfo: {} as Record<string, any>
+    }
+  }
+
+  try {
+    console.log('开始数据库状态检查...')
+    
+    // 检查数据库是否已初始化
+    const database = await initDatabase()
+    if (!database) {
+      result.lastError = '数据库初始化失败'
+      return result
+    }
+
+    result.isInitialized = true
+
+    // 检查表是否存在
+    const tablesStmt = database.prepare("SELECT name FROM sqlite_master WHERE type='table'")
+    const tables = tablesStmt.all() as Array<{ name: string }>
+    result.details.tables = tables.map(t => t.name)
+    
+    const hasNoteHistoryTable = result.details.tables.includes('note_history')
+    result.tablesExist = hasNoteHistoryTable
+
+    if (hasNoteHistoryTable) {
+      // 获取note_history表的记录数量
+      const countStmt = database.prepare('SELECT COUNT(*) as count FROM note_history')
+      const countResult = countStmt.get() as { count: number }
+      result.recordCount = countResult.count
+      
+      // 获取表结构信息
+      const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
+      const tableInfo = tableInfoStmt.all()
+      result.details.tableInfo.note_history = tableInfo
+    }
+
+    // 检查其他表
+    if (result.details.tables.includes('webdav_sync_cache')) {
+      const webdavCountStmt = database.prepare('SELECT COUNT(*) as count FROM webdav_sync_cache')
+      const webdavCount = webdavCountStmt.get() as { count: number }
+      result.details.tableInfo.webdav_sync_cache = { recordCount: webdavCount.count }
+    }
+
+    return result
+  } catch (error) {
+    console.error('数据库状态检查失败:', error)
+    result.lastError = error instanceof Error ? error.message : String(error)
+    return result
+  }
 }

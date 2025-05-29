@@ -121,21 +121,29 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         }
       }
 
-      // 获取笔记统计数据
-      set({ progress: 20 })
+      // 获取基础统计数据
+      set({ progress: 40 })
       const statsResult = await window.api.analytics.getNoteHistoryStats()
-      if (!statsResult.success) {
-        throw new Error(`加载统计数据失败: ${statsResult.error}`)
+      
+      // 检查统计数据是否有效
+      if (!statsResult.success || !statsResult.stats) {
+        console.warn('获取统计数据失败，使用默认数据')
+        // 使用默认数据继续分析，但提示用户
+        throw new Error('暂无笔记数据，请先创建和编辑一些笔记后再进行分析')
       }
+      
       const statsData = statsResult.stats
 
       // 获取用户活动数据
-      set({ progress: 40 })
+      set({ progress: 50 })
       const activityResult = await window.api.analytics.getUserActivityData(30)
-      if (!activityResult.success) {
-        throw new Error(`加载活动数据失败: ${activityResult.error}`)
+      const activityData = activityResult.success ? activityResult.activityData : null
+      
+      // 检查活动数据是否有效
+      if (!activityData) {
+        console.warn('获取活动数据失败，使用默认数据')
+        // 可以继续进行分析，只是活动数据为空
       }
-      const activityData = activityResult.activityData
 
       // 获取AI模型配置
       set({ progress: 60 })
@@ -162,43 +170,35 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         aiApiConfig = selectedConfig
       }
 
-      // 准备分析数据
+      // 准备分析数据，添加安全的数据访问
       const analysisData = {
-        totalNotes: statsData.totalNotes,
-        totalEdits: statsData.totalEdits,
-        averageEditLength: statsData.averageEditLength,
-        mostEditedNotes: statsData.mostEditedNotes
+        totalNotes: statsData.totalNotes || 0,
+        totalEdits: statsData.totalEdits || 0,
+        averageEditLength: statsData.averageEditLength || 0,
+        mostEditedNotes: (statsData.mostEditedNotes || [])
           .map((note) => note.filePath.split('/').pop())
-          .join(', '),
+          .join(', ') || '暂无数据',
         notesByDate: Object.entries(
-          statsData.notesByDate.reduce((acc: Record<string, number>, item) => {
+          (statsData.notesByDate || []).reduce((acc: Record<string, number>, item) => {
             acc[item.date] = item.count
             return acc
           }, {})
         )
           .map(([date, count]) => `${date}:${count}`)
-          .join(', '),
+          .join(', ') || '暂无数据',
         editsByDate: Object.entries(
-          statsData.editsByDate.reduce((acc: Record<string, number>, item) => {
+          (statsData.editsByDate || []).reduce((acc: Record<string, number>, item) => {
             acc[item.date] = item.count
             return acc
           }, {})
         )
           .map(([date, count]) => `${date}:${count}`)
-          .join(', '),
-        editTimeDistribution: statsData.editTimeDistribution
+          .join(', ') || '暂无数据',
+        editTimeDistribution: (statsData.editTimeDistribution || [])
           .map((item) => `${item.hour}点:${item.count}次`)
-          .join(', '),
-        tagUsage: statsData.topTags
-          ? statsData.topTags.map((tag) => `${tag.tag}:${tag.count}次`).join(', ')
-          : '暂无标签数据',
-        tagRelations:
-          statsData.tagRelations && statsData.tagRelations.length > 0
-            ? statsData.tagRelations
-                .slice(0, Math.min(10, statsData.tagRelations.length))
-                .map((rel) => `${rel.source}↔${rel.target}:${rel.strength}次共现`)
-                .join(', ')
-            : '暂无标签关联数据'
+          .join(', ') || '暂无数据',
+        tagUsage: '暂无标签数据', // 当前API不包含标签数据
+        tagRelations: '暂无标签关联数据' // 当前API不包含标签关联数据
       }
 
       // 获取分析提示词模板
