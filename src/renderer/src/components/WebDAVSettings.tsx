@@ -77,6 +77,9 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   const [confirmNewPassword, setConfirmNewPassword] = useState<string>('')
   const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false)
   const [showDisableEncryptionModal, setShowDisableEncryptionModal] = useState<boolean>(false)
+  
+  // 添加独立的enabled状态管理
+  const [enabledState, setEnabledState] = useState<boolean>(false)
 
   // 加载WebDAV配置
   const loadConfig = useCallback(async (): Promise<void> => {
@@ -89,6 +92,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         formApi.setValues(settings.webdav)
         // 更新自定义加密状态
         setCustomEncryptionEnabled((settings.webdav as WebDAVConfig).useCustomEncryption || false)
+        // 同步enabled状态
+        setEnabledState((settings.webdav as WebDAVConfig).enabled || false)
       }
     } catch (error) {
       console.error('加载WebDAV配置失败:', error)
@@ -656,7 +661,12 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     // 配置变更后自动保存
     if (formApi) {
       try {
-        await saveConfig(formApi.getValues())
+        const currentValues = formApi.getValues()
+        // 检测enabled状态变化并立即更新本地状态
+        if (currentValues.enabled !== enabledState) {
+          setEnabledState(currentValues.enabled || false)
+        }
+        await saveConfig(currentValues)
       } catch (error) {
         console.error('保存配置失败:', error)
       }
@@ -870,7 +880,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                 field="syncOnStartup"
                 label="应用启动时自动同步"
                 noLabel
-                disabled={!formApi?.getValues()?.enabled}
+                disabled={!enabledState}
               />
               <Text style={{ marginLeft: '16px' }}>应用启动时自动同步文件</Text>
             </div>
@@ -878,7 +888,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
             <Form.RadioGroup
               field="syncDirection"
               label="同步方向"
-              disabled={!formApi?.getValues()?.enabled}
+              disabled={!enabledState}
             >
               <Form.Radio value="localToRemote">本地 → 远程 (上传)</Form.Radio>
               <Form.Radio value="remoteToLocal">远程 → 本地 (下载)</Form.Radio>
@@ -929,7 +939,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                   loading={loading}
                   onClick={handleSyncToRemote}
                   theme="solid"
-                  disabled={!formApi?.getValues()?.enabled}
+                  disabled={!enabledState}
                 >
                   上传到云端
                 </Button>
@@ -939,7 +949,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                   loading={loading}
                   onClick={handleSyncFromRemote}
                   theme="solid"
-                  disabled={!formApi?.getValues()?.enabled}
+                  disabled={!enabledState}
                 >
                   从云端下载
                 </Button>
@@ -950,7 +960,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                   onClick={handleSyncBidirectional}
                   theme="solid"
                   type="primary"
-                  disabled={!formApi?.getValues()?.enabled}
+                  disabled={!enabledState}
                 >
                   双向同步
                 </Button>
@@ -972,7 +982,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
             <Button
               type="danger"
               onClick={handleClearSyncCache}
-              disabled={!formApi?.getValues()?.enabled}
+              disabled={!enabledState}
             >
               清除同步缓存
             </Button>
