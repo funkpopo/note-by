@@ -17,15 +17,12 @@ import {
   Radio
 } from '@douyinfe/semi-ui'
 import {
-  IconMoon,
-  IconSun,
   IconPulse,
   IconPlus,
   IconDelete,
   IconEdit,
   IconRefresh
 } from '@douyinfe/semi-icons'
-import { useTheme } from '../context/theme/useTheme'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
 
@@ -57,7 +54,6 @@ interface HistoryManagementSettings {
 }
 
 const Settings: React.FC = () => {
-  const { isDarkMode, toggleTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
@@ -582,33 +578,6 @@ const Settings: React.FC = () => {
       >
         <TabPane tab="基本设置" itemKey="basic">
           <div className="settings-scroll-container">
-            {/* 主题设置卡片 */}
-            <Card style={{ marginTop: 20, marginBottom: 20 }}>
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              >
-                <div>
-                  <Text strong>主题模式</Text>
-                  <Paragraph spacing="normal" type="tertiary">
-                    {isDarkMode ? '当前使用深色主题' : '当前使用浅色主题'}
-                  </Paragraph>
-                </div>
-                <Switch
-                  onChange={toggleTheme}
-                  checked={isDarkMode}
-                  checkedText={<IconMoon style={{ fontSize: '16px' }} />}
-                  uncheckedText={<IconSun style={{ fontSize: '16px' }} />}
-                  size="large"
-                  style={{ marginLeft: '16px' }}
-                  loading={isLoading}
-                />
-              </div>
-              <Divider />
-              <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
-                主题设置会保存在settings.json文件中，应用启动时会自动载入
-              </Paragraph>
-            </Card>
-
             {/* 更新检查设置卡片 */}
             <Card style={{ marginBottom: 20 }}>
               <div

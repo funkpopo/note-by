@@ -13,13 +13,16 @@ import {
   IconClose,
   IconChevronRight,
   IconChevronLeft,
-  IconMoreStroked
+  IconMoreStroked,
+  IconMoon,
+  IconSun
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
 import ConfirmDialog from './ConfirmDialog'
 import RenameDialog from './RenameDialog'
 import CreateDialog from './CreateDialog'
+import { useTheme } from '../context/theme/useTheme'
 
 // 定义导航项类型
 interface NavItem {
@@ -37,6 +40,7 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, fileListVersion }) => {
+  const { isDarkMode, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
@@ -160,6 +164,15 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         }
       },
       {
+        itemKey: 'ThemeToggle',
+        text: '主题切换',
+        icon: isDarkMode ? <IconMoon size="large" /> : <IconSun size="large" />,
+        onClick: (): void => {
+          toggleTheme()
+        },
+        style: { cursor: 'pointer' }
+      },
+      {
         itemKey: 'Sync',
         text: '同步',
         icon: <IconSync size="large" />,
@@ -258,7 +271,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       }
       return item
     })
-  }, [collapsed, onNavChange, toggleSecondaryNav])
+  }, [collapsed, onNavChange, toggleSecondaryNav, isDarkMode, toggleTheme])
 
   // 加载markdown文件夹和文件
   const loadMarkdownFolders = useCallback(async (): Promise<void> => {
