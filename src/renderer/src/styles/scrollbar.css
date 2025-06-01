@@ -64,10 +64,3 @@ body[theme-mode='dark'] ::-webkit-scrollbar-thumb:hover {
 .settings-scroll-container .semi-tabs-content {
   overflow: visible;
 }
-
-/* 编辑器相关容器滚动条保持一致样式 */
-#cherry-markdown,
-.cherry-editor,
-.cherry-content {
-  /* 样式保持跟全局一致 */
-}
