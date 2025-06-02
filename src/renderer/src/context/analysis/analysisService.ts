@@ -1,6 +1,46 @@
 import { create } from 'zustand'
 import { filterThinkingContent } from '../../utils/filterThinking'
 
+// 数据指纹计算函数
+const calculateDataFingerprint = (statsData: any, activityData: any): DataFingerprint => {
+  // 计算内容哈希
+  const contentString = JSON.stringify({
+    notesByDate: statsData.notesByDate || [],
+    editsByDate: statsData.editsByDate || [],
+    editTimeDistribution: statsData.editTimeDistribution || [],
+    mostEditedNotes: statsData.mostEditedNotes || [],
+    dailyActivity: activityData?.dailyActivity || {}
+  })
+  
+  // 简单哈希函数
+  const simpleHash = (str: string): string => {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // 转换为32位整数
+    }
+    return hash.toString(36)
+  }
+
+  // 计算笔记数量哈希
+  const notesCountString = `${statsData.totalNotes}-${statsData.totalEdits}`
+  
+  // 获取最新编辑时间戳
+  const lastEditTimestamp = Math.max(
+    ...(statsData.editsByDate || []).map((item: any) => new Date(item.date).getTime()),
+    0
+  )
+
+  return {
+    totalNotes: statsData.totalNotes || 0,
+    totalEdits: statsData.totalEdits || 0,
+    lastEditTimestamp,
+    contentHash: simpleHash(contentString),
+    notesCountHash: simpleHash(notesCountString)
+  }
+}
+
 // 分析状态接口
 export interface AnalysisResult {
   summary: string
@@ -43,20 +83,50 @@ export interface AnalysisResult {
   }
 }
 
+// 数据指纹接口
+export interface DataFingerprint {
+  totalNotes: number
+  totalEdits: number
+  lastEditTimestamp: number
+  contentHash: string
+  notesCountHash: string
+}
+
+// 错误类型枚举
+export enum AnalysisErrorType {
+  NETWORK_ERROR = 'network_error',
+  DATA_ERROR = 'data_error', 
+  API_ERROR = 'api_error',
+  CACHE_ERROR = 'cache_error',
+  UNKNOWN_ERROR = 'unknown_error'
+}
+
+// 错误状态接口
+export interface AnalysisError {
+  type: AnalysisErrorType
+  message: string
+  retryable: boolean
+  timestamp: number
+}
+
 // 分析状态接口
 export interface AnalysisState {
   isAnalyzing: boolean
   analysisCached: boolean
   analysisResult: AnalysisResult | null
   progress: number
-  error: string | null
+  error: AnalysisError | null
   selectedModelId: string | null
+  retryCount: number
+  maxRetries: number
 
   // 行为方法
   startAnalysis: (modelId: string, forceUpdate?: boolean) => Promise<void>
   stopAnalysis: () => void
   setAnalysisResult: (result: AnalysisResult) => void
   setSelectedModelId: (modelId: string) => void
+  retryAnalysis: () => Promise<void>
+  clearError: () => void
 }
 
 // 创建分析状态存储
@@ -67,6 +137,8 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   progress: 0,
   error: null,
   selectedModelId: null,
+  retryCount: 0,
+  maxRetries: 3,
 
   // 设置选中的模型ID
   setSelectedModelId: (modelId: string) => {
@@ -101,43 +173,104 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         isAnalyzing: true,
         error: null,
         progress: 0,
-        selectedModelId: modelId
+        selectedModelId: modelId,
+        retryCount: 0  // 重置重试计数
       })
 
-      // 如果是强制更新，则跳过缓存检查
-      if (!forceUpdate) {
-        // 检查是否已有当天的分析结果
-        const today = new Date().toISOString().split('T')[0]
-        const cacheResult = await window.api.analytics.getAnalysisCache()
-
-        if (cacheResult.success && cacheResult.cache && cacheResult.cache.date === today) {
-          set({
-            analysisResult: cacheResult.cache.result,
-            isAnalyzing: false,
-            analysisCached: true,
-            progress: 100
-          })
-          return
+      // 获取基础统计数据
+      set({ progress: 30 })
+      let statsResult
+      try {
+        statsResult = await window.api.analytics.getNoteHistoryStats()
+      } catch (error) {
+        throw {
+          type: AnalysisErrorType.DATA_ERROR,
+          message: `获取统计数据失败: ${error instanceof Error ? error.message : String(error)}`,
+          retryable: true,
+          timestamp: Date.now()
         }
       }
-
-      // 获取基础统计数据
-      set({ progress: 40 })
-      const statsResult = await window.api.analytics.getNoteHistoryStats()
       
       // 检查统计数据是否有效
       if (!statsResult.success || !statsResult.stats) {
         console.warn('获取统计数据失败，使用默认数据')
-        // 使用默认数据继续分析，但提示用户
-        throw new Error('暂无笔记数据，请先创建和编辑一些笔记后再进行分析')
+        throw {
+          type: AnalysisErrorType.DATA_ERROR,
+          message: '暂无笔记数据，请先创建和编辑一些笔记后再进行分析',
+          retryable: false,
+          timestamp: Date.now()
+        }
       }
       
       const statsData = statsResult.stats
 
       // 获取用户活动数据
-      set({ progress: 50 })
-      const activityResult = await window.api.analytics.getUserActivityData(30)
+      set({ progress: 40 })
+      let activityResult
+      try {
+        activityResult = await window.api.analytics.getUserActivityData(30)
+      } catch (error) {
+        console.warn('获取活动数据失败:', error)
+        // 活动数据失败不阻止分析继续进行
+        activityResult = { success: false, activityData: null }
+      }
       const activityData = activityResult.success ? activityResult.activityData : null
+
+      // 智能缓存检查（如果不是强制更新）
+      if (!forceUpdate) {
+        set({ progress: 50 })
+        let cacheResult
+        try {
+          cacheResult = await window.api.analytics.getAnalysisCache()
+        } catch (error) {
+          console.warn('缓存检查失败:', error)
+          // 缓存失败不阻止分析继续进行
+          cacheResult = { success: false, cache: null }
+        }
+
+        if (cacheResult.success && cacheResult.cache) {
+          try {
+            // 计算当前数据指纹
+            const currentFingerprint = calculateDataFingerprint(statsData, activityData)
+            
+            // 比较数据指纹而不是日期
+            if (cacheResult.cache.dataFingerprint) {
+              const cachedFingerprint = cacheResult.cache.dataFingerprint
+              const isFingerprintMatch = 
+                cachedFingerprint.totalNotes === currentFingerprint.totalNotes &&
+                cachedFingerprint.totalEdits === currentFingerprint.totalEdits &&
+                cachedFingerprint.lastEditTimestamp === currentFingerprint.lastEditTimestamp &&
+                cachedFingerprint.contentHash === currentFingerprint.contentHash &&
+                cachedFingerprint.notesCountHash === currentFingerprint.notesCountHash
+
+              if (isFingerprintMatch && cacheResult.cache.modelId === modelId) {
+                set({
+                  analysisResult: cacheResult.cache.result,
+                  isAnalyzing: false,
+                  analysisCached: true,
+                  progress: 100
+                })
+                return
+              }
+            } else {
+              // 兼容旧缓存格式，使用日期检查
+              const today = new Date().toISOString().split('T')[0]
+              if (cacheResult.cache.date === today && cacheResult.cache.modelId === modelId) {
+                set({
+                  analysisResult: cacheResult.cache.result,
+                  isAnalyzing: false,
+                  analysisCached: true,
+                  progress: 100
+                })
+                return
+              }
+            }
+          } catch (error) {
+            console.warn('缓存数据处理失败:', error)
+            // 缓存处理失败，继续新的分析
+          }
+        }
+      }
       
       // 检查活动数据是否有效
       if (!activityData) {
@@ -147,7 +280,18 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
       // 获取AI模型配置
       set({ progress: 60 })
-      const settings = await window.api.settings.getAll()
+      let settings
+      try {
+        settings = await window.api.settings.getAll()
+      } catch (error) {
+        throw {
+          type: AnalysisErrorType.DATA_ERROR,
+          message: `获取设置失败: ${error instanceof Error ? error.message : String(error)}`,
+          retryable: true,
+          timestamp: Date.now()
+        }
+      }
+
       const aiApiConfigs =
         (settings.AiApiConfigs as Array<{
           id: string
@@ -160,7 +304,12 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         }>) || []
 
       if (aiApiConfigs.length === 0) {
-        throw new Error('未配置AI模型')
+        throw {
+          type: AnalysisErrorType.DATA_ERROR,
+          message: '未配置AI模型，请先在设置中配置AI模型后再进行分析',
+          retryable: false,
+          timestamp: Date.now()
+        }
       }
 
       // 使用选中的模型，如果没有选中，则使用第一个
@@ -283,16 +432,40 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       // 调用AI进行分析
       set({ progress: 80 })
       let result: AnalysisResult | null = null
-      const aiResponse = await window.api.openai.generateContent({
-        apiKey: aiApiConfig.apiKey,
-        apiUrl: aiApiConfig.apiUrl,
-        modelName: aiApiConfig.modelName,
-        prompt: prompt,
-        maxTokens: parseInt(aiApiConfig.maxTokens || '4000')
-      })
+      let aiResponse
+      try {
+        aiResponse = await window.api.openai.generateContent({
+          apiKey: aiApiConfig.apiKey,
+          apiUrl: aiApiConfig.apiUrl,
+          modelName: aiApiConfig.modelName,
+          prompt: prompt,
+          maxTokens: parseInt(aiApiConfig.maxTokens || '4000')
+        })
+      } catch (error) {
+        throw {
+          type: AnalysisErrorType.NETWORK_ERROR,
+          message: `AI API调用失败: ${error instanceof Error ? error.message : String(error)}`,
+          retryable: true,
+          timestamp: Date.now()
+        }
+      }
 
       if (!aiResponse.success || !aiResponse.content) {
-        throw new Error(aiResponse.error || '分析失败，未返回结果')
+        const errorMessage = aiResponse.error || '分析失败，未返回结果'
+        // 根据错误内容判断错误类型
+        let errorType = AnalysisErrorType.API_ERROR
+        if (errorMessage.includes('网络') || errorMessage.includes('连接') || errorMessage.includes('超时')) {
+          errorType = AnalysisErrorType.NETWORK_ERROR
+        } else if (errorMessage.includes('认证') || errorMessage.includes('授权') || errorMessage.includes('密钥')) {
+          errorType = AnalysisErrorType.API_ERROR
+        }
+
+        throw {
+          type: errorType,
+          message: errorMessage,
+          retryable: errorType === AnalysisErrorType.NETWORK_ERROR,
+          timestamp: Date.now()
+        }
       }
 
       // 过滤思维标签内容
@@ -314,26 +487,128 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
         // 保存到缓存
         if (result) {
-          // @ts-ignore - API可能存在但TypeScript不知道
-          await window.api.analytics.saveAnalysisCache({
-            date: new Date().toISOString().split('T')[0],
-            stats: statsData,
-            activityData,
-            result,
-            modelId
-          })
+          try {
+            const dataFingerprint = calculateDataFingerprint(statsData, activityData)
+            // @ts-ignore - API可能存在但TypeScript不知道
+            await window.api.analytics.saveAnalysisCache({
+              date: new Date().toISOString().split('T')[0],
+              stats: statsData,
+              activityData,
+              result,
+              modelId,
+              dataFingerprint
+            })
+          } catch (cacheError) {
+            console.warn('保存缓存失败:', cacheError)
+            // 缓存保存失败不影响分析结果的显示
+          }
         }
       } catch (jsonError) {
         console.error('解析AI返回的JSON失败:', jsonError, filteredContent)
-        throw new Error('处理AI返回的数据格式失败')
+        throw {
+          type: AnalysisErrorType.API_ERROR,
+          message: `处理AI返回的数据格式失败: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
+          retryable: false,
+          timestamp: Date.now()
+        }
       }
     } catch (error) {
       console.error('分析失败:', error)
+      
+      // 检查是否为自定义错误对象（包含type字段）
+      let analysisError: AnalysisError
+      if (error && typeof error === 'object' && 'type' in error && 'message' in error) {
+        analysisError = error as AnalysisError
+      } else {
+        // 处理其他类型的错误
+        analysisError = {
+          type: AnalysisErrorType.UNKNOWN_ERROR,
+          message: error instanceof Error ? error.message : String(error),
+          retryable: true,
+          timestamp: Date.now()
+        }
+      }
+
       set({
-        error: error instanceof Error ? error.message : String(error),
+        error: analysisError,
         isAnalyzing: false,
         progress: 0
       })
+
+      // 自动重试逻辑：只对可重试的错误进行自动重试
+      const currentState = get()
+      if (analysisError.retryable && 
+          currentState.retryCount < currentState.maxRetries &&
+          (analysisError.type === AnalysisErrorType.NETWORK_ERROR || 
+           analysisError.type === AnalysisErrorType.DATA_ERROR)) {
+        
+        console.log(`自动重试 (${currentState.retryCount + 1}/${currentState.maxRetries})`)
+        
+        // 延迟后自动重试
+        setTimeout(async () => {
+          try {
+            await get().retryAnalysis()
+          } catch (retryError) {
+            console.error('自动重试失败:', retryError)
+          }
+        }, 2000) // 2秒后重试
+      }
     }
+  },
+
+  retryAnalysis: async () => {
+    const state = get()
+    if (state.retryCount >= state.maxRetries) {
+      set({
+        error: {
+          type: AnalysisErrorType.UNKNOWN_ERROR,
+          message: '达到最大重试次数，请检查网络连接或AI模型配置后手动重试',
+          retryable: false,
+          timestamp: Date.now()
+        }
+      })
+      return
+    }
+
+    if (!state.selectedModelId) {
+      set({
+        error: {
+          type: AnalysisErrorType.DATA_ERROR,
+          message: '未选择AI模型，无法重试',
+          retryable: false,
+          timestamp: Date.now()
+        }
+      })
+      return
+    }
+
+    try {
+      set({ 
+        retryCount: state.retryCount + 1,
+        error: null  // 清除之前的错误
+      })
+      
+      // 添加延迟重试，避免频繁请求
+      const retryDelay = Math.min(1000 * Math.pow(2, state.retryCount), 10000) // 指数退避，最大10秒
+      if (retryDelay > 1000) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay))
+      }
+      
+      await state.startAnalysis(state.selectedModelId, true)
+    } catch (error) {
+      console.error('重试失败:', error)
+      set({
+        error: {
+          type: AnalysisErrorType.UNKNOWN_ERROR,
+          message: `重试失败: ${error instanceof Error ? error.message : String(error)}`,
+          retryable: true,
+          timestamp: Date.now()
+        }
+      })
+    }
+  },
+
+  clearError: () => {
+    set({ error: null })
   }
 }))

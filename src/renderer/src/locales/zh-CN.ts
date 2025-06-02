@@ -1,6 +1,56 @@
 import { Dictionary } from '@blocknote/core'
 
-export const zhCN: Dictionary = {
+// 扩展字典接口以包含自定义模块
+interface ExtendedDictionary extends Dictionary {
+  dataAnalysis?: {
+    title: string
+    analysisButton: string
+    reAnalysisButton: string
+    selectModel: string
+    analyzing: string
+    loadingData: string
+    noResults: string
+    cachedResults: string
+    retryButton: string
+    resetCache: string
+    errors: {
+      networkError: string
+      dataError: string
+      apiError: string
+      cacheError: string
+      unknownError: string
+      noModel: string
+      noData: string
+      parseError: string
+      maxRetries: string
+    }
+    tabs: {
+      habits: string
+      content: string
+      suggestions: string
+      visualization: string
+    }
+    charts: {
+      hourlyDistribution: string
+      topNotes: string
+      editTrend: string
+      noteTrend: string
+      activeHours: string
+      topFolders: string
+      topTags: string
+      tagRelations: string
+      tagGraph: string
+    }
+    status: {
+      success: string
+      failed: string
+      cached: string
+      retrying: string
+    }
+  }
+}
+
+export const zhCN: ExtendedDictionary = {
   slash_menu: {
     heading: {
       title: '标题 1',
@@ -372,6 +422,53 @@ export const zhCN: Dictionary = {
   },
   generic: {
     ctrl_shortcut: 'Ctrl+'
+  },
+  // 数据分析模块国际化
+  dataAnalysis: {
+    title: '笔记数据分析',
+    analysisButton: '执行分析',
+    reAnalysisButton: '重新分析',
+    selectModel: '选择AI模型',
+    analyzing: '正在分析您的笔记数据...',
+    loadingData: '正在加载数据...',
+    noResults: '暂无分析结果',
+    cachedResults: '当前显示的是缓存的分析结果',
+    retryButton: '重试分析',
+    resetCache: '重置缓存',
+    errors: {
+      networkError: '网络连接错误，请检查网络后重试',
+      dataError: '数据获取失败，请稍后重试',
+      apiError: 'AI服务调用失败，请检查模型配置',
+      cacheError: '缓存操作失败',
+      unknownError: '未知错误，请重试',
+      noModel: '请先选择AI模型',
+      noData: '暂无笔记数据，请先创建和编辑一些笔记',
+      parseError: '数据解析失败，请联系技术支持',
+      maxRetries: '达到最大重试次数，请检查配置后手动重试'
+    },
+    tabs: {
+      habits: '写作习惯',
+      content: '内容分析',
+      suggestions: '改进建议',
+      visualization: '数据可视化'
+    },
+    charts: {
+      hourlyDistribution: '每日时段编辑分布',
+      topNotes: '最常编辑的笔记',
+      editTrend: '每日编辑次数趋势',
+      noteTrend: '每日活跃笔记数趋势',
+      activeHours: '日内活跃时段分布',
+      topFolders: '最常用的文件夹',
+      topTags: '最常用的标签',
+      tagRelations: '标签关联分析',
+      tagGraph: '标签关联知识图谱'
+    },
+    status: {
+      success: '分析完成',
+      failed: '分析失败',
+      cached: '已加载缓存的分析结果',
+      retrying: '正在重试...'
+    }
   }
 }
 

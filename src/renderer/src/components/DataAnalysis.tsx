@@ -343,6 +343,16 @@ interface AnalysisCacheItem {
   activityData: ActivityData // 活动数据
   result: AnalysisResult // 分析结果
   modelId: string // 使用的模型ID
+  dataFingerprint?: DataFingerprint // 数据指纹，用于智能缓存检测
+}
+
+// 数据指纹接口（与analysisService.ts保持一致）
+interface DataFingerprint {
+  totalNotes: number
+  totalEdits: number
+  lastEditTimestamp: number
+  contentHash: string
+  notesCountHash: string
 }
 
 interface AnalyticsAPI {
@@ -1696,7 +1706,7 @@ const DataAnalysis: React.FC = () => {
 
         {error && (
           <div style={{ marginTop: 24, textAlign: 'center', color: 'var(--semi-color-danger)' }}>
-            <Paragraph>{error}</Paragraph>
+            <Paragraph>{typeof error === 'string' ? error : error.message}</Paragraph>
           </div>
         )}
 
