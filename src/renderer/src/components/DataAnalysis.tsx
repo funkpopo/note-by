@@ -397,8 +397,8 @@ const DataAnalysis: React.FC = () => {
     setAnalysisResult
   } = useAnalysisStore()
   
-  // Toast实例引用，用于管理Toast消息的生命周期
-  const currentToastRef = useRef<any>(null)
+  // 用于跟踪当前显示的Toast类型，避免重复显示
+  const currentToastType = useRef<string | null>(null)
 
   const [isLoading, setIsLoading] = useState(false)
   const [statsData, setStatsData] = useState<StatsData | null>(null)
@@ -407,6 +407,62 @@ const DataAnalysis: React.FC = () => {
   const analysisContainerRef = useRef<HTMLDivElement>(null)
   const [cacheDate, setCacheDate] = useState<string | null>(null)
   const [useKnowledgeGraph, setUseKnowledgeGraph] = useState<boolean>(true) // 是否使用知识图谱
+
+  // 响应式Toast管理：根据分析状态自动显示相应的Toast
+  const showToastByState = (
+    analyzing: boolean, 
+    cached: boolean, 
+    error: any, 
+    forceUpdate: boolean = false
+  ): void => {
+    const newToastType = analyzing 
+      ? (forceUpdate ? 'reanalyzing' : 'analyzing')
+      : error 
+        ? 'error' 
+        : cached 
+          ? 'cached' 
+          : 'completed'
+
+    // 避免重复显示相同类型的Toast
+    if (currentToastType.current === newToastType) {
+      return
+    }
+
+    currentToastType.current = newToastType
+
+    switch (newToastType) {
+      case 'reanalyzing':
+        Toast.info({
+          content: '开始重新分析...',
+          duration: 0 // 分析期间持续显示
+        })
+        break
+      case 'analyzing':
+        Toast.info({
+          content: '开始分析，检查缓存...',
+          duration: 0 // 分析期间持续显示
+        })
+        break
+      case 'error':
+        Toast.error({
+          content: `分析失败: ${error.message || error}`,
+          duration: 5000 // 5秒后自动关闭
+        })
+        break
+      case 'cached':
+        Toast.success({
+          content: '已加载缓存的分析结果',
+          duration: 3000 // 3秒后自动关闭
+        })
+        break
+      case 'completed':
+        Toast.success({
+          content: '分析完成',
+          duration: 3000 // 3秒后自动关闭
+        })
+        break
+    }
+  }
 
   // 初始化
   useEffect(() => {
@@ -417,24 +473,30 @@ const DataAnalysis: React.FC = () => {
     loadCachedAnalysisResult()
   }, [])
 
-  // 添加useEffect监听分析状态变化，管理Toast消息
+  // 响应式Toast状态监听：基于分析状态自动管理Toast显示
   useEffect(() => {
-    // 当分析状态变为false（完成或停止）时，关闭当前的Toast
-    if (!isAnalyzing && currentToastRef.current) {
-      try {
-        // 尝试关闭Toast（Semi Design的Toast可能有destroy方法）
-        if (typeof currentToastRef.current === 'function') {
-          currentToastRef.current()
-        } else if (currentToastRef.current.destroy) {
-          currentToastRef.current.destroy()
-        }
-      } catch (error) {
-        console.warn('关闭Toast失败:', error)
-      } finally {
-        currentToastRef.current = null
+    // 根据当前状态决定Toast显示
+    if (isAnalyzing) {
+      // 正在分析中，Toast在showToastByState中处理
+      return
+    }
+    
+    // 分析完成，根据结果显示相应Toast
+    if (error) {
+      showToastByState(false, false, error)
+    } else if (analysisCached) {
+      showToastByState(false, true, null)
+    } else if (analysisResult) {
+      showToastByState(false, false, null)
+    }
+    
+    // 清理函数：重置Toast类型状态
+    return () => {
+      if (!isAnalyzing) {
+        currentToastType.current = null
       }
     }
-  }, [isAnalyzing])
+  }, [isAnalyzing, error, analysisCached, analysisResult])
 
   // 加载缓存的分析结果
   const loadCachedAnalysisResult = async (): Promise<void> => {
@@ -454,15 +516,10 @@ const DataAnalysis: React.FC = () => {
         // 保存缓存的日期
         setCacheDate(cache.date)
 
-        // 更新状态，表示已有缓存的分析结果
-        console.log('已加载缓存的分析结果，日期:', cache.date)
-
         // 如果分析容器存在，滚动到顶部显示结果
         if (analysisContainerRef.current) {
           analysisContainerRef.current.scrollTop = 0
         }
-      } else {
-        console.log('未找到缓存的分析结果')
       }
     } catch (error) {
       console.error('加载缓存的分析结果失败:', error)
@@ -557,35 +614,15 @@ const DataAnalysis: React.FC = () => {
     }
 
     try {
-      // 关闭之前的Toast（如果存在）
-      if (currentToastRef.current) {
-        try {
-          if (typeof currentToastRef.current === 'function') {
-            currentToastRef.current()
-          } else if (currentToastRef.current.destroy) {
-            currentToastRef.current.destroy()
-          }
-        } catch (error) {
-          console.warn('关闭之前的Toast失败:', error)
-        }
-        currentToastRef.current = null
-      }
-
-      // 显示开始分析的提示，并保存Toast实例
+      // 显示分析开始的Toast
+      showToastByState(true, false, null, forceUpdate)
+      
+      // 如果是重新分析，先清除缓存日期显示
       if (forceUpdate) {
-        currentToastRef.current = Toast.info({
-          content: '开始重新分析...',
-          duration: 0 // 不自动关闭
-        })
-        // 如果是重新分析，先清除缓存日期显示
         setCacheDate(null)
-      } else {
-        currentToastRef.current = Toast.info({
-          content: '开始分析，检查缓存...',
-          duration: 0 // 不自动关闭
-        })
       }
 
+      // 执行分析逻辑
       await startAnalysis(selectedModelId, forceUpdate)
 
       // 如果是新分析结果，更新缓存日期为今天
@@ -598,56 +635,10 @@ const DataAnalysis: React.FC = () => {
         analysisContainerRef.current.scrollTop = 0
       }
 
-      // 关闭进度Toast
-      if (currentToastRef.current) {
-        try {
-          if (typeof currentToastRef.current === 'function') {
-            currentToastRef.current()
-          } else if (currentToastRef.current.destroy) {
-            currentToastRef.current.destroy()
-          }
-        } catch (error) {
-          console.warn('关闭进度Toast失败:', error)
-        }
-        currentToastRef.current = null
-      }
-
-      // 显示结果Toast
-      if (!error) {
-        if (analysisCached && !forceUpdate) {
-          Toast.success({
-            content: '已加载缓存的分析结果',
-            duration: 3000 // 3秒后自动关闭
-          })
-        } else {
-          Toast.success({
-            content: '分析完成',
-            duration: 3000 // 3秒后自动关闭
-          })
-        }
-      }
+      // Toast显示由useEffect自动处理，不需要手动管理
     } catch (err) {
-      console.error('分析出错:', err)
-      
-      // 关闭进度Toast
-      if (currentToastRef.current) {
-        try {
-          if (typeof currentToastRef.current === 'function') {
-            currentToastRef.current()
-          } else if (currentToastRef.current.destroy) {
-            currentToastRef.current.destroy()
-          }
-        } catch (error) {
-          console.warn('关闭进度Toast失败:', error)
-        }
-        currentToastRef.current = null
-      }
-
-      // 显示错误Toast
-      Toast.error({
-        content: `分析失败: ${err instanceof Error ? err.message : String(err)}`,
-        duration: 5000 // 5秒后自动关闭
-      })
+      console.error('[分析执行] 分析出错:', err)
+      // 错误Toast也由useEffect自动处理
     }
   }
 
