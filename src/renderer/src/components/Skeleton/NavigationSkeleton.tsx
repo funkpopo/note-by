@@ -17,7 +17,7 @@ const NavigationSkeleton: React.FC<NavigationSkeletonProps> = ({
     <div className={`navigation-skeleton ${className}`} style={style}>
       {/* 搜索框骨架屏 */}
       <div className="navigation-skeleton-search">
-        <Skeleton.Input
+        <Skeleton.Title
           style={{
             width: '100%',
             height: 32,

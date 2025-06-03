@@ -30,7 +30,7 @@ const DataAnalysisSkeleton: React.FC<DataAnalysisSkeletonProps> = ({
         {[1, 2, 3, 4].map((item) => (
           <Col span={6} key={item}>
             <Card className="data-analysis-skeleton-stat-card">
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space vertical style={{ width: '100%' }}>
                 <Skeleton.Title style={{ width: '70%', height: 16, marginBottom: 8 }} />
                 <Skeleton.Title style={{ width: '50%', height: 32, marginBottom: 0 }} />
               </Space>
