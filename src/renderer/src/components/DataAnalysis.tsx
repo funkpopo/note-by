@@ -601,11 +601,11 @@ const ContentQualityScore: React.FC<{
     if (!statsData) return {
       overall: 0,
       metrics: {
-        consistency: 0,
-        productivity: 0,
-        engagement: 0,
-        organization: 0,
-        depth: 0
+        consistency: 0,    // 一致性：基于编辑频率的稳定性
+        productivity: 0,   // 生产力：基于笔记数量和编辑次数
+        engagement: 0,     // 参与度：基于活跃时段分布
+        organization: 0,   // 组织性：基于文件夹和标签使用
+        depth: 0          // 深度：基于平均编辑长度
       }
     }
 
@@ -759,6 +759,7 @@ const DataAnalysis: React.FC = () => {
   const [cacheDate, setCacheDate] = useState<string | null>(null)
   const [useKnowledgeGraph, setUseKnowledgeGraph] = useState<boolean>(true) // 是否使用知识图谱
   const currentAnalyzingToastRef = useRef<any>(null) // 用于存储当前分析中的Toast引用
+  const currentCachedToastRef = useRef<any>(null) // 用于存储当前缓存Toast引用
   const [isInitializing, setIsInitializing] = useState<boolean>(true) // 跟踪是否处于初始化阶段
 
   // 统一的Toast清理函数
@@ -767,9 +768,22 @@ const DataAnalysis: React.FC = () => {
       try {
         currentAnalyzingToastRef.current.destroy()
       } catch (e) {
-        console.warn('清除Toast失败:', e)
+        console.warn('清除分析Toast失败:', e)
       } finally {
         currentAnalyzingToastRef.current = null
+      }
+    }
+  }
+
+  // 缓存Toast清理函数
+  const clearCachedToast = (): void => {
+    if (currentCachedToastRef.current) {
+      try {
+        Toast.close(currentCachedToastRef.current)
+      } catch (e) {
+        console.warn('清除缓存Toast失败:', e)
+      } finally {
+        currentCachedToastRef.current = null
       }
     }
   }
@@ -811,6 +825,11 @@ const DataAnalysis: React.FC = () => {
       clearAnalyzingToast()
     }
 
+    // 如果要显示新的缓存Toast，先清除之前的缓存Toast
+    if (newToastType === 'cached' && currentCachedToastRef.current) {
+      clearCachedToast()
+    }
+
     currentToastType.current = newToastType
 
     switch (newToastType) {
@@ -833,10 +852,21 @@ const DataAnalysis: React.FC = () => {
         })
         break
       case 'cached':
-        Toast.success({
+        // 为缓存Toast添加引用管理，确保能够正确自动消除
+        const cachedToastId = Toast.success({
           content: '已加载缓存的分析结果',
-          duration: 3000 // 3秒后自动关闭
+          duration: 3000, // 3秒后自动关闭
         })
+        currentCachedToastRef.current = cachedToastId
+        console.log(`[Toast管理] 缓存Toast已创建，ID: ${cachedToastId}`)
+
+        // 设置超时保护，确保引用最终会被清除
+        setTimeout(() => {
+          if (currentCachedToastRef.current === cachedToastId) {
+            console.log(`[Toast管理] 缓存Toast超时清理，ID: ${cachedToastId}`)
+            currentCachedToastRef.current = null
+          }
+        }, 4000) // 比duration多1秒，确保Toast已经自动消失
         break
       case 'completed':
         Toast.success({
@@ -890,14 +920,17 @@ const DataAnalysis: React.FC = () => {
         currentToastType.current = null
         // 确保清理任何残留的Toast引用
         clearAnalyzingToast()
+        clearCachedToast()
       }
     }
   }, [isAnalyzing, error, analysisCached, analysisResult, isInitializing])
 
-  // 组件卸载时清理Toast引用
+  // 组件卸载时清理所有Toast引用
   useEffect(() => {
     return () => {
       clearAnalyzingToast()
+      clearCachedToast()
+      currentToastType.current = null
     }
   }, [])
 
