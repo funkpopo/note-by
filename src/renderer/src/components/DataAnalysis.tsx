@@ -383,6 +383,356 @@ interface AnalyticsAPI {
 
 const { Title, Paragraph, Text } = Typography
 
+// 写作热力图组件
+const WritingHeatmap: React.FC<{
+  activityData: ActivityData | null
+  isDarkMode: boolean
+}> = ({ activityData, isDarkMode }) => {
+  // 生成热力图数据
+  const generateHeatmapData = useCallback(() => {
+    if (!activityData?.dailyActivity) return []
+
+    const data: Array<[string, number, number]> = []
+    const today = new Date()
+
+    // 生成过去30天的数据
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+
+      const dayActivity = activityData.dailyActivity[dateStr]
+      const activityLevel = dayActivity?.activeHours?.length || 0
+
+      // 格式：[日期, 星期几(0-6), 活动强度]
+      data.push([dateStr, date.getDay(), activityLevel])
+    }
+
+    return data
+  }, [activityData])
+
+  const heatmapOption: EChartsOption = {
+    title: {
+      text: '写作活动热力图',
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? '#ffffff' : '#333333',
+        fontSize: 16
+      }
+    },
+    tooltip: {
+      formatter: (params: any) => {
+        const [date, dayOfWeek, value] = params.data
+        const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+        return `${date}<br/>${dayNames[dayOfWeek]}<br/>活动强度: ${value}`
+      }
+    },
+    grid: {
+      left: '10%',
+      right: '10%',
+      top: '15%',
+      bottom: '15%'
+    },
+    xAxis: {
+      type: 'category',
+      data: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+      axisLabel: {
+        color: isDarkMode ? '#ffffff' : '#333333'
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: Array.from({ length: 5 }, (_, i) => `第${i + 1}周`),
+      axisLabel: {
+        color: isDarkMode ? '#ffffff' : '#333333'
+      }
+    },
+    series: [{
+      type: 'scatter',
+      data: generateHeatmapData().map(([, dayOfWeek, value], index) => [
+        dayOfWeek,
+        Math.floor(index / 7),
+        value
+      ]),
+      symbolSize: 20,
+      itemStyle: {
+        color: (params: any) => {
+          const intensity = params.data[2]
+          if (intensity === 0) return isDarkMode ? '#404040' : '#f0f0f0'
+          if (intensity <= 2) return isDarkMode ? '#0d4377' : '#c6e48b'
+          if (intensity <= 5) return isDarkMode ? '#1e6091' : '#7bc96f'
+          if (intensity <= 8) return isDarkMode ? '#3182ce' : '#239a3b'
+          return isDarkMode ? '#4299e1' : '#196127'
+        }
+      }
+    }]
+  }
+
+  return (
+    <Card title="写作活动热力图" style={{ marginBottom: 16 }}>
+      <ReactECharts
+        option={heatmapOption}
+        style={{ height: '300px' }}
+        theme={isDarkMode ? 'dark' : 'light'}
+      />
+    </Card>
+  )
+}
+
+// 写作效率趋势分析组件
+const WritingEfficiencyTrend: React.FC<{
+  statsData: StatsData | null
+  activityData: ActivityData | null
+  isDarkMode: boolean
+}> = ({ statsData, activityData, isDarkMode }) => {
+  // 计算写作效率数据
+  const generateEfficiencyData = useCallback(() => {
+    if (!statsData?.editsByDate || !activityData?.dailyActivity) return []
+
+    const efficiencyData: Array<{ date: string; efficiency: number; edits: number; activeHours: number }> = []
+
+    // 获取最近30天的数据
+    const today = new Date()
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+
+      // 获取当天的编辑次数
+      const dayEdits = statsData.editsByDate.find(item => item.date === dateStr)?.count || 0
+
+      // 获取当天的活跃小时数
+      const dayActivity = activityData.dailyActivity[dateStr]
+      const activeHours = dayActivity?.activeHours?.length || 0
+
+      // 计算效率：编辑次数/活跃小时数（避免除零）
+      const efficiency = activeHours > 0 ? dayEdits / activeHours : 0
+
+      efficiencyData.push({
+        date: dateStr,
+        efficiency: Math.round(efficiency * 100) / 100, // 保留两位小数
+        edits: dayEdits,
+        activeHours
+      })
+    }
+
+    return efficiencyData
+  }, [statsData, activityData])
+
+  const efficiencyOption: EChartsOption = {
+    title: {
+      text: '写作效率趋势分析',
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? '#ffffff' : '#333333',
+        fontSize: 16
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const data = params[0]
+        const efficiency = generateEfficiencyData()[data.dataIndex]
+        return `${efficiency.date}<br/>
+                效率指数: ${efficiency.efficiency}<br/>
+                编辑次数: ${efficiency.edits}<br/>
+                活跃小时: ${efficiency.activeHours}`
+      }
+    },
+    grid: {
+      left: '10%',
+      right: '10%',
+      top: '15%',
+      bottom: '15%'
+    },
+    xAxis: {
+      type: 'category',
+      data: generateEfficiencyData().map(item => {
+        const date = new Date(item.date)
+        return `${date.getMonth() + 1}/${date.getDate()}`
+      }),
+      axisLabel: {
+        color: isDarkMode ? '#ffffff' : '#333333',
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: isDarkMode ? '#ffffff' : '#333333'
+      }
+    },
+    series: [{
+      type: 'line',
+      data: generateEfficiencyData().map(item => item.efficiency),
+      smooth: true,
+      lineStyle: {
+        color: isDarkMode ? '#4299e1' : '#1890ff',
+        width: 3
+      },
+      areaStyle: {
+        color: isDarkMode ? 'rgba(66, 153, 225, 0.2)' : 'rgba(24, 144, 255, 0.2)'
+      },
+      symbolSize: 6
+    }]
+  }
+
+  return (
+    <Card title="写作效率趋势" style={{ marginBottom: 16 }}>
+      <ReactECharts
+        option={efficiencyOption}
+        style={{ height: '300px' }}
+        theme={isDarkMode ? 'dark' : 'light'}
+      />
+      <div style={{ marginTop: 16, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+        * 效率指数 = 编辑次数 ÷ 活跃小时数，反映单位时间内的写作产出
+      </div>
+    </Card>
+  )
+}
+
+// 内容质量评分组件
+const ContentQualityScore: React.FC<{
+  statsData: StatsData | null
+  isDarkMode: boolean
+}> = ({ statsData, isDarkMode }) => {
+  // 计算内容质量评分
+  const calculateQualityScore = useCallback(() => {
+    if (!statsData) return {
+      overall: 0,
+      metrics: {
+        consistency: 0,
+        productivity: 0,
+        engagement: 0,
+        organization: 0,
+        depth: 0
+      }
+    }
+
+    const metrics = {
+      consistency: 0,    // 一致性：基于编辑频率的稳定性
+      productivity: 0,   // 生产力：基于笔记数量和编辑次数
+      engagement: 0,     // 参与度：基于活跃时段分布
+      organization: 0,   // 组织性：基于文件夹和标签使用
+      depth: 0          // 深度：基于平均编辑长度
+    }
+
+    // 1. 一致性评分 (0-100)
+    if (statsData.editsByDate && statsData.editsByDate.length > 0) {
+      const editCounts = statsData.editsByDate.map(item => item.count)
+      const avgEdits = editCounts.reduce((sum, count) => sum + count, 0) / editCounts.length
+      const variance = editCounts.reduce((sum, count) => sum + Math.pow(count - avgEdits, 2), 0) / editCounts.length
+      const stdDev = Math.sqrt(variance)
+      const consistencyScore = Math.max(0, 100 - (stdDev / avgEdits) * 100)
+      metrics.consistency = Math.min(100, consistencyScore)
+    }
+
+    // 2. 生产力评分 (0-100)
+    const totalNotes = statsData.totalNotes || 0
+    const totalEdits = statsData.totalEdits || 0
+    const productivityScore = Math.min(100, (totalNotes * 2 + totalEdits * 0.5))
+    metrics.productivity = productivityScore
+
+    // 3. 参与度评分 (0-100)
+    if (statsData.editTimeDistribution && statsData.editTimeDistribution.length > 0) {
+      const activeHours = statsData.editTimeDistribution.filter(item => item.count > 0).length
+      const engagementScore = (activeHours / 24) * 100
+      metrics.engagement = engagementScore
+    }
+
+    // 4. 组织性评分 (0-100)
+    const folderCount = statsData.topFolders?.length || 0
+    const tagCount = statsData.topTags?.length || 0
+    const organizationScore = Math.min(100, (folderCount * 10 + tagCount * 5))
+    metrics.organization = organizationScore
+
+    // 5. 深度评分 (0-100)
+    const avgEditLength = statsData.averageEditLength || 0
+    const depthScore = Math.min(100, avgEditLength / 10) // 假设1000字符为满分
+    metrics.depth = depthScore
+
+    // 计算总体评分
+    const overall = Object.values(metrics).reduce((sum, score) => sum + score, 0) / Object.keys(metrics).length
+
+    return { overall: Math.round(overall), metrics }
+  }, [statsData])
+
+  const { overall, metrics } = calculateQualityScore()
+
+  const scoreOption: EChartsOption = {
+    title: {
+      text: '内容质量评分分布',
+      left: 'center',
+      textStyle: {
+        color: isDarkMode ? '#ffffff' : '#333333',
+        fontSize: 16
+      }
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: any) => {
+        return `${params.name}: ${params.value}分`
+      }
+    },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['50%', '60%'],
+      data: [
+        { name: '一致性', value: metrics.consistency || 0 },
+        { name: '生产力', value: metrics.productivity || 0 },
+        { name: '参与度', value: metrics.engagement || 0 },
+        { name: '组织性', value: metrics.organization || 0 },
+        { name: '深度', value: metrics.depth || 0 }
+      ],
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      },
+      label: {
+        show: true,
+        formatter: '{b}: {c}分'
+      }
+    }]
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return '#52c41a'
+    if (score >= 60) return '#faad14'
+    if (score >= 40) return '#ff7875'
+    return '#ff4d4f'
+  }
+
+  return (
+    <Card title="内容质量评分" style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{
+          fontSize: 48,
+          fontWeight: 'bold',
+          color: getScoreColor(overall),
+          marginRight: 16
+        }}>
+          {overall}
+        </div>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 'bold' }}>总体评分</div>
+          <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            基于写作习惯和内容质量的综合评估
+          </div>
+        </div>
+      </div>
+      <ReactECharts
+        option={scoreOption}
+        style={{ height: '300px' }}
+        theme={isDarkMode ? 'dark' : 'light'}
+      />
+    </Card>
+  )
+}
+
 const DataAnalysis: React.FC = () => {
   const { isDarkMode } = useTheme()
   const {
@@ -394,7 +744,8 @@ const DataAnalysis: React.FC = () => {
     selectedModelId,
     startAnalysis,
     setSelectedModelId,
-    setAnalysisResult
+    setAnalysisResult,
+    resetCacheStatus
   } = useAnalysisStore()
   
   // 用于跟踪当前显示的Toast类型，避免重复显示
@@ -407,20 +758,47 @@ const DataAnalysis: React.FC = () => {
   const analysisContainerRef = useRef<HTMLDivElement>(null)
   const [cacheDate, setCacheDate] = useState<string | null>(null)
   const [useKnowledgeGraph, setUseKnowledgeGraph] = useState<boolean>(true) // 是否使用知识图谱
+  const currentAnalyzingToastRef = useRef<any>(null) // 用于存储当前分析中的Toast引用
+  const [isInitializing, setIsInitializing] = useState<boolean>(true) // 跟踪是否处于初始化阶段
+
+  // 统一的Toast清理函数
+  const clearAnalyzingToast = (): void => {
+    if (currentAnalyzingToastRef.current) {
+      try {
+        currentAnalyzingToastRef.current.destroy()
+      } catch (e) {
+        console.warn('清除Toast失败:', e)
+      } finally {
+        currentAnalyzingToastRef.current = null
+      }
+    }
+  }
+
+  // 设置分析Toast并添加超时保护
+  const setAnalyzingToastWithTimeout = (toastInstance: any): void => {
+    currentAnalyzingToastRef.current = toastInstance
+
+    // 设置超时保护，确保Toast最终会被清除（30秒超时）
+    setTimeout(() => {
+      if (currentAnalyzingToastRef.current === toastInstance) {
+        clearAnalyzingToast()
+      }
+    }, 30000)
+  }
 
   // 响应式Toast管理：根据分析状态自动显示相应的Toast
   const showToastByState = (
-    analyzing: boolean, 
-    cached: boolean, 
-    error: any, 
+    analyzing: boolean,
+    cached: boolean,
+    error: any,
     forceUpdate: boolean = false
   ): void => {
-    const newToastType = analyzing 
+    const newToastType = analyzing
       ? (forceUpdate ? 'reanalyzing' : 'analyzing')
-      : error 
-        ? 'error' 
-        : cached 
-          ? 'cached' 
+      : error
+        ? 'error'
+        : cached
+          ? 'cached'
           : 'completed'
 
     // 避免重复显示相同类型的Toast
@@ -428,20 +806,25 @@ const DataAnalysis: React.FC = () => {
       return
     }
 
+    // 如果之前有分析中的Toast，先清除它
+    if (currentAnalyzingToastRef.current && !analyzing) {
+      clearAnalyzingToast()
+    }
+
     currentToastType.current = newToastType
 
     switch (newToastType) {
       case 'reanalyzing':
-        Toast.info({
-          content: '开始重新分析...',
+        setAnalyzingToastWithTimeout(Toast.info({
+          content: '正在重新分析数据...',
           duration: 0 // 分析期间持续显示
-        })
+        }))
         break
       case 'analyzing':
-        Toast.info({
-          content: '开始分析，检查缓存...',
+        setAnalyzingToastWithTimeout(Toast.info({
+          content: '正在分析数据...',
           duration: 0 // 分析期间持续显示
-        })
+        }))
         break
       case 'error':
         Toast.error({
@@ -466,11 +849,20 @@ const DataAnalysis: React.FC = () => {
 
   // 初始化
   useEffect(() => {
-    fetchData()
-    loadAvailableModels()
+    const initializeApp = async () => {
+      try {
+        await Promise.all([
+          fetchData(),
+          loadAvailableModels(),
+          loadCachedAnalysisResult()
+        ])
+      } finally {
+        // 初始化完成，允许显示Toast
+        setIsInitializing(false)
+      }
+    }
 
-    // 添加自动加载缓存的分析结果
-    loadCachedAnalysisResult()
+    initializeApp()
   }, [])
 
   // 响应式Toast状态监听：基于分析状态自动管理Toast显示
@@ -480,25 +872,36 @@ const DataAnalysis: React.FC = () => {
       // 正在分析中，Toast在showToastByState中处理
       return
     }
-    
+
     // 分析完成，根据结果显示相应Toast
     if (error) {
       showToastByState(false, false, error)
-    } else if (analysisCached) {
+    } else if (analysisCached && !isInitializing) {
+      // 只有在非初始化阶段才显示缓存Toast
       showToastByState(false, true, null)
-    } else if (analysisResult) {
+    } else if (analysisResult && !analysisCached) {
+      // 只有在非缓存结果时才显示完成Toast
       showToastByState(false, false, null)
     }
-    
-    // 清理函数：重置Toast类型状态
+
+    // 清理函数：重置Toast类型状态并清理Toast引用
     return () => {
       if (!isAnalyzing) {
         currentToastType.current = null
+        // 确保清理任何残留的Toast引用
+        clearAnalyzingToast()
       }
     }
-  }, [isAnalyzing, error, analysisCached, analysisResult])
+  }, [isAnalyzing, error, analysisCached, analysisResult, isInitializing])
 
-  // 加载缓存的分析结果
+  // 组件卸载时清理Toast引用
+  useEffect(() => {
+    return () => {
+      clearAnalyzingToast()
+    }
+  }, [])
+
+  // 加载缓存的分析结果（仅在初始化时使用）
   const loadCachedAnalysisResult = async (): Promise<void> => {
     try {
       // 修改加载状态，表示正在加载缓存
@@ -516,6 +919,9 @@ const DataAnalysis: React.FC = () => {
         // 保存缓存的日期
         setCacheDate(cache.date)
 
+        // 标记为缓存结果，但不显示Toast（因为这是自动加载）
+        // Toast提示将由useEffect根据analysisCached状态自动处理
+
         // 如果分析容器存在，滚动到顶部显示结果
         if (analysisContainerRef.current) {
           analysisContainerRef.current.scrollTop = 0
@@ -523,10 +929,8 @@ const DataAnalysis: React.FC = () => {
       }
     } catch (error) {
       console.error('加载缓存的分析结果失败:', error)
-      Toast.error({
-        content: `加载缓存的分析结果失败: ${error instanceof Error ? error.message : String(error)}`,
-        duration: 0 // 不自动关闭
-      })
+      // 初始化时的缓存加载失败不显示错误Toast，避免干扰用户
+      console.warn('初始化时加载缓存失败，将等待用户手动触发分析')
     } finally {
       // 无论成功失败，都结束加载状态
       setIsLoading(false)
@@ -605,7 +1009,7 @@ const DataAnalysis: React.FC = () => {
   }
 
   // 执行分析的包装函数
-  const handlePerformAnalysis = async (forceUpdate: boolean = false): Promise<void> => {
+  const handlePerformAnalysis = async (userTriggered: boolean = true): Promise<void> => {
     if (!selectedModelId) {
       Toast.error({
         content: '请先选择AI模型'
@@ -614,15 +1018,22 @@ const DataAnalysis: React.FC = () => {
     }
 
     try {
-      // 显示分析开始的Toast
-      showToastByState(true, false, null, forceUpdate)
-      
-      // 如果是重新分析，先清除缓存日期显示
-      if (forceUpdate) {
+      // 用户主动触发的分析总是强制更新（跳过缓存）
+      const forceUpdate = userTriggered
+
+      // 用户主动分析时，确保不在初始化状态并重置所有缓存相关状态
+      if (userTriggered) {
+        setIsInitializing(false)
         setCacheDate(null)
+        // 重置缓存状态，确保用户主动分析时不显示缓存相关UI
+        resetCacheStatus()
+        console.log('[分析执行] 用户主动触发分析，强制跳过缓存，forceUpdate =', forceUpdate)
       }
 
-      // 执行分析逻辑
+      // 显示分析开始的Toast
+      showToastByState(true, false, null, forceUpdate)
+
+      // 执行分析逻辑，用户主动触发时总是强制更新
       await startAnalysis(selectedModelId, forceUpdate)
 
       // 如果是新分析结果，更新缓存日期为今天
@@ -1990,6 +2401,28 @@ const DataAnalysis: React.FC = () => {
                               false
                             )}
                         </div>
+                      </div>
+
+                      {/* 添加写作热力图 */}
+                      <div style={{ width: '100%', marginBottom: '24px' }}>
+                        <WritingHeatmap activityData={activityData} isDarkMode={isDarkMode} />
+                      </div>
+
+                      {/* 添加写作效率趋势分析 */}
+                      <div style={{ width: '100%', marginBottom: '24px' }}>
+                        <WritingEfficiencyTrend
+                          statsData={statsData}
+                          activityData={activityData}
+                          isDarkMode={isDarkMode}
+                        />
+                      </div>
+
+                      {/* 添加内容质量评分 */}
+                      <div style={{ width: '100%', marginBottom: '24px' }}>
+                        <ContentQualityScore
+                          statsData={statsData}
+                          isDarkMode={isDarkMode}
+                        />
                       </div>
 
                       {/* 添加标签分析相关的可视化 */}

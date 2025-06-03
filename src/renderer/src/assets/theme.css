@@ -8,6 +8,44 @@
   --semi-border-radius-medium: 12px;
   /* modal组件圆角大小 */
   --semi-border-radius-large: 14px;
+
+  /* 主题切换动画时长 */
+  --theme-transition-duration: 0.3s;
+  --theme-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 全局主题切换动画 */
+* {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing),
+    box-shadow var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* 主题切换加载状态 */
+body.theme-switching {
+  pointer-events: none;
+  position: relative;
+}
+
+body.theme-switching::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  opacity: 0;
+  animation: themeLoadingFade 0.3s ease-in-out;
+}
+
+@keyframes themeLoadingFade {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* 浅色模式 */

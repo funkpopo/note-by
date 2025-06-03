@@ -127,6 +127,7 @@ export interface AnalysisState {
   setSelectedModelId: (modelId: string) => void
   retryAnalysis: () => Promise<void>
   clearError: () => void
+  resetCacheStatus: () => void
 }
 
 // 创建分析状态存储
@@ -174,8 +175,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         error: null,
         progress: 0,
         selectedModelId: modelId,
-        retryCount: 0  // 重置重试计数
+        retryCount: 0,  // 重置重试计数
+        analysisCached: false  // 重置缓存状态，确保新分析不显示缓存标识
       })
+
+      console.log('[分析服务] 开始分析，forceUpdate =', forceUpdate)
 
       // 获取基础统计数据
       set({ progress: 30 })
@@ -610,5 +614,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   clearError: () => {
     set({ error: null })
+  },
+
+  // 重置缓存状态
+  resetCacheStatus: () => {
+    set({ analysisCached: false })
+    console.log('[分析服务] 缓存状态已重置')
   }
 }))
