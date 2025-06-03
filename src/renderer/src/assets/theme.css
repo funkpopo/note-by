@@ -43,9 +43,15 @@ body.theme-switching::before {
 }
 
 @keyframes themeLoadingFade {
-  0% { opacity: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* 浅色模式 */

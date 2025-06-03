@@ -11,13 +11,13 @@ const calculateDataFingerprint = (statsData: any, activityData: any): DataFinger
     mostEditedNotes: statsData.mostEditedNotes || [],
     dailyActivity: activityData?.dailyActivity || {}
   })
-  
+
   // 简单哈希函数
   const simpleHash = (str: string): string => {
     let hash = 0
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // 转换为32位整数
     }
     return hash.toString(36)
@@ -25,7 +25,7 @@ const calculateDataFingerprint = (statsData: any, activityData: any): DataFinger
 
   // 计算笔记数量哈希
   const notesCountString = `${statsData.totalNotes}-${statsData.totalEdits}`
-  
+
   // 获取最新编辑时间戳
   const lastEditTimestamp = Math.max(
     ...(statsData.editsByDate || []).map((item: any) => new Date(item.date).getTime()),
@@ -95,7 +95,7 @@ export interface DataFingerprint {
 // 错误类型枚举
 export enum AnalysisErrorType {
   NETWORK_ERROR = 'network_error',
-  DATA_ERROR = 'data_error', 
+  DATA_ERROR = 'data_error',
   API_ERROR = 'api_error',
   CACHE_ERROR = 'cache_error',
   UNKNOWN_ERROR = 'unknown_error'
@@ -175,8 +175,8 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         error: null,
         progress: 0,
         selectedModelId: modelId,
-        retryCount: 0,  // 重置重试计数
-        analysisCached: false  // 重置缓存状态，确保新分析不显示缓存标识
+        retryCount: 0, // 重置重试计数
+        analysisCached: false // 重置缓存状态，确保新分析不显示缓存标识
       })
 
       console.log('[分析服务] 开始分析，forceUpdate =', forceUpdate)
@@ -194,7 +194,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           timestamp: Date.now()
         }
       }
-      
+
       // 检查统计数据是否有效
       if (!statsResult.success || !statsResult.stats) {
         console.warn('获取统计数据失败，使用默认数据')
@@ -205,7 +205,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           timestamp: Date.now()
         }
       }
-      
+
       const statsData = statsResult.stats
 
       // 获取用户活动数据
@@ -236,11 +236,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           try {
             // 计算当前数据指纹
             const currentFingerprint = calculateDataFingerprint(statsData, activityData)
-            
+
             // 比较数据指纹而不是日期
             if (cacheResult.cache.dataFingerprint) {
               const cachedFingerprint = cacheResult.cache.dataFingerprint
-              const isFingerprintMatch = 
+              const isFingerprintMatch =
                 cachedFingerprint.totalNotes === currentFingerprint.totalNotes &&
                 cachedFingerprint.totalEdits === currentFingerprint.totalEdits &&
                 cachedFingerprint.lastEditTimestamp === currentFingerprint.lastEditTimestamp &&
@@ -275,7 +275,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           }
         }
       }
-      
+
       // 检查活动数据是否有效
       if (!activityData) {
         console.warn('获取活动数据失败，使用默认数据')
@@ -328,28 +328,32 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         totalNotes: statsData.totalNotes || 0,
         totalEdits: statsData.totalEdits || 0,
         averageEditLength: statsData.averageEditLength || 0,
-        mostEditedNotes: (statsData.mostEditedNotes || [])
-          .map((note) => note.filePath.split('/').pop())
-          .join(', ') || '暂无数据',
-        notesByDate: Object.entries(
-          (statsData.notesByDate || []).reduce((acc: Record<string, number>, item) => {
-            acc[item.date] = item.count
-            return acc
-          }, {})
-        )
-          .map(([date, count]) => `${date}:${count}`)
-          .join(', ') || '暂无数据',
-        editsByDate: Object.entries(
-          (statsData.editsByDate || []).reduce((acc: Record<string, number>, item) => {
-            acc[item.date] = item.count
-            return acc
-          }, {})
-        )
-          .map(([date, count]) => `${date}:${count}`)
-          .join(', ') || '暂无数据',
-        editTimeDistribution: (statsData.editTimeDistribution || [])
-          .map((item) => `${item.hour}点:${item.count}次`)
-          .join(', ') || '暂无数据',
+        mostEditedNotes:
+          (statsData.mostEditedNotes || [])
+            .map((note) => note.filePath.split('/').pop())
+            .join(', ') || '暂无数据',
+        notesByDate:
+          Object.entries(
+            (statsData.notesByDate || []).reduce((acc: Record<string, number>, item) => {
+              acc[item.date] = item.count
+              return acc
+            }, {})
+          )
+            .map(([date, count]) => `${date}:${count}`)
+            .join(', ') || '暂无数据',
+        editsByDate:
+          Object.entries(
+            (statsData.editsByDate || []).reduce((acc: Record<string, number>, item) => {
+              acc[item.date] = item.count
+              return acc
+            }, {})
+          )
+            .map(([date, count]) => `${date}:${count}`)
+            .join(', ') || '暂无数据',
+        editTimeDistribution:
+          (statsData.editTimeDistribution || [])
+            .map((item) => `${item.hour}点:${item.count}次`)
+            .join(', ') || '暂无数据',
         tagUsage: '暂无标签数据', // 当前API不包含标签数据
         tagRelations: '暂无标签关联数据' // 当前API不包含标签关联数据
       }
@@ -458,9 +462,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         const errorMessage = aiResponse.error || '分析失败，未返回结果'
         // 根据错误内容判断错误类型
         let errorType = AnalysisErrorType.API_ERROR
-        if (errorMessage.includes('网络') || errorMessage.includes('连接') || errorMessage.includes('超时')) {
+        if (
+          errorMessage.includes('网络') ||
+          errorMessage.includes('连接') ||
+          errorMessage.includes('超时')
+        ) {
           errorType = AnalysisErrorType.NETWORK_ERROR
-        } else if (errorMessage.includes('认证') || errorMessage.includes('授权') || errorMessage.includes('密钥')) {
+        } else if (
+          errorMessage.includes('认证') ||
+          errorMessage.includes('授权') ||
+          errorMessage.includes('密钥')
+        ) {
           errorType = AnalysisErrorType.API_ERROR
         }
 
@@ -518,7 +530,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       }
     } catch (error) {
       console.error('分析失败:', error)
-      
+
       // 检查是否为自定义错误对象（包含type字段）
       let analysisError: AnalysisError
       if (error && typeof error === 'object' && 'type' in error && 'message' in error) {
@@ -541,13 +553,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
       // 自动重试逻辑：只对可重试的错误进行自动重试
       const currentState = get()
-      if (analysisError.retryable && 
-          currentState.retryCount < currentState.maxRetries &&
-          (analysisError.type === AnalysisErrorType.NETWORK_ERROR || 
-           analysisError.type === AnalysisErrorType.DATA_ERROR)) {
-        
+      if (
+        analysisError.retryable &&
+        currentState.retryCount < currentState.maxRetries &&
+        (analysisError.type === AnalysisErrorType.NETWORK_ERROR ||
+          analysisError.type === AnalysisErrorType.DATA_ERROR)
+      ) {
         console.log(`自动重试 (${currentState.retryCount + 1}/${currentState.maxRetries})`)
-        
+
         // 延迟后自动重试
         setTimeout(async () => {
           try {
@@ -587,17 +600,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }
 
     try {
-      set({ 
+      set({
         retryCount: state.retryCount + 1,
-        error: null  // 清除之前的错误
+        error: null // 清除之前的错误
       })
-      
+
       // 添加延迟重试，避免频繁请求
       const retryDelay = Math.min(1000 * Math.pow(2, state.retryCount), 10000) // 指数退避，最大10秒
       if (retryDelay > 1000) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay))
+        await new Promise((resolve) => setTimeout(resolve, retryDelay))
       }
-      
+
       await state.startAnalysis(state.selectedModelId, true)
     } catch (error) {
       console.error('重试失败:', error)

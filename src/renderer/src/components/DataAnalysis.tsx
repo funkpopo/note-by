@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Typography,
   Card,
-  Spin,
   Toast,
   Select,
   Button,
@@ -16,6 +15,7 @@ import { useTheme } from '../context/theme/useTheme'
 import { useAnalysisStore } from '../context/analysis/analysisService'
 import ReactECharts from 'echarts-for-react'
 import 'echarts-wordcloud'
+import { DataAnalysisSkeleton } from './Skeleton'
 
 // 图谱数据接口定义
 interface GraphNode {
@@ -383,8 +383,6 @@ interface AnalyticsAPI {
 
 const { Title, Paragraph, Text } = Typography
 
-
-
 // 写作效率趋势分析组件
 const WritingEfficiencyTrend: React.FC<{
   statsData: StatsData | null
@@ -395,7 +393,12 @@ const WritingEfficiencyTrend: React.FC<{
   const generateEfficiencyData = useCallback(() => {
     if (!statsData?.editsByDate || !activityData?.dailyActivity) return []
 
-    const efficiencyData: Array<{ date: string; efficiency: number; edits: number; activeHours: number }> = []
+    const efficiencyData: Array<{
+      date: string
+      efficiency: number
+      edits: number
+      activeHours: number
+    }> = []
 
     // 获取最近30天的数据
     const today = new Date()
@@ -405,7 +408,7 @@ const WritingEfficiencyTrend: React.FC<{
       const dateStr = date.toISOString().split('T')[0]
 
       // 获取当天的编辑次数
-      const dayEdits = statsData.editsByDate.find(item => item.date === dateStr)?.count || 0
+      const dayEdits = statsData.editsByDate.find((item) => item.date === dateStr)?.count || 0
 
       // 获取当天的活跃小时数
       const dayActivity = activityData.dailyActivity[dateStr]
@@ -453,7 +456,7 @@ const WritingEfficiencyTrend: React.FC<{
     },
     xAxis: {
       type: 'category',
-      data: generateEfficiencyData().map(item => {
+      data: generateEfficiencyData().map((item) => {
         const date = new Date(item.date)
         return `${date.getMonth() + 1}/${date.getDate()}`
       }),
@@ -468,19 +471,21 @@ const WritingEfficiencyTrend: React.FC<{
         color: isDarkMode ? '#ffffff' : '#333333'
       }
     },
-    series: [{
-      type: 'line',
-      data: generateEfficiencyData().map(item => item.efficiency),
-      smooth: true,
-      lineStyle: {
-        color: isDarkMode ? '#4299e1' : '#1890ff',
-        width: 3
-      },
-      areaStyle: {
-        color: isDarkMode ? 'rgba(66, 153, 225, 0.2)' : 'rgba(24, 144, 255, 0.2)'
-      },
-      symbolSize: 6
-    }]
+    series: [
+      {
+        type: 'line',
+        data: generateEfficiencyData().map((item) => item.efficiency),
+        smooth: true,
+        lineStyle: {
+          color: isDarkMode ? '#4299e1' : '#1890ff',
+          width: 3
+        },
+        areaStyle: {
+          color: isDarkMode ? 'rgba(66, 153, 225, 0.2)' : 'rgba(24, 144, 255, 0.2)'
+        },
+        symbolSize: 6
+      }
+    ]
   }
 
   return (
@@ -504,30 +509,33 @@ const ContentQualityScore: React.FC<{
 }> = ({ statsData, isDarkMode }) => {
   // 计算内容质量评分
   const calculateQualityScore = useCallback(() => {
-    if (!statsData) return {
-      overall: 0,
-      metrics: {
-        consistency: 0,    // 一致性：基于编辑频率的稳定性
-        productivity: 0,   // 生产力：基于笔记数量和编辑次数
-        engagement: 0,     // 参与度：基于活跃时段分布
-        organization: 0,   // 组织性：基于文件夹和标签使用
-        depth: 0          // 深度：基于平均编辑长度
+    if (!statsData)
+      return {
+        overall: 0,
+        metrics: {
+          consistency: 0, // 一致性：基于编辑频率的稳定性
+          productivity: 0, // 生产力：基于笔记数量和编辑次数
+          engagement: 0, // 参与度：基于活跃时段分布
+          organization: 0, // 组织性：基于文件夹和标签使用
+          depth: 0 // 深度：基于平均编辑长度
+        }
       }
-    }
 
     const metrics = {
-      consistency: 0,    // 一致性：基于编辑频率的稳定性
-      productivity: 0,   // 生产力：基于笔记数量和编辑次数
-      engagement: 0,     // 参与度：基于活跃时段分布
-      organization: 0,   // 组织性：基于文件夹和标签使用
-      depth: 0          // 深度：基于平均编辑长度
+      consistency: 0, // 一致性：基于编辑频率的稳定性
+      productivity: 0, // 生产力：基于笔记数量和编辑次数
+      engagement: 0, // 参与度：基于活跃时段分布
+      organization: 0, // 组织性：基于文件夹和标签使用
+      depth: 0 // 深度：基于平均编辑长度
     }
 
     // 1. 一致性评分 (0-100)
     if (statsData.editsByDate && statsData.editsByDate.length > 0) {
-      const editCounts = statsData.editsByDate.map(item => item.count)
+      const editCounts = statsData.editsByDate.map((item) => item.count)
       const avgEdits = editCounts.reduce((sum, count) => sum + count, 0) / editCounts.length
-      const variance = editCounts.reduce((sum, count) => sum + Math.pow(count - avgEdits, 2), 0) / editCounts.length
+      const variance =
+        editCounts.reduce((sum, count) => sum + Math.pow(count - avgEdits, 2), 0) /
+        editCounts.length
       const stdDev = Math.sqrt(variance)
       const consistencyScore = Math.max(0, 100 - (stdDev / avgEdits) * 100)
       metrics.consistency = Math.min(100, consistencyScore)
@@ -536,12 +544,12 @@ const ContentQualityScore: React.FC<{
     // 2. 生产力评分 (0-100)
     const totalNotes = statsData.totalNotes || 0
     const totalEdits = statsData.totalEdits || 0
-    const productivityScore = Math.min(100, (totalNotes * 2 + totalEdits * 0.5))
+    const productivityScore = Math.min(100, totalNotes * 2 + totalEdits * 0.5)
     metrics.productivity = productivityScore
 
     // 3. 参与度评分 (0-100)
     if (statsData.editTimeDistribution && statsData.editTimeDistribution.length > 0) {
-      const activeHours = statsData.editTimeDistribution.filter(item => item.count > 0).length
+      const activeHours = statsData.editTimeDistribution.filter((item) => item.count > 0).length
       const engagementScore = (activeHours / 24) * 100
       metrics.engagement = engagementScore
     }
@@ -549,7 +557,7 @@ const ContentQualityScore: React.FC<{
     // 4. 组织性评分 (0-100)
     const folderCount = statsData.topFolders?.length || 0
     const tagCount = statsData.topTags?.length || 0
-    const organizationScore = Math.min(100, (folderCount * 10 + tagCount * 5))
+    const organizationScore = Math.min(100, folderCount * 10 + tagCount * 5)
     metrics.organization = organizationScore
 
     // 5. 深度评分 (0-100)
@@ -558,7 +566,8 @@ const ContentQualityScore: React.FC<{
     metrics.depth = depthScore
 
     // 计算总体评分
-    const overall = Object.values(metrics).reduce((sum, score) => sum + score, 0) / Object.keys(metrics).length
+    const overall =
+      Object.values(metrics).reduce((sum, score) => sum + score, 0) / Object.keys(metrics).length
 
     return { overall: parseFloat(overall.toFixed(2)), metrics }
   }, [statsData])
@@ -580,29 +589,31 @@ const ContentQualityScore: React.FC<{
         return `${params.name}: ${params.value}分`
       }
     },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['50%', '60%'],
-      data: [
-        { name: '一致性', value: metrics.consistency || 0 },
-        { name: '生产力', value: metrics.productivity || 0 },
-        { name: '参与度', value: metrics.engagement || 0 },
-        { name: '组织性', value: metrics.organization || 0 },
-        { name: '深度', value: metrics.depth || 0 }
-      ],
-      emphasis: {
-        itemStyle: {
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['50%', '60%'],
+        data: [
+          { name: '一致性', value: metrics.consistency || 0 },
+          { name: '生产力', value: metrics.productivity || 0 },
+          { name: '参与度', value: metrics.engagement || 0 },
+          { name: '组织性', value: metrics.organization || 0 },
+          { name: '深度', value: metrics.depth || 0 }
+        ],
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {c}分'
         }
-      },
-      label: {
-        show: true,
-        formatter: '{b}: {c}分'
       }
-    }]
+    ]
   }
 
   const getScoreColor = (score: number) => {
@@ -615,12 +626,14 @@ const ContentQualityScore: React.FC<{
   return (
     <Card title="内容质量评分" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{
-          fontSize: 48,
-          fontWeight: 'bold',
-          color: getScoreColor(overall),
-          marginRight: 16
-        }}>
+        <div
+          style={{
+            fontSize: 48,
+            fontWeight: 'bold',
+            color: getScoreColor(overall),
+            marginRight: 16
+          }}
+        >
           {overall.toFixed(2)}
         </div>
         <div>
@@ -653,7 +666,7 @@ const DataAnalysis: React.FC = () => {
     setAnalysisResult,
     resetCacheStatus
   } = useAnalysisStore()
-  
+
   // 用于跟踪当前显示的Toast类型，避免重复显示
   const currentToastType = useRef<string | null>(null)
 
@@ -714,7 +727,9 @@ const DataAnalysis: React.FC = () => {
     forceUpdate: boolean = false
   ): void => {
     const newToastType = analyzing
-      ? (forceUpdate ? 'reanalyzing' : 'analyzing')
+      ? forceUpdate
+        ? 'reanalyzing'
+        : 'analyzing'
       : error
         ? 'error'
         : cached
@@ -740,16 +755,20 @@ const DataAnalysis: React.FC = () => {
 
     switch (newToastType) {
       case 'reanalyzing':
-        setAnalyzingToastWithTimeout(Toast.info({
-          content: '正在重新分析数据...',
-          duration: 0 // 分析期间持续显示
-        }))
+        setAnalyzingToastWithTimeout(
+          Toast.info({
+            content: '正在重新分析数据...',
+            duration: 0 // 分析期间持续显示
+          })
+        )
         break
       case 'analyzing':
-        setAnalyzingToastWithTimeout(Toast.info({
-          content: '正在分析数据...',
-          duration: 0 // 分析期间持续显示
-        }))
+        setAnalyzingToastWithTimeout(
+          Toast.info({
+            content: '正在分析数据...',
+            duration: 0 // 分析期间持续显示
+          })
+        )
         break
       case 'error':
         Toast.error({
@@ -761,7 +780,7 @@ const DataAnalysis: React.FC = () => {
         // 为缓存Toast添加引用管理，确保能够正确自动消除
         const cachedToastId = Toast.success({
           content: '已加载缓存的分析结果',
-          duration: 3000, // 3秒后自动关闭
+          duration: 3000 // 3秒后自动关闭
         })
         currentCachedToastRef.current = cachedToastId
         console.log(`[Toast管理] 缓存Toast已创建，ID: ${cachedToastId}`)
@@ -787,11 +806,7 @@ const DataAnalysis: React.FC = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        await Promise.all([
-          fetchData(),
-          loadAvailableModels(),
-          loadCachedAnalysisResult()
-        ])
+        await Promise.all([fetchData(), loadAvailableModels(), loadCachedAnalysisResult()])
       } finally {
         // 初始化完成，允许显示Toast
         setIsInitializing(false)
@@ -2032,14 +2047,34 @@ const DataAnalysis: React.FC = () => {
         </div>
 
         {(isLoading || (isAnalyzing && !analysisResult)) && (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <Spin size="large" />
-            <Paragraph style={{ marginTop: 16 }}>
-              {isAnalyzing ? '正在使用AI分析您的笔记数据...' : '正在加载数据...'}
-            </Paragraph>
+          <div>
+            <DataAnalysisSkeleton
+              style={{
+                width: '100%',
+                minHeight: '600px'
+              }}
+            />
             {isAnalyzing && (
-              <div style={{ maxWidth: '500px', margin: '20px auto' }}>
-                <Progress percent={progress} showInfo />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'var(--semi-color-bg-0)',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--semi-shadow-elevated)',
+                  textAlign: 'center',
+                  zIndex: 10
+                }}
+              >
+                <Paragraph style={{ marginBottom: 16 }}>
+                  {isAnalyzing ? '正在使用AI分析您的笔记数据...' : '正在加载数据...'}
+                </Paragraph>
+                <div style={{ maxWidth: '300px', margin: '0 auto' }}>
+                  <Progress percent={progress} showInfo />
+                </div>
               </div>
             )}
           </div>
@@ -2342,8 +2377,6 @@ const DataAnalysis: React.FC = () => {
                         </div>
                       </div>
 
-
-
                       {/* 添加写作效率趋势分析 */}
                       <div style={{ width: '100%', marginBottom: '24px' }}>
                         <WritingEfficiencyTrend
@@ -2355,10 +2388,7 @@ const DataAnalysis: React.FC = () => {
 
                       {/* 添加内容质量评分 */}
                       <div style={{ width: '100%', marginBottom: '24px' }}>
-                        <ContentQualityScore
-                          statsData={statsData}
-                          isDarkMode={isDarkMode}
-                        />
+                        <ContentQualityScore statsData={statsData} isDarkMode={isDarkMode} />
                       </div>
 
                       {/* 添加标签分析相关的可视化 */}

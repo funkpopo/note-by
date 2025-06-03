@@ -1,0 +1,306 @@
+/* 骨架屏通用样式 */
+.skeleton-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+/* 编辑器骨架屏样式 */
+.editor-skeleton {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-skeleton-toolbar {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-1);
+}
+
+.editor-skeleton-content {
+  flex: 1;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.skeleton-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--semi-color-border);
+  margin: 0 8px;
+}
+
+.skeleton-code-block {
+  margin: 16px 0;
+}
+
+.skeleton-list {
+  margin: 16px 0;
+}
+
+.skeleton-list-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+/* 导航骨架屏样式 */
+.navigation-skeleton {
+  padding: 16px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.navigation-skeleton-search {
+  margin-bottom: 16px;
+}
+
+.navigation-skeleton-list {
+  flex: 1;
+  overflow: hidden;
+}
+
+.navigation-skeleton-item {
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+.navigation-skeleton-children {
+  margin-top: 4px;
+}
+
+.navigation-skeleton-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--semi-color-border);
+}
+
+/* 数据分析骨架屏样式 */
+.data-analysis-skeleton {
+  width: 100%;
+  padding: 24px;
+}
+
+.data-analysis-skeleton-header {
+  margin-bottom: 24px;
+}
+
+.data-analysis-skeleton-stat-card {
+  text-align: center;
+  padding: 16px;
+}
+
+.data-analysis-skeleton-result {
+  margin-top: 24px;
+}
+
+.data-analysis-skeleton-section {
+  padding: 16px 0;
+}
+
+.data-analysis-skeleton-list {
+  margin-top: 12px;
+}
+
+.data-analysis-skeleton-list-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+/* 图表骨架屏样式 */
+.chart-skeleton {
+  position: relative;
+  background: var(--semi-color-bg-0);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* 折线图骨架屏 */
+.chart-skeleton-line {
+  display: flex;
+  height: 100%;
+  padding: 20px;
+}
+
+.chart-skeleton-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 50px;
+  height: calc(100% - 40px);
+  margin-right: 16px;
+}
+
+.chart-skeleton-content {
+  flex: 1;
+  position: relative;
+  height: calc(100% - 40px);
+}
+
+.chart-skeleton-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.chart-skeleton-grid-line {
+  height: 1px;
+  background: var(--semi-color-border);
+  opacity: 0.3;
+}
+
+.chart-skeleton-line-path {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--semi-color-primary) 0%,
+    var(--semi-color-primary-light-default) 50%,
+    var(--semi-color-primary) 100%
+  );
+  border-radius: 1px;
+  animation: skeleton-shimmer 2s infinite;
+}
+
+.chart-skeleton-x-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+/* 柱状图骨架屏 */
+.chart-skeleton-bar {
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-skeleton-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  margin-bottom: 16px;
+}
+
+.chart-skeleton-bar-item {
+  width: 30px;
+  background: var(--semi-color-primary-light-default);
+  border-radius: 2px 2px 0 0;
+  animation: skeleton-shimmer 2s infinite;
+}
+
+/* 饼图骨架屏 */
+.chart-skeleton-pie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.chart-skeleton-pie-chart {
+  margin-right: 40px;
+}
+
+.chart-skeleton-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-skeleton-legend-item {
+  display: flex;
+  align-items: center;
+}
+
+/* 关系图骨架屏 */
+.chart-skeleton-graph {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chart-skeleton-node {
+  position: absolute;
+  animation: skeleton-pulse 2s infinite;
+}
+
+.chart-skeleton-edge {
+  position: absolute;
+  height: 1px;
+  background: var(--semi-color-border);
+  opacity: 0.5;
+  animation: skeleton-shimmer 3s infinite;
+}
+
+/* 词云骨架屏 */
+.chart-skeleton-wordcloud {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 骨架屏动画 */
+@keyframes skeleton-shimmer {
+  0% {
+    opacity: 0.6;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(0%);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* 暗色主题适配 */
+body[theme-mode='dark'] .chart-skeleton {
+  background: var(--semi-color-bg-1);
+}
+
+body[theme-mode='dark'] .chart-skeleton-grid-line {
+  background: var(--semi-color-border);
+}
+
+body[theme-mode='dark'] .chart-skeleton-line-path {
+  background: linear-gradient(
+    90deg,
+    var(--semi-color-primary) 0%,
+    var(--semi-color-primary-light-active) 50%,
+    var(--semi-color-primary) 100%
+  );
+}
+
+body[theme-mode='dark'] .chart-skeleton-bar-item {
+  background: var(--semi-color-primary-light-active);
+}

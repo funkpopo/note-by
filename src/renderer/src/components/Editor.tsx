@@ -47,6 +47,7 @@ import globalTagManager from '../utils/GlobalTagManager'
 import { LanguageModelV1 } from '@ai-sdk/provider'
 import { zh as aiLocales } from '@blocknote/xl-ai/locales'
 import { CustomAIMenu } from './AICustomCommands'
+import { EditorSkeleton } from './Skeleton'
 
 // 添加一个接口定义API配置
 interface AiApiConfig {
@@ -1428,16 +1429,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }}
       >
         {isLoading ? (
-          <div
+          <EditorSkeleton
             style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%'
+              height: '100%',
+              width: '100%'
             }}
-          >
-            <Spin size="large" />
-          </div>
+          />
         ) : !currentFile ? (
           <div
             style={{

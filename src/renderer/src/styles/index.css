@@ -128,3 +128,36 @@ code {
 [data-floating-ui-focusable] {
   z-index: 1000 !important; /* 设置一个比 semi-portal-inner 低的值 */
 }
+
+/* 骨架屏全局样式增强 */
+.skeleton-wrapper {
+  animation: skeleton-loading 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 骨架屏在暗色主题下的适配 */
+body[theme-mode='dark'] .skeleton-wrapper {
+  filter: brightness(0.9);
+}
+
+/* 确保骨架屏组件在加载时平滑过渡 */
+.editor-skeleton,
+.navigation-skeleton,
+.data-analysis-skeleton,
+.chart-skeleton {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* 骨架屏加载完成后的淡出效果 */
+.skeleton-fade-out {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}

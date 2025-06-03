@@ -22,6 +22,7 @@ import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
 import ConfirmDialog from './ConfirmDialog'
 import RenameDialog from './RenameDialog'
 import CreateDialog from './CreateDialog'
+import { NavigationSkeleton } from './Skeleton'
 import { useTheme } from '../context/theme/useTheme'
 
 // 定义导航项类型
@@ -1010,45 +1011,51 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
             ></div>
           )}
 
-          <Tree
-            treeData={convertNavItemsToTreeData(navItems)}
-            onSelect={handleTreeSelect}
-            expandedKeys={searchText ? [...expandedKeys, ...filteredExpandedKeys] : expandedKeys}
-            onExpand={handleTreeExpand}
-            onContextMenu={(e, node): void => {
-              // 通过节点的key判断是文件夹还是文件
-              const nodeKey = node.key?.toString() || ''
-              const isFolder = nodeKey.startsWith('folder:')
+          {isLoading ? (
+            <NavigationSkeleton
+              style={{
+                padding: '0',
+                height: '100%'
+              }}
+              itemCount={10}
+            />
+          ) : (
+            <Tree
+              treeData={convertNavItemsToTreeData(navItems)}
+              onSelect={handleTreeSelect}
+              expandedKeys={searchText ? [...expandedKeys, ...filteredExpandedKeys] : expandedKeys}
+              onExpand={handleTreeExpand}
+              onContextMenu={(e, node): void => {
+                // 通过节点的key判断是文件夹还是文件
+                const nodeKey = node.key?.toString() || ''
+                const isFolder = nodeKey.startsWith('folder:')
 
-              // 添加额外的调试信息
-              console.log('Tree节点右键菜单:', {
-                nodeKey,
-                isFolder,
-                node: node
-              })
+                // 添加额外的调试信息
+                console.log('Tree节点右键菜单:', {
+                  nodeKey,
+                  isFolder,
+                  node: node
+                })
 
-              // 先转换成unknown再转成React.MouseEvent类型
-              const mouseEvent = e.nativeEvent as unknown as React.MouseEvent
-              handleContextMenu(mouseEvent, nodeKey, isFolder)
-            }}
-            emptyContent={
-              isLoading ? (
-                <Typography.Text>加载中...</Typography.Text>
-              ) : (
+                // 先转换成unknown再转成React.MouseEvent类型
+                const mouseEvent = e.nativeEvent as unknown as React.MouseEvent
+                handleContextMenu(mouseEvent, nodeKey, isFolder)
+              }}
+              emptyContent={
                 <Typography.Text type="tertiary" className="empty-area">
                   暂无笔记
                 </Typography.Text>
-              )
-            }
-            style={{
-              width: '100%',
-              borderRadius: '3px'
-            }}
-            filterTreeNode={true}
-            showFilteredOnly={showFilteredOnly}
-            searchRender={renderSearch}
-            onSearch={handleSearch}
-          />
+              }
+              style={{
+                width: '100%',
+                borderRadius: '3px'
+              }}
+              filterTreeNode={true}
+              showFilteredOnly={showFilteredOnly}
+              searchRender={renderSearch}
+              onSearch={handleSearch}
+            />
+          )}
         </div>
 
         {/* 右键菜单 - 使用绝对定位 */}

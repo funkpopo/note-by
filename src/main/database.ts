@@ -32,7 +32,7 @@ function getDatabasePath(): string {
     // 生产环境，使用应用程序所在目录的上级目录下的markdown文件夹
     markdownPath = resolve(app.getPath('exe'), '..', 'markdown')
   }
-  
+
   // 返回数据库文件的完整路径
   return path.join(markdownPath, '.assets', 'note_history.db')
 }
@@ -50,7 +50,7 @@ export async function initDatabase(): Promise<Database.Database | null> {
   // 确保数据库目录存在
   const dbDir = path.dirname(dbPath)
   console.log('数据库目录:', dbDir)
-  
+
   try {
     if (!fs.existsSync(dbDir)) {
       console.log('数据库目录不存在，开始创建:', dbDir)
@@ -80,9 +80,9 @@ export async function initDatabase(): Promise<Database.Database | null> {
     console.log('开始创建数据库连接:', dbPath)
     db = new SqliteDatabase(dbPath)
 
-    if (db) {      
+    if (db) {
       console.log('数据库连接创建成功，开始创建表结构')
-      
+
       // 创建文档历史记录表
       db.exec(`
         CREATE TABLE IF NOT EXISTS note_history (
@@ -95,16 +95,18 @@ export async function initDatabase(): Promise<Database.Database | null> {
         CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
         CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
       `)
-      
+
       // 验证表是否创建成功
-      const tableCheckStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='note_history'")
+      const tableCheckStmt = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='note_history'"
+      )
       const tableExists = tableCheckStmt.get()
-      
+
       if (!tableExists) {
         console.error('验证失败：note_history表未找到')
         return null
       }
-      
+
       console.log('数据库初始化完成，note_history表已创建')
     } else {
       console.error('数据库连接创建失败')
@@ -1247,7 +1249,7 @@ export async function checkDatabaseStatus(): Promise<{
 }> {
   const dbPath = getDatabasePath()
   const dbDir = path.dirname(dbPath)
-  
+
   // 获取markdown根目录路径用于一致性检查
   let markdownPath
   if (is.dev) {
@@ -1255,7 +1257,7 @@ export async function checkDatabaseStatus(): Promise<{
   } else {
     markdownPath = resolve(app.getPath('exe'), '..', 'markdown')
   }
-  
+
   const result = {
     isInitialized: false,
     tablesExist: false,
@@ -1278,19 +1280,19 @@ export async function checkDatabaseStatus(): Promise<{
     console.log('开始数据库状态检查...')
     console.log('数据库路径:', dbPath)
     console.log('Markdown路径:', markdownPath)
-    
+
     // 检查目录是否存在
     result.details.dbDirExists = fs.existsSync(dbDir)
     result.details.dbFileExists = fs.existsSync(dbPath)
-    
+
     // 检查路径一致性（数据库应该位于markdown/.assets目录下）
     const expectedDbPath = path.join(markdownPath, '.assets', 'note_history.db')
-    result.details.pathConsistency = (dbPath === expectedDbPath)
-    
+    result.details.pathConsistency = dbPath === expectedDbPath
+
     if (!result.details.pathConsistency) {
       result.details.recommendations.push(`路径不一致：期望 ${expectedDbPath}，实际 ${dbPath}`)
     }
-    
+
     // 检查写入权限
     try {
       if (result.details.dbDirExists) {
@@ -1311,18 +1313,18 @@ export async function checkDatabaseStatus(): Promise<{
       result.details.recommendations.push(`权限问题：无法写入目录 ${dbDir}`)
       result.details.recommendations.push('请检查应用程序是否有足够的文件系统权限')
     }
-    
+
     // 如果基础条件不满足，提供建议
     if (!result.details.dbDirExists) {
       result.details.recommendations.push('数据库目录不存在，请确保应用有权限创建目录')
     }
-    
+
     if (!result.details.hasWritePermission) {
       result.details.recommendations.push('没有写入权限，历史记录功能将无法工作')
       result.lastError = '数据库目录权限不足'
       return result
     }
-    
+
     // 检查数据库是否已初始化
     const database = await initDatabase()
     if (!database) {
@@ -1337,8 +1339,8 @@ export async function checkDatabaseStatus(): Promise<{
     // 检查表是否存在
     const tablesStmt = database.prepare("SELECT name FROM sqlite_master WHERE type='table'")
     const tables = tablesStmt.all() as Array<{ name: string }>
-    result.details.tables = tables.map(t => t.name)
-    
+    result.details.tables = tables.map((t) => t.name)
+
     const hasNoteHistoryTable = result.details.tables.includes('note_history')
     result.tablesExist = hasNoteHistoryTable
 
@@ -1347,14 +1349,16 @@ export async function checkDatabaseStatus(): Promise<{
       const countStmt = database.prepare('SELECT COUNT(*) as count FROM note_history')
       const countResult = countStmt.get() as { count: number }
       result.recordCount = countResult.count
-      
+
       // 获取表结构信息
       const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
       const tableInfo = tableInfoStmt.all()
       result.details.tableInfo.note_history = tableInfo
-      
+
       if (result.recordCount === 0) {
-        result.details.recommendations.push('历史记录表存在但为空，这可能是正常的（如果是首次使用）')
+        result.details.recommendations.push(
+          '历史记录表存在但为空，这可能是正常的（如果是首次使用）'
+        )
       } else {
         result.details.recommendations.push(`历史记录表包含 ${result.recordCount} 条记录，功能正常`)
       }
@@ -1368,9 +1372,14 @@ export async function checkDatabaseStatus(): Promise<{
       const webdavCount = webdavCountStmt.get() as { count: number }
       result.details.tableInfo.webdav_sync_cache = { recordCount: webdavCount.count }
     }
-    
+
     // 如果一切正常，提供积极反馈
-    if (result.isInitialized && result.tablesExist && result.details.hasWritePermission && result.details.pathConsistency) {
+    if (
+      result.isInitialized &&
+      result.tablesExist &&
+      result.details.hasWritePermission &&
+      result.details.pathConsistency
+    ) {
       result.details.recommendations.push('数据库状态良好，历史记录功能应该正常工作')
     }
 

@@ -16,13 +16,7 @@ import {
   TabPane,
   Radio
 } from '@douyinfe/semi-ui'
-import {
-  IconPulse,
-  IconPlus,
-  IconDelete,
-  IconEdit,
-  IconRefresh
-} from '@douyinfe/semi-icons'
+import { IconPulse, IconPlus, IconDelete, IconEdit, IconRefresh } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
 
