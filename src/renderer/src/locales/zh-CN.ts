@@ -44,7 +44,6 @@ interface ExtendedDictionary extends Dictionary {
     status: {
       success: string
       failed: string
-      cached: string
       retrying: string
     }
   }
@@ -466,7 +465,6 @@ export const zhCN: ExtendedDictionary = {
     status: {
       success: '分析完成',
       failed: '分析失败',
-      cached: '已加载缓存的分析结果',
       retrying: '正在重试...'
     }
   }

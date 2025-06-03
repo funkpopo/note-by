@@ -754,14 +754,6 @@ const DataAnalysis: React.FC = () => {
     currentToastType.current = newToastType
 
     switch (newToastType) {
-      case 'reanalyzing':
-        setAnalyzingToastWithTimeout(
-          Toast.info({
-            content: '正在重新分析数据...',
-            duration: 0 // 分析期间持续显示
-          })
-        )
-        break
       case 'analyzing':
         setAnalyzingToastWithTimeout(
           Toast.info({
@@ -775,23 +767,6 @@ const DataAnalysis: React.FC = () => {
           content: `分析失败: ${error.message || error}`,
           duration: 5000 // 5秒后自动关闭
         })
-        break
-      case 'cached':
-        // 为缓存Toast添加引用管理，确保能够正确自动消除
-        const cachedToastId = Toast.success({
-          content: '已加载缓存的分析结果',
-          duration: 3000 // 3秒后自动关闭
-        })
-        currentCachedToastRef.current = cachedToastId
-        console.log(`[Toast管理] 缓存Toast已创建，ID: ${cachedToastId}`)
-
-        // 设置超时保护，确保引用最终会被清除
-        setTimeout(() => {
-          if (currentCachedToastRef.current === cachedToastId) {
-            console.log(`[Toast管理] 缓存Toast超时清理，ID: ${cachedToastId}`)
-            currentCachedToastRef.current = null
-          }
-        }, 4000) // 比duration多1秒，确保Toast已经自动消失
         break
       case 'completed':
         Toast.success({
