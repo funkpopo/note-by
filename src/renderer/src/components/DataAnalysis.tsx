@@ -383,101 +383,7 @@ interface AnalyticsAPI {
 
 const { Title, Paragraph, Text } = Typography
 
-// 写作热力图组件
-const WritingHeatmap: React.FC<{
-  activityData: ActivityData | null
-  isDarkMode: boolean
-}> = ({ activityData, isDarkMode }) => {
-  // 生成热力图数据
-  const generateHeatmapData = useCallback(() => {
-    if (!activityData?.dailyActivity) return []
 
-    const data: Array<[string, number, number]> = []
-    const today = new Date()
-
-    // 生成过去30天的数据
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
-
-      const dayActivity = activityData.dailyActivity[dateStr]
-      const activityLevel = dayActivity?.activeHours?.length || 0
-
-      // 格式：[日期, 星期几(0-6), 活动强度]
-      data.push([dateStr, date.getDay(), activityLevel])
-    }
-
-    return data
-  }, [activityData])
-
-  const heatmapOption: EChartsOption = {
-    title: {
-      text: '写作活动热力图',
-      left: 'center',
-      textStyle: {
-        color: isDarkMode ? '#ffffff' : '#333333',
-        fontSize: 16
-      }
-    },
-    tooltip: {
-      formatter: (params: any) => {
-        const [date, dayOfWeek, value] = params.data
-        const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-        return `${date}<br/>${dayNames[dayOfWeek]}<br/>活动强度: ${value}`
-      }
-    },
-    grid: {
-      left: '10%',
-      right: '10%',
-      top: '15%',
-      bottom: '15%'
-    },
-    xAxis: {
-      type: 'category',
-      data: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
-      axisLabel: {
-        color: isDarkMode ? '#ffffff' : '#333333'
-      }
-    },
-    yAxis: {
-      type: 'category',
-      data: Array.from({ length: 5 }, (_, i) => `第${i + 1}周`),
-      axisLabel: {
-        color: isDarkMode ? '#ffffff' : '#333333'
-      }
-    },
-    series: [{
-      type: 'scatter',
-      data: generateHeatmapData().map(([, dayOfWeek, value], index) => [
-        dayOfWeek,
-        Math.floor(index / 7),
-        value
-      ]),
-      symbolSize: 20,
-      itemStyle: {
-        color: (params: any) => {
-          const intensity = params.data[2]
-          if (intensity === 0) return isDarkMode ? '#404040' : '#f0f0f0'
-          if (intensity <= 2) return isDarkMode ? '#0d4377' : '#c6e48b'
-          if (intensity <= 5) return isDarkMode ? '#1e6091' : '#7bc96f'
-          if (intensity <= 8) return isDarkMode ? '#3182ce' : '#239a3b'
-          return isDarkMode ? '#4299e1' : '#196127'
-        }
-      }
-    }]
-  }
-
-  return (
-    <Card title="写作活动热力图" style={{ marginBottom: 16 }}>
-      <ReactECharts
-        option={heatmapOption}
-        style={{ height: '300px' }}
-        theme={isDarkMode ? 'dark' : 'light'}
-      />
-    </Card>
-  )
-}
 
 // 写作效率趋势分析组件
 const WritingEfficiencyTrend: React.FC<{
@@ -654,7 +560,7 @@ const ContentQualityScore: React.FC<{
     // 计算总体评分
     const overall = Object.values(metrics).reduce((sum, score) => sum + score, 0) / Object.keys(metrics).length
 
-    return { overall: Math.round(overall), metrics }
+    return { overall: parseFloat(overall.toFixed(2)), metrics }
   }, [statsData])
 
   const { overall, metrics } = calculateQualityScore()
@@ -715,7 +621,7 @@ const ContentQualityScore: React.FC<{
           color: getScoreColor(overall),
           marginRight: 16
         }}>
-          {overall}
+          {overall.toFixed(2)}
         </div>
         <div>
           <div style={{ fontSize: 16, fontWeight: 'bold' }}>总体评分</div>
@@ -2436,10 +2342,7 @@ const DataAnalysis: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 添加写作热力图 */}
-                      <div style={{ width: '100%', marginBottom: '24px' }}>
-                        <WritingHeatmap activityData={activityData} isDarkMode={isDarkMode} />
-                      </div>
+
 
                       {/* 添加写作效率趋势分析 */}
                       <div style={{ width: '100%', marginBottom: '24px' }}>
