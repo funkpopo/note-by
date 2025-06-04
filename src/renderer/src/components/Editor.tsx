@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Typography, Button, Space, Toast, Spin, Select, Dropdown } from '@douyinfe/semi-ui'
+import { Typography, Button, Space, Toast, Select, Dropdown } from '@douyinfe/semi-ui'
 import { IconSave, IconFile, IconChevronDown } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
