@@ -48,7 +48,7 @@
     "echarts-wordcloud": "^2.1.0",
     "html-to-image": "^1.11.13",
     "md-to-pdf": "^5.2.4",
-    "openai": "^5.0.2",
+    "openai": "^5.1.1",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
