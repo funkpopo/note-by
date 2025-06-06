@@ -23,9 +23,6 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
     "@ai-sdk/provider": "^1.1.3",
-    "@antv/xflow": "^2.2.4",
-    "@antv/xflow-core": "^1.1.52",
-    "@antv/xflow-extension": "^1.1.52",
     "@blocknote/code-block": "^0.31.1",
     "@blocknote/core": "^0.31.1",
     "@blocknote/mantine": "^0.31.1",

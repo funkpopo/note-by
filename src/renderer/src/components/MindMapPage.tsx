@@ -14,7 +14,8 @@ import {
   useReactFlow,
   BackgroundVariant,
   Panel,
-  useKeyPress
+  useKeyPress,
+  MarkerType
 } from '@xyflow/react'
 import { Button, Space, Toast, Input, Modal, Typography, Select, Slider } from '@douyinfe/semi-ui'
 import {
@@ -23,10 +24,32 @@ import {
   IconUpload,
   IconDownload,
   IconUndo,
-  IconRedo
+  IconRedo,
+  IconEdit,
+  IconDelete,
+  IconArrowRight
 } from '@douyinfe/semi-icons'
 import '@xyflow/react/dist/style.css'
 import { toPng } from 'html-to-image'
+
+// 添加右键菜单样式
+const contextMenuStyles = `
+  .context-menu-item:hover {
+    background: var(--semi-color-fill-0) !important;
+  }
+  
+  .context-menu-item.context-menu-item-danger:hover {
+    background: var(--semi-color-danger-light-default) !important;
+  }
+`
+
+// 注入样式
+if (typeof document !== 'undefined' && !document.getElementById('mindmap-context-menu-styles')) {
+  const style = document.createElement('style')
+  style.id = 'mindmap-context-menu-styles'
+  style.textContent = contextMenuStyles
+  document.head.appendChild(style)
+}
 
 const { Title } = Typography
 const { Option } = Select
@@ -105,6 +128,19 @@ const MindMapFlow: React.FC = () => {
   } | null>(null)
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean
+    x: number
+    y: number
+    type: 'node' | 'edge' | 'pane'
+    nodeId?: string
+    edgeId?: string
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    type: 'pane'
+  })
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { getViewport, setViewport, getNodes, getEdges, deleteElements, screenToFlowPosition } =
     useReactFlow()
@@ -138,6 +174,31 @@ const MindMapFlow: React.FC = () => {
       Toast.success('已撤销')
     }
   }, [history, historyIndex, setNodes, setEdges])
+
+  // 隐藏右键菜单
+  const hideContextMenu = useCallback(() => {
+    setContextMenu((prev) => ({ ...prev, visible: false }))
+  }, [])
+
+  // 计算菜单位置
+  const calculateMenuPosition = useCallback((x: number, y: number) => {
+    const menuWidth = 200
+    const menuHeight = 150
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    let menuX = x
+    let menuY = y
+
+    if (x + menuWidth > viewportWidth) {
+      menuX = x - menuWidth
+    }
+    if (y + menuHeight > viewportHeight) {
+      menuY = y - menuHeight
+    }
+
+    return { x: Math.max(0, menuX), y: Math.max(0, menuY) }
+  }, [])
 
   // 重做
   const redo = useCallback(() => {
@@ -225,14 +286,12 @@ const MindMapFlow: React.FC = () => {
     const selectedNodes = nodes.filter((node) => node.selected)
     const selectedEdges = edges.filter((edge) => edge.selected)
 
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-      Toast.warning('请先选择要删除的节点或连线')
-      return
+    // 只有真正有选中元素时才执行删除操作
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+      deleteElements({ nodes: selectedNodes, edges: selectedEdges })
+      saveToHistory()
+      Toast.success(`已删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条连线`)
     }
-
-    deleteElements({ nodes: selectedNodes, edges: selectedEdges })
-    saveToHistory()
-    Toast.success(`已删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条连线`)
   }, [nodes, edges, deleteElements, saveToHistory])
 
   // 节点双击编辑
@@ -248,6 +307,44 @@ const MindMapFlow: React.FC = () => {
       fontSize: (node.data.fontSize as number) || 14
     })
   }, [])
+
+  // 节点右键菜单
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault()
+    const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
+    setContextMenu({
+      visible: true,
+      x,
+      y,
+      type: 'node',
+      nodeId: node.id
+    })
+  }, [calculateMenuPosition])
+
+  // 边右键菜单
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault()
+    const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
+    setContextMenu({
+      visible: true,
+      x,
+      y,
+      type: 'edge',
+      edgeId: edge.id
+    })
+  }, [calculateMenuPosition])
+
+  // 空白区域右键菜单
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    event.preventDefault()
+    const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
+    setContextMenu({
+      visible: true,
+      x,
+      y,
+      type: 'pane'
+    })
+  }, [calculateMenuPosition])
 
   // 保存节点编辑
   const saveNodeEdit = useCallback(() => {
@@ -281,6 +378,103 @@ const MindMapFlow: React.FC = () => {
     saveToHistory()
     Toast.success('节点内容已更新')
   }, [editingNode, setNodes, saveToHistory])
+
+  // 右键菜单功能 - 编辑节点
+  const handleEditNode = useCallback(() => {
+    if (contextMenu.nodeId) {
+      const node = nodes.find(n => n.id === contextMenu.nodeId)
+      if (node) {
+        let nodeTypeToEdit = (node.data.nodeType as string) || 'default'
+        if (nodeTypeToEdit === 'custom') {
+          nodeTypeToEdit = 'default'
+        }
+        setEditingNode({
+          id: node.id,
+          label: String(node.data.label),
+          nodeType: nodeTypeToEdit,
+          fontSize: (node.data.fontSize as number) || 14
+        })
+      }
+    }
+    hideContextMenu()
+  }, [contextMenu.nodeId, nodes, hideContextMenu])
+
+  // 右键菜单功能 - 删除节点
+  const handleDeleteNode = useCallback(() => {
+    if (contextMenu.nodeId) {
+      const nodeToDelete = nodes.find(n => n.id === contextMenu.nodeId)
+      const edgesToDelete = edges.filter(e => e.source === contextMenu.nodeId || e.target === contextMenu.nodeId)
+      
+      if (nodeToDelete) {
+        deleteElements({ nodes: [nodeToDelete], edges: edgesToDelete })
+        saveToHistory()
+        Toast.success(`已删除节点和 ${edgesToDelete.length} 条连线`)
+      }
+    }
+    hideContextMenu()
+  }, [contextMenu.nodeId, nodes, edges, deleteElements, saveToHistory, hideContextMenu])
+
+  // 右键菜单功能 - 添加节点（空白区域）
+  const handleAddNodeAtPosition = useCallback(() => {
+    if (reactFlowWrapper.current) {
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect()
+      const position = screenToFlowPosition({
+        x: contextMenu.x - reactFlowBounds.left,
+        y: contextMenu.y - reactFlowBounds.top
+      })
+
+      const newNode: Node = {
+        id: nodeId.toString(),
+        type: 'default',
+        position,
+        data: {
+          label: `新节点 ${nodeId}`,
+          nodeType: 'default'
+        },
+        style: nodeStyles.default
+      }
+      setNodes((nds) => nds.concat(newNode))
+      setNodeId((id) => id + 1)
+      saveToHistory()
+      Toast.success('节点添加成功')
+    }
+    hideContextMenu()
+  }, [contextMenu.x, contextMenu.y, nodeId, setNodes, setNodeId, saveToHistory, hideContextMenu, screenToFlowPosition])
+
+  // 右键菜单功能 - 添加箭头标记
+  const handleAddEdgeMarker = useCallback((markerType: 'arrow' | 'arrowclosed') => {
+    if (contextMenu.edgeId) {
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === contextMenu.edgeId
+            ? {
+                ...edge,
+                markerEnd: {
+                  type: markerType === 'arrow' ? MarkerType.Arrow : MarkerType.ArrowClosed,
+                  color: '#666'
+                }
+              }
+            : edge
+        )
+      )
+      saveToHistory()
+      Toast.success('已添加箭头标记')
+    }
+    hideContextMenu()
+  }, [contextMenu.edgeId, setEdges, saveToHistory, hideContextMenu])
+
+  // 右键菜单功能 - 删除边
+  const handleDeleteEdge = useCallback(() => {
+    if (contextMenu.edgeId) {
+      const edgeToDelete = edges.find(e => e.id === contextMenu.edgeId)
+      if (edgeToDelete) {
+        deleteElements({ nodes: [], edges: [edgeToDelete] })
+        saveToHistory()
+        Toast.success('已删除连线')
+      }
+    }
+    hideContextMenu()
+  }, [contextMenu.edgeId, edges, deleteElements, saveToHistory, hideContextMenu])
 
   // MiniMap节点颜色映射
   const nodeColor = useCallback((node: Node): string => {
@@ -442,6 +636,19 @@ const MindMapFlow: React.FC = () => {
     }
   }, [ctrlYPressed, redo])
 
+  // 点击空白处隐藏右键菜单
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        hideContextMenu()
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [contextMenu.visible, hideContextMenu])
+
   // 初始化历史记录
   useEffect(() => {
     if (history.length === 0) {
@@ -461,6 +668,9 @@ const MindMapFlow: React.FC = () => {
           onConnect={onConnect}
           onConnectEnd={handleConnectEnd}
           onNodeDoubleClick={onNodeDoubleClick}
+          onNodeContextMenu={onNodeContextMenu}
+          onEdgeContextMenu={onEdgeContextMenu}
+          onPaneContextMenu={onPaneContextMenu}
           fitView
           multiSelectionKeyCode="Shift"
           deleteKeyCode="Delete"
@@ -513,6 +723,137 @@ const MindMapFlow: React.FC = () => {
           </Panel>
         </ReactFlow>
       </div>
+
+      {/* 右键菜单 */}
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 1000,
+            background: 'var(--semi-color-bg-2)',
+            boxShadow: 'var(--semi-shadow-elevated)',
+            borderRadius: '4px',
+            padding: '4px 0',
+            minWidth: '180px',
+            border: '1px solid var(--semi-color-border)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.type === 'node' && (
+            <>
+              <div
+                className="context-menu-item"
+                style={{
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+                onClick={handleEditNode}
+              >
+                <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                <Typography.Text>编辑节点</Typography.Text>
+              </div>
+              <div
+                style={{
+                  height: '1px',
+                  background: 'var(--semi-color-border)',
+                  margin: '4px 0'
+                }}
+              />
+                             <div
+                 className="context-menu-item context-menu-item-danger"
+                 style={{
+                   padding: '8px 12px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   cursor: 'pointer',
+                   transition: 'background 0.3s'
+                 }}
+                 onClick={handleDeleteNode}
+               >
+                 <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                 <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>删除节点</Typography.Text>
+               </div>
+            </>
+          )}
+
+          {contextMenu.type === 'edge' && (
+            <>
+              <div
+                className="context-menu-item"
+                style={{
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+                onClick={() => handleAddEdgeMarker('arrow')}
+              >
+                <IconArrowRight style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                <Typography.Text>添加开放箭头</Typography.Text>
+              </div>
+              <div
+                className="context-menu-item"
+                style={{
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+                onClick={() => handleAddEdgeMarker('arrowclosed')}
+              >
+                <IconArrowRight style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                <Typography.Text>添加封闭箭头</Typography.Text>
+              </div>
+              <div
+                style={{
+                  height: '1px',
+                  background: 'var(--semi-color-border)',
+                  margin: '4px 0'
+                }}
+              />
+                             <div
+                 className="context-menu-item context-menu-item-danger"
+                 style={{
+                   padding: '8px 12px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   cursor: 'pointer',
+                   transition: 'background 0.3s'
+                 }}
+                 onClick={handleDeleteEdge}
+               >
+                 <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                 <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>删除连线</Typography.Text>
+               </div>
+            </>
+          )}
+
+          {contextMenu.type === 'pane' && (
+            <div
+              className="context-menu-item"
+              style={{
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                transition: 'background 0.3s'
+              }}
+              onClick={handleAddNodeAtPosition}
+            >
+              <IconPlus style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+              <Typography.Text>新增节点</Typography.Text>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 增强的节点编辑对话框 */}
       <Modal
