@@ -150,11 +150,13 @@ const Settings: React.FC = () => {
         // 重新加载配置
         await loadSettings()
 
-        // 清除相关的测试结果
+        // 清除相关的测试结果，使用函数式更新
         if (testResults[currentConfig.id]) {
-          const newResults = { ...testResults }
-          delete newResults[currentConfig.id]
-          setTestResults(newResults)
+          setTestResults((prev) => {
+            const newResults = { ...prev }
+            delete newResults[currentConfig.id]
+            return newResults
+          })
         }
       } else {
         Toast.error('保存配置失败: ' + (result.error || '未知错误'))
@@ -174,11 +176,13 @@ const Settings: React.FC = () => {
         // 重新加载配置
         await loadSettings()
 
-        // 清除相关的测试结果
+        // 清除相关的测试结果，使用函数式更新
         if (testResults[configId]) {
-          const newResults = { ...testResults }
-          delete newResults[configId]
-          setTestResults(newResults)
+          setTestResults((prev) => {
+            const newResults = { ...prev }
+            delete newResults[configId]
+            return newResults
+          })
         }
       } else {
         Toast.error('删除配置失败: ' + (result.error || '未知错误'))
@@ -214,10 +218,12 @@ const Settings: React.FC = () => {
     try {
       setTestingId(config.id)
 
-      // 清除此配置的旧测试结果
-      const newResults = { ...testResults }
-      delete newResults[config.id]
-      setTestResults(newResults)
+      // 清除此配置的旧测试结果，使用函数式更新
+      setTestResults((prev) => {
+        const newResults = { ...prev }
+        delete newResults[config.id]
+        return newResults
+      })
 
       // 清除该配置可能存在的定时器
       if (testResultTimersRef.current[config.id]) {
@@ -227,11 +233,11 @@ const Settings: React.FC = () => {
       // 调用API测试连接
       const result = await window.api.openai.testConnection(config)
 
-      // 保存测试结果
-      setTestResults({
-        ...testResults,
+      // 保存测试结果，使用函数式更新确保基于最新状态
+      setTestResults((prev) => ({
+        ...prev,
         [config.id]: result
-      })
+      }))
 
       // 显示测试结果提示
       if (result.success) {
@@ -250,10 +256,11 @@ const Settings: React.FC = () => {
         delete testResultTimersRef.current[config.id]
       }, 5000)
     } catch (error) {
-      setTestResults({
-        ...testResults,
+      // 错误情况下也使用函数式更新
+      setTestResults((prev) => ({
+        ...prev,
         [config.id]: { success: false, message: '测试过程出错' }
-      })
+      }))
       Toast.error('连接测试出错')
 
       // 错误情况下也设置5秒后自动消失
