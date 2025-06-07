@@ -281,7 +281,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           }
         }
       } catch (error) {
-        console.error('加载API配置失败:', error)
+        
       }
     }
 
@@ -295,7 +295,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         // 预加载全局标签数据，不阻塞界面
         globalTagManager.preloadTags()
       } catch (error) {
-        console.error('预加载全局标签失败:', error)
+        
       }
     }
 
@@ -452,7 +452,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               throw new Error(result.error || '文件上传失败')
             }
 
-            console.log('文件上传成功，URL:', result.url)
+            
 
             // 确保URL格式正确
             const imageUrl = result.url
@@ -487,7 +487,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           if (!result.success) {
             throw new Error(result.error || '文件上传失败')
           }
-          console.log('文件上传成功，URL:', result.url)
+
 
           // 确保URL格式正确
           const imageUrl = result.url
@@ -498,7 +498,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
           return imageUrl
         } catch (error) {
-          console.error('文件上传失败:', error)
+          
           Toast.error(`文件上传失败: ${error instanceof Error ? error.message : String(error)}`)
           throw error
         }
@@ -543,7 +543,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
                 return fixedUrl
               } catch (e) {
-                console.error('处理编码的反斜杠失败:', e)
+                
               }
             }
 
@@ -576,7 +576,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
             return normalizedUrl
           } catch (e) {
-            console.error('处理 file:// URL 时出错:', e)
+            
             return url
           }
         }
@@ -601,7 +601,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               return fileUrl
             }
           } catch (e) {
-            console.error('处理 .assets 路径失败:', e)
+            
             return url
           }
         }
@@ -616,7 +616,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
             return fileUrl
           } catch (e) {
-            console.error('处理绝对路径失败:', e)
+            
             return url
           }
         }
@@ -631,7 +631,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
             return fileUrl
           } catch (e) {
-            console.error('处理相对路径失败:', e)
+            
             return url
           }
         }
@@ -645,7 +645,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
             return fileUrl
           } catch (e) {
-            console.error('处理普通路径失败:', e)
             return url
           }
         }
@@ -761,11 +760,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 const standardizedContent = await editor.blocksToMarkdownLossy(editor.document)
                 lastSavedContentRef.current = standardizedContent
               } catch (err) {
-                console.error('设置基准失败:', err)
+                // 设置基准失败，继续执行
               }
             }, 100)
           } catch (err) {
-            console.error('解析Markdown内容失败:', err)
+            // 解析失败，继续执行
           }
         }, 0)
       } else {
@@ -773,7 +772,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         lastLoadedFileRef.current = null
       }
     } catch (error) {
-      console.error('加载文件内容失败:', error)
+      
       Toast.error('加载文件内容失败')
       lastLoadedFileRef.current = null
     } finally {
@@ -830,7 +829,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             setIsEditing(false)
           }
         } catch (error) {
-          console.error('状态检查失败:', error)
+          
         }
       }, 500)
 
@@ -885,8 +884,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         }
 
         // 刷新全局标签缓存（异步执行，不阻塞保存流程）
-        refreshGlobalTagCache().catch((error) => {
-          console.warn('刷新全局标签缓存失败:', error)
+        refreshGlobalTagCache().catch(() => {
+          // 刷新失败，继续执行
         })
 
         // 5秒后清除"已保存"状态
@@ -898,7 +897,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         setAutoSaveStatus('')
       }
     } catch (error) {
-      console.error('保存文件内容失败:', error)
       Toast.error('保存文件内容失败')
       setAutoSaveStatus('')
     } finally {
@@ -958,11 +956,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             setIsEditing(false)
           }
         } catch (error) {
-          console.error('内容比较失败:', error)
+          
         }
       }, 300) // 300ms防抖延迟
     } catch (error) {
-      console.error('处理变化失败:', error)
+      
     }
   }, [editor, triggerAutoSave])
 
@@ -997,7 +995,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           setAvailableFolders(['default'])
         }
       } catch (error) {
-        console.error('加载文件夹列表失败:', error)
+        
         setAvailableFolders(['default'])
       }
     }
@@ -1048,7 +1046,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.success('已恢复历史版本')
         setIsEditing(true)
       } catch (error) {
-        console.error('恢复历史版本失败:', error)
+        
         Toast.error('恢复历史版本失败')
       }
     }
@@ -1068,11 +1066,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
           // 只有在处理前后有差异时才更新编辑器
           if (JSON.stringify(blocks) !== JSON.stringify(processedBlocks)) {
-
             editor.replaceBlocks(editor.document, processedBlocks)
           }
         } catch (error) {
-          console.error('检查和修复标签渲染时出错:', error)
+          // 标签渲染检查失败，继续执行
         }
       }
 
@@ -1108,7 +1105,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.error(`导出失败: ${result.error}`)
       }
     } catch (error) {
-      console.error('导出PDF失败:', error)
+      
       Toast.error('导出PDF失败')
     } finally {
       setIsExporting(false)
@@ -1137,7 +1134,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.error(`导出失败: ${result.error}`)
       }
     } catch (error) {
-      console.error('导出DOCX失败:', error)
+      
       Toast.error('导出DOCX失败')
     } finally {
       setIsExporting(false)
@@ -1166,7 +1163,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.error(`导出失败: ${result.error}`)
       }
     } catch (error) {
-      console.error('导出HTML失败:', error)
       Toast.error('导出HTML失败')
     } finally {
       setIsExporting(false)
@@ -1186,7 +1182,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     // 根据选中的ID查找配置
     const selectedConfig = AiApiConfigs.find((config) => config.id === selectedModelId)
     if (!selectedConfig) {
-      console.error('找不到选中的API配置')
+      
       setAiStatus('error')
       return null
     }
@@ -1209,13 +1205,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
 
             if (!response.ok) {
-              console.error(`[编辑器] AI请求失败: ${response.statusText}`)
+              
               // 不抛出错误，让ai-sdk处理
             }
 
             return response
           } catch (error) {
-            console.error(`[编辑器] AI请求网络错误:`, error)
+            
             throw error
           }
         }
@@ -1228,7 +1224,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       return model
     } catch (error) {
-      console.error('[编辑器] 创建OpenAI模型实例失败:', error)
+      
       setAiStatus('error')
       const errorMessage = error instanceof Error ? error.message : String(error)
       Toast.error(`创建AI模型实例失败: ${errorMessage}`)
@@ -1594,7 +1590,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
                   return uniqueItems
                 } catch (error) {
-                  console.error('获取标签建议失败:', error)
+                  
                   // 降级到仅使用本地标签
                   return getTagMenuItems(editor, tagList, query)
                 }
@@ -1631,7 +1627,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 }
               }
             } catch (error) {
-              console.error('创建文件失败:', error)
               Toast.error('创建文件失败')
             } finally {
               setShowCreateDialog(false)

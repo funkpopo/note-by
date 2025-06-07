@@ -325,7 +325,7 @@ export const getGlobalTagSuggestions = async (
       }
     }))
   } catch (error) {
-    console.error('获取全局标签建议失败:', error)
+    
     return []
   }
 }
@@ -335,6 +335,6 @@ export const refreshGlobalTagCache = async (): Promise<void> => {
   try {
     await globalTagManager.refreshGlobalTags()
   } catch (error) {
-    console.error('刷新全局标签缓存失败:', error)
+    
   }
 }

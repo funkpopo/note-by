@@ -73,7 +73,7 @@ const PasswordPrompt: React.FC<PasswordPromptProps> = ({
         inputRef.current?.focus()
       }
     } catch (err) {
-      console.error('密码验证出错:', err)
+      
       Toast.error('验证密码时发生错误')
       setError('验证密码时发生错误，请重试')
     } finally {

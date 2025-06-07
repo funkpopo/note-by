@@ -215,45 +215,45 @@ const api = {
       const baseRetryDelay = retryOptions.retryDelay || 1000
       const currentAttempt = retryOptions.currentAttempt || 0
 
-      console.log(
+      
         `[AI请求] 开始流式内容生成: 模型=${request.modelName}, URL=${request.apiUrl.substring(0, 20)}..., 尝试次数=${currentAttempt + 1}/${maxRetries + 1}`
       )
 
       return new Promise((resolve) => {
         // 生成唯一请求ID用于跟踪
         const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-        console.log(`[AI请求:${requestId}] 初始化请求`)
+        
 
         // 添加超时处理
         const timeoutMs = 30000 // 30秒超时
         const timeoutId = setTimeout(() => {
-          console.error(`[AI请求:${requestId}] 请求超时 (${timeoutMs}ms)`)
+          
 
           // 检查是否已经有监听器并清理
           if (typeof dataListener === 'function') {
             try {
-              console.log(`[AI请求:${requestId}] 超时，清理数据监听器`)
+              
               ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
             } catch (err) {
-              console.error(`[AI请求:${requestId}] 清理数据监听器失败:`, err)
+              
             }
           }
 
           if (typeof doneListener === 'function') {
             try {
-              console.log(`[AI请求:${requestId}] 超时，清理完成监听器`)
+              
               ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
             } catch (err) {
-              console.error(`[AI请求:${requestId}] 清理完成监听器失败:`, err)
+              
             }
           }
 
           if (typeof errorListener === 'function') {
             try {
-              console.log(`[AI请求:${requestId}] 超时，清理错误监听器`)
+              
               ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
             } catch (err) {
-              console.error(`[AI请求:${requestId}] 清理错误监听器失败:`, err)
+              
             }
           }
 
@@ -274,56 +274,56 @@ const api = {
 
         // 清理所有监听器的函数
         const cleanupListeners = (): void => {
-          console.log(`[AI请求:${requestId}] 执行监听器清理`)
+          
           clearTimeout(timeoutId)
 
           if (streamId) {
             if (typeof dataListener === 'function') {
               try {
-                console.log(`[AI请求:${requestId}] 清理数据监听器`)
+                
                 ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
               } catch (err) {
-                console.error(`[AI请求:${requestId}] 清理数据监听器失败:`, err)
+                
               }
             }
 
             if (typeof doneListener === 'function') {
               try {
-                console.log(`[AI请求:${requestId}] 清理完成监听器`)
+                
                 ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
               } catch (err) {
-                console.error(`[AI请求:${requestId}] 清理完成监听器失败:`, err)
+                
               }
             }
 
             if (typeof errorListener === 'function') {
               try {
-                console.log(`[AI请求:${requestId}] 清理错误监听器`)
+                
                 ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
               } catch (err) {
-                console.error(`[AI请求:${requestId}] 清理错误监听器失败:`, err)
+                
               }
             }
           }
         }
 
         // 发送流式生成请求
-        console.log(`[AI请求:${requestId}] 发送IPC请求`)
+        
         ipcRenderer
           .invoke(IPC_CHANNELS.STREAM_GENERATE_CONTENT, {
             ...request,
             stream: true // 确保stream标志为true
           })
           .then((result: { success: boolean; streamId?: string; error?: string }) => {
-            console.log(`[AI请求:${requestId}] 收到IPC响应:`, JSON.stringify(result))
+            
 
             if (result.success && result.streamId) {
               streamId = result.streamId
-              console.log(`[AI请求:${requestId}] 请求成功，分配streamId=${streamId}`)
+              
 
               // 设置监听器接收数据块
               dataListener = (_event: Electron.IpcRendererEvent, data: { chunk: string }): void => {
-                console.log(`[AI请求:${requestId}] 收到数据块: ${data.chunk.length} 字符`)
+                
                 callbacks.onData(data.chunk)
               }
 
@@ -332,7 +332,7 @@ const api = {
                 _event: Electron.IpcRendererEvent,
                 data: { content: string }
               ): void => {
-                console.log(`[AI请求:${requestId}] 接收完成，总共 ${data.content.length} 字符`)
+                
                 callbacks.onDone(data.content)
                 cleanupListeners()
               }
@@ -342,13 +342,13 @@ const api = {
                 _event: Electron.IpcRendererEvent,
                 data: { error: string }
               ): void => {
-                console.error(`[AI请求:${requestId}] 接收到错误:`, data.error)
+                
                 callbacks.onError(data.error)
                 cleanupListeners()
               }
 
               // 添加所有监听器
-              console.log(`[AI请求:${requestId}] 添加事件监听器`)
+              
               ipcRenderer.on(`stream-data-${streamId}`, dataListener)
               ipcRenderer.on(`stream-done-${streamId}`, doneListener)
               ipcRenderer.on(`stream-error-${streamId}`, errorListener)
@@ -356,7 +356,7 @@ const api = {
               resolve(result)
             } else {
               // 请求失败，直接调用错误回调
-              console.error(`[AI请求:${requestId}] 请求失败:`, result.error || '未知错误')
+              
               clearTimeout(timeoutId)
 
               if (result.error) {
@@ -370,20 +370,20 @@ const api = {
           .catch((error) => {
             // 处理请求过程中的异常
             const errorMessage = error instanceof Error ? error.message : '未知错误'
-            console.error(`[AI请求:${requestId}] 请求异常:`, errorMessage)
+            
             clearTimeout(timeoutId)
 
             // 添加自动重试逻辑
             if (currentAttempt < maxRetries) {
-              console.log(`[AI请求:${requestId}] 准备重试 (${currentAttempt + 1}/${maxRetries})`)
+              
 
               // 使用指数退避策略计算延迟
               const retryDelay = baseRetryDelay * Math.pow(2, currentAttempt)
-              console.log(`[AI请求:${requestId}] 将在 ${retryDelay}ms 后重试`)
+              
 
               // 延迟后重试
               setTimeout(() => {
-                console.log(`[AI请求:${requestId}] 开始重试请求`)
+                
 
                 // 递归调用自身，传递更新后的重试计数
                 api.openai
@@ -398,7 +398,7 @@ const api = {
                   })
               }, retryDelay)
             } else {
-              console.log(`[AI请求:${requestId}] 已达到最大重试次数 (${maxRetries})`)
+              
               callbacks.onError(`${errorMessage} (已尝试 ${maxRetries + 1} 次)`)
               resolve({ success: false, error: errorMessage })
             }
@@ -406,7 +406,6 @@ const api = {
 
         // 返回一个清理函数，允许调用者在组件卸载时手动清理
         return (): void => {
-          console.log(`[AI请求:${requestId}] 调用方手动清理`)
           cleanupListeners()
         }
       })
@@ -802,7 +801,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
-    console.error(error)
+    
   }
 } else {
   // @ts-ignore (define in dts)

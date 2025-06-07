@@ -518,7 +518,7 @@ const MindMapFlow: React.FC = () => {
       }
     } catch (error) {
       Toast.error('保存失败，请重试')
-      console.error('Save error:', error)
+      
     } finally {
       setIsLoading(false)
     }
@@ -550,7 +550,7 @@ const MindMapFlow: React.FC = () => {
           }
         } catch (parseError) {
           Toast.error('文件内容解析失败，请检查文件格式')
-          console.error('Parse error:', parseError)
+          
         }
       } else if (result.cancelled) {
         // 用户取消了文件选择
@@ -559,7 +559,7 @@ const MindMapFlow: React.FC = () => {
       }
     } catch (error) {
       Toast.error('加载失败，请重试')
-      console.error('Load error:', error)
+      
     } finally {
       setIsLoading(false)
     }
@@ -593,7 +593,7 @@ const MindMapFlow: React.FC = () => {
       }
     } catch (error) {
       Toast.error('导出失败，请重试')
-      console.error('Export error:', error)
+      
     } finally {
       setIsLoading(false)
     }

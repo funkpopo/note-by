@@ -46,7 +46,6 @@ export async function clearSyncCache(): Promise<{
       message: '同步缓存已清除'
     }
   } catch (error) {
-    console.error('清除同步缓存失败:', error)
     return {
       success: false,
       error: String(error)
@@ -118,7 +117,6 @@ export function initWebDAVClient(config: WebDAVConfig): boolean {
     })
     return true
   } catch (error) {
-    console.error('初始化WebDAV客户端失败:', error)
     return false
   }
 }
@@ -148,14 +146,12 @@ export async function testWebDAVConnection(
         return { success: true, message: `连接成功，远程目录访问正常: ${config.remotePath}` }
       }
     } catch (remotePathError) {
-      console.error('远程目录检查失败:', remotePathError)
       return {
         success: false,
         message: `连接成功但无法访问远程目录 ${config.remotePath}: ${remotePathError}`
       }
     }
   } catch (error) {
-    console.error('测试WebDAV连接失败:', error)
     return { success: false, message: `连接失败: ${error}` }
   }
 }
@@ -172,7 +168,6 @@ async function ensureRemoteDirectory(remotePath: string): Promise<boolean> {
     }
     return true
   } catch (error) {
-    console.error(`确保远程目录存在失败: ${remotePath}`, error)
     return false
   }
 }
@@ -210,12 +205,10 @@ async function uploadFile(localFilePath: string, remoteFilePath: string): Promis
       })
     } catch (cacheError) {
       // 缓存更新失败不影响上传结果
-      console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
     }
 
     return true
   } catch (error) {
-    console.error(`上传文件失败: ${localFilePath} -> ${remoteFilePath}`, error)
     return false
   }
 }
@@ -262,12 +255,10 @@ async function downloadFile(remoteFilePath: string, localFilePath: string): Prom
       })
     } catch (cacheError) {
       // 缓存更新失败不影响下载结果
-      console.error(`更新同步缓存失败: ${localFilePath}`, cacheError)
     }
 
     return true
   } catch (error) {
-    console.error(`下载文件失败: ${remoteFilePath} -> ${localFilePath}`, error)
     return false
   }
 }
@@ -279,7 +270,6 @@ async function getRemoteFiles(remotePath: string): Promise<FileStat[]> {
     const contents = await webdavClient.getDirectoryContents(remotePath)
     return Array.isArray(contents) ? contents : []
   } catch (error) {
-    console.error(`获取远程文件列表失败: ${remotePath}`, error)
     return []
   }
 }
@@ -341,7 +331,6 @@ async function needUpload(
     // 如果本地文件更新，则需要上传
     return localModTime > remoteModTime
   } catch (error) {
-    console.error(`检查文件是否需要上传失败: ${localFilePath}`, error)
     // 出错时保守处理，上传文件
     return true
   }
@@ -384,7 +373,6 @@ async function needDownload(localFilePath: string, remoteFile: FileStat): Promis
     // 本地文件更新或相同，不需要下载
     return false
   } catch (error) {
-    console.error(`检查文件是否需要下载失败: ${localFilePath}`, error)
     // 出错时保守处理，下载文件
     return true
   }
@@ -411,7 +399,6 @@ async function calculateFileHash(filePath: string): Promise<string> {
       })
     })
   } catch (error) {
-    console.error(`计算文件 ${filePath} 哈希值失败:`, error)
     // 出错时返回时间戳作为备选哈希值
     return Date.now().toString()
   }
@@ -439,7 +426,6 @@ async function compareFileContent(localFilePath: string, remoteFilePath: string)
     // 返回是否相同 (false表示内容相同，不需要同步)
     return localHash !== remoteHash
   } catch (error) {
-    console.error(`比较文件内容失败: ${localFilePath} vs ${remoteFilePath}`, error)
     return true // 出错时保守返回需要同步
   }
 }
@@ -634,7 +620,6 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
       skipped
     }
   } catch (error) {
-    console.error('同步本地到远程失败:', error)
     return {
       success: false,
       message: `同步失败: ${error}`,
@@ -787,7 +772,6 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
       skipped
     }
   } catch (error) {
-    console.error('同步远程到本地失败:', error)
     return {
       success: false,
       message: `同步失败: ${error}`,
@@ -1015,7 +999,6 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
               action
             })
           } catch (error) {
-            console.error(`获取文件状态失败: ${localPath}`, error)
             failed++
           }
         }
@@ -1235,7 +1218,6 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       skippedDownload
     }
   } catch (error) {
-    console.error('双向同步失败:', error)
 
     // 检查是否是因为用户取消而失败
     if (String(error).includes('用户取消了同步')) {
@@ -1296,14 +1278,12 @@ export async function handleConfigChanged(): Promise<{ success: boolean; message
         message: 'WebDAV配置已更新，客户端重新初始化成功'
       }
     } else {
-      console.error('WebDAV客户端重新初始化失败')
       return {
         success: false,
         message: 'WebDAV客户端重新初始化失败，请检查配置'
       }
     }
   } catch (error) {
-    console.error('处理WebDAV配置变更失败:', error)
     return {
       success: false,
       message: `配置变更处理失败: ${error}`

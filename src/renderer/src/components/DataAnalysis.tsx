@@ -687,7 +687,7 @@ const DataAnalysis: React.FC = () => {
       try {
         currentAnalyzingToastRef.current.destroy()
       } catch (e) {
-        console.warn('清除分析Toast失败:', e)
+        // Toast清理失败，继续执行
       } finally {
         currentAnalyzingToastRef.current = null
       }
@@ -700,7 +700,7 @@ const DataAnalysis: React.FC = () => {
       try {
         Toast.close(currentCachedToastRef.current)
       } catch (e) {
-        console.warn('清除缓存Toast失败:', e)
+        // Toast清理失败，继续执行
       } finally {
         currentCachedToastRef.current = null
       }
@@ -857,7 +857,7 @@ const DataAnalysis: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('加载缓存的分析结果失败:', error)
+      
       // 初始化时的缓存加载失败不显示错误Toast，避免干扰用户
       console.warn('初始化时加载缓存失败，将等待用户手动触发分析')
     } finally {
@@ -895,7 +895,7 @@ const DataAnalysis: React.FC = () => {
         setSelectedModelId(models[0].id)
       }
     } catch (error) {
-      console.error('加载AI模型失败:', error)
+      
       Toast.error({
         content: '加载AI模型失败'
       })
@@ -928,7 +928,6 @@ const DataAnalysis: React.FC = () => {
       }
       setActivityData(activityResult.activityData)
     } catch (error) {
-      console.error('加载数据失败:', error)
       Toast.error({
         content: `加载数据失败: ${error instanceof Error ? error.message : String(error)}`
       })
@@ -956,7 +955,6 @@ const DataAnalysis: React.FC = () => {
         setCacheDate(null)
         // 重置缓存状态，确保用户主动分析时不显示缓存相关UI
         resetCacheStatus()
-        console.log('[分析执行] 用户主动触发分析，强制跳过缓存，forceUpdate =', forceUpdate)
       }
 
       // 显示分析开始的Toast
@@ -977,7 +975,6 @@ const DataAnalysis: React.FC = () => {
 
       // Toast显示由useEffect自动处理，不需要手动管理
     } catch (err) {
-      console.error('[分析执行] 分析出错:', err)
       // 错误Toast也由useEffect自动处理
     }
   }
@@ -1690,9 +1687,7 @@ const DataAnalysis: React.FC = () => {
               style={{ height: '100%', width: '100%' }}
               onEvents={{
                 click: (params) => {
-                  if (params.dataType === 'node' && process.env.NODE_ENV !== 'production') {
-                    console.log(`标签详情:`, params.data)
-                  }
+                  // 标签点击事件处理
                 }
               }}
               opts={{ renderer: 'canvas' }} // 使用canvas渲染器提高性能
@@ -2008,7 +2003,6 @@ const DataAnalysis: React.FC = () => {
                       content: '分析缓存已重置'
                     })
                   } catch (error) {
-                    console.error('重置缓存失败:', error)
                     Toast.error({
                       content: '重置缓存失败'
                     })

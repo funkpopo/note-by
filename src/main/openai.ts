@@ -55,7 +55,6 @@ export async function testOpenAIConnection(
     })
 
     // 增强检查响应格式
-    console.log('API响应数据:', JSON.stringify(response, null, 2)) // 调试用
 
     // 尝试提取内容
     let content = ''
@@ -76,7 +75,6 @@ export async function testOpenAIConnection(
         }
       }
     } catch (err) {
-      console.error('解析响应内容时出错:', err)
       content = '解析响应内容时出错'
     }
 
@@ -85,7 +83,6 @@ export async function testOpenAIConnection(
       message: content ? `连接成功!` : '连接成功!'
     }
   } catch (error: unknown) {
-    console.error('AI API连接测试失败:', error)
 
     // 提取更友好的错误信息
     let errorMessage = '连接失败'
@@ -180,7 +177,6 @@ export async function generateContent(
         }
       }
     } catch (err) {
-      console.error('解析响应内容时出错:', err)
       return { success: false, error: '解析响应内容时出错' }
     }
 
@@ -190,7 +186,6 @@ export async function generateContent(
       return { success: false, error: '生成内容为空' }
     }
   } catch (error: unknown) {
-    console.error('内容生成失败:', error)
 
     // 提取更友好的错误信息
     let errorMessage = '生成失败'
@@ -227,7 +222,7 @@ export async function streamGenerateContent(
   const eventEmitter = new EventEmitter()
   const requestId = `server_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
-  console.log(`[OpenAI服务] 开始流式生成内容请求 ID=${requestId}, 模型=${request.modelName}`)
+
 
   // 异步处理流式请求
   ;(async (): Promise<void> => {
@@ -235,32 +230,25 @@ export async function streamGenerateContent(
       const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
 
       if (!apiKey) {
-        console.error(`[OpenAI服务:${requestId}] 错误: API Key 未设置`)
         eventEmitter.emit('error', 'API Key 未设置')
         return
       }
 
       if (!apiUrl) {
-        console.error(`[OpenAI服务:${requestId}] 错误: API URL 未设置`)
         eventEmitter.emit('error', 'API URL 未设置')
         return
       }
 
       if (!modelName) {
-        console.error(`[OpenAI服务:${requestId}] 错误: 模型名称未设置`)
         eventEmitter.emit('error', '模型名称未设置')
         return
       }
 
       // 处理并规范化API URL
       const normalizedApiUrl = normalizeApiUrl(apiUrl)
-      console.log(
-        `[OpenAI服务:${requestId}] 规范化API URL: ${normalizedApiUrl.substring(0, 30)}...`
-      )
 
       try {
         // 创建 AI 客户端
-        console.log(`[OpenAI服务:${requestId}] 创建 OpenAI 客户端实例`)
         const openai = new OpenAI({
           apiKey,
           baseURL: normalizedApiUrl,
@@ -269,7 +257,6 @@ export async function streamGenerateContent(
         })
 
         // 使用流式响应选项
-        console.log(`[OpenAI服务:${requestId}] 发送流式请求，最大令牌数=${maxTokens}`)
         const stream = await openai.chat.completions.create({
           model: modelName,
           messages: [{ role: 'user', content: prompt }],
@@ -283,7 +270,6 @@ export async function streamGenerateContent(
         let lastChunkTime = Date.now()
 
         // 处理流式响应
-        console.log(`[OpenAI服务:${requestId}] 开始处理流式响应`)
         for await (const chunk of stream) {
           try {
             // 更新最后接收数据块的时间
@@ -302,27 +288,17 @@ export async function streamGenerateContent(
 
               // 每10个块记录一次进度
               if (chunkCount % 10 === 0) {
-                console.log(
-                  `[OpenAI服务:${requestId}] 已接收 ${chunkCount} 个数据块，当前内容长度=${fullContent.length}`
-                )
+                // 进度记录（可选）
               }
             }
           } catch (streamError) {
-            console.error(`[OpenAI服务:${requestId}] 处理流式响应块时出错:`, streamError)
             // 继续处理下一个块，不中断整个流
           }
         }
 
-        // 计算总处理时间
-        const totalTime = Date.now() - lastChunkTime + (lastChunkTime - Date.now())
-
         // 流结束，发送完成事件
-        console.log(
-          `[OpenAI服务:${requestId}] 流式响应完成，总内容长度=${fullContent.length}，共 ${chunkCount} 个数据块，耗时 ${totalTime}ms`
-        )
         eventEmitter.emit('done', fullContent)
       } catch (apiError) {
-        console.error(`[OpenAI服务:${requestId}] AI API 流式请求失败:`, apiError)
 
         // 提取更友好的错误信息
         let errorMessage = '流式生成失败'
@@ -330,8 +306,7 @@ export async function streamGenerateContent(
         if (apiError instanceof Error) {
           errorMessage += `: ${apiError.message}`
 
-          // 记录详细错误堆栈
-          console.error(`[OpenAI服务:${requestId}] 错误堆栈:`, apiError.stack)
+
         }
 
         // 处理API错误的状态码
@@ -340,7 +315,6 @@ export async function streamGenerateContent(
 
         if (statusCode) {
           errorMessage += ` (HTTP 状态码: ${statusCode})`
-          console.error(`[OpenAI服务:${requestId}] HTTP状态码: ${statusCode}`)
 
           if (statusCode === 404) {
             errorMessage += '。可能是API URL不正确，请检查URL格式。'
@@ -356,7 +330,6 @@ export async function streamGenerateContent(
         eventEmitter.emit('error', errorMessage)
       }
     } catch (error) {
-      console.error(`[OpenAI服务:${requestId}] 流式生成内容时发生未知错误:`, error)
 
       // 提供更具体的错误信息
       const errorMessage = error instanceof Error ? `发生错误: ${error.message}` : '发生未知错误'

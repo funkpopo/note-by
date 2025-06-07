@@ -145,7 +145,7 @@ function getMarkdownFolderPath(): string {
       fsSync.mkdirSync(defaultAssetsFolderPath, { recursive: true })
     }
   } catch (error) {
-    console.error('创建文件夹失败:', error)
+    
   }
 
   return markdownPath
@@ -156,7 +156,7 @@ async function ensureMarkdownFolders(folderPath: string): Promise<void> {
   try {
     await fsPromises.mkdir(folderPath, { recursive: true })
   } catch (error) {
-    console.error(`创建文件夹失败: ${folderPath}`, error)
+    
     throw error
   }
 }
@@ -260,7 +260,7 @@ async function performAutoSync(): Promise<void> {
         break
     }
   } catch (error) {
-    console.error('WebDAV自动同步失败:', error)
+    
   }
 }
 
@@ -322,7 +322,7 @@ async function checkForUpdates(): Promise<{
         // 保存直接连接的错误
         directConnectionError =
           directError instanceof Error ? directError : new Error(String(directError))
-        console.error('直接连接检查更新也失败:', directError)
+        
       } finally {
         // 恢复原始环境变量
         if (originalHttpProxy) process.env.HTTP_PROXY = originalHttpProxy
@@ -357,7 +357,7 @@ async function checkForUpdates(): Promise<{
       currentVersion
     }
   } catch (error) {
-    console.error('检查更新失败:', error)
+    
     return {
       hasUpdate: false,
       latestVersion: '',
@@ -385,7 +385,7 @@ async function checkUpdatesOnStartup(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error('启动时检查更新失败:', error)
+    
   }
 }
 
@@ -418,12 +418,12 @@ app.whenReady().then(() => {
       // 安全检查：确保路径在应用数据目录内（这里用markdownRoot作为基准）
       const markdownRoot = getMarkdownFolderPath()
       if (!normalizedPath.startsWith(markdownRoot)) {
-        console.error(`安全警告: 尝试访问应用数据目录外的文件: ${normalizedPath}`)
+        
         return callback({ error: -2 }) // 文件不存在或无权限
       }
       callback({ path: normalizedPath })
     } catch (error) {
-      console.error('处理notebyfileprotocol协议请求时出错:', error)
+      
       callback({ error: -2 })
     }
   })
@@ -436,7 +436,9 @@ app.whenReady().then(() => {
   })
 
   // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('ping', () => {
+    // pong
+  })
 
   // 设置相关的IPC处理
   ipcMain.handle(IPC_CHANNELS.GET_SETTINGS, () => {
@@ -493,7 +495,7 @@ app.whenReady().then(() => {
           try {
             emitter.removeListener('data', listeners.data)
           } catch (err) {
-            console.error(`[主进程] 移除数据监听器失败:`, err)
+            // 移除监听器失败，继续执行
           }
         }
 
@@ -501,7 +503,7 @@ app.whenReady().then(() => {
           try {
             emitter.removeListener('done', listeners.done)
           } catch (err) {
-            console.error(`[主进程] 移除完成监听器失败:`, err)
+            // 移除监听器失败，继续执行
           }
         }
 
@@ -509,7 +511,7 @@ app.whenReady().then(() => {
           try {
             emitter.removeListener('error', listeners.error)
           } catch (err) {
-            console.error(`[主进程] 移除错误监听器失败:`, err)
+            // 移除监听器失败，继续执行
           }
         }
       }
@@ -517,7 +519,7 @@ app.whenReady().then(() => {
       // 添加超时机制
       const timeoutMs = 60000 // 60秒超时
       const timeoutId = setTimeout(() => {
-        console.error(`[主进程] 流式请求超时 (${timeoutMs}ms), streamId=${streamId}`)
+        
 
         if (!sender.isDestroyed()) {
           sender.send(`stream-error-${streamId}`, {
@@ -565,7 +567,6 @@ app.whenReady().then(() => {
           return
         }
 
-        console.error(`[主进程] 发送错误事件: ${error}, streamId=${streamId}`)
         sender.send(`stream-error-${streamId}`, { error })
 
         // 错误后清理监听器
@@ -576,7 +577,6 @@ app.whenReady().then(() => {
       // 返回流ID供客户端使用
       return { success: true, streamId }
     } catch (error) {
-      console.error('启动流式内容生成失败:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : '启动流式生成失败'
@@ -607,7 +607,7 @@ app.whenReady().then(() => {
 
       return { success: true }
     } catch (error) {
-      console.error('保存API配置失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -624,7 +624,7 @@ app.whenReady().then(() => {
 
       return { success: true }
     } catch (error) {
-      console.error('删除API配置失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -650,7 +650,7 @@ app.whenReady().then(() => {
 
       return { success: true, path: fullPath }
     } catch (error) {
-      console.error('保存Markdown文件失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -680,7 +680,7 @@ app.whenReady().then(() => {
 
       return { success: true, path: savePath }
     } catch (error) {
-      console.error('导出PDF失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -763,7 +763,7 @@ app.whenReady().then(() => {
 
       return { success: true, path: savePath }
     } catch (error) {
-      console.error('导出DOCX失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -944,7 +944,6 @@ ${htmlContent}
 
       return { success: true, path: savePath }
     } catch (error) {
-      console.error('导出HTML失败:', error)
       return { success: false, error: String(error) }
     }
   })
@@ -964,7 +963,6 @@ ${htmlContent}
         return { success: true, exists: false }
       }
     } catch (error) {
-      console.error(`检查文件 ${filePath} 是否存在失败:`, error)
       return { success: false, error: String(error), exists: false }
     }
   })
@@ -996,7 +994,7 @@ ${htmlContent}
             }
           }
         } catch (error) {
-          console.error(`读取目录 ${dir} 失败:`, error)
+          
         }
 
         return folders
@@ -1005,7 +1003,7 @@ ${htmlContent}
       const folders = await getAllFolders(markdownRoot)
       return { success: true, folders }
     } catch (error) {
-      console.error('获取Markdown文件夹列表失败:', error)
+      
       return { success: false, error: String(error), folders: [] }
     }
   })
@@ -1023,7 +1021,7 @@ ${htmlContent}
       try {
         await fsPromises.access(folderPath)
       } catch (error) {
-        console.error(`检查文件夹 ${folderName} 失败:`, error)
+        
         return { success: false, error: String(error), files: [] }
       }
 
@@ -1034,7 +1032,7 @@ ${htmlContent}
 
       return { success: true, files }
     } catch (error) {
-      console.error(`获取文件夹 ${folderName} 中的Markdown文件列表失败:`, error)
+      
       return { success: false, error: String(error), files: [] }
     }
   })
@@ -1058,7 +1056,7 @@ ${htmlContent}
 
       return { success: true, content }
     } catch (error) {
-      console.error(`读取文件 ${filePath} 失败:`, error)
+      
       return { success: false, error: String(error), content: '' }
     }
   })
@@ -1068,7 +1066,7 @@ ${htmlContent}
     try {
       // 验证文件夹名称
       if (!folderName || folderName.trim() === '') {
-        console.error('文件夹名称无效')
+        
         return { success: false, error: '文件夹名称不能为空' }
       }
 
@@ -1096,7 +1094,7 @@ ${htmlContent}
         if (stat.isDirectory()) {
           return { success: false, error: '文件夹已存在' }
         } else {
-          console.error('路径存在但不是文件夹')
+          
           return { success: false, error: '该名称已被文件占用' }
         }
       } catch {}
@@ -1106,7 +1104,7 @@ ${htmlContent}
 
       return { success: true, path: fullPath }
     } catch (error) {
-      console.error(`创建文件夹 ${folderName} 失败:`, error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1129,7 +1127,7 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      console.error(`删除文件夹 ${folderName} 失败:`, error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1161,7 +1159,7 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      console.error(`重命名文件夹从 ${oldFolderName} 到 ${newFolderName} 失败:`, error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1190,7 +1188,6 @@ ${htmlContent}
 
       return { success: true, path: filePath }
     } catch (error) {
-      console.error(`创建笔记 ${folderName}/${fileName} 失败:`, error)
       return { success: false, error: String(error) }
     }
   })
@@ -1213,7 +1210,7 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      console.error(`删除文件 ${filePath} 失败:`, error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1249,7 +1246,7 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      console.error(`重命名文件从 ${oldFilePath} 到 ${newFilePath} 失败:`, error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1260,7 +1257,7 @@ ${htmlContent}
       const result = await testWebDAVConnection(config)
       return result
     } catch (error) {
-      console.error('测试WebDAV连接失败:', error)
+      
       return { success: false, message: `测试连接失败: ${error}` }
     }
   })
@@ -1276,7 +1273,7 @@ ${htmlContent}
       const result = await syncLocalToRemote(config)
       return result
     } catch (error) {
-      console.error('同步本地到远程失败:', error)
+      
       return {
         success: false,
         message: `同步失败: ${error}`,
@@ -1297,7 +1294,7 @@ ${htmlContent}
       const result = await syncRemoteToLocal(config)
       return result
     } catch (error) {
-      console.error('同步远程到本地失败:', error)
+      
       return {
         success: false,
         message: `同步失败: ${error}`,
@@ -1318,7 +1315,6 @@ ${htmlContent}
       const result = await syncBidirectional(config)
       return result
     } catch (error) {
-      console.error('双向同步失败:', error)
       return {
         success: false,
         message: `同步失败: ${error}`,
@@ -1335,7 +1331,6 @@ ${htmlContent}
       cancelSync()
       return { success: true, message: '已发送取消同步请求' }
     } catch (error) {
-      console.error('取消同步失败:', error)
       return { success: false, message: `取消同步失败: ${error}` }
     }
   })
@@ -1346,7 +1341,6 @@ ${htmlContent}
       const result = await clearSyncCache()
       return result
     } catch (error) {
-      console.error('清除WebDAV同步缓存失败:', error)
       return { success: false, error: String(error) }
     }
   })
@@ -1381,7 +1375,7 @@ ${htmlContent}
         }
       }
     } catch (error) {
-      console.error('验证主密码失败:', error)
+      
       return {
         success: false,
         message: '验证过程中发生错误',
@@ -1417,7 +1411,7 @@ ${htmlContent}
         message: '主密码设置成功'
       }
     } catch (error) {
-      console.error('设置主密码失败:', error)
+      
       return {
         success: false,
         message: '设置过程中发生错误',
@@ -1440,7 +1434,7 @@ ${htmlContent}
         message: result.message || 'WebDAV配置已更新'
       }
     } catch (error) {
-      console.error('处理WebDAV配置变更失败:', error)
+      
       return {
         success: false,
         message: '配置更新失败',
@@ -1474,7 +1468,7 @@ ${htmlContent}
               cleanPath = decodedPath
             }
           } catch (decodeError) {
-            console.error('解码路径失败:', decodeError)
+            
             // 继续使用原始路径
           }
 
@@ -1491,11 +1485,11 @@ ${htmlContent}
             const base64Data = `data:image/${path.extname(cleanPath).substring(1)};base64,${fileBuffer.toString('base64')}`
             fileData = base64Data
           } catch (readError) {
-            console.error('读取文件失败，可能不是有效的本地文件路径:', readError)
+            
             // 如果读取失败，保持原始数据
           }
         } catch (error) {
-          console.error('解析文件路径失败:', error)
+          
           // 错误处理，继续使用原始fileData
         }
       }
@@ -1572,7 +1566,7 @@ ${htmlContent}
           fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`
         }
       } catch (error) {
-        console.error('生成文件URL时出错:', error)
+        
         // 使用备用方法生成URL
         fileUrl = `file:///${markdownImagePath.replace(/\\/g, '/')}`
       }
@@ -1583,7 +1577,7 @@ ${htmlContent}
         path: savePath
       }
     } catch (error) {
-      console.error('文件上传失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1599,7 +1593,7 @@ ${htmlContent}
       const history = await getNoteHistory(filePath)
       return { success: true, history }
     } catch (error) {
-      console.error('获取笔记历史记录失败:', error)
+      
       return { success: false, error: String(error), history: [] }
     }
   })
@@ -1613,7 +1607,7 @@ ${htmlContent}
       }
       return { success: true, history }
     } catch (error) {
-      console.error('获取特定历史记录失败:', error)
+      
       return { success: false, error: String(error), history: null }
     }
   })
@@ -1630,7 +1624,7 @@ ${htmlContent}
       const stats = await getNoteHistoryStats()
       return { success: true, stats }
     } catch (error) {
-      console.error('获取笔记历史统计数据失败:', error)
+      
       return { success: false, error: String(error), stats: null }
     }
   })
@@ -1641,7 +1635,7 @@ ${htmlContent}
       const activityData = await getUserActivityData(days)
       return { success: true, activityData }
     } catch (error) {
-      console.error('获取用户活动数据失败:', error)
+      
       return { success: false, error: String(error), activityData: null }
     }
   })
@@ -1652,7 +1646,6 @@ ${htmlContent}
       const cache = await getAnalysisCache()
       return { success: true, cache }
     } catch (error) {
-      console.error('获取分析缓存失败:', error)
       return { success: false, error: String(error), cache: null }
     }
   })
@@ -1663,7 +1656,6 @@ ${htmlContent}
       const success = await saveAnalysisCache(cacheData)
       return { success }
     } catch (error) {
-      console.error('保存分析缓存失败:', error)
       return { success: false, error: String(error) }
     }
   })
@@ -1674,7 +1666,6 @@ ${htmlContent}
       const success = await resetAnalysisCache()
       return { success }
     } catch (error) {
-      console.error('重置分析缓存失败:', error)
       return { success: false, error: String(error) }
     }
   })
@@ -1685,7 +1676,6 @@ ${htmlContent}
       const status = await checkDatabaseStatus()
       return { success: true, status }
     } catch (error) {
-      console.error('检查数据库状态失败:', error)
       return { success: false, error: String(error), status: null }
     }
   })
@@ -1697,7 +1687,7 @@ ${htmlContent}
       const tagsData = await getDocumentTagsData(markdownPath)
       return { success: true, tagsData }
     } catch (error) {
-      console.error('获取全局标签数据失败:', error)
+      
       return { success: false, error: String(error), tagsData: null }
     }
   })
@@ -1709,7 +1699,6 @@ ${htmlContent}
       const tagsData = await getDocumentTagsData(markdownPath)
       return { success: true, tagsData }
     } catch (error) {
-      console.error('刷新全局标签数据失败:', error)
       return { success: false, error: String(error), tagsData: null }
     }
   })
@@ -1718,13 +1707,11 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_SAVE, async (_, options: Electron.SaveDialogOptions) => {
     try {
       if (!mainWindow) {
-        console.error('主窗口未初始化')
         return undefined
       }
       const result = await dialog.showSaveDialog(mainWindow, options)
       return result.canceled ? undefined : result.filePath
     } catch (error) {
-      console.error('显示保存对话框失败:', error)
       return undefined
     }
   })
@@ -1733,13 +1720,13 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_OPEN, async (_, options: Electron.OpenDialogOptions) => {
     try {
       if (!mainWindow) {
-        console.error('主窗口未初始化')
+        
         return undefined
       }
       const result = await dialog.showOpenDialog(mainWindow, options)
       return result.canceled ? undefined : result.filePaths[0]
     } catch (error) {
-      console.error('显示打开对话框失败:', error)
+      
       return undefined
     }
   })
@@ -1748,7 +1735,7 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.MINDMAP_SAVE_FILE, async (_, content: string) => {
     try {
       if (!mainWindow) {
-        console.error('主窗口未初始化')
+        
         return { success: false, error: '主窗口未初始化' }
       }
 
@@ -1766,7 +1753,7 @@ ${htmlContent}
       await fsPromises.writeFile(savePath, content, 'utf-8')
       return { success: true, path: savePath }
     } catch (error) {
-      console.error('保存思维导图文件失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1775,7 +1762,7 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.MINDMAP_LOAD_FILE, async () => {
     try {
       if (!mainWindow) {
-        console.error('主窗口未初始化')
+        
         return { success: false, error: '主窗口未初始化' }
       }
 
@@ -1794,7 +1781,7 @@ ${htmlContent}
       const content = await fsPromises.readFile(filePath, 'utf-8')
       return { success: true, data: content }
     } catch (error) {
-      console.error('加载思维导图文件失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1803,7 +1790,7 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.MINDMAP_EXPORT_HTML, async (_, imageDataUrl: string) => {
     try {
       if (!mainWindow) {
-        console.error('主窗口未初始化')
+        
         return { success: false, error: '主窗口未初始化' }
       }
 
@@ -1869,7 +1856,7 @@ ${htmlContent}
       await fsPromises.writeFile(savePath, htmlContent, 'utf-8')
       return { success: true, path: savePath }
     } catch (error) {
-      console.error('导出思维导图HTML失败:', error)
+      
       return { success: false, error: String(error) }
     }
   })
@@ -1899,10 +1886,10 @@ ${htmlContent}
         return initWebDAVSyncCacheTable()
       })
       .catch((error) => {
-        console.error('数据库初始化失败:', error)
+        
       })
   } catch (error) {
-    console.error('数据库初始化尝试失败:', error)
+    
   }
 
   app.on('activate', function () {

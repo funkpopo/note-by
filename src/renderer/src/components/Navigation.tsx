@@ -231,7 +231,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         ).cancelSync()
                         Toast.info('已发送取消同步请求，正在中断...')
                       } catch (error) {
-                        console.error('取消同步失败:', error)
+                        
                       }
                     }}
                   >
@@ -257,7 +257,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               Toast.error(`同步失败: ${result.message}`)
             }
           } catch (error) {
-            console.error('同步失败:', error)
+            
             Toast.error(`同步失败: ${error}`)
           }
         }
@@ -414,7 +414,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         setNavItems(folderItems)
       }
     } catch (error) {
-      console.error('加载Markdown文件夹失败:', error)
+      
       Toast.error('加载文件列表失败')
     } finally {
       setIsLoading(false)
@@ -579,7 +579,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       }
     } catch (error) {
       Toast.error('删除操作失败')
-      console.error('删除操作失败:', error)
     }
 
     hideContextMenu()
@@ -660,7 +659,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       }
     } catch (error) {
       Toast.error('重命名操作失败')
-      console.error('重命名失败:', error)
     }
 
     closeRenameDialog()
@@ -738,7 +736,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
         // 检查API是否存在
         if (!window.api.markdown.createFolder) {
-          console.error('createFolder API不存在')
           Toast.error('创建文件夹API不存在，请检查应用实现')
           return
         }
@@ -748,7 +745,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
 
         const result = await window.api.markdown.createFolder(folderPath)
-        console.log('创建文件夹结果:', result)
 
         if (result.success) {
           Toast.success('文件夹已创建')
@@ -756,7 +752,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           loadMarkdownFolders()
         } else {
           Toast.error(`创建失败: ${result.error}`)
-          console.error('创建文件夹失败:', result.error)
         }
       } else {
         // 创建笔记
@@ -769,13 +764,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
         // 检查API是否存在
         if (!window.api.markdown.createNote) {
-          console.error('createNote API不存在')
           Toast.error('创建笔记API不存在，请检查应用实现')
           return
         }
 
         const result = await window.api.markdown.createNote(finalFolder, `${name}.md`, '')
-        console.log('创建笔记结果:', result)
 
         if (result.success) {
           Toast.success('笔记已创建')
@@ -787,12 +780,10 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           }
         } else {
           Toast.error(`创建失败: ${result.error}`)
-          console.error('创建笔记失败:', result.error)
         }
       }
     } catch (error) {
       Toast.error(`创建${type === 'folder' ? '文件夹' : '笔记'}失败`)
-      console.error('创建失败详细信息:', error)
     }
 
     closeCreateDialog()
@@ -912,8 +903,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   }
 
   // 处理搜索结果及展开的节点
-  const handleSearch = (value: string, expandedKeys: string[]): void => {
-
+  const handleSearch = (_value: string, expandedKeys: string[]): void => {
     setFilteredExpandedKeys(expandedKeys)
   }
 

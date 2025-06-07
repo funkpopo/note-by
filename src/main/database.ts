@@ -67,7 +67,6 @@ export async function initDatabase(): Promise<Database.Database | null> {
       const SqliteModule = await import('better-sqlite3')
       SqliteDatabase = SqliteModule.default
     } catch (importError) {
-      console.error('动态导入better-sqlite3失败:', importError)
       return null
     }
 
@@ -95,25 +94,17 @@ export async function initDatabase(): Promise<Database.Database | null> {
       const tableExists = tableCheckStmt.get()
 
       if (!tableExists) {
-        console.error('验证失败：note_history表未找到')
         return null
       }
 
 
     } else {
-      console.error('数据库连接创建失败')
       return null
     }
 
     return db
   } catch (error) {
-    console.error('初始化数据库失败:', error)
-    console.error('错误详情:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      dbPath: dbPath,
-      dbDir: path.dirname(dbPath)
-    })
+    
     return null
   }
 }
@@ -147,7 +138,7 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
 
 
   } catch (error) {
-    console.error('创建WebDAV同步缓存表失败:', error)
+    // 创建表失败，继续执行
   }
 }
 
@@ -210,7 +201,6 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
 
     return true
   } catch (error) {
-    console.error('保存WebDAV同步记录失败:', error)
     return false
   }
 }
@@ -221,7 +211,7 @@ export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncR
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法获取WebDAV同步记录：数据库不可用')
+      
       return null
     }
 
@@ -243,7 +233,6 @@ export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncR
 
     return record || null
   } catch (error) {
-    console.error('获取WebDAV同步记录失败:', error)
     return null
   }
 }
@@ -265,7 +254,6 @@ export async function clearWebDAVSyncCache(): Promise<boolean> {
 
     return true
   } catch (error) {
-    console.error('清除WebDAV同步缓存失败:', error)
     return false
   }
 }
@@ -276,7 +264,7 @@ export function closeDatabase(): void {
     try {
       db.close()
     } catch (error) {
-      console.error('关闭数据库连接失败:', error)
+      // 关闭失败，继续执行
     } finally {
       db = null
     }
@@ -299,11 +287,8 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
   try {
     const database = await initDatabase()
 
-    // 如果数据库不可用，记录警告并返回
+    // 如果数据库不可用，静默返回
     if (!database) {
-      console.warn('历史记录功能不可用：数据库初始化失败')
-      console.warn('文件路径:', params.filePath)
-      console.warn('请检查数据库目录权限和磁盘空间')
       return
     }
 
@@ -369,8 +354,8 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
       }
     }
   } catch (error) {
-    console.error('添加历史记录失败:', error)
-    console.error('错误详情:', {
+    
+    
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       filePath: params.filePath,
@@ -404,7 +389,6 @@ export async function getNoteHistory(filePath: string): Promise<NoteHistoryItem[
     // 执行查询并返回结果
     return stmt.all(filePath) as NoteHistoryItem[]
   } catch (error) {
-    console.error('获取历史记录失败:', error)
     return []
   }
 }
@@ -427,7 +411,6 @@ export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | 
     // 执行查询并返回结果
     return stmt.get(id) as NoteHistoryItem | null
   } catch (error) {
-    console.error('获取历史记录失败:', error)
     return null
   }
 }
@@ -623,7 +606,6 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       // 分析标签数据
       tagData = await getDocumentTagsData(markdownPath)
     } catch (error) {
-      console.error('获取标签分析数据失败:', error)
       // 继续执行，即使标签分析失败
     }
 
@@ -643,11 +625,7 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       documentTags: tagData?.documentTags || []
     }
   } catch (error) {
-    console.error('获取历史记录统计失败:', error)
-    console.error('错误详情:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    })
+    // 统计失败，返回默认值
     // 发生错误时，返回默认的空统计对象而不是null
     return {
       totalNotes: 0,
@@ -844,7 +822,6 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
 
     return result
   } catch (error) {
-    console.error('获取用户活动数据失败:', error)
     return null
   }
 }
@@ -913,7 +890,6 @@ export async function initAnalysisCacheTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_analysis_cache_date ON analysis_cache(date);
     `)
   } catch (error) {
-    console.error('创建分析缓存表失败:', error)
   }
 }
 
@@ -949,11 +925,6 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
           data.date
         )
       } catch (error) {
-        console.error('执行更新语句失败:', error, {
-          stats: typeof data.stats,
-          activityData: typeof data.activityData,
-          result: typeof data.result
-        })
         return false
       }
     } else {
@@ -974,11 +945,6 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
           Date.now()
         )
       } catch (error) {
-        console.error('执行插入语句失败:', error, {
-          stats: typeof data.stats,
-          activityData: typeof data.activityData,
-          result: typeof data.result
-        })
         return false
       }
     }
@@ -997,7 +963,6 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
 
     return true
   } catch (error) {
-    console.error('保存分析缓存失败:', error)
     return false
   }
 }
@@ -1008,7 +973,7 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法获取分析缓存：数据库不可用')
+      
       return null
     }
 
@@ -1043,7 +1008,6 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
       modelId: record.model_id
     }
   } catch (error) {
-    console.error('获取分析缓存失败:', error)
     return null
   }
 }
@@ -1054,7 +1018,6 @@ export async function resetAnalysisCache(): Promise<boolean> {
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法重置分析缓存：数据库不可用')
       return false
     }
 
@@ -1064,10 +1027,8 @@ export async function resetAnalysisCache(): Promise<boolean> {
     // 重新创建表
     await initAnalysisCacheTable()
 
-    console.log('分析缓存表已重置')
     return true
   } catch (error) {
-    console.error('重置分析缓存表失败:', error)
     return false
   }
 }
@@ -1142,7 +1103,6 @@ export async function getDocumentTagsData(markdownPath: string): Promise<{
           })
         }
       } catch (error) {
-        console.error(`处理文件 ${filePath} 时出错:`, error)
         // 继续处理其他文件
         continue
       }
@@ -1186,7 +1146,6 @@ export async function getDocumentTagsData(markdownPath: string): Promise<{
       documentTags
     }
   } catch (error) {
-    console.error('获取文档标签数据失败:', error)
     return null
   }
 }
@@ -1267,9 +1226,6 @@ export async function checkDatabaseStatus(): Promise<{
   }
 
   try {
-    console.log('开始数据库状态检查...')
-    console.log('数据库路径:', dbPath)
-    console.log('Markdown路径:', markdownPath)
 
     // 检查目录是否存在
     result.details.dbDirExists = fs.existsSync(dbDir)
@@ -1375,7 +1331,7 @@ export async function checkDatabaseStatus(): Promise<{
 
     return result
   } catch (error) {
-    console.error('数据库状态检查失败:', error)
+    
     result.lastError = error instanceof Error ? error.message : String(error)
     result.details.recommendations.push('数据库状态检查过程中发生错误')
     result.details.recommendations.push('请查看控制台日志获取详细错误信息')

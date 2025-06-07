@@ -27,7 +27,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches)
         }
       } catch (error) {
-        console.error('加载主题设置失败:', error)
+        
         // 出错时使用系统主题
         setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches)
       } finally {
@@ -68,7 +68,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       // 保存到设置
       window.api.settings
         .set('theme', isDarkMode ? 'dark' : 'light')
-        .catch((error) => console.error('保存主题设置失败:', error))
+        .catch((error) => 
 
       // 移除切换状态类
       setTimeout(() => {

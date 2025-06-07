@@ -64,7 +64,7 @@ async function loadCache(): Promise<SyncCacheData> {
     cacheLoaded = true
     return cacheData
   } catch (error) {
-    console.error('加载WebDAV同步缓存失败:', error)
+    
     // 出错时返回新的空缓存
     cacheData = {
       version: '1.0',
@@ -87,7 +87,7 @@ async function saveCache(data: SyncCacheData): Promise<boolean> {
     await fs.promises.writeFile(cacheFilePath, JSON.stringify(data, null, 2), 'utf-8')
     return true
   } catch (error) {
-    console.error('保存WebDAV同步缓存失败:', error)
+    
     return false
   }
 }
@@ -113,7 +113,7 @@ export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncR
       fileSize: record.fileSize
     }
   } catch (error) {
-    console.error('获取WebDAV同步记录失败:', error)
+    
     return null
   }
 }
@@ -136,7 +136,7 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     // 保存更新后的缓存
     return await saveCache(cache)
   } catch (error) {
-    console.error('保存WebDAV同步记录失败:', error)
+    
     return false
   }
 }
@@ -154,7 +154,6 @@ export async function deleteWebDAVSyncRecord(filePath: string): Promise<boolean>
 
     return true // 记录不存在也视为成功
   } catch (error) {
-    console.error('删除WebDAV同步记录失败:', error)
     return false
   }
 }
@@ -172,7 +171,6 @@ export async function clearWebDAVSyncCache(): Promise<boolean> {
     // 保存空缓存
     return await saveCache(cacheData)
   } catch (error) {
-    console.error('清除WebDAV同步缓存失败:', error)
     return false
   }
 }
@@ -188,7 +186,6 @@ export async function getAllWebDAVSyncRecords(): Promise<WebDAVSyncRecord[]> {
       ...record
     }))
   } catch (error) {
-    console.error('获取所有WebDAV同步记录失败:', error)
     return []
   }
 }
@@ -199,7 +196,6 @@ export async function getLastGlobalSyncTime(): Promise<number> {
     const cache = await loadCache()
     return cache.lastSync || 0
   } catch (error) {
-    console.error('获取上次全局同步时间失败:', error)
     return 0
   }
 }
@@ -211,7 +207,6 @@ export async function updateLastGlobalSyncTime(): Promise<boolean> {
     cache.lastSync = Date.now()
     return await saveCache(cache)
   } catch (error) {
-    console.error('更新上次全局同步时间失败:', error)
     return false
   }
 }

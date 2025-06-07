@@ -196,7 +196,7 @@ class GlobalTagManager {
 
       return response.tagsData
     } catch (error) {
-      console.error('加载全局标签数据失败:', error)
+      
       // 返回空数据作为降级处理
       return {
         topTags: [],
@@ -258,7 +258,7 @@ class GlobalTagManager {
       try {
         listener(data)
       } catch (error) {
-        console.error('标签变更监听器执行失败:', error)
+        
       }
     })
   }

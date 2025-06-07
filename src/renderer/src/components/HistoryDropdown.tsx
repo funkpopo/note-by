@@ -48,11 +48,11 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
       if (response.success && response.history) {
         setHistoryList(response.history)
       } else {
-        console.error('加载历史记录失败:', response.error)
+        
         setHistoryList([])
       }
     } catch (error) {
-      console.error('加载历史记录异常:', error)
+      
       setHistoryList([])
     } finally {
       setLoading(false)
@@ -76,7 +76,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
         setDropdownVisible(false) // 关闭下拉菜单
       }
     } catch (error) {
-      console.error('加载历史记录详情失败:', error)
+      
     }
   }
 

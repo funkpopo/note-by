@@ -179,7 +179,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         analysisCached: false // 重置缓存状态，确保新分析不显示缓存标识
       })
 
-      console.log('[分析服务] 开始分析，forceUpdate =', forceUpdate)
+
 
       // 获取基础统计数据
       set({ progress: 30 })
@@ -197,7 +197,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
       // 检查统计数据是否有效
       if (!statsResult.success || !statsResult.stats) {
-        console.warn('获取统计数据失败，使用默认数据')
         throw {
           type: AnalysisErrorType.DATA_ERROR,
           message: '暂无笔记数据，请先创建和编辑一些笔记后再进行分析',
@@ -270,7 +269,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
               }
             }
           } catch (error) {
-            console.warn('缓存数据处理失败:', error)
             // 缓存处理失败，继续新的分析
           }
         }
@@ -278,7 +276,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
       // 检查活动数据是否有效
       if (!activityData) {
-        console.warn('获取活动数据失败，使用默认数据')
         // 可以继续进行分析，只是活动数据为空
       }
 
@@ -515,12 +512,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
               dataFingerprint
             })
           } catch (cacheError) {
-            console.warn('保存缓存失败:', cacheError)
             // 缓存保存失败不影响分析结果的显示
           }
         }
       } catch (jsonError) {
-        console.error('解析AI返回的JSON失败:', jsonError, filteredContent)
+        
         throw {
           type: AnalysisErrorType.API_ERROR,
           message: `处理AI返回的数据格式失败: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
@@ -529,7 +525,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         }
       }
     } catch (error) {
-      console.error('分析失败:', error)
+      
 
       // 检查是否为自定义错误对象（包含type字段）
       let analysisError: AnalysisError
@@ -559,14 +555,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         (analysisError.type === AnalysisErrorType.NETWORK_ERROR ||
           analysisError.type === AnalysisErrorType.DATA_ERROR)
       ) {
-        console.log(`自动重试 (${currentState.retryCount + 1}/${currentState.maxRetries})`)
+        
 
         // 延迟后自动重试
         setTimeout(async () => {
           try {
             await get().retryAnalysis()
           } catch (retryError) {
-            console.error('自动重试失败:', retryError)
+            
           }
         }, 2000) // 2秒后重试
       }
@@ -613,7 +609,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
       await state.startAnalysis(state.selectedModelId, true)
     } catch (error) {
-      console.error('重试失败:', error)
       set({
         error: {
           type: AnalysisErrorType.UNKNOWN_ERROR,
@@ -632,6 +627,5 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   // 重置缓存状态
   resetCacheStatus: () => {
     set({ analysisCached: false })
-    console.log('[分析服务] 缓存状态已重置')
   }
 }))

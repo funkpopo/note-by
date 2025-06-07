@@ -21,7 +21,7 @@ export function encrypt(text: string): string {
 
     return encrypted
   } catch (error) {
-    console.error('加密失败:', error)
+    
     return ''
   }
 }
@@ -42,7 +42,7 @@ export function decrypt(encryptedText: string): string {
 
     return decrypted
   } catch (error) {
-    console.error('解密失败:', error)
+    
     return ''
   }
 }
@@ -64,7 +64,7 @@ export function encryptWithPassword(text: string, password: string): string {
 
     return encrypted
   } catch (error) {
-    console.error('使用自定义密码加密失败:', error)
+    
     return ''
   }
 }
@@ -86,7 +86,7 @@ export function decryptWithPassword(encryptedText: string, password: string): st
 
     return decrypted
   } catch (error) {
-    console.error('使用自定义密码解密失败:', error)
+    
     return ''
   }
 }
@@ -106,7 +106,7 @@ export function verifyPassword(
     const decrypted = decryptWithPassword(encryptedTest, password)
     return decrypted === originalText
   } catch (error) {
-    console.error('密码验证失败:', error)
+    
     return false
   }
 }
