@@ -50,7 +50,7 @@ export async function testOpenAIConnection(
     // 发送一个简单的测试请求
     const response = await openai.chat.completions.create({
       model: modelName,
-      messages: [{ role: 'user', content: '你好，这是一个API连接测试。请回复"连接成功"。' }],
+      messages: [{ role: 'user', content: 'ping. Just reply "pong"' }],
       max_tokens: 20
     })
 
@@ -80,7 +80,7 @@ export async function testOpenAIConnection(
 
     return {
       success: true,
-      message: content ? `连接成功!` : '连接成功!'
+      message: content ? `` : '连接成功!'
     }
   } catch (error: unknown) {
     // 提取更友好的错误信息
