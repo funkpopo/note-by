@@ -280,7 +280,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     try {
       // 获取文件夹列表
       const foldersResult = await window.api.markdown.getFolders()
-      console.log('获取到的所有文件夹:', foldersResult.folders)
+
 
       if (foldersResult.success && foldersResult.folders) {
         // 过滤掉.assets文件夹
@@ -294,11 +294,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         for (const folder of filteredFolders) {
           // 获取文件夹中的文件
           const filesResult = await window.api.markdown.getFiles(folder)
-          console.log(`文件夹[${folder}]中的文件:`, filesResult.files)
+
 
           // 检查是否为嵌套文件夹路径（包含斜杠）
           if (folder.includes('/')) {
-            console.log('处理嵌套路径文件夹:', folder)
+
             // 处理嵌套文件夹路径，例如 "parent/child"
             const pathParts = folder.split('/')
             let currentPath = ''
@@ -495,11 +495,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     e.preventDefault()
     e.stopPropagation()
 
-    console.log('处理右键菜单', {
-      itemKey,
-      isFolder,
-      position: { x: e.clientX, y: e.clientY }
-    })
+
 
     // 计算菜单位置，确保不超出窗口边界
     const { x, y } = calculateMenuPosition(e.clientX, e.clientY, isFolder, false)
@@ -519,7 +515,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const handleEmptyAreaContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
 
-    console.log('处理空白区域右键菜单')
+
 
     // 确保点击的是空白区域，而非Tree中的节点
     const target = e.target as HTMLElement
@@ -738,7 +734,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     try {
       if (type === 'folder') {
         // 创建文件夹
-        console.log('开始创建文件夹:', name)
+
 
         // 检查API是否存在
         if (!window.api.markdown.createFolder) {
@@ -749,7 +745,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
         // 处理子文件夹情况：如果有父文件夹，则创建"父文件夹/新文件夹"格式的路径
         const folderPath = finalFolder ? `${finalFolder}/${name}` : name
-        console.log('创建文件夹路径:', folderPath)
+
 
         const result = await window.api.markdown.createFolder(folderPath)
         console.log('创建文件夹结果:', result)
@@ -769,7 +765,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           return
         }
 
-        console.log('开始创建笔记:', name, '在文件夹:', finalFolder)
+
 
         // 检查API是否存在
         if (!window.api.markdown.createNote) {
@@ -917,8 +913,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
   // 处理搜索结果及展开的节点
   const handleSearch = (value: string, expandedKeys: string[]): void => {
-    console.log('搜索文本:', value)
-    console.log('自动展开的节点:', expandedKeys)
+
     setFilteredExpandedKeys(expandedKeys)
   }
 
@@ -1030,12 +1025,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 const nodeKey = node.key?.toString() || ''
                 const isFolder = nodeKey.startsWith('folder:')
 
-                // 添加额外的调试信息
-                console.log('Tree节点右键菜单:', {
-                  nodeKey,
-                  isFolder,
-                  node: node
-                })
+
 
                 // 先转换成unknown再转成React.MouseEvent类型
                 const mouseEvent = e.nativeEvent as unknown as React.MouseEvent

@@ -396,7 +396,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 添加uploadFile函数，用于处理文件上传
       uploadFile: async (file: File): Promise<string> => {
         try {
-          console.log('正在上传文件:', file.name)
+
 
           // 创建图片元素以获取原始尺寸信息
           const getImageDimensions = (
@@ -422,12 +422,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           let imageDimensions: { width: number; height: number } | null = null
           if (file.type.startsWith('image/')) {
             imageDimensions = await getImageDimensions(file)
-            console.log('原始图片尺寸:', imageDimensions)
+
           }
 
           // 确保有当前文件夹和文件
           if (!currentFolder || !currentFile) {
-            console.log('未选择文件，使用根目录临时文件')
+
             // 构造默认文件路径（使用纯文件名，不包含目录部分）
             const filePath = 'temp_assets.md'
 
@@ -459,8 +459,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             if (!imageUrl) {
               throw new Error('上传成功但未返回URL')
             }
-            // 记录实际路径信息，帮助调试
-            console.log('图片保存到:', imageUrl)
+
 
             return imageUrl
           }
@@ -495,8 +494,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           if (!imageUrl) {
             throw new Error('上传成功但未返回URL')
           }
-          // 记录实际路径信息，帮助调试
-          console.log('图片保存到:', imageUrl)
+
 
           return imageUrl
         } catch (error) {
@@ -507,7 +505,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       },
       // 添加 resolveFileUrl 函数以确保图片 URL 能正确解析
       resolveFileUrl: async (url: string): Promise<string> => {
-        console.log('正在解析文件 URL:', url)
+
 
         // 如果 URL 已经是 http/https/data 格式，直接返回
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
@@ -522,7 +520,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             try {
               // 尝试解码URL
               decodedUrl = decodeURI(url)
-              console.log('解码URL:', decodedUrl)
+
             } catch (e) {
               // 解码失败，尝试不解码的方式
               console.warn('解码URL失败，尝试其他方式:', e)
@@ -533,14 +531,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               try {
                 // 先将%5C替换为/
                 const fixedUrl = url.replace(/%5C/g, '/')
-                console.log('解析文件 URL 中的 %5C:', url)
-                console.log('解码并修正 file:// URL:', fixedUrl)
+
 
                 // 检查是否包含双斜杠问题
                 const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
                 if (doubleDriveSlashRegex.test(fixedUrl)) {
                   const correctedUrl = fixedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
-                  console.log('修正Windows盘符后的双斜杠问题:', correctedUrl)
+
                   return correctedUrl
                 }
 
@@ -563,8 +560,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 修复Windows盘符后的双斜杠问题
             const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
             if (doubleDriveSlashRegex.test(normalizedUrl)) {
-              const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
-              console.log('修正Windows盘符后的双斜杠问题:', fixedUrl)
+                          const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
               return fixedUrl
             }
 
@@ -573,11 +569,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             const match = badDrivePathRegex.exec(normalizedUrl)
             if (match) {
               const fixedUrl = normalizedUrl.replace(badDrivePathRegex, 'file:///$1/$2')
-              console.log('修复Windows盘符路径:', fixedUrl)
+
               return fixedUrl
             }
 
-            console.log('使用标准化的 file:// URL:', normalizedUrl)
+
             return normalizedUrl
           } catch (e) {
             console.error('处理 file:// URL 时出错:', e)
@@ -596,12 +592,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 3. 处理盘符格式，确保是 file:///D:/path 格式
             if (cleanPath.match(/^[A-Za-z]:/)) {
               const fileUrl = `file:///${cleanPath}`
-              console.log('处理 .assets 资源文件绝对路径 URL:', fileUrl)
+
               return fileUrl
             } else {
               // 没有盘符，可能是相对路径
               const fileUrl = `file:///${cleanPath}`
-              console.log('处理 .assets 资源文件相对路径 URL:', fileUrl)
+              
               return fileUrl
             }
           } catch (e) {
@@ -617,7 +613,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             let cleanPath = url.replace(/^\/+/, '')
             cleanPath = cleanPath.replace(/\\/g, '/')
             const fileUrl = `file:///${cleanPath}`
-            console.log('将绝对路径转换为标准 file:// URL:', fileUrl)
+
             return fileUrl
           } catch (e) {
             console.error('处理绝对路径失败:', e)
@@ -632,7 +628,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             let cleanPath = url.replace(/^\.\//, '')
             cleanPath = cleanPath.replace(/\\/g, '/')
             const fileUrl = `file:///${cleanPath}`
-            console.log('将相对路径转换为 file:// URL:', fileUrl)
+
             return fileUrl
           } catch (e) {
             console.error('处理相对路径失败:', e)
@@ -646,7 +642,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 转换为正斜杠格式
             const cleanPath = url.replace(/\\/g, '/')
             const fileUrl = `file:///${cleanPath}`
-            console.log('将普通路径转换为 file:// URL:', fileUrl)
+
             return fileUrl
           } catch (e) {
             console.error('处理普通路径失败:', e)
@@ -715,7 +711,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
         if (tagsMatch && tagsMatch[1]) {
           extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
-          console.log('从文件头部提取的标签:', extractedTags)
+
         }
 
         // 移除标签信息行，避免在编辑器中显示
@@ -724,7 +720,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         // 预处理Markdown内容，将@tag格式转换为可识别的特殊格式
         // 同时提取内联的@标签
         const inlineTagsFromMarkdown = extractTagsFromMarkdown(contentWithoutTags)
-        console.log('从Markdown内容提取的内联标签:', inlineTagsFromMarkdown)
+
 
         // 合并所有标签
         const allTags = [...new Set([...extractedTags, ...inlineTagsFromMarkdown])]
@@ -859,7 +855,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       // 提取标签信息
       const tags = extractTags(blocks)
-      console.log('提取的标签:', tags)
+
 
       // 更新标签列表状态
       setTagList(tags)
@@ -1072,7 +1068,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
           // 只有在处理前后有差异时才更新编辑器
           if (JSON.stringify(blocks) !== JSON.stringify(processedBlocks)) {
-            console.log('发现需要修复的标签渲染问题，正在应用修复...')
+
             editor.replaceBlocks(editor.document, processedBlocks)
           }
         } catch (error) {
@@ -1196,9 +1192,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
 
     try {
-      console.log(
-        `[编辑器] 创建OpenAI模型实例: 模型=${selectedConfig.modelName}, URL=${selectedConfig.apiUrl.substring(0, 20)}...`
-      )
+
       setAiStatus('loading')
 
       // 创建OpenAI实例
@@ -1206,14 +1200,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         apiKey: selectedConfig.apiKey,
         baseURL: selectedConfig.apiUrl,
         fetch: async (url, options) => {
-          console.log(`[编辑器] 发送AI请求: ${url}`)
+
 
           // 使用系统fetch并记录结果
           try {
             const response = await fetch(url, options)
 
-            // 记录状态码
-            console.log(`[编辑器] AI请求返回状态码: ${response.status}`)
+
 
             if (!response.ok) {
               console.error(`[编辑器] AI请求失败: ${response.statusText}`)
@@ -1230,8 +1223,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       const model = provider(selectedConfig.modelName as string)
 
-      // 测试连接是否正常
-      console.log(`[编辑器] 模型实例创建成功，设置状态为ready`)
+      
       setAiStatus('ready')
 
       return model
@@ -1253,7 +1245,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       return
     }
 
-    console.log(`[编辑器] 选择了新的AI模型: ${selectedModelId}`)
+
     const model = createOpenAIModel()
     setCurrentAiModel(model)
 

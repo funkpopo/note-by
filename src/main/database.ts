@@ -45,23 +45,17 @@ export async function initDatabase(): Promise<Database.Database | null> {
   }
 
   const dbPath = getDatabasePath()
-  console.log('数据库初始化：尝试使用路径', dbPath)
+
 
   // 确保数据库目录存在
   const dbDir = path.dirname(dbPath)
-  console.log('数据库目录:', dbDir)
+
 
   try {
     if (!fs.existsSync(dbDir)) {
-      console.log('数据库目录不存在，开始创建:', dbDir)
       fs.mkdirSync(dbDir, { recursive: true })
-      console.log('数据库目录创建成功')
-    } else {
-      console.log('数据库目录已存在')
     }
   } catch (dirError) {
-    console.error('创建数据库目录失败:', dirError)
-    console.error('目录路径:', dbDir)
     return null
   }
 
@@ -77,11 +71,9 @@ export async function initDatabase(): Promise<Database.Database | null> {
       return null
     }
 
-    console.log('开始创建数据库连接:', dbPath)
     db = new SqliteDatabase(dbPath)
 
     if (db) {
-      console.log('数据库连接创建成功，开始创建表结构')
 
       // 创建文档历史记录表
       db.exec(`
@@ -107,7 +99,7 @@ export async function initDatabase(): Promise<Database.Database | null> {
         return null
       }
 
-      console.log('数据库初始化完成，note_history表已创建')
+
     } else {
       console.error('数据库连接创建失败')
       return null
@@ -134,7 +126,7 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法创建WebDAV同步缓存表：数据库不可用')
+
       return
     }
 
@@ -153,7 +145,7 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
     `)
 
-    console.log('WebDAV同步缓存表初始化成功')
+
   } catch (error) {
     console.error('创建WebDAV同步缓存表失败:', error)
   }
@@ -165,7 +157,7 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法保存WebDAV同步记录：数据库不可用')
+
       return false
     }
 
@@ -262,7 +254,7 @@ export async function clearWebDAVSyncCache(): Promise<boolean> {
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法清除WebDAV同步缓存：数据库不可用')
+
       return false
     }
 
@@ -270,7 +262,7 @@ export async function clearWebDAVSyncCache(): Promise<boolean> {
     const stmt = database.prepare('DELETE FROM webdav_sync_cache')
     stmt.run()
 
-    console.log('WebDAV同步缓存已清除')
+
     return true
   } catch (error) {
     console.error('清除WebDAV同步缓存失败:', error)
@@ -359,7 +351,7 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
 
       const result = cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
       if (result.changes > 0) {
-        console.log(`清理了 ${result.changes} 条旧历史记录（基于数量）`)
+
       }
     } else if (historyManagement.type === 'time') {
       // 基于时间的清理策略
@@ -373,7 +365,7 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
 
       const result = cleanStmt.run(params.filePath, timeThreshold)
       if (result.changes > 0) {
-        console.log(`清理了 ${result.changes} 条旧历史记录（基于时间）`)
+
       }
     }
   } catch (error) {
@@ -401,7 +393,6 @@ export async function getNoteHistory(filePath: string): Promise<NoteHistoryItem[
 
     // 如果数据库不可用，返回空数组
     if (!database) {
-      console.log('无法获取历史记录：数据库不可用')
       return []
     }
 
@@ -425,7 +416,6 @@ export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | 
 
     // 如果数据库不可用，返回null
     if (!database) {
-      console.log('无法获取历史记录：数据库不可用')
       return null
     }
 
@@ -498,7 +488,7 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
 
     // 如果数据库不可用，返回null
     if (!database) {
-      console.log('无法获取历史记录统计：数据库不可用')
+
       return null
     }
 
@@ -706,7 +696,7 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
 
     // 如果数据库不可用，返回null
     if (!database) {
-      console.log('无法获取用户活动数据：数据库不可用')
+
       return null
     }
 
@@ -904,7 +894,7 @@ export async function initAnalysisCacheTable(): Promise<void> {
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法创建分析缓存表：数据库不可用')
+
       return
     }
 
@@ -933,7 +923,7 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
     const database = await initDatabase()
 
     if (!database) {
-      console.log('无法保存分析缓存：数据库不可用')
+
       return false
     }
 

@@ -15,13 +15,7 @@ export interface ContentGenerationRequest {
 // 处理API URL，确保格式正确
 function normalizeApiUrl(url: string): string {
   if (!url) return ''
-
-  // 移除URL末尾的斜杠
   const normalizedUrl = url.trim().replace(/\/+$/, '')
-
-  // 不再自动移除 /v1 路径，保留用户输入的完整URL
-  // 用户需要自行确保URL格式正确
-
   return normalizedUrl
 }
 
