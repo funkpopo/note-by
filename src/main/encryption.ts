@@ -21,7 +21,6 @@ export function encrypt(text: string): string {
 
     return encrypted
   } catch (error) {
-    
     return ''
   }
 }
@@ -42,7 +41,6 @@ export function decrypt(encryptedText: string): string {
 
     return decrypted
   } catch (error) {
-    
     return ''
   }
 }
@@ -64,7 +62,6 @@ export function encryptWithPassword(text: string, password: string): string {
 
     return encrypted
   } catch (error) {
-    
     return ''
   }
 }
@@ -86,7 +83,6 @@ export function decryptWithPassword(encryptedText: string, password: string): st
 
     return decrypted
   } catch (error) {
-    
     return ''
   }
 }
@@ -106,7 +102,6 @@ export function verifyPassword(
     const decrypted = decryptWithPassword(encryptedTest, password)
     return decrypted === originalText
   } catch (error) {
-    
     return false
   }
 }

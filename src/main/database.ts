@@ -46,10 +46,8 @@ export async function initDatabase(): Promise<Database.Database | null> {
 
   const dbPath = getDatabasePath()
 
-
   // 确保数据库目录存在
   const dbDir = path.dirname(dbPath)
-
 
   try {
     if (!fs.existsSync(dbDir)) {
@@ -73,7 +71,6 @@ export async function initDatabase(): Promise<Database.Database | null> {
     db = new SqliteDatabase(dbPath)
 
     if (db) {
-
       // 创建文档历史记录表
       db.exec(`
         CREATE TABLE IF NOT EXISTS note_history (
@@ -96,15 +93,12 @@ export async function initDatabase(): Promise<Database.Database | null> {
       if (!tableExists) {
         return null
       }
-
-
     } else {
       return null
     }
 
     return db
   } catch (error) {
-    
     return null
   }
 }
@@ -117,7 +111,6 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
     const database = await initDatabase()
 
     if (!database) {
-
       return
     }
 
@@ -135,8 +128,6 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
       
       CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
     `)
-
-
   } catch (error) {
     // 创建表失败，继续执行
   }
@@ -148,7 +139,6 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     const database = await initDatabase()
 
     if (!database) {
-
       return false
     }
 
@@ -211,7 +201,6 @@ export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncR
     const database = await initDatabase()
 
     if (!database) {
-      
       return null
     }
 
@@ -243,14 +232,12 @@ export async function clearWebDAVSyncCache(): Promise<boolean> {
     const database = await initDatabase()
 
     if (!database) {
-
       return false
     }
 
     // 删除所有记录
     const stmt = database.prepare('DELETE FROM webdav_sync_cache')
     stmt.run()
-
 
     return true
   } catch (error) {
@@ -336,7 +323,6 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
 
       const result = cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
       if (result.changes > 0) {
-
       }
     } else if (historyManagement.type === 'time') {
       // 基于时间的清理策略
@@ -350,17 +336,10 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
 
       const result = cleanStmt.run(params.filePath, timeThreshold)
       if (result.changes > 0) {
-
       }
     }
   } catch (error) {
-    
-    
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      filePath: params.filePath,
-      contentLength: params.content.length
-    })
+    return
   }
 }
 
@@ -471,7 +450,6 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
 
     // 如果数据库不可用，返回null
     if (!database) {
-
       return null
     }
 
@@ -674,7 +652,6 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
 
     // 如果数据库不可用，返回null
     if (!database) {
-
       return null
     }
 
@@ -871,7 +848,6 @@ export async function initAnalysisCacheTable(): Promise<void> {
     const database = await initDatabase()
 
     if (!database) {
-
       return
     }
 
@@ -889,8 +865,7 @@ export async function initAnalysisCacheTable(): Promise<void> {
       
       CREATE INDEX IF NOT EXISTS idx_analysis_cache_date ON analysis_cache(date);
     `)
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 // 保存分析缓存
@@ -899,7 +874,6 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
     const database = await initDatabase()
 
     if (!database) {
-
       return false
     }
 
@@ -973,7 +947,6 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
     const database = await initDatabase()
 
     if (!database) {
-      
       return null
     }
 
@@ -1226,7 +1199,6 @@ export async function checkDatabaseStatus(): Promise<{
   }
 
   try {
-
     // 检查目录是否存在
     result.details.dbDirExists = fs.existsSync(dbDir)
     result.details.dbFileExists = fs.existsSync(dbPath)
@@ -1331,7 +1303,6 @@ export async function checkDatabaseStatus(): Promise<{
 
     return result
   } catch (error) {
-    
     result.lastError = error instanceof Error ? error.message : String(error)
     result.details.recommendations.push('数据库状态检查过程中发生错误')
     result.details.recommendations.push('请查看控制台日志获取详细错误信息')

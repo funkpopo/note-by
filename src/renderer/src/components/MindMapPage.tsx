@@ -309,42 +309,51 @@ const MindMapFlow: React.FC = () => {
   }, [])
 
   // 节点右键菜单
-  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
-    event.preventDefault()
-    const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
-    setContextMenu({
-      visible: true,
-      x,
-      y,
-      type: 'node',
-      nodeId: node.id
-    })
-  }, [calculateMenuPosition])
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault()
+      const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
+      setContextMenu({
+        visible: true,
+        x,
+        y,
+        type: 'node',
+        nodeId: node.id
+      })
+    },
+    [calculateMenuPosition]
+  )
 
   // 边右键菜单
-  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
-    event.preventDefault()
-    const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
-    setContextMenu({
-      visible: true,
-      x,
-      y,
-      type: 'edge',
-      edgeId: edge.id
-    })
-  }, [calculateMenuPosition])
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault()
+      const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
+      setContextMenu({
+        visible: true,
+        x,
+        y,
+        type: 'edge',
+        edgeId: edge.id
+      })
+    },
+    [calculateMenuPosition]
+  )
 
   // 空白区域右键菜单
-  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
-    event.preventDefault()
-    const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
-    setContextMenu({
-      visible: true,
-      x,
-      y,
-      type: 'pane'
-    })
-  }, [calculateMenuPosition])
+  const onPaneContextMenu = useCallback(
+    (event: MouseEvent | React.MouseEvent) => {
+      event.preventDefault()
+      const { x, y } = calculateMenuPosition(event.clientX, event.clientY)
+      setContextMenu({
+        visible: true,
+        x,
+        y,
+        type: 'pane'
+      })
+    },
+    [calculateMenuPosition]
+  )
 
   // 保存节点编辑
   const saveNodeEdit = useCallback(() => {
@@ -382,7 +391,7 @@ const MindMapFlow: React.FC = () => {
   // 右键菜单功能 - 编辑节点
   const handleEditNode = useCallback(() => {
     if (contextMenu.nodeId) {
-      const node = nodes.find(n => n.id === contextMenu.nodeId)
+      const node = nodes.find((n) => n.id === contextMenu.nodeId)
       if (node) {
         let nodeTypeToEdit = (node.data.nodeType as string) || 'default'
         if (nodeTypeToEdit === 'custom') {
@@ -402,9 +411,11 @@ const MindMapFlow: React.FC = () => {
   // 右键菜单功能 - 删除节点
   const handleDeleteNode = useCallback(() => {
     if (contextMenu.nodeId) {
-      const nodeToDelete = nodes.find(n => n.id === contextMenu.nodeId)
-      const edgesToDelete = edges.filter(e => e.source === contextMenu.nodeId || e.target === contextMenu.nodeId)
-      
+      const nodeToDelete = nodes.find((n) => n.id === contextMenu.nodeId)
+      const edgesToDelete = edges.filter(
+        (e) => e.source === contextMenu.nodeId || e.target === contextMenu.nodeId
+      )
+
       if (nodeToDelete) {
         deleteElements({ nodes: [nodeToDelete], edges: edgesToDelete })
         saveToHistory()
@@ -439,34 +450,46 @@ const MindMapFlow: React.FC = () => {
       Toast.success('节点添加成功')
     }
     hideContextMenu()
-  }, [contextMenu.x, contextMenu.y, nodeId, setNodes, setNodeId, saveToHistory, hideContextMenu, screenToFlowPosition])
+  }, [
+    contextMenu.x,
+    contextMenu.y,
+    nodeId,
+    setNodes,
+    setNodeId,
+    saveToHistory,
+    hideContextMenu,
+    screenToFlowPosition
+  ])
 
   // 右键菜单功能 - 添加箭头标记
-  const handleAddEdgeMarker = useCallback((markerType: 'arrow' | 'arrowclosed') => {
-    if (contextMenu.edgeId) {
-      setEdges((eds) =>
-        eds.map((edge) =>
-          edge.id === contextMenu.edgeId
-            ? {
-                ...edge,
-                markerEnd: {
-                  type: markerType === 'arrow' ? MarkerType.Arrow : MarkerType.ArrowClosed,
-                  color: '#666'
+  const handleAddEdgeMarker = useCallback(
+    (markerType: 'arrow' | 'arrowclosed') => {
+      if (contextMenu.edgeId) {
+        setEdges((eds) =>
+          eds.map((edge) =>
+            edge.id === contextMenu.edgeId
+              ? {
+                  ...edge,
+                  markerEnd: {
+                    type: markerType === 'arrow' ? MarkerType.Arrow : MarkerType.ArrowClosed,
+                    color: '#666'
+                  }
                 }
-              }
-            : edge
+              : edge
+          )
         )
-      )
-      saveToHistory()
-      Toast.success('已添加箭头标记')
-    }
-    hideContextMenu()
-  }, [contextMenu.edgeId, setEdges, saveToHistory, hideContextMenu])
+        saveToHistory()
+        Toast.success('已添加箭头标记')
+      }
+      hideContextMenu()
+    },
+    [contextMenu.edgeId, setEdges, saveToHistory, hideContextMenu]
+  )
 
   // 右键菜单功能 - 删除边
   const handleDeleteEdge = useCallback(() => {
     if (contextMenu.edgeId) {
-      const edgeToDelete = edges.find(e => e.id === contextMenu.edgeId)
+      const edgeToDelete = edges.find((e) => e.id === contextMenu.edgeId)
       if (edgeToDelete) {
         deleteElements({ nodes: [], edges: [edgeToDelete] })
         saveToHistory()
@@ -518,7 +541,6 @@ const MindMapFlow: React.FC = () => {
       }
     } catch (error) {
       Toast.error('保存失败，请重试')
-      
     } finally {
       setIsLoading(false)
     }
@@ -550,7 +572,6 @@ const MindMapFlow: React.FC = () => {
           }
         } catch (parseError) {
           Toast.error('文件内容解析失败，请检查文件格式')
-          
         }
       } else if (result.cancelled) {
         // 用户取消了文件选择
@@ -559,7 +580,6 @@ const MindMapFlow: React.FC = () => {
       }
     } catch (error) {
       Toast.error('加载失败，请重试')
-      
     } finally {
       setIsLoading(false)
     }
@@ -593,7 +613,6 @@ const MindMapFlow: React.FC = () => {
       }
     } catch (error) {
       Toast.error('导出失败，请重试')
-      
     } finally {
       setIsLoading(false)
     }
@@ -765,20 +784,22 @@ const MindMapFlow: React.FC = () => {
                   margin: '4px 0'
                 }}
               />
-                             <div
-                 className="context-menu-item context-menu-item-danger"
-                 style={{
-                   padding: '8px 12px',
-                   display: 'flex',
-                   alignItems: 'center',
-                   cursor: 'pointer',
-                   transition: 'background 0.3s'
-                 }}
-                 onClick={handleDeleteNode}
-               >
-                 <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
-                 <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>删除节点</Typography.Text>
-               </div>
+              <div
+                className="context-menu-item context-menu-item-danger"
+                style={{
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+                onClick={handleDeleteNode}
+              >
+                <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
+                  删除节点
+                </Typography.Text>
+              </div>
             </>
           )}
 
@@ -795,7 +816,9 @@ const MindMapFlow: React.FC = () => {
                 }}
                 onClick={() => handleAddEdgeMarker('arrow')}
               >
-                <IconArrowRight style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                <IconArrowRight
+                  style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                />
                 <Typography.Text>添加开放箭头</Typography.Text>
               </div>
               <div
@@ -819,20 +842,22 @@ const MindMapFlow: React.FC = () => {
                   margin: '4px 0'
                 }}
               />
-                             <div
-                 className="context-menu-item context-menu-item-danger"
-                 style={{
-                   padding: '8px 12px',
-                   display: 'flex',
-                   alignItems: 'center',
-                   cursor: 'pointer',
-                   transition: 'background 0.3s'
-                 }}
-                 onClick={handleDeleteEdge}
-               >
-                 <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
-                 <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>删除连线</Typography.Text>
-               </div>
+              <div
+                className="context-menu-item context-menu-item-danger"
+                style={{
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.3s'
+                }}
+                onClick={handleDeleteEdge}
+              >
+                <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
+                  删除连线
+                </Typography.Text>
+              </div>
             </>
           )}
 

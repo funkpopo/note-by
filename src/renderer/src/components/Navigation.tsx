@@ -230,9 +230,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                           }
                         ).cancelSync()
                         Toast.info('已发送取消同步请求，正在中断...')
-                      } catch (error) {
-                        
-                      }
+                      } catch (error) {}
                     }}
                   >
                     取消
@@ -257,7 +255,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               Toast.error(`同步失败: ${result.message}`)
             }
           } catch (error) {
-            
             Toast.error(`同步失败: ${error}`)
           }
         }
@@ -281,7 +278,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       // 获取文件夹列表
       const foldersResult = await window.api.markdown.getFolders()
 
-
       if (foldersResult.success && foldersResult.folders) {
         // 过滤掉.assets文件夹
         const filteredFolders = foldersResult.folders.filter(
@@ -295,10 +291,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           // 获取文件夹中的文件
           const filesResult = await window.api.markdown.getFiles(folder)
 
-
           // 检查是否为嵌套文件夹路径（包含斜杠）
           if (folder.includes('/')) {
-
             // 处理嵌套文件夹路径，例如 "parent/child"
             const pathParts = folder.split('/')
             let currentPath = ''
@@ -414,7 +408,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         setNavItems(folderItems)
       }
     } catch (error) {
-      
       Toast.error('加载文件列表失败')
     } finally {
       setIsLoading(false)
@@ -495,8 +488,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     e.preventDefault()
     e.stopPropagation()
 
-
-
     // 计算菜单位置，确保不超出窗口边界
     const { x, y } = calculateMenuPosition(e.clientX, e.clientY, isFolder, false)
 
@@ -514,8 +505,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   // 处理空白区域右键菜单
   const handleEmptyAreaContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
-
-
 
     // 确保点击的是空白区域，而非Tree中的节点
     const target = e.target as HTMLElement
@@ -733,7 +722,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       if (type === 'folder') {
         // 创建文件夹
 
-
         // 检查API是否存在
         if (!window.api.markdown.createFolder) {
           Toast.error('创建文件夹API不存在，请检查应用实现')
@@ -742,7 +730,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
         // 处理子文件夹情况：如果有父文件夹，则创建"父文件夹/新文件夹"格式的路径
         const folderPath = finalFolder ? `${finalFolder}/${name}` : name
-
 
         const result = await window.api.markdown.createFolder(folderPath)
 
@@ -759,8 +746,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           Toast.error('未指定文件夹')
           return
         }
-
-
 
         // 检查API是否存在
         if (!window.api.markdown.createNote) {
@@ -1014,8 +999,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 // 通过节点的key判断是文件夹还是文件
                 const nodeKey = node.key?.toString() || ''
                 const isFolder = nodeKey.startsWith('folder:')
-
-
 
                 // 先转换成unknown再转成React.MouseEvent类型
                 const mouseEvent = e.nativeEvent as unknown as React.MouseEvent

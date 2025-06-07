@@ -83,7 +83,6 @@ export async function testOpenAIConnection(
       message: content ? `连接成功!` : '连接成功!'
     }
   } catch (error: unknown) {
-
     // 提取更友好的错误信息
     let errorMessage = '连接失败'
 
@@ -186,7 +185,6 @@ export async function generateContent(
       return { success: false, error: '生成内容为空' }
     }
   } catch (error: unknown) {
-
     // 提取更友好的错误信息
     let errorMessage = '生成失败'
 
@@ -220,10 +218,6 @@ export async function streamGenerateContent(
   request: ContentGenerationRequest
 ): Promise<EventEmitter> {
   const eventEmitter = new EventEmitter()
-  const requestId = `server_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-
-
   // 异步处理流式请求
   ;(async (): Promise<void> => {
     try {
@@ -267,14 +261,10 @@ export async function streamGenerateContent(
         // 用于累积完整响应
         let fullContent = ''
         let chunkCount = 0
-        let lastChunkTime = Date.now()
 
         // 处理流式响应
         for await (const chunk of stream) {
           try {
-            // 更新最后接收数据块的时间
-            lastChunkTime = Date.now()
-
             // 提取delta内容
             const content = chunk.choices[0]?.delta?.content || ''
 
@@ -299,14 +289,11 @@ export async function streamGenerateContent(
         // 流结束，发送完成事件
         eventEmitter.emit('done', fullContent)
       } catch (apiError) {
-
         // 提取更友好的错误信息
         let errorMessage = '流式生成失败'
 
         if (apiError instanceof Error) {
           errorMessage += `: ${apiError.message}`
-
-
         }
 
         // 处理API错误的状态码
@@ -330,7 +317,6 @@ export async function streamGenerateContent(
         eventEmitter.emit('error', errorMessage)
       }
     } catch (error) {
-
       // 提供更具体的错误信息
       const errorMessage = error instanceof Error ? `发生错误: ${error.message}` : '发生未知错误'
 

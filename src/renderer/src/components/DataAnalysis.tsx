@@ -857,7 +857,6 @@ const DataAnalysis: React.FC = () => {
         }
       }
     } catch (error) {
-      
       // 初始化时的缓存加载失败不显示错误Toast，避免干扰用户
       console.warn('初始化时加载缓存失败，将等待用户手动触发分析')
     } finally {
@@ -895,7 +894,6 @@ const DataAnalysis: React.FC = () => {
         setSelectedModelId(models[0].id)
       }
     } catch (error) {
-      
       Toast.error({
         content: '加载AI模型失败'
       })
@@ -1686,7 +1684,7 @@ const DataAnalysis: React.FC = () => {
               option={option}
               style={{ height: '100%', width: '100%' }}
               onEvents={{
-                click: (params) => {
+                click: () => {
                   // 标签点击事件处理
                 }
               }}

@@ -325,7 +325,6 @@ export const getGlobalTagSuggestions = async (
       }
     }))
   } catch (error) {
-    
     return []
   }
 }
@@ -334,7 +333,5 @@ export const getGlobalTagSuggestions = async (
 export const refreshGlobalTagCache = async (): Promise<void> => {
   try {
     await globalTagManager.refreshGlobalTags()
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 }

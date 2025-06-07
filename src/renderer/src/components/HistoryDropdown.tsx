@@ -48,11 +48,9 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
       if (response.success && response.history) {
         setHistoryList(response.history)
       } else {
-        
         setHistoryList([])
       }
     } catch (error) {
-      
       setHistoryList([])
     } finally {
       setLoading(false)
@@ -75,9 +73,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
         setPreviewVisible(true)
         setDropdownVisible(false) // 关闭下拉菜单
       }
-    } catch (error) {
-      
-    }
+    } catch (error) {}
   }
 
   // 恢复历史版本

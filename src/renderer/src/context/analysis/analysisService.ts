@@ -179,8 +179,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         analysisCached: false // 重置缓存状态，确保新分析不显示缓存标识
       })
 
-
-
       // 获取基础统计数据
       set({ progress: 30 })
       let statsResult
@@ -516,7 +514,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           }
         }
       } catch (jsonError) {
-        
         throw {
           type: AnalysisErrorType.API_ERROR,
           message: `处理AI返回的数据格式失败: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
@@ -525,8 +522,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         }
       }
     } catch (error) {
-      
-
       // 检查是否为自定义错误对象（包含type字段）
       let analysisError: AnalysisError
       if (error && typeof error === 'object' && 'type' in error && 'message' in error) {
@@ -555,15 +550,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         (analysisError.type === AnalysisErrorType.NETWORK_ERROR ||
           analysisError.type === AnalysisErrorType.DATA_ERROR)
       ) {
-        
-
         // 延迟后自动重试
         setTimeout(async () => {
           try {
             await get().retryAnalysis()
-          } catch (retryError) {
-            
-          }
+          } catch (retryError) {}
         }, 2000) // 2秒后重试
       }
     }

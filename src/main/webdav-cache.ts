@@ -64,7 +64,6 @@ async function loadCache(): Promise<SyncCacheData> {
     cacheLoaded = true
     return cacheData
   } catch (error) {
-    
     // 出错时返回新的空缓存
     cacheData = {
       version: '1.0',
@@ -87,7 +86,6 @@ async function saveCache(data: SyncCacheData): Promise<boolean> {
     await fs.promises.writeFile(cacheFilePath, JSON.stringify(data, null, 2), 'utf-8')
     return true
   } catch (error) {
-    
     return false
   }
 }
@@ -113,7 +111,6 @@ export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncR
       fileSize: record.fileSize
     }
   } catch (error) {
-    
     return null
   }
 }
@@ -136,7 +133,6 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     // 保存更新后的缓存
     return await saveCache(cache)
   } catch (error) {
-    
     return false
   }
 }

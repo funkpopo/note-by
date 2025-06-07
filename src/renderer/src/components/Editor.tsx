@@ -280,9 +280,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             setSelectedModelId(configs[0].id)
           }
         }
-      } catch (error) {
-        
-      }
+      } catch (error) {}
     }
 
     loadApiConfigs()
@@ -294,9 +292,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       try {
         // 预加载全局标签数据，不阻塞界面
         globalTagManager.preloadTags()
-      } catch (error) {
-        
-      }
+      } catch (error) {}
     }
 
     preloadGlobalTags()
@@ -396,8 +392,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 添加uploadFile函数，用于处理文件上传
       uploadFile: async (file: File): Promise<string> => {
         try {
-
-
           // 创建图片元素以获取原始尺寸信息
           const getImageDimensions = (
             imageFile: File
@@ -422,12 +416,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           let imageDimensions: { width: number; height: number } | null = null
           if (file.type.startsWith('image/')) {
             imageDimensions = await getImageDimensions(file)
-
           }
 
           // 确保有当前文件夹和文件
           if (!currentFolder || !currentFile) {
-
             // 构造默认文件路径（使用纯文件名，不包含目录部分）
             const filePath = 'temp_assets.md'
 
@@ -452,14 +444,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               throw new Error(result.error || '文件上传失败')
             }
 
-            
-
             // 确保URL格式正确
             const imageUrl = result.url
             if (!imageUrl) {
               throw new Error('上传成功但未返回URL')
             }
-
 
             return imageUrl
           }
@@ -488,25 +477,20 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             throw new Error(result.error || '文件上传失败')
           }
 
-
           // 确保URL格式正确
           const imageUrl = result.url
           if (!imageUrl) {
             throw new Error('上传成功但未返回URL')
           }
 
-
           return imageUrl
         } catch (error) {
-          
           Toast.error(`文件上传失败: ${error instanceof Error ? error.message : String(error)}`)
           throw error
         }
       },
       // 添加 resolveFileUrl 函数以确保图片 URL 能正确解析
       resolveFileUrl: async (url: string): Promise<string> => {
-
-
         // 如果 URL 已经是 http/https/data 格式，直接返回
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
           return url
@@ -520,7 +504,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             try {
               // 尝试解码URL
               decodedUrl = decodeURI(url)
-
             } catch (e) {
               // 解码失败，尝试不解码的方式
               console.warn('解码URL失败，尝试其他方式:', e)
@@ -532,7 +515,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 // 先将%5C替换为/
                 const fixedUrl = url.replace(/%5C/g, '/')
 
-
                 // 检查是否包含双斜杠问题
                 const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
                 if (doubleDriveSlashRegex.test(fixedUrl)) {
@@ -542,9 +524,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 }
 
                 return fixedUrl
-              } catch (e) {
-                
-              }
+              } catch (e) {}
             }
 
             // 确保使用正斜杠
@@ -560,7 +540,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 修复Windows盘符后的双斜杠问题
             const doubleDriveSlashRegex = /file:\/\/\/([A-Za-z]:)\/\//
             if (doubleDriveSlashRegex.test(normalizedUrl)) {
-                          const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
+              const fixedUrl = normalizedUrl.replace(doubleDriveSlashRegex, 'file:///$1/')
               return fixedUrl
             }
 
@@ -573,10 +553,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               return fixedUrl
             }
 
-
             return normalizedUrl
           } catch (e) {
-            
             return url
           }
         }
@@ -597,11 +575,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             } else {
               // 没有盘符，可能是相对路径
               const fileUrl = `file:///${cleanPath}`
-              
+
               return fileUrl
             }
           } catch (e) {
-            
             return url
           }
         }
@@ -616,7 +593,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
             return fileUrl
           } catch (e) {
-            
             return url
           }
         }
@@ -631,7 +607,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
             return fileUrl
           } catch (e) {
-            
             return url
           }
         }
@@ -710,7 +685,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
         if (tagsMatch && tagsMatch[1]) {
           extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
-
         }
 
         // 移除标签信息行，避免在编辑器中显示
@@ -719,7 +693,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         // 预处理Markdown内容，将@tag格式转换为可识别的特殊格式
         // 同时提取内联的@标签
         const inlineTagsFromMarkdown = extractTagsFromMarkdown(contentWithoutTags)
-
 
         // 合并所有标签
         const allTags = [...new Set([...extractedTags, ...inlineTagsFromMarkdown])]
@@ -772,7 +745,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         lastLoadedFileRef.current = null
       }
     } catch (error) {
-      
       Toast.error('加载文件内容失败')
       lastLoadedFileRef.current = null
     } finally {
@@ -828,9 +800,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           if (normalizedCurrent === normalizedSaved) {
             setIsEditing(false)
           }
-        } catch (error) {
-          
-        }
+        } catch (error) {}
       }, 500)
 
       return () => clearTimeout(timer)
@@ -854,7 +824,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       // 提取标签信息
       const tags = extractTags(blocks)
-
 
       // 更新标签列表状态
       setTagList(tags)
@@ -955,13 +924,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           } else {
             setIsEditing(false)
           }
-        } catch (error) {
-          
-        }
+        } catch (error) {}
       }, 300) // 300ms防抖延迟
-    } catch (error) {
-      
-    }
+    } catch (error) {}
   }, [editor, triggerAutoSave])
 
   // 获取当前选中模型的详细信息
@@ -995,7 +960,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           setAvailableFolders(['default'])
         }
       } catch (error) {
-        
         setAvailableFolders(['default'])
       }
     }
@@ -1046,7 +1010,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.success('已恢复历史版本')
         setIsEditing(true)
       } catch (error) {
-        
         Toast.error('恢复历史版本失败')
       }
     }
@@ -1105,7 +1068,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.error(`导出失败: ${result.error}`)
       }
     } catch (error) {
-      
       Toast.error('导出PDF失败')
     } finally {
       setIsExporting(false)
@@ -1134,7 +1096,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         Toast.error(`导出失败: ${result.error}`)
       }
     } catch (error) {
-      
       Toast.error('导出DOCX失败')
     } finally {
       setIsExporting(false)
@@ -1182,13 +1143,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     // 根据选中的ID查找配置
     const selectedConfig = AiApiConfigs.find((config) => config.id === selectedModelId)
     if (!selectedConfig) {
-      
       setAiStatus('error')
       return null
     }
 
     try {
-
       setAiStatus('loading')
 
       // 创建OpenAI实例
@@ -1196,22 +1155,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         apiKey: selectedConfig.apiKey,
         baseURL: selectedConfig.apiUrl,
         fetch: async (url, options) => {
-
-
           // 使用系统fetch并记录结果
           try {
             const response = await fetch(url, options)
 
-
-
             if (!response.ok) {
-              
               // 不抛出错误，让ai-sdk处理
             }
 
             return response
           } catch (error) {
-            
             throw error
           }
         }
@@ -1219,12 +1172,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
       const model = provider(selectedConfig.modelName as string)
 
-      
       setAiStatus('ready')
 
       return model
     } catch (error) {
-      
       setAiStatus('error')
       const errorMessage = error instanceof Error ? error.message : String(error)
       Toast.error(`创建AI模型实例失败: ${errorMessage}`)
@@ -1240,7 +1191,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       setAiStatus('idle')
       return
     }
-
 
     const model = createOpenAIModel()
     setCurrentAiModel(model)
@@ -1590,7 +1540,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
                   return uniqueItems
                 } catch (error) {
-                  
                   // 降级到仅使用本地标签
                   return getTagMenuItems(editor, tagList, query)
                 }

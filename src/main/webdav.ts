@@ -1218,7 +1218,6 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       skippedDownload
     }
   } catch (error) {
-
     // 检查是否是因为用户取消而失败
     if (String(error).includes('用户取消了同步')) {
       return {

@@ -144,9 +144,7 @@ function getMarkdownFolderPath(): string {
     if (!fsSync.existsSync(defaultAssetsFolderPath)) {
       fsSync.mkdirSync(defaultAssetsFolderPath, { recursive: true })
     }
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 
   return markdownPath
 }
@@ -156,7 +154,6 @@ async function ensureMarkdownFolders(folderPath: string): Promise<void> {
   try {
     await fsPromises.mkdir(folderPath, { recursive: true })
   } catch (error) {
-    
     throw error
   }
 }
@@ -259,9 +256,7 @@ async function performAutoSync(): Promise<void> {
         })
         break
     }
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 }
 
 // GitHub releases API URL
@@ -322,7 +317,6 @@ async function checkForUpdates(): Promise<{
         // 保存直接连接的错误
         directConnectionError =
           directError instanceof Error ? directError : new Error(String(directError))
-        
       } finally {
         // 恢复原始环境变量
         if (originalHttpProxy) process.env.HTTP_PROXY = originalHttpProxy
@@ -357,7 +351,6 @@ async function checkForUpdates(): Promise<{
       currentVersion
     }
   } catch (error) {
-    
     return {
       hasUpdate: false,
       latestVersion: '',
@@ -384,9 +377,7 @@ async function checkUpdatesOnStartup(): Promise<void> {
         }
       }
     }
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 }
 
 // This method will be called when Electron has finished
@@ -418,12 +409,10 @@ app.whenReady().then(() => {
       // 安全检查：确保路径在应用数据目录内（这里用markdownRoot作为基准）
       const markdownRoot = getMarkdownFolderPath()
       if (!normalizedPath.startsWith(markdownRoot)) {
-        
         return callback({ error: -2 }) // 文件不存在或无权限
       }
       callback({ path: normalizedPath })
     } catch (error) {
-      
       callback({ error: -2 })
     }
   })
@@ -519,8 +508,6 @@ app.whenReady().then(() => {
       // 添加超时机制
       const timeoutMs = 60000 // 60秒超时
       const timeoutId = setTimeout(() => {
-        
-
         if (!sender.isDestroyed()) {
           sender.send(`stream-error-${streamId}`, {
             error: `生成超时 (${timeoutMs / 1000}秒). 请检查网络连接或API服务状态。`
@@ -607,7 +594,6 @@ app.whenReady().then(() => {
 
       return { success: true }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -624,7 +610,6 @@ app.whenReady().then(() => {
 
       return { success: true }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -650,7 +635,6 @@ app.whenReady().then(() => {
 
       return { success: true, path: fullPath }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -680,7 +664,6 @@ app.whenReady().then(() => {
 
       return { success: true, path: savePath }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -763,7 +746,6 @@ app.whenReady().then(() => {
 
       return { success: true, path: savePath }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -993,9 +975,7 @@ ${htmlContent}
               folders.push(...subFolders)
             }
           }
-        } catch (error) {
-          
-        }
+        } catch (error) {}
 
         return folders
       }
@@ -1003,7 +983,6 @@ ${htmlContent}
       const folders = await getAllFolders(markdownRoot)
       return { success: true, folders }
     } catch (error) {
-      
       return { success: false, error: String(error), folders: [] }
     }
   })
@@ -1021,7 +1000,6 @@ ${htmlContent}
       try {
         await fsPromises.access(folderPath)
       } catch (error) {
-        
         return { success: false, error: String(error), files: [] }
       }
 
@@ -1032,7 +1010,6 @@ ${htmlContent}
 
       return { success: true, files }
     } catch (error) {
-      
       return { success: false, error: String(error), files: [] }
     }
   })
@@ -1056,7 +1033,6 @@ ${htmlContent}
 
       return { success: true, content }
     } catch (error) {
-      
       return { success: false, error: String(error), content: '' }
     }
   })
@@ -1066,7 +1042,6 @@ ${htmlContent}
     try {
       // 验证文件夹名称
       if (!folderName || folderName.trim() === '') {
-        
         return { success: false, error: '文件夹名称不能为空' }
       }
 
@@ -1094,7 +1069,6 @@ ${htmlContent}
         if (stat.isDirectory()) {
           return { success: false, error: '文件夹已存在' }
         } else {
-          
           return { success: false, error: '该名称已被文件占用' }
         }
       } catch {}
@@ -1104,7 +1078,6 @@ ${htmlContent}
 
       return { success: true, path: fullPath }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1127,7 +1100,6 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1159,7 +1131,6 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1210,7 +1181,6 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1246,7 +1216,6 @@ ${htmlContent}
 
       return { success: true }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1257,7 +1226,6 @@ ${htmlContent}
       const result = await testWebDAVConnection(config)
       return result
     } catch (error) {
-      
       return { success: false, message: `测试连接失败: ${error}` }
     }
   })
@@ -1273,7 +1241,6 @@ ${htmlContent}
       const result = await syncLocalToRemote(config)
       return result
     } catch (error) {
-      
       return {
         success: false,
         message: `同步失败: ${error}`,
@@ -1294,7 +1261,6 @@ ${htmlContent}
       const result = await syncRemoteToLocal(config)
       return result
     } catch (error) {
-      
       return {
         success: false,
         message: `同步失败: ${error}`,
@@ -1375,7 +1341,6 @@ ${htmlContent}
         }
       }
     } catch (error) {
-      
       return {
         success: false,
         message: '验证过程中发生错误',
@@ -1411,7 +1376,6 @@ ${htmlContent}
         message: '主密码设置成功'
       }
     } catch (error) {
-      
       return {
         success: false,
         message: '设置过程中发生错误',
@@ -1434,7 +1398,6 @@ ${htmlContent}
         message: result.message || 'WebDAV配置已更新'
       }
     } catch (error) {
-      
       return {
         success: false,
         message: '配置更新失败',
@@ -1468,7 +1431,6 @@ ${htmlContent}
               cleanPath = decodedPath
             }
           } catch (decodeError) {
-            
             // 继续使用原始路径
           }
 
@@ -1485,11 +1447,9 @@ ${htmlContent}
             const base64Data = `data:image/${path.extname(cleanPath).substring(1)};base64,${fileBuffer.toString('base64')}`
             fileData = base64Data
           } catch (readError) {
-            
             // 如果读取失败，保持原始数据
           }
         } catch (error) {
-          
           // 错误处理，继续使用原始fileData
         }
       }
@@ -1566,7 +1526,6 @@ ${htmlContent}
           fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`
         }
       } catch (error) {
-        
         // 使用备用方法生成URL
         fileUrl = `file:///${markdownImagePath.replace(/\\/g, '/')}`
       }
@@ -1577,7 +1536,6 @@ ${htmlContent}
         path: savePath
       }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1593,7 +1551,6 @@ ${htmlContent}
       const history = await getNoteHistory(filePath)
       return { success: true, history }
     } catch (error) {
-      
       return { success: false, error: String(error), history: [] }
     }
   })
@@ -1607,7 +1564,6 @@ ${htmlContent}
       }
       return { success: true, history }
     } catch (error) {
-      
       return { success: false, error: String(error), history: null }
     }
   })
@@ -1624,7 +1580,6 @@ ${htmlContent}
       const stats = await getNoteHistoryStats()
       return { success: true, stats }
     } catch (error) {
-      
       return { success: false, error: String(error), stats: null }
     }
   })
@@ -1635,7 +1590,6 @@ ${htmlContent}
       const activityData = await getUserActivityData(days)
       return { success: true, activityData }
     } catch (error) {
-      
       return { success: false, error: String(error), activityData: null }
     }
   })
@@ -1687,7 +1641,6 @@ ${htmlContent}
       const tagsData = await getDocumentTagsData(markdownPath)
       return { success: true, tagsData }
     } catch (error) {
-      
       return { success: false, error: String(error), tagsData: null }
     }
   })
@@ -1720,13 +1673,11 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_OPEN, async (_, options: Electron.OpenDialogOptions) => {
     try {
       if (!mainWindow) {
-        
         return undefined
       }
       const result = await dialog.showOpenDialog(mainWindow, options)
       return result.canceled ? undefined : result.filePaths[0]
     } catch (error) {
-      
       return undefined
     }
   })
@@ -1735,7 +1686,6 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.MINDMAP_SAVE_FILE, async (_, content: string) => {
     try {
       if (!mainWindow) {
-        
         return { success: false, error: '主窗口未初始化' }
       }
 
@@ -1753,7 +1703,6 @@ ${htmlContent}
       await fsPromises.writeFile(savePath, content, 'utf-8')
       return { success: true, path: savePath }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1762,7 +1711,6 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.MINDMAP_LOAD_FILE, async () => {
     try {
       if (!mainWindow) {
-        
         return { success: false, error: '主窗口未初始化' }
       }
 
@@ -1781,7 +1729,6 @@ ${htmlContent}
       const content = await fsPromises.readFile(filePath, 'utf-8')
       return { success: true, data: content }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1790,7 +1737,6 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.MINDMAP_EXPORT_HTML, async (_, imageDataUrl: string) => {
     try {
       if (!mainWindow) {
-        
         return { success: false, error: '主窗口未初始化' }
       }
 
@@ -1856,7 +1802,6 @@ ${htmlContent}
       await fsPromises.writeFile(savePath, htmlContent, 'utf-8')
       return { success: true, path: savePath }
     } catch (error) {
-      
       return { success: false, error: String(error) }
     }
   })
@@ -1885,12 +1830,8 @@ ${htmlContent}
         // 初始化WebDAV同步缓存表
         return initWebDAVSyncCacheTable()
       })
-      .catch((error) => {
-        
-      })
-  } catch (error) {
-    
-  }
+      .catch(() => {})
+  } catch {}
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

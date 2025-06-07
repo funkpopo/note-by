@@ -215,46 +215,27 @@ const api = {
       const baseRetryDelay = retryOptions.retryDelay || 1000
       const currentAttempt = retryOptions.currentAttempt || 0
 
-      
-        `[AI请求] 开始流式内容生成: 模型=${request.modelName}, URL=${request.apiUrl.substring(0, 20)}..., 尝试次数=${currentAttempt + 1}/${maxRetries + 1}`
-      )
-
       return new Promise((resolve) => {
-        // 生成唯一请求ID用于跟踪
-        const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-        
-
         // 添加超时处理
         const timeoutMs = 30000 // 30秒超时
         const timeoutId = setTimeout(() => {
-          
-
           // 检查是否已经有监听器并清理
           if (typeof dataListener === 'function') {
             try {
-              
               ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
-            } catch (err) {
-              
-            }
+            } catch (err) {}
           }
 
           if (typeof doneListener === 'function') {
             try {
-              
               ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
-            } catch (err) {
-              
-            }
+            } catch (err) {}
           }
 
           if (typeof errorListener === 'function') {
             try {
-              
               ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
-            } catch (err) {
-              
-            }
+            } catch (err) {}
           }
 
           callbacks.onError(`请求超时 (${timeoutMs / 1000}秒)`)
@@ -274,56 +255,42 @@ const api = {
 
         // 清理所有监听器的函数
         const cleanupListeners = (): void => {
-          
           clearTimeout(timeoutId)
 
           if (streamId) {
             if (typeof dataListener === 'function') {
               try {
-                
                 ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
-              } catch (err) {
-                
-              }
+              } catch (err) {}
             }
 
             if (typeof doneListener === 'function') {
               try {
-                
                 ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
-              } catch (err) {
-                
-              }
+              } catch (err) {}
             }
 
             if (typeof errorListener === 'function') {
               try {
-                
                 ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
-              } catch (err) {
-                
-              }
+              } catch (err) {}
             }
           }
         }
 
         // 发送流式生成请求
-        
+
         ipcRenderer
           .invoke(IPC_CHANNELS.STREAM_GENERATE_CONTENT, {
             ...request,
             stream: true // 确保stream标志为true
           })
           .then((result: { success: boolean; streamId?: string; error?: string }) => {
-            
-
             if (result.success && result.streamId) {
               streamId = result.streamId
-              
 
               // 设置监听器接收数据块
               dataListener = (_event: Electron.IpcRendererEvent, data: { chunk: string }): void => {
-                
                 callbacks.onData(data.chunk)
               }
 
@@ -332,7 +299,6 @@ const api = {
                 _event: Electron.IpcRendererEvent,
                 data: { content: string }
               ): void => {
-                
                 callbacks.onDone(data.content)
                 cleanupListeners()
               }
@@ -342,13 +308,12 @@ const api = {
                 _event: Electron.IpcRendererEvent,
                 data: { error: string }
               ): void => {
-                
                 callbacks.onError(data.error)
                 cleanupListeners()
               }
 
               // 添加所有监听器
-              
+
               ipcRenderer.on(`stream-data-${streamId}`, dataListener)
               ipcRenderer.on(`stream-done-${streamId}`, doneListener)
               ipcRenderer.on(`stream-error-${streamId}`, errorListener)
@@ -356,35 +321,30 @@ const api = {
               resolve(result)
             } else {
               // 请求失败，直接调用错误回调
-              
+
               clearTimeout(timeoutId)
 
               if (result.error) {
                 callbacks.onError(result.error)
               } else {
-                callbacks.onError('未知错误')
+                callbacks.onError('调用错误')
               }
               resolve(result)
             }
           })
           .catch((error) => {
             // 处理请求过程中的异常
-            const errorMessage = error instanceof Error ? error.message : '未知错误'
-            
+            const errorMessage = error instanceof Error ? error.message : '调用错误'
+
             clearTimeout(timeoutId)
 
             // 添加自动重试逻辑
             if (currentAttempt < maxRetries) {
-              
-
               // 使用指数退避策略计算延迟
               const retryDelay = baseRetryDelay * Math.pow(2, currentAttempt)
-              
 
               // 延迟后重试
               setTimeout(() => {
-                
-
                 // 递归调用自身，传递更新后的重试计数
                 api.openai
                   .streamGenerateContent(request, callbacks, {
@@ -398,7 +358,6 @@ const api = {
                   })
               }, retryDelay)
             } else {
-              
               callbacks.onError(`${errorMessage} (已尝试 ${maxRetries + 1} 次)`)
               resolve({ success: false, error: errorMessage })
             }
@@ -800,9 +759,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    
-  }
+  } catch (error) {}
 } else {
   // @ts-ignore (define in dts)
   window.electron = electronAPI

@@ -95,9 +95,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         // 同步enabled状态
         setEnabledState((settings.webdav as WebDAVConfig).enabled || false)
       }
-    } catch (error) {
-      
-    }
+    } catch (error) {}
   }, [formApi])
 
   // 从设置加载WebDAV配置
@@ -126,7 +124,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       // 通知主进程WebDAV配置已变更，立即生效
       await window.api.webdav.notifyConfigChanged()
     } catch (error) {
-      
       Toast.error('保存WebDAV配置失败')
     }
   }
@@ -240,7 +237,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         setPasswordError(result.error || result.message || '设置主密码失败')
       }
     } catch (error) {
-      
       Toast.error('设置主密码时发生错误')
       setPasswordError('设置主密码时发生错误')
     } finally {
@@ -254,7 +250,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       const result = await window.api.webdav.verifyMasterPassword(password)
       return result.success
     } catch (error) {
-      
       return false
     }
   }
@@ -361,7 +356,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         setPasswordError(result.error || result.message || '更改密码失败')
       }
     } catch (error) {
-      
       Toast.error('更改密码时发生错误')
       setPasswordError('更改密码时发生错误')
     } finally {
@@ -424,7 +418,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         })
       }
     } catch (error) {
-      
       Toast.error(`测试连接失败: ${error}`)
       setSyncStatus({
         show: true,
@@ -486,7 +479,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           }
         }
       } catch (error) {
-        
         Toast.error(`上传失败: ${error}`)
         setSyncStatus({
           show: true,
@@ -559,7 +551,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           }
         }
       } catch (error) {
-        
         Toast.error(`下载失败: ${error}`)
         setSyncStatus({
           show: true,
@@ -633,7 +624,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           }
         }
       } catch (error) {
-        
         Toast.error(`同步失败: ${error}`)
         setSyncStatus({
           show: true,
@@ -667,9 +657,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           setEnabledState(currentValues.enabled || false)
         }
         await saveConfig(currentValues)
-      } catch (error) {
-        
-      }
+      } catch (error) {}
     }
   }
 
@@ -693,7 +681,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         })
       }
     } catch (error) {
-      
       Toast.error(`清除缓存失败: ${error}`)
       setSyncStatus({
         show: true,
@@ -712,7 +699,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       await saveConfig(values)
       Toast.success('WebDAV配置已保存')
     } catch (formError) {
-      
       Toast.error('请检查表单填写是否正确')
     }
   }
@@ -763,7 +749,6 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
       Toast.success('已关闭自定义加密')
     } catch (error) {
-      
       Toast.error('关闭加密失败')
     }
   }

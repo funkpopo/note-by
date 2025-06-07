@@ -196,7 +196,6 @@ class GlobalTagManager {
 
       return response.tagsData
     } catch (error) {
-      
       // 返回空数据作为降级处理
       return {
         topTags: [],
@@ -257,9 +256,7 @@ class GlobalTagManager {
     this.listeners.forEach((listener) => {
       try {
         listener(data)
-      } catch (error) {
-        
-      }
+      } catch (error) {}
     })
   }
 }
