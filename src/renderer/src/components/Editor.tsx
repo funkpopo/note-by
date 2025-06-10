@@ -392,32 +392,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 添加uploadFile函数，用于处理文件上传
       uploadFile: async (file: File): Promise<string> => {
         try {
-          // 创建图片元素以获取原始尺寸信息
-          const getImageDimensions = (
-            imageFile: File
-          ): Promise<{ width: number; height: number }> => {
-            return new Promise((resolve) => {
-              const img = new Image()
-              img.onload = () => {
-                // 获取原始尺寸
-                resolve({
-                  width: img.naturalWidth,
-                  height: img.naturalHeight
-                })
-                // 清理URL对象
-                URL.revokeObjectURL(img.src)
-              }
-              // 创建临时URL用于加载图片
-              img.src = URL.createObjectURL(imageFile)
-            })
-          }
-
-          // 如果是图片文件，获取其原始尺寸
-          let imageDimensions: { width: number; height: number } | null = null
-          if (file.type.startsWith('image/')) {
-            imageDimensions = await getImageDimensions(file)
-          }
-
           // 确保有当前文件夹和文件
           if (!currentFolder || !currentFile) {
             // 构造默认文件路径（使用纯文件名，不包含目录部分）
