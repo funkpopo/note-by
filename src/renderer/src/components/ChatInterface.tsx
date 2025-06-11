@@ -439,6 +439,60 @@ ${contextInfo}
     ]
   )
 
+  // 消息删除处理 - 删除指定消息
+  const handleMessageDelete = useCallback(
+    (message: any) => {
+      console.log('消息删除被调用，消息:', message) // 调试信息
+
+      try {
+        // 如果正在生成且删除的是正在生成的消息，先停止生成
+        if (isGenerating && streamingMessageId === message.id?.toString() && currentStreamCleanup) {
+          currentStreamCleanup()
+        }
+
+        setMessages((prev) => {
+          let newMessages = [...prev]
+
+          // 如果删除的是用户消息，同时删除对应的AI回复
+          if (message.role === 'user') {
+            // 找到所有以此用户消息为父消息的AI回复
+            const relatedAIMessages = newMessages.filter(
+              (msg) => msg.parentId === message.id?.toString()
+            )
+
+            // 删除用户消息和相关的AI回复
+            newMessages = newMessages.filter(
+              (msg) =>
+                msg.id !== message.id && !relatedAIMessages.some((aiMsg) => aiMsg.id === msg.id)
+            )
+
+            // 如果删除的是最后一条用户消息，更新lastUserMessage
+            if (lastUserMessage && lastUserMessage.id === message.id) {
+              // 找到剩余消息中最后一条用户消息
+              const remainingUserMessages = newMessages.filter((msg) => msg.role === 'user')
+              setLastUserMessage(
+                remainingUserMessages.length > 0
+                  ? remainingUserMessages[remainingUserMessages.length - 1]
+                  : null
+              )
+            }
+          } else {
+            // 如果删除的是AI消息，只删除该消息
+            newMessages = newMessages.filter((msg) => msg.id !== message.id)
+          }
+
+          return newMessages
+        })
+
+        Toast.success('消息已删除')
+      } catch (error) {
+        console.error('消息删除失败:', error)
+        Toast.error('删除消息失败，请稍后重试')
+      }
+    },
+    [isGenerating, streamingMessageId, currentStreamCleanup, lastUserMessage]
+  )
+
   // Semi Chat组件的消息发送处理
   const handleChatMessageSend = useCallback(
     (content: string, _attachment?: any[]) => {
@@ -840,6 +894,7 @@ ${contextInfo}
             onChatsChange={handleChatsChange}
             onMessageSend={handleChatMessageSend}
             onMessageReset={handleMessageReset} // 添加消息重置回调
+            onMessageDelete={handleMessageDelete} // 添加消息删除回调
             onStopGenerator={handleStopGenerate}
             showStopGenerate={isGenerating}
             showClearContext={false}
