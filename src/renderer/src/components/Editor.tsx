@@ -900,14 +900,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     } catch (error) {}
   }, [editor, triggerAutoSave])
 
-  // 获取当前选中模型的详细信息
-  const getSelectedModel = useCallback(() => {
-    if (!selectedModelId || AiApiConfigs.length === 0) return null
-    return AiApiConfigs.find((config) => config.id === selectedModelId) || AiApiConfigs[0]
-  }, [selectedModelId, AiApiConfigs])
-
-
-
   const [showCreateDialog, setShowCreateDialog] = useState<boolean>(false)
   const [createDialogType, setCreateDialogType] = useState<'folder' | 'note'>('note')
   const [availableFolders, setAvailableFolders] = useState<string[]>(['default'])
