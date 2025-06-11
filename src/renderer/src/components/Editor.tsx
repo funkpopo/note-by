@@ -48,17 +48,9 @@ import { LanguageModelV1 } from '@ai-sdk/provider'
 import { zh as aiLocales } from '@blocknote/xl-ai/locales'
 import { CustomAIMenu } from './AICustomCommands'
 import { EditorSkeleton } from './Skeleton'
+import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 
-// 添加一个接口定义API配置
-interface AiApiConfig {
-  id: string
-  name: string
-  apiKey: string
-  apiUrl: string
-  modelName: string
-  temperature?: string
-  maxTokens?: string
-}
+
 
 // 添加接口定义
 interface MarkdownAPI {
@@ -270,21 +262,26 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   useEffect(() => {
     const loadApiConfigs = async (): Promise<void> => {
       try {
-        const settings = await window.api.settings.getAll()
-        if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
-          const configs = settings.AiApiConfigs as AiApiConfig[]
-          setApiConfigs(configs)
+        const configs = await modelSelectionService.getAvailableModels()
+        setApiConfigs(configs)
 
-          // 如果有配置且没有选中的模型，默认选择第一个
-          if (configs.length > 0 && !selectedModelId) {
-            setSelectedModelId(configs[0].id)
-          }
+        // 获取当前选中的模型ID
+        const currentSelectedId = await modelSelectionService.getSelectedModelId()
+        if (currentSelectedId && configs.some(config => config.id === currentSelectedId)) {
+          setSelectedModelId(currentSelectedId)
+        } else if (configs.length > 0) {
+          // 如果没有选中模型或选中的模型不存在，初始化默认模型
+          await modelSelectionService.initializeDefaultModel()
+          const newSelectedId = await modelSelectionService.getSelectedModelId()
+          setSelectedModelId(newSelectedId)
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error('加载API配置失败:', error)
+      }
     }
 
     loadApiConfigs()
-  }, [selectedModelId])
+  }, [])
 
   // 预加载全局标签数据
   useEffect(() => {
@@ -909,14 +906,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     return AiApiConfigs.find((config) => config.id === selectedModelId) || AiApiConfigs[0]
   }, [selectedModelId, AiApiConfigs])
 
-  // 将选中的模型信息存储到本地存储，以便AI功能组件获取
-  useEffect(() => {
-    const selectedModel = getSelectedModel()
-    if (selectedModel) {
-      // 将选中的模型信息设置到本地存储中，供AI功能组件使用
-      window.localStorage.setItem('selectedModelId', selectedModelId)
-    }
-  }, [selectedModelId, getSelectedModel])
+
 
   const [showCreateDialog, setShowCreateDialog] = useState<boolean>(false)
   const [createDialogType, setCreateDialogType] = useState<'folder' | 'note'>('note')
@@ -1267,7 +1257,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               <>
                 <Select
                   value={selectedModelId}
-                  onChange={(value) => setSelectedModelId(value as string)}
+                  onChange={async (value) => {
+                    const modelId = value as string
+                    setSelectedModelId(modelId)
+                    try {
+                      await modelSelectionService.setSelectedModelId(modelId)
+                    } catch (error) {
+                      console.error('保存选中模型失败:', error)
+                      Toast.error('保存模型选择失败')
+                    }
+                  }}
                   style={{ width: 150 }}
                   placeholder="选择AI模型"
                   disabled={AiApiConfigs.length === 0 || aiStatus === 'loading'}

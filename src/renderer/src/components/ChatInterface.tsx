@@ -14,6 +14,7 @@ import {
   Space
 } from '@douyinfe/semi-ui'
 import { IconSend, IconSearch, IconBookmark } from '@douyinfe/semi-icons'
+import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -52,17 +53,6 @@ interface ChatMessage {
   parentId?: string
 }
 
-// AI API配置接口
-interface AiApiConfig {
-  id: string
-  name: string
-  apiKey: string
-  apiUrl: string
-  modelName: string
-  temperature?: string
-  maxTokens?: string
-}
-
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -88,17 +78,23 @@ const ChatInterface: React.FC = () => {
   // 加载AI API配置
   const loadAiApiConfigs = useCallback(async () => {
     try {
-      const settings = await window.api.settings.get('AiApiConfigs')
-      if (settings && Array.isArray(settings)) {
-        setAiApiConfigs(settings)
-        if (settings.length > 0 && !selectedAiConfig) {
-          setSelectedAiConfig(settings[0].id)
-        }
+      const configs = await modelSelectionService.getAvailableModels()
+      setAiApiConfigs(configs)
+
+      // 获取当前选中的模型ID
+      const currentSelectedId = await modelSelectionService.getSelectedModelId()
+      if (currentSelectedId && configs.some(config => config.id === currentSelectedId)) {
+        setSelectedAiConfig(currentSelectedId)
+      } else if (configs.length > 0) {
+        // 如果没有选中模型或选中的模型不存在，初始化默认模型
+        await modelSelectionService.initializeDefaultModel()
+        const newSelectedId = await modelSelectionService.getSelectedModelId()
+        setSelectedAiConfig(newSelectedId)
       }
     } catch (error) {
       console.error('加载AI API配置失败:', error)
     }
-  }, [selectedAiConfig])
+  }, [])
 
   // 加载知识库配置
   const loadKnowledgeBaseConfig = useCallback(async () => {
@@ -849,7 +845,16 @@ ${contextInfo}
             {aiApiConfigs.length > 0 ? (
               <Select
                 value={selectedAiConfig}
-                onChange={(value) => setSelectedAiConfig(value as string)}
+                onChange={async (value) => {
+                  const modelId = value as string
+                  setSelectedAiConfig(modelId)
+                  try {
+                    await modelSelectionService.setSelectedModelId(modelId)
+                  } catch (error) {
+                    console.error('保存选中模型失败:', error)
+                    Toast.error('保存模型选择失败')
+                  }
+                }}
                 style={{ width: 150 }}
                 placeholder="选择AI模型"
               >

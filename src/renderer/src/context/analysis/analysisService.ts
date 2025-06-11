@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { modelSelectionService } from '../../services/modelSelectionService'
 import { filterThinkingContent } from '../../utils/filterThinking'
 
 // 数据指纹计算函数
@@ -142,9 +143,13 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   maxRetries: 3,
 
   // 设置选中的模型ID
-  setSelectedModelId: (modelId: string) => {
+  setSelectedModelId: async (modelId: string) => {
     set({ selectedModelId: modelId })
-    window.localStorage.setItem('selectedModelId', modelId)
+    try {
+      await modelSelectionService.setSelectedModelId(modelId)
+    } catch (error) {
+      console.error('保存选中模型失败:', error)
+    }
   },
 
   // 设置分析结果

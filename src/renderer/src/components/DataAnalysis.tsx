@@ -16,6 +16,7 @@ import { useAnalysisStore } from '../context/analysis/analysisService'
 import ReactECharts from 'echarts-for-react'
 import 'echarts-wordcloud'
 import { DataAnalysisSkeleton } from './Skeleton'
+import { modelSelectionService } from '../services/modelSelectionService'
 
 // 图谱数据接口定义
 interface GraphNode {
@@ -868,32 +869,28 @@ const DataAnalysis: React.FC = () => {
   // 加载可用的AI模型
   const loadAvailableModels = async (): Promise<void> => {
     try {
-      const settings = await window.api.settings.getAll()
-      const aiApiConfigs =
-        (settings.AiApiConfigs as Array<{
-          id: string
-          name: string
-          apiKey: string
-          apiUrl: string
-          modelName: string
-        }>) || []
+      const configs = await modelSelectionService.getAvailableModels()
 
       // 转换为下拉菜单选项格式
-      const models = aiApiConfigs.map((config) => ({
+      const models = configs.map((config) => ({
         id: config.id,
         name: config.name
       }))
 
       setAvailableModels(models)
 
-      // 获取存储的选中模型ID，或默认使用第一个
-      const savedModelId = window.localStorage.getItem('selectedModelId')
-      if (savedModelId && models.some((model) => model.id === savedModelId)) {
-        setSelectedModelId(savedModelId)
+      // 获取当前选中的模型ID
+      const currentSelectedId = await modelSelectionService.getSelectedModelId()
+      if (currentSelectedId && models.some((model) => model.id === currentSelectedId)) {
+        setSelectedModelId(currentSelectedId)
       } else if (models.length > 0) {
-        setSelectedModelId(models[0].id)
+        // 如果没有选中模型或选中的模型不存在，初始化默认模型
+        await modelSelectionService.initializeDefaultModel()
+        const newSelectedId = await modelSelectionService.getSelectedModelId()
+        setSelectedModelId(newSelectedId)
       }
     } catch (error) {
+      console.error('加载AI模型失败:', error)
       Toast.error({
         content: '加载AI模型失败'
       })
@@ -1971,8 +1968,17 @@ const DataAnalysis: React.FC = () => {
             <Select
               placeholder="选择AI模型"
               value={selectedModelId || undefined}
-              onChange={(value) => {
-                setSelectedModelId(value as string)
+              onChange={async (value) => {
+                const modelId = value as string
+                setSelectedModelId(modelId)
+                try {
+                  await modelSelectionService.setSelectedModelId(modelId)
+                } catch (error) {
+                  console.error('保存选中模型失败:', error)
+                  Toast.error({
+                    content: '保存模型选择失败'
+                  })
+                }
               }}
               style={{ width: 200 }}
             >

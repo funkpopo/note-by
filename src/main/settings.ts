@@ -77,6 +77,8 @@ const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
   AiApiConfigs: [] as AiApiConfig[],
+  // 全局选中的AI模型ID
+  selectedModelId: '',
   // 默认WebDAV配置
   webdav: {
     url: '',
