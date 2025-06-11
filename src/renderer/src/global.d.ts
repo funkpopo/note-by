@@ -89,6 +89,12 @@ interface Window {
         content?: string
         error?: string
       }>
+
+      // 停止流式生成
+      stopStreamGenerate: (streamId: string) => Promise<{
+        success: boolean
+        error?: string
+      }>
     }
     // API配置管理
     api: {

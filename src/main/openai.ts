@@ -218,6 +218,15 @@ export async function streamGenerateContent(
   request: ContentGenerationRequest
 ): Promise<EventEmitter> {
   const eventEmitter = new EventEmitter()
+
+  // 创建AbortController用于中断请求
+  const abortController = new AbortController()
+
+  // 添加停止方法到EventEmitter
+  eventEmitter.stop = () => {
+    abortController.abort()
+  }
+
   // 异步处理流式请求
   ;(async (): Promise<void> => {
     try {
@@ -250,12 +259,14 @@ export async function streamGenerateContent(
           maxRetries: 2 // 启用自动重试
         })
 
-        // 使用流式响应选项
+        // 使用流式响应选项，添加AbortController支持
         const stream = await openai.chat.completions.create({
           model: modelName,
           messages: [{ role: 'user', content: prompt }],
           max_tokens: maxTokens,
           stream: true
+        }, {
+          signal: abortController.signal
         })
 
         // 用于累积完整响应
@@ -264,6 +275,12 @@ export async function streamGenerateContent(
 
         // 处理流式响应
         for await (const chunk of stream) {
+          // 检查是否被中断
+          if (abortController.signal.aborted) {
+            eventEmitter.emit('error', '请求已被用户停止')
+            return
+          }
+
           try {
             // 提取delta内容
             const content = chunk.choices[0]?.delta?.content || ''
@@ -289,6 +306,12 @@ export async function streamGenerateContent(
         // 流结束，发送完成事件
         eventEmitter.emit('done', fullContent)
       } catch (apiError) {
+        // 检查是否是用户主动中断
+        if (abortController.signal.aborted) {
+          eventEmitter.emit('error', '请求已被用户停止')
+          return
+        }
+
         // 提取更友好的错误信息
         let errorMessage = '流式生成失败'
 

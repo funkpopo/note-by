@@ -269,28 +269,28 @@ body .semi-portal-inner {
 }
 
 /* 智能边缘检测 - 当弹出层接近边缘时自动调整 */
-body .semi-portal-inner[data-popper-placement*="top"] {
+body .semi-portal-inner[data-popper-placement*='top'] {
   /* 顶部弹出时，确保不会超出顶部边界 */
   max-width: min(350px, calc(100vw - 32px)) !important;
   max-height: min(250px, calc(100vh - 100px)) !important;
   transform-origin: bottom center !important;
 }
 
-body .semi-portal-inner[data-popper-placement*="bottom"] {
+body .semi-portal-inner[data-popper-placement*='bottom'] {
   /* 底部弹出时，确保不会超出底部边界 */
   max-width: min(350px, calc(100vw - 32px)) !important;
   max-height: min(250px, calc(100vh - 100px)) !important;
   transform-origin: top center !important;
 }
 
-body .semi-portal-inner[data-popper-placement*="left"] {
+body .semi-portal-inner[data-popper-placement*='left'] {
   /* 左侧弹出时，确保不会超出左边界 */
   max-width: min(300px, calc(100vw - 100px)) !important;
   max-height: min(200px, calc(100vh - 32px)) !important;
   transform-origin: center right !important;
 }
 
-body .semi-portal-inner[data-popper-placement*="right"] {
+body .semi-portal-inner[data-popper-placement*='right'] {
   /* 右侧弹出时，确保不会超出右边界 */
   max-width: min(300px, calc(100vw - 100px)) !important;
   max-height: min(200px, calc(100vh - 32px)) !important;
@@ -345,22 +345,22 @@ body .semi-portal-inner {
 }
 
 /* 针对不同方向的弹出层进行优化 */
-body .semi-portal-inner[data-popper-placement^="top"] {
+body .semi-portal-inner[data-popper-placement^='top'] {
   transform: translateY(-100%) !important;
   margin-bottom: 8px !important;
 }
 
-body .semi-portal-inner[data-popper-placement^="bottom"] {
+body .semi-portal-inner[data-popper-placement^='bottom'] {
   transform: translateY(0%) !important;
   margin-top: 8px !important;
 }
 
-body .semi-portal-inner[data-popper-placement^="left"] {
+body .semi-portal-inner[data-popper-placement^='left'] {
   transform: translateX(-100%) !important;
   margin-right: 8px !important;
 }
 
-body .semi-portal-inner[data-popper-placement^="right"] {
+body .semi-portal-inner[data-popper-placement^='right'] {
   transform: translateX(0%) !important;
   margin-left: 8px !important;
 }

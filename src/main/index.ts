@@ -66,6 +66,7 @@ const IPC_CHANNELS = {
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   GENERATE_CONTENT: 'openai:generate-content',
   STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
+  STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
@@ -479,6 +480,9 @@ app.whenReady().then(() => {
     return await generateContent(request)
   })
 
+  // 流式请求管理Map
+  const activeStreams = new Map<string, { emitter: any; cleanup: () => void }>()
+
   // 流式内容生成
   ipcMain.handle(IPC_CHANNELS.STREAM_GENERATE_CONTENT, async (event, request) => {
     try {
@@ -520,6 +524,9 @@ app.whenReady().then(() => {
             // 移除监听器失败，继续执行
           }
         }
+
+        // 从活跃流式请求Map中移除
+        activeStreams.delete(streamId)
       }
 
       // 添加超时机制
@@ -578,12 +585,43 @@ app.whenReady().then(() => {
       }
       emitter.on('error', listeners.error)
 
+      // 将流式请求添加到管理Map中
+      activeStreams.set(streamId, {
+        emitter,
+        cleanup: cleanupListeners
+      })
+
       // 返回流ID供客户端使用
       return { success: true, streamId }
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : '启动流式生成失败'
+      }
+    }
+  })
+
+  // 停止流式内容生成
+  ipcMain.handle(IPC_CHANNELS.STOP_STREAM_GENERATE, async (_, streamId: string) => {
+    try {
+      const streamInfo = activeStreams.get(streamId)
+      if (streamInfo) {
+        // 调用emitter的停止方法（如果存在）
+        if (streamInfo.emitter && typeof streamInfo.emitter.stop === 'function') {
+          streamInfo.emitter.stop()
+        }
+
+        // 清理监听器和从Map中移除
+        streamInfo.cleanup()
+
+        return { success: true }
+      } else {
+        return { success: false, error: '流式请求不存在或已完成' }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '停止流式生成失败'
       }
     }
   })

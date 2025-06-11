@@ -122,7 +122,9 @@ const Settings: React.FC = () => {
   // Embedding API配置状态
   const [embeddingApiConfigs, setEmbeddingApiConfigs] = useState<EmbeddingApiConfig[]>([])
   const [showEmbeddingModal, setShowEmbeddingModal] = useState(false)
-  const [currentEmbeddingConfig, setCurrentEmbeddingConfig] = useState<EmbeddingApiConfig | null>(null)
+  const [currentEmbeddingConfig, setCurrentEmbeddingConfig] = useState<EmbeddingApiConfig | null>(
+    null
+  )
   const [isEmbeddingEditMode, setIsEmbeddingEditMode] = useState(false)
 
   // 加载设置函数
@@ -717,7 +719,7 @@ const Settings: React.FC = () => {
 
       let updatedConfigs: EmbeddingApiConfig[]
       if (isEmbeddingEditMode) {
-        updatedConfigs = embeddingApiConfigs.map(config =>
+        updatedConfigs = embeddingApiConfigs.map((config) =>
           config.id === currentEmbeddingConfig.id ? currentEmbeddingConfig : config
         )
       } else {
@@ -735,7 +737,7 @@ const Settings: React.FC = () => {
 
   const handleDeleteEmbeddingConfig = async (configId: string): Promise<void> => {
     try {
-      const updatedConfigs = embeddingApiConfigs.filter(config => config.id !== configId)
+      const updatedConfigs = embeddingApiConfigs.filter((config) => config.id !== configId)
       await window.api.settings.set('embeddingApiConfigs', updatedConfigs)
       setEmbeddingApiConfigs(updatedConfigs)
 
@@ -759,7 +761,7 @@ const Settings: React.FC = () => {
   }
 
   const handleEmbeddingConfigInputChange = (key: string, value: any): void => {
-    setCurrentEmbeddingConfig(prev => {
+    setCurrentEmbeddingConfig((prev) => {
       if (!prev) return null
       return { ...prev, [key]: value }
     })
@@ -1038,7 +1040,9 @@ const Settings: React.FC = () => {
                   {/* Embedding API 配置 */}
                   <div style={{ marginBottom: 16 }}>
                     <Text strong>Embedding API 配置</Text>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginTop: 8 }}>
+                    <div
+                      style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginTop: 8 }}
+                    >
                       <div style={{ flex: 1 }}>
                         <Select
                           value={knowledgeBaseConfig.embedding.apiConfigId}
@@ -1046,18 +1050,14 @@ const Settings: React.FC = () => {
                           placeholder="选择Embedding API配置"
                           style={{ width: '100%' }}
                         >
-                          {embeddingApiConfigs.map(config => (
+                          {embeddingApiConfigs.map((config) => (
                             <Select.Option key={config.id} value={config.id}>
                               {config.name} ({config.modelName})
                             </Select.Option>
                           ))}
                         </Select>
                       </div>
-                      <Button
-                        icon={<IconPlus />}
-                        onClick={handleAddEmbeddingConfig}
-                        type="primary"
-                      >
+                      <Button icon={<IconPlus />} onClick={handleAddEmbeddingConfig} type="primary">
                         添加
                       </Button>
                     </div>
@@ -1438,11 +1438,7 @@ const Settings: React.FC = () => {
                           content="删除后无法恢复"
                           onConfirm={() => handleDeleteEmbeddingConfig(config.id)}
                         >
-                          <Button
-                            type="danger"
-                            size="small"
-                            icon={<IconDelete />}
-                          >
+                          <Button type="danger" size="small" icon={<IconDelete />}>
                             删除
                           </Button>
                         </Popconfirm>

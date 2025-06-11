@@ -21,6 +21,7 @@ const IPC_CHANNELS = {
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   GENERATE_CONTENT: 'openai:generate-content',
   STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
+  STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
   SAVE_MARKDOWN: 'markdown:save',
@@ -374,8 +375,19 @@ const api = {
         // 返回一个清理函数，允许调用者在组件卸载时手动清理
         return (): void => {
           cleanupListeners()
+          // 通知主进程停止流式请求
+          if (streamId) {
+            ipcRenderer.invoke(IPC_CHANNELS.STOP_STREAM_GENERATE, streamId).catch(() => {
+              // 忽略停止请求的错误
+            })
+          }
         }
       })
+    },
+
+    // 停止流式生成
+    stopStreamGenerate: (streamId: string): Promise<{ success: boolean; error?: string }> => {
+      return ipcRenderer.invoke(IPC_CHANNELS.STOP_STREAM_GENERATE, streamId)
     }
   },
   // API配置管理
