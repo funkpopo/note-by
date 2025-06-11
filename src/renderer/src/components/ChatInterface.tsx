@@ -860,7 +860,7 @@ ${contextInfo}
               >
                 {aiApiConfigs.map((config) => (
                   <Select.Option key={config.id} value={config.id}>
-                    {config.name} ({config.modelName})
+                    {config.name}
                   </Select.Option>
                 ))}
               </Select>

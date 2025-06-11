@@ -124,6 +124,11 @@ code {
   position: relative;
 }
 
+/* Semi Design Select下拉菜单优化 - 简化版本 */
+.semi-select-dropdown {
+  z-index: 10052 !important;
+}
+
 /* 针对 data-floating-ui-focusable 元素调整 z-index，确保不会遮挡弹出层 */
 [data-floating-ui-focusable] {
   z-index: 1000 !important; /* 设置一个比 semi-portal-inner 低的值 */
