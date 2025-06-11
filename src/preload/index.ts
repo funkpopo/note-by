@@ -70,7 +70,15 @@ const IPC_CHANNELS = {
   MINDMAP_LOAD_FILE: 'mindmap:load-file',
   MINDMAP_EXPORT_HTML: 'mindmap:export-html',
   DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
-  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog' // Re-using if a generic one is better, or make specific
+  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog', // Re-using if a generic one is better, or make specific
+  // 添加知识库相关IPC通道
+  KB_EMBED_DOCUMENT: 'kb:embed-document',
+  KB_SEARCH_DOCUMENTS: 'kb:search-documents',
+  KB_EMBED_ALL_DOCUMENTS: 'kb:embed-all-documents',
+  KB_REMOVE_DOCUMENT: 'kb:remove-document',
+  KB_GET_STATS: 'kb:get-stats',
+  KB_GET_EMBEDDING_MODELS: 'kb:get-embedding-models',
+  KB_GET_ALL_DOCUMENTS: 'kb:get-all-documents'
 }
 
 // 内容生成请求接口
@@ -749,6 +757,41 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_SAVE, options),
     showOpenDialog: (options: Electron.OpenDialogOptions): Promise<string | undefined> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_OPEN, options)
+  },
+  // 知识库相关API
+  knowledgeBase: {
+    // 向量化单个文档
+    embedDocument: (filePath: string, content: string, title?: string): Promise<any> =>
+      ipcRenderer.invoke(IPC_CHANNELS.KB_EMBED_DOCUMENT, filePath, content, title),
+    // 语义搜索
+    searchDocuments: (
+      query: string,
+      maxResults?: number,
+      similarityThreshold?: number
+    ): Promise<any> =>
+      ipcRenderer.invoke(IPC_CHANNELS.KB_SEARCH_DOCUMENTS, query, maxResults, similarityThreshold),
+    // 批量向量化所有文档
+    embedAllDocuments: (): Promise<any> => ipcRenderer.invoke(IPC_CHANNELS.KB_EMBED_ALL_DOCUMENTS),
+    // 删除文档向量
+    removeDocument: (filePath: string): Promise<any> =>
+      ipcRenderer.invoke(IPC_CHANNELS.KB_REMOVE_DOCUMENT, filePath),
+    // 获取知识库统计信息
+    getStats: (): Promise<any> => ipcRenderer.invoke(IPC_CHANNELS.KB_GET_STATS),
+    // 获取支持的embedding模型列表
+    getEmbeddingModels: (): Promise<any> =>
+      ipcRenderer.invoke(IPC_CHANNELS.KB_GET_EMBEDDING_MODELS),
+    // 获取所有知识库文档
+    getAllDocuments: (): Promise<any> => ipcRenderer.invoke(IPC_CHANNELS.KB_GET_ALL_DOCUMENTS),
+    // 监听向量化进度
+    onEmbedProgress: (
+      callback: (progress: { current: number; total: number; filePath: string }) => void
+    ) => {
+      ipcRenderer.on('kb:embed-progress', (_, progress) => callback(progress))
+    },
+    // 移除向量化进度监听器
+    removeEmbedProgressListener: () => {
+      ipcRenderer.removeAllListeners('kb:embed-progress')
+    }
   }
 }
 

@@ -15,7 +15,8 @@ import {
   IconChevronLeft,
   IconMoreStroked,
   IconMoon,
-  IconSun
+  IconSun,
+  IconComment
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
@@ -152,6 +153,16 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           setShowSecondaryNav(false)
           onNavChange('MindMap')
           setSelectedKeys(['MindMap'])
+        }
+      },
+      {
+        itemKey: 'Chat',
+        text: '对话',
+        icon: <IconComment size="large" />,
+        onClick: (): void => {
+          setShowSecondaryNav(false)
+          onNavChange('Chat')
+          setSelectedKeys(['Chat'])
         }
       },
       {

@@ -53,6 +53,25 @@ export interface WebDAVConfig {
   encryptionTestPlain?: string // 加密前的原始字符串
 }
 
+// Embedding配置接口
+export interface EmbeddingConfig {
+  enabled: boolean // 是否启用知识库功能
+  model: string // 使用的embedding模型
+  chunkSize: number // 文档分块大小
+  chunkOverlap: number // 分块重叠大小
+  autoEmbedding: boolean // 是否自动向量化新文档
+  apiConfigId?: string // 关联的API配置ID
+}
+
+// 知识库设置接口
+export interface KnowledgeBaseConfig {
+  embedding: EmbeddingConfig
+  searchSettings: {
+    maxResults: number // 最大搜索结果数
+    similarityThreshold: number // 相似度阈值
+  }
+}
+
 // 默认设置
 const defaultSettings = {
   theme: 'light',
@@ -78,7 +97,22 @@ const defaultSettings = {
     type: 'count', // 'count' 或 'time'
     maxCount: 20, // 保留的最大记录数
     maxDays: 7 // 保留的最大天数
-  }
+  },
+  // 默认知识库设置
+  knowledgeBase: {
+    embedding: {
+      enabled: false,
+      model: 'text-embedding-3-small', // 默认使用OpenAI的小模型
+      chunkSize: 1000,
+      chunkOverlap: 200,
+      autoEmbedding: false,
+      apiConfigId: undefined
+    },
+    searchSettings: {
+      maxResults: 10,
+      similarityThreshold: 0.7
+    }
+  } as KnowledgeBaseConfig
 }
 
 // 读取设置
@@ -235,4 +269,30 @@ export function decryptWebDAVWithMasterPassword(
   }
 
   return newConfig
+}
+
+// 获取知识库配置
+export function getKnowledgeBaseConfig(): KnowledgeBaseConfig {
+  const settings = readSettings()
+  return (settings.knowledgeBase as KnowledgeBaseConfig) || defaultSettings.knowledgeBase
+}
+
+// 更新知识库配置
+export function updateKnowledgeBaseConfig(config: KnowledgeBaseConfig): void {
+  const settings = readSettings()
+  settings.knowledgeBase = config
+  writeSettings(settings)
+}
+
+// 获取Embedding配置
+export function getEmbeddingConfig(): EmbeddingConfig {
+  const knowledgeBaseConfig = getKnowledgeBaseConfig()
+  return knowledgeBaseConfig.embedding
+}
+
+// 更新Embedding配置
+export function updateEmbeddingConfig(config: EmbeddingConfig): void {
+  const knowledgeBaseConfig = getKnowledgeBaseConfig()
+  knowledgeBaseConfig.embedding = config
+  updateKnowledgeBaseConfig(knowledgeBaseConfig)
 }

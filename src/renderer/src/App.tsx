@@ -5,6 +5,7 @@ import Settings from './components/Settings'
 import EditorComponent from './components/Editor'
 import DataAnalysis from './components/DataAnalysis'
 import MindMapPage from './components/MindMapPage'
+import ChatInterface from './components/ChatInterface'
 
 const App: React.FC = () => {
   const { Content } = Layout
@@ -45,6 +46,8 @@ const App: React.FC = () => {
         return <DataAnalysis />
       case 'MindMap':
         return <MindMapPage />
+      case 'Chat':
+        return <ChatInterface />
       default:
         return <div>分组管理内容</div>
     }
