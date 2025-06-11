@@ -260,14 +260,17 @@ export async function streamGenerateContent(
         })
 
         // 使用流式响应选项，添加AbortController支持
-        const stream = await openai.chat.completions.create({
-          model: modelName,
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: maxTokens,
-          stream: true
-        }, {
-          signal: abortController.signal
-        })
+        const stream = await openai.chat.completions.create(
+          {
+            model: modelName,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: maxTokens,
+            stream: true
+          },
+          {
+            signal: abortController.signal
+          }
+        )
 
         // 用于累积完整响应
         let fullContent = ''

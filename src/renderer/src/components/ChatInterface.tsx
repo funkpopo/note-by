@@ -10,7 +10,8 @@ import {
   Tag,
   Select,
   Tooltip,
-  Chat
+  Chat,
+  Space
 } from '@douyinfe/semi-ui'
 import { IconSend, IconSearch, IconBookmark } from '@douyinfe/semi-icons'
 
@@ -153,7 +154,7 @@ const ChatInterface: React.FC = () => {
     setCurrentStreamCleanup(null)
 
     // 强制刷新Chat组件，确保状态完全清理
-    setChatKey(prev => prev + 1)
+    setChatKey((prev) => prev + 1)
 
     Toast.success('会话已清空') // 添加成功提示
   }, [currentStreamCleanup])
@@ -376,58 +377,67 @@ ${contextInfo}
   }, [currentStreamCleanup, streamingMessageId])
 
   // 消息重置处理 - 重新发送上一条请求
-  const handleMessageReset = useCallback((message: any) => {
-    console.log('消息重置被调用，消息:', message) // 调试信息
+  const handleMessageReset = useCallback(
+    (message: any) => {
+      console.log('消息重置被调用，消息:', message) // 调试信息
 
-    // 检查是否有选中的AI配置
-    if (!selectedAiConfig) {
-      Toast.error('请先选择AI配置')
-      return
-    }
+      // 检查是否有选中的AI配置
+      if (!selectedAiConfig) {
+        Toast.error('请先选择AI配置')
+        return
+      }
 
-    // 如果正在生成，先停止
-    if (isGenerating && currentStreamCleanup) {
-      currentStreamCleanup()
-    }
+      // 如果正在生成，先停止
+      if (isGenerating && currentStreamCleanup) {
+        currentStreamCleanup()
+      }
 
-    try {
-      // 方法1：通过parentId找到对应的用户消息
-      if (message.parentId) {
-        const parentMessage = messages.find(msg => msg.id?.toString() === message.parentId)
-        if (parentMessage && parentMessage.role === 'user') {
+      try {
+        // 方法1：通过parentId找到对应的用户消息
+        if (message.parentId) {
+          const parentMessage = messages.find((msg) => msg.id?.toString() === message.parentId)
+          if (parentMessage && parentMessage.role === 'user') {
+            // 移除当前AI消息
+            setMessages((prev) => prev.filter((msg) => msg.id !== message.id))
+
+            // 重新发送用户消息
+            setIsLoading(true)
+            performRAGAndAIResponse(parentMessage.content, parentMessage.id?.toString())
+
+            Toast.info('正在重新生成回复...')
+            return
+          }
+        }
+
+        // 方法2：如果没有parentId或找不到父消息，使用最后一条用户消息
+        if (lastUserMessage) {
           // 移除当前AI消息
-          setMessages((prev) => prev.filter(msg => msg.id !== message.id))
+          setMessages((prev) => prev.filter((msg) => msg.id !== message.id))
 
-          // 重新发送用户消息
+          // 重新发送最后一条用户消息
           setIsLoading(true)
-          performRAGAndAIResponse(parentMessage.content, parentMessage.id?.toString())
+          performRAGAndAIResponse(lastUserMessage.content, lastUserMessage.id?.toString())
 
           Toast.info('正在重新生成回复...')
           return
         }
+
+        // 如果都找不到，提示错误
+        Toast.error('无法找到对应的用户消息，无法重新生成')
+      } catch (error) {
+        console.error('消息重置失败:', error)
+        Toast.error('重新生成失败，请稍后重试')
       }
-
-      // 方法2：如果没有parentId或找不到父消息，使用最后一条用户消息
-      if (lastUserMessage) {
-        // 移除当前AI消息
-        setMessages((prev) => prev.filter(msg => msg.id !== message.id))
-
-        // 重新发送最后一条用户消息
-        setIsLoading(true)
-        performRAGAndAIResponse(lastUserMessage.content, lastUserMessage.id?.toString())
-
-        Toast.info('正在重新生成回复...')
-        return
-      }
-
-      // 如果都找不到，提示错误
-      Toast.error('无法找到对应的用户消息，无法重新生成')
-
-    } catch (error) {
-      console.error('消息重置失败:', error)
-      Toast.error('重新生成失败，请稍后重试')
-    }
-  }, [selectedAiConfig, isGenerating, currentStreamCleanup, messages, lastUserMessage, performRAGAndAIResponse])
+    },
+    [
+      selectedAiConfig,
+      isGenerating,
+      currentStreamCleanup,
+      messages,
+      lastUserMessage,
+      performRAGAndAIResponse
+    ]
+  )
 
   // Semi Chat组件的消息发送处理
   const handleChatMessageSend = useCallback(
@@ -775,50 +785,33 @@ ${contextInfo}
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px'
+            alignItems: 'center'
           }}
         >
           <Title heading={2} style={{ margin: 0 }}>
             AI 对话
           </Title>
+          <Space>
+            {aiApiConfigs.length > 0 ? (
+              <Select
+                value={selectedAiConfig}
+                onChange={(value) => setSelectedAiConfig(value as string)}
+                style={{ width: 150 }}
+                placeholder="选择AI模型"
+              >
+                {aiApiConfigs.map((config) => (
+                  <Select.Option key={config.id} value={config.id}>
+                    {config.name} ({config.modelName})
+                  </Select.Option>
+                ))}
+              </Select>
+            ) : (
+              <Text type="warning" size="small">
+                暂无AI配置
+              </Text>
+            )}
+          </Space>
         </div>
-
-        {/* 配置选择区域 */}
-        <Card style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <Text strong>AI模型:</Text>
-              {aiApiConfigs.length === 0 ? (
-                <div
-                  style={{
-                    marginTop: '8px',
-                    padding: '12px',
-                    backgroundColor: 'var(--semi-color-warning-light-default)',
-                    borderRadius: '6px',
-                    border: '1px solid var(--semi-color-warning-light-active)',
-                    wordBreak: 'break-word' // 防止长文本溢出
-                  }}
-                >
-                  <Text type="warning">暂无AI API配置，请先在设置中添加AI API配置</Text>
-                </div>
-              ) : (
-                <Select
-                  value={selectedAiConfig}
-                  onChange={(value) => setSelectedAiConfig(value as string)}
-                  placeholder="选择AI配置"
-                  style={{ width: '100%', marginTop: '4px' }}
-                >
-                  {aiApiConfigs.map((config) => (
-                    <Select.Option key={config.id} value={config.id}>
-                      {config.name} ({config.modelName})
-                    </Select.Option>
-                  ))}
-                </Select>
-              )}
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* 对话区域 - 使用Semi Design Chat组件 */}
