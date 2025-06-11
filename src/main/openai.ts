@@ -223,7 +223,7 @@ export async function streamGenerateContent(
   const abortController = new AbortController()
 
   // 添加停止方法到EventEmitter
-  eventEmitter.stop = () => {
+  ;(eventEmitter as any).stop = () => {
     abortController.abort()
   }
 
