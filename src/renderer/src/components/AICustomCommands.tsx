@@ -6,27 +6,7 @@ import {
   getDefaultAIMenuItems,
   AIMenuSuggestionItem
 } from '@blocknote/xl-ai'
-import { IconTextRectangle, IconBolt } from '@douyinfe/semi-icons'
-
-// 继续写作命令
-const continueWriting = (editor: BlockNoteEditor): AIMenuSuggestionItem => ({
-  key: 'continue_writing',
-  title: '继续写作',
-  aliases: ['继续', '续写', '接着写', 'continue'],
-  icon: <IconTextRectangle />,
-  onItemClick: async () => {
-    await getAIExtension(editor).callLLM({
-      userPrompt: '基于当前内容，继续写作后续内容。保持相同的写作风格、语气和上下文连贯性。',
-      useSelection: true,
-      defaultStreamTools: {
-        add: true,
-        delete: false,
-        update: false
-      }
-    })
-  },
-  size: 'small'
-})
+import { IconBolt } from '@douyinfe/semi-icons'
 
 // 自定义AI命令：修复语法错误
 const fixGrammar = (editor: BlockNoteEditor): AIMenuSuggestionItem => ({
@@ -72,10 +52,10 @@ export const CustomAIMenu: React.FC = () => {
 
           if (hasSelection) {
             // 当有内容被选中时的菜单项
-            return [...defaultItems, fixGrammar(editor), continueWriting(editor)]
+            return [...defaultItems, fixGrammar(editor)]
           } else {
             // 当没有内容被选中时的菜单项（全文操作）
-            return [...defaultItems, continueWriting(editor)]
+            return [...defaultItems]
           }
         }
 
