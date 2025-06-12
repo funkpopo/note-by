@@ -72,7 +72,7 @@ const IPC_CHANNELS = {
   MINDMAP_EXPORT_HTML: 'mindmap:export-html',
   DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
   DIALOG_SHOW_OPEN: 'dialog:showOpenDialog', // Re-using if a generic one is better, or make specific
-  // 添加知识库相关IPC通道
+  // 添加RAG相关IPC通道
   KB_EMBED_DOCUMENT: 'kb:embed-document',
   KB_SEARCH_DOCUMENTS: 'kb:search-documents',
   KB_EMBED_ALL_DOCUMENTS: 'kb:embed-all-documents',
@@ -770,8 +770,8 @@ const api = {
     showOpenDialog: (options: Electron.OpenDialogOptions): Promise<string | undefined> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_OPEN, options)
   },
-  // 知识库相关API
-  knowledgeBase: {
+  // RAG相关API
+  RAG: {
     // 向量化单个文档
     embedDocument: (filePath: string, content: string, title?: string): Promise<any> =>
       ipcRenderer.invoke(IPC_CHANNELS.KB_EMBED_DOCUMENT, filePath, content, title),
@@ -787,12 +787,12 @@ const api = {
     // 删除文档向量
     removeDocument: (filePath: string): Promise<any> =>
       ipcRenderer.invoke(IPC_CHANNELS.KB_REMOVE_DOCUMENT, filePath),
-    // 获取知识库统计信息
+    // 获取RAG统计信息
     getStats: (): Promise<any> => ipcRenderer.invoke(IPC_CHANNELS.KB_GET_STATS),
     // 获取支持的embedding模型列表
     getEmbeddingModels: (): Promise<any> =>
       ipcRenderer.invoke(IPC_CHANNELS.KB_GET_EMBEDDING_MODELS),
-    // 获取所有知识库文档
+    // 获取所有RAG文档
     getAllDocuments: (): Promise<any> => ipcRenderer.invoke(IPC_CHANNELS.KB_GET_ALL_DOCUMENTS),
     // 监听向量化进度
     onEmbedProgress: (

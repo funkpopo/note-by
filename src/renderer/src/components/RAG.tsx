@@ -16,13 +16,13 @@ import {
   List,
   Popconfirm
 } from '@douyinfe/semi-ui'
-import { IconSearch, IconRefresh, IconDelete, IconPlay, IconFile } from '@douyinfe/semi-icons'
+import { IconRefresh, IconDelete, IconPlay, IconFile } from '@douyinfe/semi-icons'
 
 const { Title, Text, Paragraph } = Typography
 const { Search } = Input
 
-// 知识库文档接口
-interface KnowledgeBaseDocument {
+// RAG文档接口
+interface RAGDocument {
   id: number
   filePath: string
   title: string
@@ -45,8 +45,8 @@ interface SearchResult {
   chunkId: number
 }
 
-// 知识库统计接口
-interface KnowledgeBaseStats {
+// RAG统计接口
+interface RAGStats {
   totalDocuments: number
   embeddedDocuments: number
   pendingDocuments: number
@@ -55,14 +55,14 @@ interface KnowledgeBaseStats {
   totalEmbeddings: number
 }
 
-const KnowledgeBase: React.FC = () => {
-  const [documents, setDocuments] = useState<KnowledgeBaseDocument[]>([])
+const RAG: React.FC = () => {
+  const [documents, setDocuments] = useState<RAGDocument[]>([])
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [stats, setStats] = useState<KnowledgeBaseStats | null>(null)
+  const [stats, setStats] = useState<RAGStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDocument, setSelectedDocument] = useState<KnowledgeBaseDocument | null>(null)
+  const [selectedDocument, setSelectedDocument] = useState<RAGDocument | null>(null)
   const [showDocumentModal, setShowDocumentModal] = useState(false)
   const [embeddingProgress, setEmbeddingProgress] = useState<{
     current: number
@@ -70,11 +70,11 @@ const KnowledgeBase: React.FC = () => {
     filePath: string
   } | null>(null)
 
-  // 加载知识库文档列表
+  // 加载RAG文档列表
   const loadDocuments = useCallback(async () => {
     try {
       setLoading(true)
-      const result = await window.api.knowledgeBase.getAllDocuments()
+      const result = await window.api.RAG.getAllDocuments()
       if (result.success) {
         setDocuments(result.documents)
       } else {
@@ -87,10 +87,10 @@ const KnowledgeBase: React.FC = () => {
     }
   }, [])
 
-  // 加载知识库统计信息
+  // 加载RAG统计信息
   const loadStats = useCallback(async () => {
     try {
-      const result = await window.api.knowledgeBase.getStats()
+      const result = await window.api.RAG.getStats()
       if (result.success) {
         setStats(result.stats)
       }
@@ -108,7 +108,7 @@ const KnowledgeBase: React.FC = () => {
 
     try {
       setSearchLoading(true)
-      const result = await window.api.knowledgeBase.searchDocuments(query, 10, 0.7)
+      const result = await window.api.RAG.searchDocuments(query, 10, 0.7)
       if (result.success) {
         setSearchResults(result.results)
         if (result.results.length === 0) {
@@ -127,10 +127,10 @@ const KnowledgeBase: React.FC = () => {
   }
 
   // 向量化单个文档
-  const handleEmbedDocument = async (document: KnowledgeBaseDocument) => {
+  const handleEmbedDocument = async (document: RAGDocument) => {
     try {
       Toast.info(`开始向量化文档: ${document.title}`)
-      const result = await window.api.knowledgeBase.embedDocument(
+      const result = await window.api.RAG.embedDocument(
         document.filePath,
         document.content,
         document.title
@@ -151,9 +151,9 @@ const KnowledgeBase: React.FC = () => {
   // 删除文档向量
   const handleRemoveDocument = async (filePath: string) => {
     try {
-      const result = await window.api.knowledgeBase.removeDocument(filePath)
+      const result = await window.api.RAG.removeDocument(filePath)
       if (result.success) {
-        Toast.success('文档已从知识库中删除')
+        Toast.success('文档已从RAG中删除')
         await loadDocuments()
         await loadStats()
       } else {
@@ -170,14 +170,14 @@ const KnowledgeBase: React.FC = () => {
       Toast.info('开始批量向量化，请稍候...')
 
       // 监听进度更新
-      window.api.knowledgeBase.onEmbedProgress((progress) => {
+      window.api.RAG.onEmbedProgress((progress) => {
         setEmbeddingProgress(progress)
       })
 
-      const result = await window.api.knowledgeBase.embedAllDocuments()
+      const result = await window.api.RAG.embedAllDocuments()
 
       // 移除进度监听器
-      window.api.knowledgeBase.removeEmbedProgressListener()
+      window.api.RAG.removeEmbedProgressListener()
       setEmbeddingProgress(null)
 
       if (result.success) {
@@ -192,7 +192,7 @@ const KnowledgeBase: React.FC = () => {
       }
     } catch (error) {
       Toast.error('批量向量化过程中发生错误')
-      window.api.knowledgeBase.removeEmbedProgressListener()
+      window.api.RAG.removeEmbedProgressListener()
       setEmbeddingProgress(null)
     }
   }
@@ -229,7 +229,7 @@ const KnowledgeBase: React.FC = () => {
       title: '文档标题',
       dataIndex: 'title',
       key: 'title',
-      render: (text: string, record: KnowledgeBaseDocument) => (
+      render: (text: string, record: RAGDocument) => (
         <div>
           <Text strong>{text}</Text>
           <br />
@@ -260,7 +260,7 @@ const KnowledgeBase: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      render: (_: any, record: KnowledgeBaseDocument) => (
+      render: (_: any, record: RAGDocument) => (
         <Space>
           <Button
             size="small"
@@ -302,7 +302,7 @@ const KnowledgeBase: React.FC = () => {
   return (
     <div style={{ padding: '16px', height: '100%', overflow: 'auto' }}>
       <div style={{ marginBottom: '24px' }}>
-        <Title heading={2}>知识库管理</Title>
+        <Title heading={2}>RAG管理</Title>
         <Paragraph type="tertiary">管理文档向量化，进行语义搜索</Paragraph>
       </div>
 
@@ -445,7 +445,7 @@ const KnowledgeBase: React.FC = () => {
           <Empty
             image={<IconFile size="extra-large" />}
             title="暂无文档"
-            description="还没有文档被添加到知识库中"
+            description="还没有文档被添加到RAG中"
           />
         ) : (
           <Table
@@ -513,4 +513,4 @@ const KnowledgeBase: React.FC = () => {
   )
 }
 
-export default KnowledgeBase
+export default RAG

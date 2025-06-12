@@ -20,8 +20,8 @@ export interface WebDAVSyncRecord {
   fileSize: number
 }
 
-// 知识库相关类型定义
-export interface KnowledgeBaseDocument {
+// RAG相关类型定义
+export interface RAGDocument {
   id: number
   filePath: string
   title: string
@@ -902,8 +902,8 @@ export async function initAnalysisCacheTable(): Promise<void> {
   } catch (error) {}
 }
 
-// 初始化知识库相关表
-export async function initKnowledgeBaseTables(): Promise<void> {
+// 初始化RAG相关表
+export async function initRAGTables(): Promise<void> {
   try {
     const database = await initDatabase()
 
@@ -911,9 +911,9 @@ export async function initKnowledgeBaseTables(): Promise<void> {
       return
     }
 
-    // 创建知识库文档表
+    // 创建RAG文档表
     database.exec(`
-      CREATE TABLE IF NOT EXISTS knowledge_base_documents (
+      CREATE TABLE IF NOT EXISTS RAG_base_documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_path TEXT NOT NULL UNIQUE,
         title TEXT NOT NULL,
@@ -927,9 +927,9 @@ export async function initKnowledgeBaseTables(): Promise<void> {
         updated_at INTEGER NOT NULL
       );
 
-      CREATE INDEX IF NOT EXISTS idx_kb_docs_file_path ON knowledge_base_documents(file_path);
-      CREATE INDEX IF NOT EXISTS idx_kb_docs_status ON knowledge_base_documents(embedding_status);
-      CREATE INDEX IF NOT EXISTS idx_kb_docs_model ON knowledge_base_documents(embedding_model);
+      CREATE INDEX IF NOT EXISTS idx_kb_docs_file_path ON RAG_base_documents(file_path);
+      CREATE INDEX IF NOT EXISTS idx_kb_docs_status ON RAG_base_documents(embedding_status);
+      CREATE INDEX IF NOT EXISTS idx_kb_docs_model ON RAG_base_documents(embedding_model);
     `)
 
     // 创建文档分块表
@@ -943,7 +943,7 @@ export async function initKnowledgeBaseTables(): Promise<void> {
         end_position INTEGER NOT NULL,
         token_count INTEGER NOT NULL,
         created_at INTEGER NOT NULL,
-        FOREIGN KEY (document_id) REFERENCES knowledge_base_documents(id) ON DELETE CASCADE
+        FOREIGN KEY (document_id) REFERENCES RAG_base_documents(id) ON DELETE CASCADE
       );
 
       CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON document_chunks(document_id);
@@ -1409,11 +1409,11 @@ export async function checkDatabaseStatus(): Promise<{
   }
 }
 
-// 知识库文档管理函数
+// RAG文档管理函数
 
-// 添加或更新知识库文档
-export async function upsertKnowledgeBaseDocument(
-  doc: Omit<KnowledgeBaseDocument, 'id' | 'createdAt' | 'updatedAt'>
+// 添加或更新RAG文档
+export async function upsertRAGDocument(
+  doc: Omit<RAGDocument, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<number | null> {
   try {
     const database = await initDatabase()
@@ -1423,14 +1423,14 @@ export async function upsertKnowledgeBaseDocument(
 
     // 检查文档是否已存在
     const existingStmt = database.prepare(
-      'SELECT id FROM knowledge_base_documents WHERE file_path = ?'
+      'SELECT id FROM RAG_base_documents WHERE file_path = ?'
     )
     const existing = existingStmt.get(doc.filePath) as { id: number } | undefined
 
     if (existing) {
       // 更新现有文档
       const updateStmt = database.prepare(`
-        UPDATE knowledge_base_documents
+        UPDATE RAG_base_documents
         SET title = ?, content = ?, content_hash = ?, file_size = ?,
             last_modified = ?, embedding_status = ?, embedding_model = ?, updated_at = ?
         WHERE id = ?
@@ -1450,7 +1450,7 @@ export async function upsertKnowledgeBaseDocument(
     } else {
       // 插入新文档
       const insertStmt = database.prepare(`
-        INSERT INTO knowledge_base_documents
+        INSERT INTO RAG_base_documents
         (file_path, title, content, content_hash, file_size, last_modified,
          embedding_status, embedding_model, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1474,10 +1474,10 @@ export async function upsertKnowledgeBaseDocument(
   }
 }
 
-// 获取知识库文档
-export async function getKnowledgeBaseDocument(
+// 获取RAG文档
+export async function getRAGDocument(
   filePath: string
-): Promise<KnowledgeBaseDocument | null> {
+): Promise<RAGDocument | null> {
   try {
     const database = await initDatabase()
     if (!database) return null
@@ -1487,16 +1487,16 @@ export async function getKnowledgeBaseDocument(
              file_size as fileSize, last_modified as lastModified,
              embedding_status as embeddingStatus, embedding_model as embeddingModel,
              created_at as createdAt, updated_at as updatedAt
-      FROM knowledge_base_documents WHERE file_path = ?
+      FROM RAG_base_documents WHERE file_path = ?
     `)
-    return stmt.get(filePath) as KnowledgeBaseDocument | null
+    return stmt.get(filePath) as RAGDocument | null
   } catch (error) {
     return null
   }
 }
 
-// 获取所有知识库文档
-export async function getAllKnowledgeBaseDocuments(): Promise<KnowledgeBaseDocument[]> {
+// 获取所有RAG文档
+export async function getAllRAGDocuments(): Promise<RAGDocument[]> {
   try {
     const database = await initDatabase()
     if (!database) return []
@@ -1506,21 +1506,21 @@ export async function getAllKnowledgeBaseDocuments(): Promise<KnowledgeBaseDocum
              file_size as fileSize, last_modified as lastModified,
              embedding_status as embeddingStatus, embedding_model as embeddingModel,
              created_at as createdAt, updated_at as updatedAt
-      FROM knowledge_base_documents ORDER BY updated_at DESC
+      FROM RAG_base_documents ORDER BY updated_at DESC
     `)
-    return stmt.all() as KnowledgeBaseDocument[]
+    return stmt.all() as RAGDocument[]
   } catch (error) {
     return []
   }
 }
 
-// 删除知识库文档
-export async function deleteKnowledgeBaseDocument(filePath: string): Promise<boolean> {
+// 删除RAG文档
+export async function deleteRAGDocument(filePath: string): Promise<boolean> {
   try {
     const database = await initDatabase()
     if (!database) return false
 
-    const stmt = database.prepare('DELETE FROM knowledge_base_documents WHERE file_path = ?')
+    const stmt = database.prepare('DELETE FROM RAG_base_documents WHERE file_path = ?')
     const result = stmt.run(filePath)
     return result.changes > 0
   } catch (error) {
@@ -1646,7 +1646,7 @@ export async function getAllDocumentEmbeddings(
              e.created_at as createdAt, c.document_id as documentId, c.content, d.file_path as filePath
       FROM document_embeddings e
       JOIN document_chunks c ON e.chunk_id = c.id
-      JOIN knowledge_base_documents d ON c.document_id = d.id
+      JOIN RAG_base_documents d ON c.document_id = d.id
     `
 
     if (embeddingModel) {

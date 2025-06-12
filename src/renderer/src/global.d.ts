@@ -321,8 +321,8 @@ interface Window {
       showSaveDialog: (options: Electron.SaveDialogOptions) => Promise<string | undefined>
       showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<string | undefined>
     }
-    // 知识库相关API
-    knowledgeBase: {
+    // RAG相关API
+    RAG: {
       embedDocument: (
         filePath: string,
         content: string,

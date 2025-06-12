@@ -70,8 +70,8 @@ interface EmbeddingConfig {
   apiConfigId?: string
 }
 
-// 知识库配置接口
-interface KnowledgeBaseConfig {
+// RAG配置接口
+interface RAGConfig {
   embedding: EmbeddingConfig
   searchSettings: {
     maxResults: number
@@ -100,8 +100,8 @@ const Settings: React.FC = () => {
     maxDays: 7
   })
 
-  // 知识库设置状态
-  const [knowledgeBaseConfig, setKnowledgeBaseConfig] = useState<KnowledgeBaseConfig>({
+  // RAG设置状态
+  const [RAGConfig, setRAGConfig] = useState<RAGConfig>({
     embedding: {
       enabled: false,
       model: 'text-embedding-3-small',
@@ -148,9 +148,9 @@ const Settings: React.FC = () => {
         setHistoryManagement(settings.historyManagement as HistoryManagementSettings)
       }
 
-      // 加载知识库设置
-      if (settings.knowledgeBase) {
-        setKnowledgeBaseConfig(settings.knowledgeBase as KnowledgeBaseConfig)
+      // 加载RAG设置
+      if (settings.RAG) {
+        setRAGConfig(settings.RAG as RAGConfig)
       }
 
       // 加载Embedding API配置
@@ -164,16 +164,16 @@ const Settings: React.FC = () => {
     }
   }, [])
 
-  // 加载知识库统计信息
+  // 加载RAG统计信息
   const loadKbStats = useCallback(async (): Promise<void> => {
     try {
       setKbStatsLoading(true)
-      const result = await window.api.knowledgeBase.getStats()
+      const result = await window.api.RAG.getStats()
       if (result.success) {
         setKbStats(result.stats)
       }
     } catch (error) {
-      console.error('加载知识库统计失败:', error)
+      console.error('加载RAG统计失败:', error)
     } finally {
       setKbStatsLoading(false)
     }
@@ -627,19 +627,19 @@ const Settings: React.FC = () => {
     }
   }
 
-  // 保存知识库设置
-  const saveKnowledgeBaseConfig = async (): Promise<void> => {
+  // 保存RAG设置
+  const saveRAGConfig = async (): Promise<void> => {
     try {
-      await window.api.settings.set('knowledgeBase', knowledgeBaseConfig)
-      Toast.success('知识库设置已保存')
+      await window.api.settings.set('RAG', RAGConfig)
+      Toast.success('RAG设置已保存')
     } catch (error) {
-      Toast.error('保存知识库设置失败')
+      Toast.error('保存RAG设置失败')
     }
   }
 
   // 处理embedding配置变更
   const handleEmbeddingConfigChange = (key: keyof EmbeddingConfig, value: any): void => {
-    setKnowledgeBaseConfig((prev) => ({
+    setRAGConfig((prev) => ({
       ...prev,
       embedding: {
         ...prev.embedding,
@@ -650,7 +650,7 @@ const Settings: React.FC = () => {
 
   // 处理搜索设置变更
   const handleSearchSettingsChange = (key: string, value: any): void => {
-    setKnowledgeBaseConfig((prev) => ({
+    setRAGConfig((prev) => ({
       ...prev,
       searchSettings: {
         ...prev.searchSettings,
@@ -665,14 +665,14 @@ const Settings: React.FC = () => {
       Toast.info('开始批量向量化，请稍候...')
 
       // 监听进度更新
-      window.api.knowledgeBase.onEmbedProgress((progress) => {
+      window.api.RAG.onEmbedProgress((progress) => {
         Toast.info(`正在处理: ${progress.filePath} (${progress.current}/${progress.total})`)
       })
 
-      const result = await window.api.knowledgeBase.embedAllDocuments()
+      const result = await window.api.RAG.embedAllDocuments()
 
       // 移除进度监听器
-      window.api.knowledgeBase.removeEmbedProgressListener()
+      window.api.RAG.removeEmbedProgressListener()
 
       if (result.success) {
         const { success, failed, skipped, total } = result.result
@@ -687,7 +687,7 @@ const Settings: React.FC = () => {
     } catch (error) {
       Toast.error('批量向量化过程中发生错误')
       // 确保移除监听器
-      window.api.knowledgeBase.removeEmbedProgressListener()
+      window.api.RAG.removeEmbedProgressListener()
     }
   }
 
@@ -742,16 +742,16 @@ const Settings: React.FC = () => {
       setEmbeddingApiConfigs(updatedConfigs)
 
       // 如果删除的是当前选中的配置，清除选择
-      if (knowledgeBaseConfig.embedding.apiConfigId === configId) {
+      if (RAGConfig.embedding.apiConfigId === configId) {
         const updatedKbConfig = {
-          ...knowledgeBaseConfig,
+          ...RAGConfig,
           embedding: {
-            ...knowledgeBaseConfig.embedding,
+            ...RAGConfig.embedding,
             apiConfigId: undefined
           }
         }
-        setKnowledgeBaseConfig(updatedKbConfig)
-        await window.api.settings.set('knowledgeBase', updatedKbConfig)
+        setRAGConfig(updatedKbConfig)
+        await window.api.settings.set('RAG', updatedKbConfig)
       }
 
       Toast.success('配置已删除')
@@ -1000,14 +1000,14 @@ const Settings: React.FC = () => {
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </TabPane>
 
-        <TabPane tab="知识库" itemKey="knowledgeBase">
+        <TabPane tab="RAG" itemKey="RAG">
           <div className="settings-scroll-container">
-            {/* 知识库基本设置 */}
+            {/* RAG基本设置 */}
             <Card
-              title="知识库设置"
+              title="RAG设置"
               style={{ marginTop: 20, marginBottom: '16px' }}
               headerExtraContent={
-                <Button type="primary" theme="solid" onClick={saveKnowledgeBaseConfig}>
+                <Button type="primary" theme="solid" onClick={saveRAGConfig}>
                   保存设置
                 </Button>
               }
@@ -1021,19 +1021,19 @@ const Settings: React.FC = () => {
                 }}
               >
                 <div>
-                  <Text strong>启用知识库功能</Text>
+                  <Text strong>启用RAG功能</Text>
                   <Paragraph spacing="normal" type="tertiary">
                     开启后可以对markdown文档进行向量化，支持语义搜索
                   </Paragraph>
                 </div>
                 <Switch
-                  checked={knowledgeBaseConfig.embedding.enabled}
+                  checked={RAGConfig.embedding.enabled}
                   onChange={(checked) => handleEmbeddingConfigChange('enabled', checked)}
                   size="large"
                 />
               </div>
 
-              {knowledgeBaseConfig.embedding.enabled && (
+              {RAGConfig.embedding.enabled && (
                 <>
                   <Divider />
 
@@ -1045,7 +1045,7 @@ const Settings: React.FC = () => {
                     >
                       <div style={{ flex: 1 }}>
                         <Select
-                          value={knowledgeBaseConfig.embedding.apiConfigId}
+                          value={RAGConfig.embedding.apiConfigId}
                           onChange={(value) => handleEmbeddingConfigChange('apiConfigId', value)}
                           placeholder="选择Embedding API配置"
                           style={{ width: '100%' }}
@@ -1068,7 +1068,7 @@ const Settings: React.FC = () => {
                     <Text strong>分块大小</Text>
                     <InputNumber
                       placeholder="文档分块的字符数"
-                      value={knowledgeBaseConfig.embedding.chunkSize}
+                      value={RAGConfig.embedding.chunkSize}
                       onChange={(value) => handleEmbeddingConfigChange('chunkSize', value)}
                       min={100}
                       max={4000}
@@ -1080,7 +1080,7 @@ const Settings: React.FC = () => {
                     <Text strong>分块重叠</Text>
                     <InputNumber
                       placeholder="相邻分块的重叠字符数"
-                      value={knowledgeBaseConfig.embedding.chunkOverlap}
+                      value={RAGConfig.embedding.chunkOverlap}
                       onChange={(value) => handleEmbeddingConfigChange('chunkOverlap', value)}
                       min={0}
                       max={1000}
@@ -1103,7 +1103,7 @@ const Settings: React.FC = () => {
                       </Paragraph>
                     </div>
                     <Switch
-                      checked={knowledgeBaseConfig.embedding.autoEmbedding}
+                      checked={RAGConfig.embedding.autoEmbedding}
                       onChange={(checked) => handleEmbeddingConfigChange('autoEmbedding', checked)}
                       size="large"
                     />
@@ -1113,12 +1113,12 @@ const Settings: React.FC = () => {
             </Card>
 
             {/* 搜索设置 */}
-            {knowledgeBaseConfig.embedding.enabled && (
+            {RAGConfig.embedding.enabled && (
               <Card title="搜索设置" style={{ marginBottom: '16px' }}>
                 <div style={{ marginBottom: 16 }}>
                   <Text strong>最大搜索结果数</Text>
                   <InputNumber
-                    value={knowledgeBaseConfig.searchSettings.maxResults}
+                    value={RAGConfig.searchSettings.maxResults}
                     onChange={(value) => handleSearchSettingsChange('maxResults', value)}
                     min={1}
                     max={50}
@@ -1129,9 +1129,9 @@ const Settings: React.FC = () => {
                 <div style={{ marginBottom: 16 }}>
                   <Text
                     strong
-                  >{`相似度阈值: ${knowledgeBaseConfig.searchSettings.similarityThreshold}`}</Text>
+                  >{`相似度阈值: ${RAGConfig.searchSettings.similarityThreshold}`}</Text>
                   <Slider
-                    value={knowledgeBaseConfig.searchSettings.similarityThreshold}
+                    value={RAGConfig.searchSettings.similarityThreshold}
                     onChange={(value) => handleSearchSettingsChange('similarityThreshold', value)}
                     min={0.1}
                     max={1.0}
@@ -1142,9 +1142,9 @@ const Settings: React.FC = () => {
               </Card>
             )}
 
-            {/* 知识库统计和管理 */}
-            {knowledgeBaseConfig.embedding.enabled && (
-              <Card title="知识库管理" style={{ marginBottom: '16px' }}>
+            {/* RAG统计和管理 */}
+            {RAGConfig.embedding.enabled && (
+              <Card title="RAG管理" style={{ marginBottom: '16px' }}>
                 {kbStatsLoading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
                     <Spin size="large" />

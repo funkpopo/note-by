@@ -40,7 +40,7 @@ import {
   saveAnalysisCache,
   resetAnalysisCache,
   initAnalysisCacheTable,
-  initKnowledgeBaseTables,
+  initRAGTables,
   getDocumentTagsData,
   checkDatabaseStatus,
   type AnalysisCacheItem
@@ -50,7 +50,7 @@ import {
   searchDocuments,
   embedAllDocuments,
   removeDocumentEmbedding,
-  getKnowledgeBaseStats
+  getRAGStats
 } from './embedding'
 import { getEmbeddingConfig } from './settings'
 import { mdToPdf } from 'md-to-pdf'
@@ -119,7 +119,7 @@ const IPC_CHANNELS = {
   MINDMAP_SAVE_FILE: 'mindmap:save-file',
   MINDMAP_LOAD_FILE: 'mindmap:load-file',
   MINDMAP_EXPORT_HTML: 'mindmap:export-html',
-  // 添加知识库相关IPC通道
+  // 添加RAG相关IPC通道
   KB_EMBED_DOCUMENT: 'kb:embed-document',
   KB_SEARCH_DOCUMENTS: 'kb:search-documents',
   KB_EMBED_ALL_DOCUMENTS: 'kb:embed-all-documents',
@@ -1876,7 +1876,7 @@ ${htmlContent}
     }
   })
 
-  // 知识库相关IPC处理
+  // RAG相关IPC处理
 
   // 向量化单个文档
   ipcMain.handle(
@@ -1952,10 +1952,10 @@ ${htmlContent}
     }
   })
 
-  // 获取知识库统计信息
+  // 获取RAG统计信息
   ipcMain.handle(IPC_CHANNELS.KB_GET_STATS, async () => {
     try {
-      const stats = await getKnowledgeBaseStats()
+      const stats = await getRAGStats()
       return { success: true, stats }
     } catch (error) {
       return {
@@ -1981,11 +1981,11 @@ ${htmlContent}
     }
   })
 
-  // 获取所有知识库文档
+  // 获取所有RAG文档
   ipcMain.handle(IPC_CHANNELS.KB_GET_ALL_DOCUMENTS, async () => {
     try {
-      const { getAllKnowledgeBaseDocuments } = await import('./database')
-      const documents = await getAllKnowledgeBaseDocuments()
+      const { getAllRAGDocuments } = await import('./database')
+      const documents = await getAllRAGDocuments()
       return { success: true, documents }
     } catch (error) {
       return {
@@ -2021,8 +2021,8 @@ ${htmlContent}
         return initWebDAVSyncCacheTable()
       })
       .then(() => {
-        // 初始化知识库表
-        return initKnowledgeBaseTables()
+        // 初始化RAG表
+        return initRAGTables()
       })
       .catch(() => {})
   } catch {}

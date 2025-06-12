@@ -2,17 +2,17 @@ import { OpenAI } from 'openai'
 import crypto from 'crypto'
 import { readSettings, getEmbeddingConfig, type AiApiConfig } from './settings'
 import {
-  upsertKnowledgeBaseDocument,
-  getKnowledgeBaseDocument,
-  getAllKnowledgeBaseDocuments,
-  deleteKnowledgeBaseDocument,
+  upsertRAGDocument,
+  getRAGDocument,
+  getAllRAGDocuments,
+  deleteRAGDocument,
   addDocumentChunk,
   getDocumentChunks,
   deleteDocumentChunks,
   addDocumentEmbedding,
   getDocumentEmbedding,
   getAllDocumentEmbeddings,
-  type KnowledgeBaseDocument,
+  type RAGDocument,
   type DocumentChunk,
   type DocumentEmbedding
 } from './database'
@@ -227,7 +227,7 @@ export async function embedDocument(
     if (!embeddingConfig.enabled) {
       return {
         success: false,
-        message: '知识库功能未启用'
+        message: 'RAG功能未启用'
       }
     }
 
@@ -245,7 +245,7 @@ export async function embedDocument(
     const contentHash = calculateContentHash(content)
 
     // 检查文档是否已存在且内容未变化
-    const existingDoc = await getKnowledgeBaseDocument(filePath)
+    const existingDoc = await getRAGDocument(filePath)
     if (
       existingDoc &&
       existingDoc.contentHash === contentHash &&
@@ -271,7 +271,7 @@ export async function embedDocument(
     }
 
     // 创建或更新文档记录
-    const documentId = await upsertKnowledgeBaseDocument({
+    const documentId = await upsertRAGDocument({
       filePath,
       title: title || filePath.split('/').pop() || filePath,
       content,
@@ -297,7 +297,7 @@ export async function embedDocument(
 
     if (chunks.length === 0) {
       // 更新文档状态为失败
-      await upsertKnowledgeBaseDocument({
+      await upsertRAGDocument({
         filePath,
         title: title || filePath.split('/').pop() || filePath,
         content,
@@ -357,7 +357,7 @@ export async function embedDocument(
     // 更新文档状态
     const finalStatus =
       successCount === chunks.length ? 'completed' : successCount > 0 ? 'completed' : 'failed'
-    await upsertKnowledgeBaseDocument({
+    await upsertRAGDocument({
       filePath,
       title: title || filePath.split('/').pop() || filePath,
       content,
@@ -472,7 +472,7 @@ export async function embedAllDocuments(
     }
 
     // 获取所有文档
-    const allDocs = await getAllKnowledgeBaseDocuments()
+    const allDocs = await getAllRAGDocuments()
     const total = allDocs.length
 
     let success = 0
@@ -511,15 +511,15 @@ export async function embedAllDocuments(
 // 删除文档的向量数据
 export async function removeDocumentEmbedding(filePath: string): Promise<boolean> {
   try {
-    return await deleteKnowledgeBaseDocument(filePath)
+    return await deleteRAGDocument(filePath)
   } catch (error) {
     console.error('删除文档向量失败:', error)
     return false
   }
 }
 
-// 获取知识库统计信息
-export async function getKnowledgeBaseStats(): Promise<{
+// 获取RAG统计信息
+export async function getRAGStats(): Promise<{
   totalDocuments: number
   embeddedDocuments: number
   pendingDocuments: number
@@ -528,7 +528,7 @@ export async function getKnowledgeBaseStats(): Promise<{
   totalEmbeddings: number
 }> {
   try {
-    const allDocs = await getAllKnowledgeBaseDocuments()
+    const allDocs = await getAllRAGDocuments()
     const allEmbeddings = await getAllDocumentEmbeddings()
 
     const totalDocuments = allDocs.length
@@ -554,7 +554,7 @@ export async function getKnowledgeBaseStats(): Promise<{
       totalEmbeddings: allEmbeddings.length
     }
   } catch (error) {
-    console.error('获取知识库统计失败:', error)
+    console.error('获取RAG统计失败:', error)
     return {
       totalDocuments: 0,
       embeddedDocuments: 0,

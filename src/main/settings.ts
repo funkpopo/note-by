@@ -55,7 +55,7 @@ export interface WebDAVConfig {
 
 // Embedding配置接口
 export interface EmbeddingConfig {
-  enabled: boolean // 是否启用知识库功能
+  enabled: boolean // 是否启用RAG功能
   model: string // 使用的embedding模型
   chunkSize: number // 文档分块大小
   chunkOverlap: number // 分块重叠大小
@@ -63,8 +63,8 @@ export interface EmbeddingConfig {
   apiConfigId?: string // 关联的API配置ID
 }
 
-// 知识库设置接口
-export interface KnowledgeBaseConfig {
+// RAG设置接口
+export interface RAGConfig {
   embedding: EmbeddingConfig
   searchSettings: {
     maxResults: number // 最大搜索结果数
@@ -100,8 +100,8 @@ const defaultSettings = {
     maxCount: 20, // 保留的最大记录数
     maxDays: 7 // 保留的最大天数
   },
-  // 默认知识库设置
-  knowledgeBase: {
+  // 默认RAG设置
+  RAG: {
     embedding: {
       enabled: false,
       model: 'text-embedding-3-small', // 默认使用OpenAI的小模型
@@ -114,7 +114,7 @@ const defaultSettings = {
       maxResults: 10,
       similarityThreshold: 0.7
     }
-  } as KnowledgeBaseConfig
+  } as RAGConfig
 }
 
 // 读取设置
@@ -273,28 +273,28 @@ export function decryptWebDAVWithMasterPassword(
   return newConfig
 }
 
-// 获取知识库配置
-export function getKnowledgeBaseConfig(): KnowledgeBaseConfig {
+// 获取RAG配置
+export function getRAGConfig(): RAGConfig {
   const settings = readSettings()
-  return (settings.knowledgeBase as KnowledgeBaseConfig) || defaultSettings.knowledgeBase
+  return (settings.RAG as RAGConfig) || defaultSettings.RAG
 }
 
-// 更新知识库配置
-export function updateKnowledgeBaseConfig(config: KnowledgeBaseConfig): void {
+// 更新RAG配置
+export function updateRAGConfig(config: RAGConfig): void {
   const settings = readSettings()
-  settings.knowledgeBase = config
+  settings.RAG = config
   writeSettings(settings)
 }
 
 // 获取Embedding配置
 export function getEmbeddingConfig(): EmbeddingConfig {
-  const knowledgeBaseConfig = getKnowledgeBaseConfig()
-  return knowledgeBaseConfig.embedding
+  const RAGConfig = getRAGConfig()
+  return RAGConfig.embedding
 }
 
 // 更新Embedding配置
 export function updateEmbeddingConfig(config: EmbeddingConfig): void {
-  const knowledgeBaseConfig = getKnowledgeBaseConfig()
-  knowledgeBaseConfig.embedding = config
-  updateKnowledgeBaseConfig(knowledgeBaseConfig)
+  const RAGConfig = getRAGConfig()
+  RAGConfig.embedding = config
+  updateRAGConfig(RAGConfig)
 }

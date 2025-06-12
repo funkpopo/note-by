@@ -96,17 +96,17 @@ const ChatInterface: React.FC = () => {
     }
   }, [])
 
-  // 加载知识库配置
-  const loadKnowledgeBaseConfig = useCallback(async () => {
+  // 加载RAG配置
+  const loadRAGConfig = useCallback(async () => {
     try {
-      const knowledgeBaseConfig = (await window.api.settings.get('knowledgeBase')) as any
-      if (knowledgeBaseConfig?.embedding?.enabled) {
+      const RAGConfig = (await window.api.settings.get('RAG')) as any
+      if (RAGConfig?.embedding?.enabled) {
         setUseRAG(true)
       } else {
         setUseRAG(false)
       }
     } catch (error) {
-      console.error('加载知识库配置失败:', error)
+      console.error('加载RAG配置失败:', error)
       setUseRAG(false)
     }
   }, [])
@@ -118,13 +118,13 @@ const ChatInterface: React.FC = () => {
     }
 
     try {
-      // 从全局设置获取知识库配置
-      const knowledgeBaseConfig = (await window.api.settings.get('knowledgeBase')) as any
-      if (!knowledgeBaseConfig?.embedding?.enabled) {
+      // 从全局设置获取RAG配置
+      const RAGConfig = (await window.api.settings.get('RAG')) as any
+      if (!RAGConfig?.embedding?.enabled) {
         return []
       }
 
-      const result = await window.api.knowledgeBase.searchDocuments(query, 5, 0.7)
+      const result = await window.api.RAG.searchDocuments(query, 5, 0.7)
       if (result.success) {
         return result.results
       }
@@ -740,8 +740,8 @@ ${contextInfo}
 
   useEffect(() => {
     loadAiApiConfigs()
-    loadKnowledgeBaseConfig()
-  }, [loadAiApiConfigs, loadKnowledgeBaseConfig])
+    loadRAGConfig()
+  }, [loadAiApiConfigs, loadRAGConfig])
 
   // 调试：监控isGenerating状态变化
   useEffect(() => {
