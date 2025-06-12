@@ -14,11 +14,7 @@ import {
   ButtonGroup,
   Tabs,
   TabPane,
-  Radio,
-  Slider,
-  InputNumber,
-  Select,
-  List
+  Radio
 } from '@douyinfe/semi-ui'
 import { IconPulse, IconPlus, IconDelete, IconEdit, IconRefresh } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
@@ -51,33 +47,7 @@ interface HistoryManagementSettings {
   maxDays: number
 }
 
-// Embedding API配置接口
-interface EmbeddingApiConfig {
-  id: string
-  name: string
-  apiKey: string
-  apiUrl: string
-  modelName: string
-}
 
-// Embedding配置接口
-interface EmbeddingConfig {
-  enabled: boolean
-  model: string
-  chunkSize: number
-  chunkOverlap: number
-  autoEmbedding: boolean
-  apiConfigId?: string
-}
-
-// RAG配置接口
-interface RAGConfig {
-  embedding: EmbeddingConfig
-  searchSettings: {
-    maxResults: number
-    similarityThreshold: number
-  }
-}
 
 const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
@@ -100,32 +70,7 @@ const Settings: React.FC = () => {
     maxDays: 7
   })
 
-  // RAG设置状态
-  const [RAGConfig, setRAGConfig] = useState<RAGConfig>({
-    embedding: {
-      enabled: false,
-      model: 'text-embedding-3-small',
-      chunkSize: 1000,
-      chunkOverlap: 200,
-      autoEmbedding: false,
-      apiConfigId: undefined
-    },
-    searchSettings: {
-      maxResults: 10,
-      similarityThreshold: 0.7
-    }
-  })
 
-  const [kbStatsLoading, setKbStatsLoading] = useState(false)
-  const [kbStats, setKbStats] = useState<any>(null)
-
-  // Embedding API配置状态
-  const [embeddingApiConfigs, setEmbeddingApiConfigs] = useState<EmbeddingApiConfig[]>([])
-  const [showEmbeddingModal, setShowEmbeddingModal] = useState(false)
-  const [currentEmbeddingConfig, setCurrentEmbeddingConfig] = useState<EmbeddingApiConfig | null>(
-    null
-  )
-  const [isEmbeddingEditMode, setIsEmbeddingEditMode] = useState(false)
 
   // 加载设置函数
   const loadSettings = useCallback(async (): Promise<void> => {
@@ -148,15 +93,7 @@ const Settings: React.FC = () => {
         setHistoryManagement(settings.historyManagement as HistoryManagementSettings)
       }
 
-      // 加载RAG设置
-      if (settings.RAG) {
-        setRAGConfig(settings.RAG as RAGConfig)
-      }
 
-      // 加载Embedding API配置
-      if (settings.embeddingApiConfigs && Array.isArray(settings.embeddingApiConfigs)) {
-        setEmbeddingApiConfigs(settings.embeddingApiConfigs as EmbeddingApiConfig[])
-      }
     } catch (error) {
       Toast.error('加载设置失败')
     } finally {
@@ -164,25 +101,11 @@ const Settings: React.FC = () => {
     }
   }, [])
 
-  // 加载RAG统计信息
-  const loadKbStats = useCallback(async (): Promise<void> => {
-    try {
-      setKbStatsLoading(true)
-      const result = await window.api.RAG.getStats()
-      if (result.success) {
-        setKbStats(result.stats)
-      }
-    } catch (error) {
-      console.error('加载RAG统计失败:', error)
-    } finally {
-      setKbStatsLoading(false)
-    }
-  }, [])
+
 
   // 加载所有设置
   useEffect(() => {
     loadSettings()
-    loadKbStats()
 
     // 捕获当前的ref值
     const timers = testResultTimersRef.current
@@ -193,7 +116,7 @@ const Settings: React.FC = () => {
         clearTimeout(timerId)
       })
     }
-  }, [loadSettings, loadKbStats])
+  }, [loadSettings])
 
   // 打开添加新配置的模态框
   const handleAddConfig = (): void => {
@@ -627,145 +550,9 @@ const Settings: React.FC = () => {
     }
   }
 
-  // 保存RAG设置
-  const saveRAGConfig = async (): Promise<void> => {
-    try {
-      await window.api.settings.set('RAG', RAGConfig)
-      Toast.success('RAG设置已保存')
-    } catch (error) {
-      Toast.error('保存RAG设置失败')
-    }
-  }
 
-  // 处理embedding配置变更
-  const handleEmbeddingConfigChange = (key: keyof EmbeddingConfig, value: any): void => {
-    setRAGConfig((prev) => ({
-      ...prev,
-      embedding: {
-        ...prev.embedding,
-        [key]: value
-      }
-    }))
-  }
 
-  // 处理搜索设置变更
-  const handleSearchSettingsChange = (key: string, value: any): void => {
-    setRAGConfig((prev) => ({
-      ...prev,
-      searchSettings: {
-        ...prev.searchSettings,
-        [key]: value
-      }
-    }))
-  }
 
-  // 批量向量化所有文档
-  const handleEmbedAllDocuments = async (): Promise<void> => {
-    try {
-      Toast.info('开始批量向量化，请稍候...')
-
-      // 监听进度更新
-      window.api.RAG.onEmbedProgress((progress) => {
-        Toast.info(`正在处理: ${progress.filePath} (${progress.current}/${progress.total})`)
-      })
-
-      const result = await window.api.RAG.embedAllDocuments()
-
-      // 移除进度监听器
-      window.api.RAG.removeEmbedProgressListener()
-
-      if (result.success) {
-        const { success, failed, skipped, total } = result.result
-        Toast.success(
-          `批量向量化完成！成功: ${success}, 失败: ${failed}, 跳过: ${skipped}, 总计: ${total}`
-        )
-        // 刷新统计信息
-        await loadKbStats()
-      } else {
-        Toast.error(`批量向量化失败: ${result.error}`)
-      }
-    } catch (error) {
-      Toast.error('批量向量化过程中发生错误')
-      // 确保移除监听器
-      window.api.RAG.removeEmbedProgressListener()
-    }
-  }
-
-  // Embedding API配置管理函数
-  const handleAddEmbeddingConfig = (): void => {
-    setCurrentEmbeddingConfig({
-      id: uuidv4(),
-      name: '',
-      apiKey: '',
-      apiUrl: '',
-      modelName: ''
-    })
-    setIsEmbeddingEditMode(false)
-    setShowEmbeddingModal(true)
-  }
-
-  const handleEditEmbeddingConfig = (config: EmbeddingApiConfig): void => {
-    setCurrentEmbeddingConfig({ ...config })
-    setIsEmbeddingEditMode(true)
-    setShowEmbeddingModal(true)
-  }
-
-  const handleSaveEmbeddingConfig = async (): Promise<void> => {
-    try {
-      if (!currentEmbeddingConfig?.name.trim()) {
-        Toast.error('请输入配置名称')
-        return
-      }
-
-      let updatedConfigs: EmbeddingApiConfig[]
-      if (isEmbeddingEditMode) {
-        updatedConfigs = embeddingApiConfigs.map((config) =>
-          config.id === currentEmbeddingConfig.id ? currentEmbeddingConfig : config
-        )
-      } else {
-        updatedConfigs = [...embeddingApiConfigs, currentEmbeddingConfig]
-      }
-
-      await window.api.settings.set('embeddingApiConfigs', updatedConfigs)
-      setEmbeddingApiConfigs(updatedConfigs)
-      setShowEmbeddingModal(false)
-      Toast.success(isEmbeddingEditMode ? '配置已更新' : '配置已添加')
-    } catch (error) {
-      Toast.error('保存配置失败')
-    }
-  }
-
-  const handleDeleteEmbeddingConfig = async (configId: string): Promise<void> => {
-    try {
-      const updatedConfigs = embeddingApiConfigs.filter((config) => config.id !== configId)
-      await window.api.settings.set('embeddingApiConfigs', updatedConfigs)
-      setEmbeddingApiConfigs(updatedConfigs)
-
-      // 如果删除的是当前选中的配置，清除选择
-      if (RAGConfig.embedding.apiConfigId === configId) {
-        const updatedKbConfig = {
-          ...RAGConfig,
-          embedding: {
-            ...RAGConfig.embedding,
-            apiConfigId: undefined
-          }
-        }
-        setRAGConfig(updatedKbConfig)
-        await window.api.settings.set('RAG', updatedKbConfig)
-      }
-
-      Toast.success('配置已删除')
-    } catch (error) {
-      Toast.error('删除配置失败')
-    }
-  }
-
-  const handleEmbeddingConfigInputChange = (key: string, value: any): void => {
-    setCurrentEmbeddingConfig((prev) => {
-      if (!prev) return null
-      return { ...prev, [key]: value }
-    })
-  }
 
   return (
     <div
@@ -1000,235 +787,7 @@ const Settings: React.FC = () => {
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </TabPane>
 
-        <TabPane tab="RAG" itemKey="RAG">
-          <div className="settings-scroll-container">
-            {/* RAG基本设置 */}
-            <Card
-              title="RAG设置"
-              style={{ marginTop: 20, marginBottom: '16px' }}
-              headerExtraContent={
-                <Button type="primary" theme="solid" onClick={saveRAGConfig}>
-                  保存设置
-                </Button>
-              }
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 16
-                }}
-              >
-                <div>
-                  <Text strong>启用RAG功能</Text>
-                  <Paragraph spacing="normal" type="tertiary">
-                    开启后可以对markdown文档进行向量化，支持语义搜索
-                  </Paragraph>
-                </div>
-                <Switch
-                  checked={RAGConfig.embedding.enabled}
-                  onChange={(checked) => handleEmbeddingConfigChange('enabled', checked)}
-                  size="large"
-                />
-              </div>
 
-              {RAGConfig.embedding.enabled && (
-                <>
-                  <Divider />
-
-                  {/* Embedding API 配置 */}
-                  <div style={{ marginBottom: 16 }}>
-                    <Text strong>Embedding API 配置</Text>
-                    <div
-                      style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginTop: 8 }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <Select
-                          value={RAGConfig.embedding.apiConfigId}
-                          onChange={(value) => handleEmbeddingConfigChange('apiConfigId', value)}
-                          placeholder="选择Embedding API配置"
-                          style={{ width: '100%' }}
-                        >
-                          {embeddingApiConfigs.map((config) => (
-                            <Select.Option key={config.id} value={config.id}>
-                              {config.name} ({config.modelName})
-                            </Select.Option>
-                          ))}
-                        </Select>
-                      </div>
-                      <Button icon={<IconPlus />} onClick={handleAddEmbeddingConfig} type="primary">
-                        添加
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* 分块设置 */}
-                  <div style={{ marginBottom: 16 }}>
-                    <Text strong>分块大小</Text>
-                    <InputNumber
-                      placeholder="文档分块的字符数"
-                      value={RAGConfig.embedding.chunkSize}
-                      onChange={(value) => handleEmbeddingConfigChange('chunkSize', value)}
-                      min={100}
-                      max={4000}
-                      style={{ width: '100%', marginTop: 8 }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: 16 }}>
-                    <Text strong>分块重叠</Text>
-                    <InputNumber
-                      placeholder="相邻分块的重叠字符数"
-                      value={RAGConfig.embedding.chunkOverlap}
-                      onChange={(value) => handleEmbeddingConfigChange('chunkOverlap', value)}
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%', marginTop: 8 }}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 16
-                    }}
-                  >
-                    <div>
-                      <Text strong>自动向量化新文档</Text>
-                      <Paragraph spacing="normal" type="tertiary">
-                        保存文档时自动进行向量化处理
-                      </Paragraph>
-                    </div>
-                    <Switch
-                      checked={RAGConfig.embedding.autoEmbedding}
-                      onChange={(checked) => handleEmbeddingConfigChange('autoEmbedding', checked)}
-                      size="large"
-                    />
-                  </div>
-                </>
-              )}
-            </Card>
-
-            {/* 搜索设置 */}
-            {RAGConfig.embedding.enabled && (
-              <Card title="搜索设置" style={{ marginBottom: '16px' }}>
-                <div style={{ marginBottom: 16 }}>
-                  <Text strong>最大搜索结果数</Text>
-                  <InputNumber
-                    value={RAGConfig.searchSettings.maxResults}
-                    onChange={(value) => handleSearchSettingsChange('maxResults', value)}
-                    min={1}
-                    max={50}
-                    style={{ width: '100%', marginTop: 8 }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <Text
-                    strong
-                  >{`相似度阈值: ${RAGConfig.searchSettings.similarityThreshold}`}</Text>
-                  <Slider
-                    value={RAGConfig.searchSettings.similarityThreshold}
-                    onChange={(value) => handleSearchSettingsChange('similarityThreshold', value)}
-                    min={0.1}
-                    max={1.0}
-                    step={0.1}
-                    style={{ marginTop: 8 }}
-                  />
-                </div>
-              </Card>
-            )}
-
-            {/* RAG统计和管理 */}
-            {RAGConfig.embedding.enabled && (
-              <Card title="RAG管理" style={{ marginBottom: '16px' }}>
-                {kbStatsLoading ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-                    <Spin size="large" />
-                  </div>
-                ) : kbStats ? (
-                  <div style={{ marginBottom: 16 }}>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                        gap: '16px',
-                        marginBottom: 16
-                      }}
-                    >
-                      <div style={{ textAlign: 'center' }}>
-                        <Text type="secondary">总文档数</Text>
-                        <div
-                          style={{
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                            color: 'var(--semi-color-primary)'
-                          }}
-                        >
-                          {kbStats.totalDocuments}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <Text type="secondary">已向量化</Text>
-                        <div
-                          style={{
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                            color: 'var(--semi-color-success)'
-                          }}
-                        >
-                          {kbStats.embeddedDocuments}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <Text type="secondary">待处理</Text>
-                        <div
-                          style={{
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                            color: 'var(--semi-color-warning)'
-                          }}
-                        >
-                          {kbStats.pendingDocuments}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <Text type="secondary">失败</Text>
-                        <div
-                          style={{
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                            color: 'var(--semi-color-danger)'
-                          }}
-                        >
-                          {kbStats.failedDocuments}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <Button
-                        type="primary"
-                        onClick={handleEmbedAllDocuments}
-                        disabled={kbStats.totalDocuments === 0}
-                      >
-                        批量向量化所有文档
-                      </Button>
-                      <Button onClick={loadKbStats}>刷新统计</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                    <Text type="tertiary">无法加载统计信息</Text>
-                  </div>
-                )}
-              </Card>
-            )}
-          </div>
-        </TabPane>
       </Tabs>
 
       {/* 添加/编辑配置模态框 */}
@@ -1349,108 +908,7 @@ const Settings: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* Embedding API配置模态框 */}
-      <Modal
-        title={isEmbeddingEditMode ? '编辑Embedding API配置' : '添加Embedding API配置'}
-        visible={showEmbeddingModal}
-        onCancel={() => setShowEmbeddingModal(false)}
-        centered
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <ButtonGroup>
-              <Button type="tertiary" onClick={() => setShowEmbeddingModal(false)}>
-                取消
-              </Button>
-              <Button type="primary" onClick={handleSaveEmbeddingConfig}>
-                保存
-              </Button>
-            </ButtonGroup>
-          </div>
-        }
-      >
-        <Form<EmbeddingApiConfig> labelPosition="left" labelWidth={100}>
-          <Form.Input
-            field="name"
-            label="配置名称"
-            placeholder="请输入配置名称，如OpenAI Embedding"
-            initValue={currentEmbeddingConfig?.name}
-            onChange={(value) => handleEmbeddingConfigInputChange('name', value)}
-            showClear
-            required
-          />
-          <Form.Input
-            field="apiKey"
-            label="API Key"
-            placeholder="请输入API Key"
-            initValue={currentEmbeddingConfig?.apiKey}
-            onChange={(value) => handleEmbeddingConfigInputChange('apiKey', value)}
-            showClear
-          />
-          <Form.Input
-            field="apiUrl"
-            label="API URL"
-            placeholder="请输入API URL，如https://api.openai.com/v1"
-            initValue={currentEmbeddingConfig?.apiUrl}
-            onChange={(value) => handleEmbeddingConfigInputChange('apiUrl', value)}
-            showClear
-          />
-          <Form.Input
-            field="modelName"
-            label="模型名称"
-            placeholder="请输入模型名称，如text-embedding-3-small"
-            initValue={currentEmbeddingConfig?.modelName}
-            onChange={(value) => handleEmbeddingConfigInputChange('modelName', value)}
-            showClear
-          />
-        </Form>
 
-        {/* 现有配置列表 */}
-        {embeddingApiConfigs.length > 0 && (
-          <>
-            <Divider />
-            <div>
-              <Text strong>现有配置</Text>
-              <List
-                dataSource={embeddingApiConfigs}
-                renderItem={(config) => (
-                  <List.Item
-                    main={
-                      <div>
-                        <Text strong>{config.name}</Text>
-                        <br />
-                        <Text type="tertiary" size="small">
-                          {config.modelName}
-                        </Text>
-                      </div>
-                    }
-                    extra={
-                      <ButtonGroup>
-                        <Button
-                          type="tertiary"
-                          size="small"
-                          icon={<IconEdit />}
-                          onClick={() => handleEditEmbeddingConfig(config)}
-                        >
-                          编辑
-                        </Button>
-                        <Popconfirm
-                          title="确定要删除这个配置吗？"
-                          content="删除后无法恢复"
-                          onConfirm={() => handleDeleteEmbeddingConfig(config.id)}
-                        >
-                          <Button type="danger" size="small" icon={<IconDelete />}>
-                            删除
-                          </Button>
-                        </Popconfirm>
-                      </ButtonGroup>
-                    }
-                  />
-                )}
-              />
-            </div>
-          </>
-        )}
-      </Modal>
     </div>
   )
 }

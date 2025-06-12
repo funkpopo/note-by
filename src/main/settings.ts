@@ -53,24 +53,7 @@ export interface WebDAVConfig {
   encryptionTestPlain?: string // 加密前的原始字符串
 }
 
-// Embedding配置接口
-export interface EmbeddingConfig {
-  enabled: boolean // 是否启用RAG功能
-  model: string // 使用的embedding模型
-  chunkSize: number // 文档分块大小
-  chunkOverlap: number // 分块重叠大小
-  autoEmbedding: boolean // 是否自动向量化新文档
-  apiConfigId?: string // 关联的API配置ID
-}
 
-// RAG设置接口
-export interface RAGConfig {
-  embedding: EmbeddingConfig
-  searchSettings: {
-    maxResults: number // 最大搜索结果数
-    similarityThreshold: number // 相似度阈值
-  }
-}
 
 // 默认设置
 const defaultSettings = {
@@ -100,21 +83,7 @@ const defaultSettings = {
     maxCount: 20, // 保留的最大记录数
     maxDays: 7 // 保留的最大天数
   },
-  // 默认RAG设置
-  RAG: {
-    embedding: {
-      enabled: false,
-      model: 'text-embedding-3-small', // 默认使用OpenAI的小模型
-      chunkSize: 1000,
-      chunkOverlap: 200,
-      autoEmbedding: false,
-      apiConfigId: undefined
-    },
-    searchSettings: {
-      maxResults: 10,
-      similarityThreshold: 0.7
-    }
-  } as RAGConfig
+
 }
 
 // 读取设置
@@ -273,28 +242,4 @@ export function decryptWebDAVWithMasterPassword(
   return newConfig
 }
 
-// 获取RAG配置
-export function getRAGConfig(): RAGConfig {
-  const settings = readSettings()
-  return (settings.RAG as RAGConfig) || defaultSettings.RAG
-}
 
-// 更新RAG配置
-export function updateRAGConfig(config: RAGConfig): void {
-  const settings = readSettings()
-  settings.RAG = config
-  writeSettings(settings)
-}
-
-// 获取Embedding配置
-export function getEmbeddingConfig(): EmbeddingConfig {
-  const RAGConfig = getRAGConfig()
-  return RAGConfig.embedding
-}
-
-// 更新Embedding配置
-export function updateEmbeddingConfig(config: EmbeddingConfig): void {
-  const RAGConfig = getRAGConfig()
-  RAGConfig.embedding = config
-  updateRAGConfig(RAGConfig)
-}

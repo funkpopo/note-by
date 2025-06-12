@@ -40,19 +40,12 @@ import {
   saveAnalysisCache,
   resetAnalysisCache,
   initAnalysisCacheTable,
-  initRAGTables,
+
   getDocumentTagsData,
   checkDatabaseStatus,
   type AnalysisCacheItem
 } from './database'
-import {
-  embedDocument,
-  searchDocuments,
-  embedAllDocuments,
-  removeDocumentEmbedding,
-  getRAGStats
-} from './embedding'
-import { getEmbeddingConfig } from './settings'
+
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import Showdown from 'showdown'
@@ -118,15 +111,7 @@ const IPC_CHANNELS = {
   // 添加思维导图相关IPC通道
   MINDMAP_SAVE_FILE: 'mindmap:save-file',
   MINDMAP_LOAD_FILE: 'mindmap:load-file',
-  MINDMAP_EXPORT_HTML: 'mindmap:export-html',
-  // 添加RAG相关IPC通道
-  KB_EMBED_DOCUMENT: 'kb:embed-document',
-  KB_SEARCH_DOCUMENTS: 'kb:search-documents',
-  KB_EMBED_ALL_DOCUMENTS: 'kb:embed-all-documents',
-  KB_REMOVE_DOCUMENT: 'kb:remove-document',
-  KB_GET_STATS: 'kb:get-stats',
-  KB_GET_EMBEDDING_MODELS: 'kb:get-embedding-models',
-  KB_GET_ALL_DOCUMENTS: 'kb:get-all-documents'
+  MINDMAP_EXPORT_HTML: 'mindmap:export-html'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -688,20 +673,7 @@ app.whenReady().then(() => {
         content
       })
 
-      // 检查是否启用自动向量化
-      try {
-        const embeddingConfig = getEmbeddingConfig()
-        if (embeddingConfig.enabled && embeddingConfig.autoEmbedding) {
-          // 异步执行向量化，不阻塞保存流程
-          embedDocument(filePath, content, filePath.split('/').pop()?.replace('.md', '')).catch(
-            () => {
-              // 向量化失败不影响保存
-            }
-          )
-        }
-      } catch (error) {
-        // 向量化检查失败不影响保存
-      }
+
 
       return { success: true, path: fullPath }
     } catch (error) {
@@ -1876,125 +1848,15 @@ ${htmlContent}
     }
   })
 
-  // RAG相关IPC处理
 
-  // 向量化单个文档
-  ipcMain.handle(
-    IPC_CHANNELS.KB_EMBED_DOCUMENT,
-    async (_, filePath: string, content: string, title?: string, embeddingConfigId?: string) => {
-      try {
-        const result = await embedDocument(filePath, content, title, embeddingConfigId)
-        return result
-      } catch (error) {
-        return {
-          success: false,
-          message: `向量化失败: ${error instanceof Error ? error.message : String(error)}`
-        }
-      }
-    }
-  )
 
-  // 语义搜索
-  ipcMain.handle(
-    IPC_CHANNELS.KB_SEARCH_DOCUMENTS,
-    async (
-      _,
-      query: string,
-      maxResults?: number,
-      similarityThreshold?: number,
-      embeddingConfigId?: string
-    ) => {
-      try {
-        const results = await searchDocuments(
-          query,
-          maxResults,
-          similarityThreshold,
-          embeddingConfigId
-        )
-        return { success: true, results }
-      } catch (error) {
-        return {
-          success: false,
-          error: `搜索失败: ${error instanceof Error ? error.message : String(error)}`,
-          results: []
-        }
-      }
-    }
-  )
 
-  // 批量向量化所有文档
-  ipcMain.handle(IPC_CHANNELS.KB_EMBED_ALL_DOCUMENTS, async (event) => {
-    try {
-      const result = await embedAllDocuments((current, total, filePath) => {
-        // 发送进度更新到渲染进程
-        event.sender.send('kb:embed-progress', { current, total, filePath })
-      })
-      return { success: true, result }
-    } catch (error) {
-      return {
-        success: false,
-        error: `批量向量化失败: ${error instanceof Error ? error.message : String(error)}`,
-        result: { success: 0, failed: 0, skipped: 0, total: 0 }
-      }
-    }
-  })
 
-  // 删除文档向量
-  ipcMain.handle(IPC_CHANNELS.KB_REMOVE_DOCUMENT, async (_, filePath: string) => {
-    try {
-      const success = await removeDocumentEmbedding(filePath)
-      return { success, message: success ? '删除成功' : '删除失败' }
-    } catch (error) {
-      return {
-        success: false,
-        message: `删除失败: ${error instanceof Error ? error.message : String(error)}`
-      }
-    }
-  })
 
-  // 获取RAG统计信息
-  ipcMain.handle(IPC_CHANNELS.KB_GET_STATS, async () => {
-    try {
-      const stats = await getRAGStats()
-      return { success: true, stats }
-    } catch (error) {
-      return {
-        success: false,
-        error: `获取统计信息失败: ${error instanceof Error ? error.message : String(error)}`,
-        stats: null
-      }
-    }
-  })
 
-  // 获取embedding API配置列表
-  ipcMain.handle(IPC_CHANNELS.KB_GET_EMBEDDING_MODELS, async () => {
-    try {
-      const settings = readSettings()
-      const embeddingConfigs = settings.embeddingApiConfigs || []
-      return { success: true, configs: embeddingConfigs }
-    } catch (error) {
-      return {
-        success: false,
-        error: `获取配置列表失败: ${error instanceof Error ? error.message : String(error)}`,
-        configs: []
-      }
-    }
-  })
 
-  // 获取所有RAG文档
-  ipcMain.handle(IPC_CHANNELS.KB_GET_ALL_DOCUMENTS, async () => {
-    try {
-      const { getAllRAGDocuments } = await import('./database')
-      const documents = await getAllRAGDocuments()
-      return { success: true, documents }
-    } catch (error) {
-      return {
-        success: false,
-        error: `获取文档列表失败: ${error instanceof Error ? error.message : String(error)}`,
-        documents: []
-      }
-    }
-  })
+
+
 
   createWindow()
 
@@ -2019,10 +1881,6 @@ ${htmlContent}
       .then(() => {
         // 初始化WebDAV同步缓存表
         return initWebDAVSyncCacheTable()
-      })
-      .then(() => {
-        // 初始化RAG表
-        return initRAGTables()
       })
       .catch(() => {})
   } catch {}

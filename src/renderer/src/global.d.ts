@@ -321,29 +321,6 @@ interface Window {
       showSaveDialog: (options: Electron.SaveDialogOptions) => Promise<string | undefined>
       showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<string | undefined>
     }
-    // RAG相关API
-    RAG: {
-      embedDocument: (
-        filePath: string,
-        content: string,
-        title?: string,
-        embeddingConfigId?: string
-      ) => Promise<any>
-      searchDocuments: (
-        query: string,
-        maxResults?: number,
-        similarityThreshold?: number,
-        embeddingConfigId?: string
-      ) => Promise<any>
-      embedAllDocuments: () => Promise<any>
-      removeDocument: (filePath: string) => Promise<any>
-      getStats: () => Promise<any>
-      getEmbeddingModels: () => Promise<any>
-      getAllDocuments: () => Promise<any>
-      onEmbedProgress: (
-        callback: (progress: { current: number; total: number; filePath: string }) => void
-      ) => void
-      removeEmbedProgressListener: () => void
-    }
+
   }
 }

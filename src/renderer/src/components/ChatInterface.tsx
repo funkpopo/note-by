@@ -1,22 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Typography,
-  Card,
   Button,
   Toast,
   TextArea,
-  Divider,
-  List,
-  Tag,
   Select,
-  Tooltip,
   Chat,
   Space
 } from '@douyinfe/semi-ui'
-import { IconSend, IconSearch, IconBookmark } from '@douyinfe/semi-icons'
+import { IconSend } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 // Semi Design Chat组件的角色配置
 const roleConfig = {
@@ -43,11 +38,6 @@ interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
   createAt: number
-  ragSources?: Array<{
-    filePath: string
-    content: string
-    similarity: number
-  }>
   status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
   name?: string
   parentId?: string
@@ -59,8 +49,6 @@ const ChatInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [aiApiConfigs, setAiApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedAiConfig, setSelectedAiConfig] = useState<string>('')
-  const [useRAG, setUseRAG] = useState(true)
-  const [ragResults, setRagResults] = useState<any[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
 
   // 流式响应状态管理
@@ -96,49 +84,12 @@ const ChatInterface: React.FC = () => {
     }
   }, [])
 
-  // 加载RAG配置
-  const loadRAGConfig = useCallback(async () => {
-    try {
-      const RAGConfig = (await window.api.settings.get('RAG')) as any
-      if (RAGConfig?.embedding?.enabled) {
-        setUseRAG(true)
-      } else {
-        setUseRAG(false)
-      }
-    } catch (error) {
-      console.error('加载RAG配置失败:', error)
-      setUseRAG(false)
-    }
-  }, [])
 
-  // RAG搜索
-  const performRAGSearch = async (query: string): Promise<any[]> => {
-    if (!useRAG) {
-      return []
-    }
-
-    try {
-      // 从全局设置获取RAG配置
-      const RAGConfig = (await window.api.settings.get('RAG')) as any
-      if (!RAGConfig?.embedding?.enabled) {
-        return []
-      }
-
-      const result = await window.api.RAG.searchDocuments(query, 5, 0.7)
-      if (result.success) {
-        return result.results
-      }
-    } catch (error) {
-      console.error('RAG搜索失败:', error)
-    }
-    return []
-  }
 
   // Chat组件的清理上下文回调
   const handleClearContext = useCallback(() => {
     console.log('handleClearContext called') // 调试信息
     setMessages([])
-    setRagResults([])
     setLastUserMessage(null) // 清空最后一条用户消息
     // 如果正在生成，也要停止
     if (currentStreamCleanup) {
@@ -157,31 +108,10 @@ const ChatInterface: React.FC = () => {
 
   // 移除handleCopyMessage，Chat组件内置复制功能
 
-  // 执行RAG搜索和AI回复 - 流式响应版本
-  const performRAGAndAIResponse = useCallback(
+  // 执行AI回复 - 流式响应版本
+  const performAIResponse = useCallback(
     async (userContent: string, userMessageId?: string) => {
       try {
-        // 执行RAG搜索
-        const ragSources = await performRAGSearch(userContent)
-        setRagResults(ragSources)
-
-        // 构建增强的提示词
-        let enhancedPrompt = userContent
-        if (ragSources.length > 0) {
-          const contextInfo = ragSources
-            .map((source) => `文档: ${source.filePath}\n内容: ${source.content}`)
-            .join('\n\n')
-
-          enhancedPrompt = `基于以下相关文档内容回答用户问题：
-
-相关文档：
-${contextInfo}
-
-用户问题：${userContent}
-
-请基于提供的文档内容回答问题，如果文档内容不足以回答问题，请说明并提供你的一般性建议。`
-        }
-
         // 获取选中的AI配置
         const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
         if (!aiConfig) {
@@ -195,7 +125,6 @@ ${contextInfo}
           content: '',
           createAt: Date.now(),
           status: 'loading',
-          ragSources: ragSources.length > 0 ? ragSources : undefined,
           parentId: userMessageId // 设置父消息ID
         }
 
@@ -208,7 +137,7 @@ ${contextInfo}
             apiKey: aiConfig.apiKey,
             apiUrl: aiConfig.apiUrl,
             modelName: aiConfig.modelName,
-            prompt: enhancedPrompt,
+            prompt: userContent,
             maxTokens: parseInt(aiConfig.maxTokens || '2000')
           },
           {
@@ -330,7 +259,7 @@ ${contextInfo}
         setCurrentStreamCleanup(null)
       }
     },
-    [aiApiConfigs, selectedAiConfig, useRAG, performRAGSearch]
+    [aiApiConfigs, selectedAiConfig]
   )
 
   // 停止生成处理 - 真正的流式中断
@@ -398,7 +327,7 @@ ${contextInfo}
 
             // 重新发送用户消息
             setIsLoading(true)
-            performRAGAndAIResponse(parentMessage.content, parentMessage.id?.toString())
+            performAIResponse(parentMessage.content, parentMessage.id?.toString())
 
             Toast.info('正在重新生成回复...')
             return
@@ -412,7 +341,7 @@ ${contextInfo}
 
           // 重新发送最后一条用户消息
           setIsLoading(true)
-          performRAGAndAIResponse(lastUserMessage.content, lastUserMessage.id?.toString())
+          performAIResponse(lastUserMessage.content, lastUserMessage.id?.toString())
 
           Toast.info('正在重新生成回复...')
           return
@@ -431,7 +360,7 @@ ${contextInfo}
       currentStreamCleanup,
       messages,
       lastUserMessage,
-      performRAGAndAIResponse
+      performAIResponse
     ]
   )
 
@@ -512,10 +441,10 @@ ${contextInfo}
 
       setIsLoading(true)
 
-      // 执行RAG搜索和AI回复的逻辑，传递用户消息ID
-      performRAGAndAIResponse(userMessage.content, userMessage.id?.toString())
+      // 执行AI回复的逻辑，传递用户消息ID
+      performAIResponse(userMessage.content, userMessage.id?.toString())
     },
-    [isLoading, selectedAiConfig, performRAGAndAIResponse]
+    [isLoading, selectedAiConfig, performAIResponse]
   )
 
   // Chat组件的消息变化处理 - 禁用自动同步，避免重复消息
@@ -524,9 +453,9 @@ ${contextInfo}
     // 这样可以避免Chat组件和手动状态更新的冲突
   }, [])
 
-  // 自定义消息内容渲染 - 显示RAG来源
+  // 自定义消息内容渲染
   const renderChatBoxContent = useCallback((props: any) => {
-    const { message, defaultContent, className } = props
+    const { defaultContent, className } = props
 
     return (
       <div
@@ -537,127 +466,7 @@ ${contextInfo}
           maxWidth: '100%'
         }}
       >
-        {/* 默认消息内容 */}
-        <div
-          style={{
-            marginBottom: message.ragSources ? '12px' : '0',
-            overflow: 'hidden',
-            wordBreak: 'break-word'
-          }}
-        >
-          {defaultContent}
-        </div>
-
-        {/* RAG来源显示 */}
-        {message.ragSources && message.ragSources.length > 0 && (
-          <div
-            style={{
-              marginTop: '8px',
-              padding: '8px',
-              backgroundColor: 'var(--semi-color-fill-0)',
-              borderRadius: '6px',
-              border: '1px solid var(--semi-color-border)',
-              overflow: 'hidden',
-              maxWidth: '100%'
-            }}
-          >
-            <Text
-              type="tertiary"
-              size="small"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '6px',
-                overflow: 'hidden'
-              }}
-            >
-              <IconBookmark style={{ marginRight: '4px', flexShrink: 0 }} />
-              <span
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                参考文档 ({message.ragSources.length}个)
-              </span>
-            </Text>
-            <div
-              style={{
-                display: 'flex',
-                gap: '4px',
-                flexWrap: 'wrap',
-                overflow: 'hidden',
-                maxWidth: '100%'
-              }}
-            >
-              {message.ragSources.map((source: any, index: number) => (
-                <Tooltip
-                  key={index}
-                  content={
-                    <div
-                      style={{
-                        maxWidth: '280px',
-                        wordBreak: 'break-word',
-                        overflow: 'hidden',
-                        padding: '4px 0'
-                      }}
-                    >
-                      <Text
-                        strong
-                        style={{
-                          display: 'block',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          fontSize: '12px'
-                        }}
-                      >
-                        {source.filePath}
-                      </Text>
-                      <Divider margin="6px" />
-                      <Text
-                        size="small"
-                        style={{
-                          wordBreak: 'break-word',
-                          fontSize: '11px',
-                          lineHeight: '1.4'
-                        }}
-                      >
-                        {source.content.substring(0, 150)}...
-                      </Text>
-                      <Divider margin="6px" />
-                      <Text type="tertiary" size="small" style={{ fontSize: '11px' }}>
-                        相似度: {(source.similarity * 100).toFixed(1)}%
-                      </Text>
-                    </div>
-                  }
-                  position="topLeft" // 设置默认位置
-                  autoAdjustOverflow={true} // 启用自动溢出调整
-                  getPopupContainer={() =>
-                    document.querySelector('.chat-interface-container') || document.body
-                  } // 指定容器
-                >
-                  <Tag
-                    size="small"
-                    color="blue"
-                    style={{
-                      cursor: 'pointer',
-                      marginBottom: '4px',
-                      maxWidth: '150px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'inline-block'
-                    }}
-                  >
-                    {source.filePath.split('/').pop()}
-                  </Tag>
-                </Tooltip>
-              ))}
-            </div>
-          </div>
-        )}
+        {defaultContent}
       </div>
     )
   }, [])
@@ -740,8 +549,7 @@ ${contextInfo}
 
   useEffect(() => {
     loadAiApiConfigs()
-    loadRAGConfig()
-  }, [loadAiApiConfigs, loadRAGConfig])
+  }, [loadAiApiConfigs])
 
   // 调试：监控isGenerating状态变化
   useEffect(() => {
@@ -926,74 +734,7 @@ ${contextInfo}
           />
         </div>
 
-        {/* RAG结果侧边栏 - 响应式设计 */}
-        {useRAG && ragResults.length > 0 && (
-          <Card
-            className="chat-sidebar"
-            style={{
-              width: 'min(300px, 30vw)', // 响应式宽度，最大300px或30%视口宽度
-              minWidth: '250px', // 最小宽度
-              maxWidth: '350px', // 最大宽度
-              height: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              flexShrink: 0 // 防止侧边栏被压缩
-            }}
-          >
-            <div style={{ marginBottom: '16px', flexShrink: 0 }}>
-              <Text strong>
-                <IconSearch /> 相关文档 ({ragResults.length})
-              </Text>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                overflowX: 'hidden', // 防止水平溢出
-                minHeight: 0
-              }}
-            >
-              <List
-                dataSource={ragResults}
-                renderItem={(item) => (
-                  <List.Item
-                    main={
-                      <div style={{ wordBreak: 'break-word', overflow: 'hidden' }}>
-                        <Text
-                          strong
-                          size="small"
-                          style={{
-                            display: 'block',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {item.filePath}
-                        </Text>
-                        <Paragraph
-                          ellipsis={{ rows: 3, expandable: true, collapsible: true }}
-                          style={{
-                            marginTop: '4px',
-                            marginBottom: '4px',
-                            fontSize: '12px',
-                            wordBreak: 'break-word'
-                          }}
-                        >
-                          {item.content}
-                        </Paragraph>
-                        <Tag size="small" color="blue">
-                          相似度: {(item.similarity * 100).toFixed(1)}%
-                        </Tag>
-                      </div>
-                    }
-                  />
-                )}
-              />
-            </div>
-          </Card>
-        )}
+
       </div>
     </div>
   )
