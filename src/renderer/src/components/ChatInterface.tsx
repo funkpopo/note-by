@@ -821,16 +821,15 @@ ${contextInfo}
     <div
       className="chat-interface-container"
       style={{
-        height: 'calc(100% - 48px)', // 减去父容器的padding (24px * 2)
+        height: '100%', // 使用全部可用高度
         display: 'flex',
         flexDirection: 'column',
-        padding: '16px',
         overflow: 'hidden', // 防止整体溢出
         minHeight: 0 // 确保flex收缩正常工作
       }}
     >
       {/* 标题和设置区域 */}
-      <div className="chat-header" style={{ marginBottom: '16px', flexShrink: 0 }}>
+      <div className="chat-header" style={{ marginBottom: '16px', flexShrink: 0, padding: '0 16px' }}>
         <div
           style={{
             display: 'flex',
@@ -880,7 +879,8 @@ ${contextInfo}
           display: 'flex',
           gap: '16px',
           minHeight: 0, // 确保flex收缩正常工作
-          overflow: 'hidden' // 防止子元素溢出
+          overflow: 'hidden', // 防止子元素溢出
+          padding: '0 16px 16px 16px' // 保留左右边距和少量底部边距
         }}
       >
         {/* 主对话区域 */}
@@ -913,11 +913,15 @@ ${contextInfo}
             renderInputArea={renderInputArea}
             style={{
               height: '100%',
+              width: '100%',
+              maxWidth: 'none',
               border: '1px solid var(--semi-color-border)',
               borderRadius: '8px',
               overflow: 'hidden', // 防止Chat组件内容溢出
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              margin: 0, // 移除任何默认margin以最大化空间利用
+              padding: 0 // 移除任何默认padding
             }}
           />
         </div>

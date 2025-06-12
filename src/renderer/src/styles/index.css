@@ -166,3 +166,57 @@ body[theme-mode='dark'] .skeleton-wrapper {
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
 }
+
+/* AI对话页面Chat组件样式优化 */
+.chat-interface-container .semi-chat {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.chat-interface-container .semi-chat-content {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.chat-interface-container .semi-chat-list {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+.chat-interface-container .semi-chat-input-area {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 更具体的Semi Chat样式覆盖 */
+.chat-interface-container .semi-chat-wrapper {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.chat-interface-container .semi-chat-container {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* 覆盖Semi Design Chat组件的默认800px最大宽度限制 */
+.semi-chat {
+  max-width: none !important;
+}
+
+.semi-chat-content {
+  max-width: none !important;
+}
+
+.semi-chat-list {
+  max-width: none !important;
+}
+
+.semi-chat-input-area {
+  max-width: none !important;
+}
