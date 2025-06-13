@@ -321,6 +321,10 @@ interface Window {
       showSaveDialog: (options: Electron.SaveDialogOptions) => Promise<string | undefined>
       showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<string | undefined>
     }
+    // 窗口相关API
+    window: {
+      setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
+    }
 
   }
 }

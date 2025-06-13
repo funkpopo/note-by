@@ -111,7 +111,9 @@ const IPC_CHANNELS = {
   // 添加思维导图相关IPC通道
   MINDMAP_SAVE_FILE: 'mindmap:save-file',
   MINDMAP_LOAD_FILE: 'mindmap:load-file',
-  MINDMAP_EXPORT_HTML: 'mindmap:export-html'
+  MINDMAP_EXPORT_HTML: 'mindmap:export-html',
+  // 添加主题相关IPC通道
+  SET_WINDOW_BACKGROUND: 'window:set-background'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -173,6 +175,7 @@ function createWindow(): void {
     minHeight: 300, // 设置最小高度
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: '#f5f5f5', // 设置默认背景色为浅色主题背景
     icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -1848,15 +1851,18 @@ ${htmlContent}
     }
   })
 
-
-
-
-
-
-
-
-
-
+  // 设置窗口背景色
+  ipcMain.handle(IPC_CHANNELS.SET_WINDOW_BACKGROUND, async (_, backgroundColor: string) => {
+    try {
+      if (mainWindow) {
+        mainWindow.setBackgroundColor(backgroundColor)
+        return { success: true }
+      }
+      return { success: false, error: '主窗口未初始化' }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
 
   createWindow()
 

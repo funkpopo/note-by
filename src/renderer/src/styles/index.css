@@ -26,10 +26,13 @@ code {
 #root {
   width: 100%;
   height: 100vh;
+  overflow: hidden; /* 防止滚动条影响布局 */
 }
 
 .components-layout-demo {
-  height: 100%;
+  height: 100vh; /* 使用视口高度确保完全覆盖 */
+  width: 100vw; /* 使用视口宽度确保完全覆盖 */
+  overflow: hidden; /* 防止内容溢出 */
 }
 
 /* 导航栏样式 */

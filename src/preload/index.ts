@@ -72,6 +72,8 @@ const IPC_CHANNELS = {
   MINDMAP_EXPORT_HTML: 'mindmap:export-html',
   DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
   DIALOG_SHOW_OPEN: 'dialog:showOpenDialog', // Re-using if a generic one is better, or make specific
+  // 添加主题相关IPC通道
+  SET_WINDOW_BACKGROUND: 'window:set-background'
 
 }
 
@@ -762,6 +764,11 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_SAVE, options),
     showOpenDialog: (options: Electron.OpenDialogOptions): Promise<string | undefined> =>
       ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_OPEN, options)
+  },
+  // 窗口相关API
+  window: {
+    setBackgroundColor: (backgroundColor: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SET_WINDOW_BACKGROUND, backgroundColor)
   }
 }
 

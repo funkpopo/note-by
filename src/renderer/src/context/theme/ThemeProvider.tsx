@@ -21,10 +21,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         const savedTheme = await window.api.settings.get<string>('theme', undefined)
 
         if (savedTheme) {
-          setIsDarkMode(savedTheme === 'dark')
+          const isDark = savedTheme === 'dark'
+          setIsDarkMode(isDark)
+          // 初始化时设置窗口背景色
+          const backgroundColor = isDark ? '#1f1f1f' : '#f5f5f5'
+          window.api.window.setBackgroundColor(backgroundColor).catch(() => {})
         } else {
           // 如果没有保存的主题，则跟随系统
-          setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches)
+          const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          setIsDarkMode(isDark)
+          // 初始化时设置窗口背景色
+          const backgroundColor = isDark ? '#1f1f1f' : '#f5f5f5'
+          window.api.window.setBackgroundColor(backgroundColor).catch(() => {})
         }
       } catch (error) {
         // 出错时使用系统主题
@@ -66,6 +74,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
       // 保存到设置
       window.api.settings.set('theme', isDarkMode ? 'dark' : 'light').catch(() => {})
+
+      // 通知主进程更新窗口背景色
+      const backgroundColor = isDarkMode ? '#1f1f1f' : '#f5f5f5'
+      window.api.window.setBackgroundColor(backgroundColor).catch(() => {})
 
       // 移除切换状态类
       setTimeout(() => {
