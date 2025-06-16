@@ -1084,11 +1084,15 @@ ${htmlContent}
       }
 
       // 使用流式读取优化大文件处理
-      const content = await fileStreamManager.readFileStream(fullPath, {
+      const result = await fileStreamManager.readFileStream(fullPath, {
         encoding: 'utf-8'
       })
 
-      return { success: true, content }
+      if (result.success && result.content !== undefined) {
+        return { success: true, content: result.content }
+      } else {
+        return { success: false, error: result.error || '读取文件失败', content: '' }
+      }
     } catch (error) {
       return { success: false, error: String(error), content: '' }
     }
@@ -1787,10 +1791,15 @@ ${htmlContent}
       }
 
       const filePath = filePaths[0]
-      const content = await fileStreamManager.readFileStream(filePath, {
+      const result = await fileStreamManager.readFileStream(filePath, {
         encoding: 'utf-8'
       })
-      return { success: true, data: content }
+      
+      if (result.success && result.content !== undefined) {
+        return { success: true, data: result.content }
+      } else {
+        return { success: false, error: result.error || '读取文件失败' }
+      }
     } catch (error) {
       return { success: false, error: String(error) }
     }
