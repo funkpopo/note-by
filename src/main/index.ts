@@ -1794,7 +1794,7 @@ ${htmlContent}
       const result = await fileStreamManager.readFileStream(filePath, {
         encoding: 'utf-8'
       })
-      
+
       if (result.success && result.content !== undefined) {
         return { success: true, data: result.content }
       } else {

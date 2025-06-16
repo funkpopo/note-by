@@ -107,7 +107,7 @@ interface MarkdownAPI {
   }>
 }
 
-interface EditorProps {
+export interface EditorProps {
   currentFolder?: string
   currentFile?: string
   onFileChanged?: () => void

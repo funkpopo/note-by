@@ -1,11 +1,18 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { Layout } from '@douyinfe/semi-ui'
 import Navigation from './components/Navigation'
-import Settings from './components/Settings'
-import EditorComponent from './components/Editor'
-import DataAnalysis from './components/DataAnalysis'
-import MindMapPage from './components/MindMapPage'
-import ChatInterface from './components/ChatInterface'
+import {
+  LazySettings,
+  LazyEditor,
+  LazyDataAnalysis,
+  LazyMindMapPage,
+  LazyChatInterface,
+  SettingsLoader,
+  EditorLoader,
+  DataAnalysisLoader,
+  MindMapLoader,
+  ChatLoader
+} from './components/LazyComponents'
 
 const App: React.FC = () => {
   const { Content } = Layout
@@ -33,21 +40,39 @@ const App: React.FC = () => {
   const renderContent = (): React.ReactNode => {
     switch (currentView) {
       case 'Settings':
-        return <Settings />
+        return (
+          <Suspense fallback={<SettingsLoader />}>
+            <LazySettings />
+          </Suspense>
+        )
       case 'Editor':
         return (
-          <EditorComponent
-            currentFolder={currentFolder}
-            currentFile={currentFile}
-            onFileChanged={handleFileChanged}
-          />
+          <Suspense fallback={<EditorLoader />}>
+            <LazyEditor
+              currentFolder={currentFolder}
+              currentFile={currentFile}
+              onFileChanged={handleFileChanged}
+            />
+          </Suspense>
         )
       case 'DataAnalysis':
-        return <DataAnalysis />
+        return (
+          <Suspense fallback={<DataAnalysisLoader />}>
+            <LazyDataAnalysis />
+          </Suspense>
+        )
       case 'MindMap':
-        return <MindMapPage />
+        return (
+          <Suspense fallback={<MindMapLoader />}>
+            <LazyMindMapPage />
+          </Suspense>
+        )
       case 'Chat':
-        return <ChatInterface />
+        return (
+          <Suspense fallback={<ChatLoader />}>
+            <LazyChatInterface />
+          </Suspense>
+        )
       default:
         return <div>分组管理内容</div>
     }

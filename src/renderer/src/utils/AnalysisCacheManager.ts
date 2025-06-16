@@ -58,7 +58,7 @@ class AnalysisCacheManager {
         return JSON.stringify(entry.data).length + 200
       },
       maxSize: 10 * 1024 * 1024, // 最大10MB缓存
-      dispose: (value, key, reason) => {
+      dispose: (_value, key, reason) => {
         console.debug(`分析缓存项被移除: ${key}, 原因: ${reason}`)
       }
     })

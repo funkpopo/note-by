@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import {
   Typography,
   Card,
@@ -17,6 +17,7 @@ import ReactECharts from 'echarts-for-react'
 import 'echarts-wordcloud'
 import { DataAnalysisSkeleton } from './Skeleton'
 import { modelSelectionService } from '../services/modelSelectionService'
+import { VirtualTextList } from './VirtualList'
 
 // 图谱数据接口定义
 interface GraphNode {
@@ -389,7 +390,7 @@ const WritingEfficiencyTrend: React.FC<{
   statsData: StatsData | null
   activityData: ActivityData | null
   isDarkMode: boolean
-}> = ({ statsData, activityData, isDarkMode }) => {
+}> = memo(({ statsData, activityData, isDarkMode }) => {
   // 计算写作效率数据
   const generateEfficiencyData = useCallback(() => {
     if (!statsData?.editsByDate || !activityData?.dailyActivity) return []
@@ -501,13 +502,13 @@ const WritingEfficiencyTrend: React.FC<{
       </div>
     </Card>
   )
-}
+})
 
 // 内容质量评分组件
 const ContentQualityScore: React.FC<{
   statsData: StatsData | null
   isDarkMode: boolean
-}> = ({ statsData, isDarkMode }) => {
+}> = memo(({ statsData, isDarkMode }) => {
   // 计算内容质量评分
   const calculateQualityScore = useCallback(() => {
     if (!statsData)
@@ -651,7 +652,7 @@ const ContentQualityScore: React.FC<{
       />
     </Card>
   )
-}
+})
 
 const DataAnalysis: React.FC = () => {
   const { isDarkMode } = useTheme()
@@ -1695,7 +1696,8 @@ const DataAnalysis: React.FC = () => {
   )
 
   // 准备图表数据
-  const prepareChartData = (): {
+  // 图表数据准备函数 - 使用 useMemo 优化性能
+  const prepareChartData = useMemo((): {
     hourlyDistribution: ChartData
     topNotes: ChartData
     editTrend: ChartData
@@ -1912,7 +1914,7 @@ const DataAnalysis: React.FC = () => {
       activeHours,
       topTags
     }
-  }
+  }, [statsData, activityData, isDarkMode])
 
   // 格式化日期函数，将YYYY-MM-DD格式转为更友好的显示
   const formatDate = (dateString: string | null): string => {
@@ -2204,13 +2206,21 @@ const DataAnalysis: React.FC = () => {
                     >
                       {analysisResult.recommendations.title}
                     </Title>
-                    <ul style={{ paddingLeft: 20, margin: '16px 0' }}>
-                      {analysisResult.recommendations.items.map((item, index) => (
-                        <li key={index} style={{ marginBottom: 12 }}>
-                          <Paragraph style={{ lineHeight: 1.6 }}>{item}</Paragraph>
-                        </li>
-                      ))}
-                    </ul>
+                    <div style={{ margin: '16px 0' }}>
+                      <VirtualTextList
+                        items={analysisResult.recommendations.items}
+                        height={Math.min(300, analysisResult.recommendations.items.length * 60)}
+                        itemHeight={60}
+                        renderItem={(item) => (
+                          <div
+                            style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
+                          >
+                            <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
+                            <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
+                          </div>
+                        )}
+                      />
+                    </div>
 
                     <Divider margin="24px" />
 
@@ -2220,13 +2230,21 @@ const DataAnalysis: React.FC = () => {
                     >
                       {analysisResult.efficiencyTips.title}
                     </Title>
-                    <ul style={{ paddingLeft: 20, margin: '16px 0' }}>
-                      {analysisResult.efficiencyTips.items.map((item, index) => (
-                        <li key={index} style={{ marginBottom: 12 }}>
-                          <Paragraph style={{ lineHeight: 1.6 }}>{item}</Paragraph>
-                        </li>
-                      ))}
-                    </ul>
+                    <div style={{ margin: '16px 0' }}>
+                      <VirtualTextList
+                        items={analysisResult.efficiencyTips.items}
+                        height={Math.min(300, analysisResult.efficiencyTips.items.length * 60)}
+                        itemHeight={60}
+                        renderItem={(item) => (
+                          <div
+                            style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
+                          >
+                            <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
+                            <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
+                          </div>
+                        )}
+                      />
+                    </div>
 
                     <Divider margin="24px" />
 
@@ -2236,13 +2254,21 @@ const DataAnalysis: React.FC = () => {
                     >
                       {analysisResult.suggestedGoals.title}
                     </Title>
-                    <ul style={{ paddingLeft: 20, margin: '16px 0' }}>
-                      {analysisResult.suggestedGoals.items.map((item, index) => (
-                        <li key={index} style={{ marginBottom: 12 }}>
-                          <Paragraph style={{ lineHeight: 1.6 }}>{item}</Paragraph>
-                        </li>
-                      ))}
-                    </ul>
+                    <div style={{ margin: '16px 0' }}>
+                      <VirtualTextList
+                        items={analysisResult.suggestedGoals.items}
+                        height={Math.min(300, analysisResult.suggestedGoals.items.length * 60)}
+                        itemHeight={60}
+                        renderItem={(item) => (
+                          <div
+                            style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
+                          >
+                            <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
+                            <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
+                          </div>
+                        )}
+                      />
+                    </div>
                   </div>
                 </TabPane>
 
@@ -2264,11 +2290,8 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {prepareChartData()?.hourlyDistribution &&
-                            renderBarChart(
-                              prepareChartData()!.hourlyDistribution,
-                              '每日时段编辑分布'
-                            )}
+                          {prepareChartData?.hourlyDistribution &&
+                            renderBarChart(prepareChartData.hourlyDistribution, '每日时段编辑分布')}
                         </div>
                         <div
                           style={{
@@ -2276,8 +2299,8 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {prepareChartData()?.topNotes &&
-                            renderPieChart(prepareChartData()!.topNotes, '最常编辑的笔记')}
+                          {prepareChartData?.topNotes &&
+                            renderPieChart(prepareChartData.topNotes, '最常编辑的笔记')}
                         </div>
                       </div>
 
@@ -2296,8 +2319,8 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {prepareChartData()?.editTrend &&
-                            renderLineChart(prepareChartData()!.editTrend, '每日编辑次数趋势')}
+                          {prepareChartData?.editTrend &&
+                            renderLineChart(prepareChartData.editTrend, '每日编辑次数趋势')}
                         </div>
                         <div
                           style={{
@@ -2305,8 +2328,8 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {prepareChartData()?.noteTrend &&
-                            renderLineChart(prepareChartData()!.noteTrend, '每日活跃笔记数趋势')}
+                          {prepareChartData?.noteTrend &&
+                            renderLineChart(prepareChartData.noteTrend, '每日活跃笔记数趋势')}
                         </div>
                       </div>
 
@@ -2325,13 +2348,13 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {prepareChartData()?.activeHours &&
+                          {prepareChartData?.activeHours &&
                             renderBarChart(
-                              prepareChartData()!.activeHours,
+                              prepareChartData.activeHours,
                               '日内活跃时段分布 (占比%)',
                               true,
-                              prepareChartData()!.activeHours.datasets[0].data.indexOf(
-                                Math.max(...prepareChartData()!.activeHours.datasets[0].data)
+                              prepareChartData.activeHours.datasets[0].data.indexOf(
+                                Math.max(...prepareChartData.activeHours.datasets[0].data)
                               )
                             )}
                         </div>
@@ -2341,12 +2364,8 @@ const DataAnalysis: React.FC = () => {
                             marginRight: '0'
                           }}
                         >
-                          {prepareChartData()?.topFolders &&
-                            renderBarChart(
-                              prepareChartData()!.topFolders!,
-                              '最常用的文件夹',
-                              false
-                            )}
+                          {prepareChartData?.topFolders &&
+                            renderBarChart(prepareChartData.topFolders, '最常用的文件夹', false)}
                         </div>
                       </div>
 
@@ -2378,13 +2397,8 @@ const DataAnalysis: React.FC = () => {
                             }}
                           >
                             <div style={{ width: '100%', marginRight: '0' }}>
-                              {prepareChartData()?.topTags &&
-                                renderTagCloud(prepareChartData()!.topTags!, '最常用的标签')}
-
-                              {statsData.topTags &&
-                                statsData.topTags.length > 0 &&
-                                prepareChartData()?.topTags &&
-                                renderTagCloud(prepareChartData()!.topTags!, '最常用的标签')}
+                              {prepareChartData?.topTags &&
+                                renderTagCloud(prepareChartData.topTags, '最常用的标签')}
                             </div>
                           </div>
                         </>
