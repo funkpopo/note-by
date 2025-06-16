@@ -56,7 +56,7 @@ class GlobalTagManager {
         return JSON.stringify(item.data).length + 100 // 加上元数据开销
       },
       maxSize: 5 * 1024 * 1024, // 最大5MB缓存
-      dispose: (value, key, reason) => {
+      dispose: (_value, key, reason) => {
         console.debug(`缓存项被移除: ${key}, 原因: ${reason}`)
       }
     })

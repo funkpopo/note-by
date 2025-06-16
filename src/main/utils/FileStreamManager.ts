@@ -73,7 +73,7 @@ class FileStreamManager {
       await pipeline(
         readStream,
         new Transform({
-          transform(chunk, encoding, callback) {
+          transform(chunk, _encoding, callback) {
             chunks.push(Buffer.from(chunk))
             callback(null, chunk)
           }
@@ -267,7 +267,7 @@ class FileStreamManager {
       await pipeline(
         readStream,
         new Transform({
-          transform(chunk, encoding, callback) {
+          transform(chunk, _encoding, callback) {
             bytescopied += chunk.length
             callback(null, chunk)
           }
@@ -401,7 +401,7 @@ class FileStreamManager {
     const errors: Array<{ path: string; error: string }> = []
     let cleanedCount = 0
 
-    const result = await this.batchFileOperations(
+    await this.batchFileOperations(
       filePaths.map((filePath) => async () => {
         try {
           await fs.promises.unlink(filePath)
