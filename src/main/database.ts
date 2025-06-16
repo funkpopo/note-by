@@ -20,9 +20,297 @@ export interface WebDAVSyncRecord {
   fileSize: number
 }
 
+/**
+ * 数据库连接池管理器
+ * 管理SQLite连接的创建、复用和销毁
+ */
+class DatabasePool {
+  private connections: Array<{
+    connection: Database.Database
+    inUse: boolean
+    lastUsed: number
+  }> = []
+  private readonly maxConnections: number = 5
+  private readonly connectionTimeout: number = 30000 // 30秒
+  private SqliteDatabase: any = null
+  private dbPath: string = ''
+  private isInitialized: boolean = false
 
+  async initialize(): Promise<boolean> {
+    if (this.isInitialized) {
+      return true
+    }
 
-// 单例数据库连接
+    this.dbPath = getDatabasePath()
+
+    // 确保数据库目录存在
+    const dbDir = path.dirname(this.dbPath)
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true })
+      }
+    } catch (dirError) {
+      return false
+    }
+
+    // 动态导入better-sqlite3
+    try {
+      const SqliteModule = await import('better-sqlite3')
+      this.SqliteDatabase = SqliteModule.default
+    } catch (importError) {
+      return false
+    }
+
+    this.isInitialized = true
+
+    // 启动连接清理定时器
+    this.startConnectionCleanup()
+
+    return true
+  }
+
+  async getConnection(): Promise<Database.Database | null> {
+    if (!this.isInitialized) {
+      const initialized = await this.initialize()
+      if (!initialized) {
+        return null
+      }
+    }
+
+    // 查找可用的连接
+    const availableConnection = this.connections.find((conn) => !conn.inUse)
+    if (availableConnection) {
+      availableConnection.inUse = true
+      availableConnection.lastUsed = Date.now()
+      return availableConnection.connection
+    }
+
+    // 如果没有可用连接且未达到最大连接数，创建新连接
+    if (this.connections.length < this.maxConnections) {
+      const newConnection = this.createConnection()
+      if (newConnection) {
+        const connectionItem = {
+          connection: newConnection,
+          inUse: true,
+          lastUsed: Date.now()
+        }
+        this.connections.push(connectionItem)
+        return newConnection
+      }
+    }
+
+    // 所有连接都在使用中，等待可用连接
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        const availableConn = this.connections.find((conn) => !conn.inUse)
+        if (availableConn) {
+          clearInterval(checkInterval)
+          availableConn.inUse = true
+          availableConn.lastUsed = Date.now()
+          resolve(availableConn.connection)
+        }
+      }, 10)
+
+      // 设置超时
+      setTimeout(() => {
+        clearInterval(checkInterval)
+        resolve(null)
+      }, 5000)
+    })
+  }
+
+  releaseConnection(connection: Database.Database): void {
+    const connectionItem = this.connections.find((conn) => conn.connection === connection)
+    if (connectionItem) {
+      connectionItem.inUse = false
+      connectionItem.lastUsed = Date.now()
+    }
+  }
+
+  private createConnection(): Database.Database | null {
+    try {
+      const connection = new this.SqliteDatabase(this.dbPath)
+
+      // 设置WAL模式以提高并发性能
+      connection.pragma('journal_mode = WAL')
+      connection.pragma('synchronous = NORMAL')
+      connection.pragma('cache_size = 1000')
+      connection.pragma('temp_store = memory')
+
+      // 创建必要的表
+      this.initializeTables(connection)
+
+      return connection
+    } catch (error) {
+      console.error('创建数据库连接失败:', error)
+      return null
+    }
+  }
+
+  private initializeTables(connection: Database.Database): void {
+    // 创建文档历史记录表
+    connection.exec(`
+      CREATE TABLE IF NOT EXISTS note_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_path TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
+      CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
+    `)
+
+    // 创建WebDAV同步缓存表
+    connection.exec(`
+      CREATE TABLE IF NOT EXISTS webdav_sync_cache (
+        file_path TEXT PRIMARY KEY,
+        remote_path TEXT NOT NULL,
+        last_sync_time INTEGER NOT NULL,
+        last_modified_local INTEGER NOT NULL,
+        last_modified_remote INTEGER,
+        content_hash TEXT NOT NULL,
+        file_size INTEGER NOT NULL
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
+    `)
+
+    // 创建分析缓存表
+    connection.exec(`
+      CREATE TABLE IF NOT EXISTS analysis_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        stats_data TEXT NOT NULL,
+        activity_data TEXT NOT NULL,
+        result_data TEXT NOT NULL,
+        data_fingerprint TEXT,
+        created_at INTEGER NOT NULL
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_analysis_cache_date_model ON analysis_cache(date, model_id);
+    `)
+  }
+
+  private startConnectionCleanup(): void {
+    setInterval(() => {
+      const now = Date.now()
+      this.connections = this.connections.filter((conn) => {
+        if (!conn.inUse && now - conn.lastUsed > this.connectionTimeout) {
+          try {
+            conn.connection.close()
+            return false
+          } catch (error) {
+            console.error('关闭超时连接失败:', error)
+            return false
+          }
+        }
+        return true
+      })
+    }, 60000) // 每分钟清理一次
+  }
+
+  async closeAll(): Promise<void> {
+    const promises = this.connections.map(async (conn) => {
+      try {
+        conn.connection.close()
+      } catch (error) {
+        console.error('关闭数据库连接失败:', error)
+      }
+    })
+
+    await Promise.all(promises)
+    this.connections = []
+    this.isInitialized = false
+  }
+
+  getStats(): {
+    totalConnections: number
+    activeConnections: number
+    availableConnections: number
+  } {
+    const activeConnections = this.connections.filter((conn) => conn.inUse).length
+    return {
+      totalConnections: this.connections.length,
+      activeConnections,
+      availableConnections: this.connections.length - activeConnections
+    }
+  }
+
+  /**
+   * 内存清理（响应内存压力）
+   */
+  performMemoryCleanup(): {
+    closedConnections: number
+    cacheCleared: boolean
+  } {
+    let closedConnections = 0
+
+    // 关闭空闲连接（保留至少1个连接）
+    const now = Date.now()
+    this.connections = this.connections.filter((conn) => {
+      if (!conn.inUse && this.connections.length > 1 && now - conn.lastUsed > 10000) {
+        try {
+          conn.connection.close()
+          closedConnections++
+          return false
+        } catch (error) {
+          console.error('关闭空闲连接失败:', error)
+          return true
+        }
+      }
+      return true
+    })
+
+    // 清理SQLite内存缓存
+    let cacheCleared = false
+    this.connections.forEach((conn) => {
+      if (!conn.inUse) {
+        try {
+          // 清理SQLite的页面缓存
+          conn.connection.pragma('cache_size = 0')
+          conn.connection.pragma('cache_size = 1000')
+          // 执行VACUUM操作清理内存碎片
+          conn.connection.pragma('optimize')
+          cacheCleared = true
+        } catch (error) {
+          console.error('清理数据库缓存失败:', error)
+        }
+      }
+    })
+
+    return {
+      closedConnections,
+      cacheCleared
+    }
+  }
+}
+
+// 全局连接池实例
+const dbPool = new DatabasePool()
+
+// 连接池包装器函数
+async function withDatabase<T>(
+  operation: (db: Database.Database) => T | Promise<T>
+): Promise<T | null> {
+  const connection = await dbPool.getConnection()
+  if (!connection) {
+    return null
+  }
+
+  try {
+    const result = await operation(connection)
+    return result
+  } catch (error) {
+    console.error('数据库操作失败:', error)
+    return null
+  } finally {
+    dbPool.releaseConnection(connection)
+  }
+}
+
+// 保持向后兼容的单例数据库连接（标记为已弃用）
 let db: Database.Database | null = null
 
 function getDatabasePath(): string {
@@ -39,83 +327,28 @@ function getDatabasePath(): string {
   return path.join(markdownPath, '.assets', 'note_history.db')
 }
 
-// 初始化数据库
+// 初始化数据库（保持向后兼容，但推荐使用连接池）
 export async function initDatabase(): Promise<Database.Database | null> {
   // 如果已经初始化过并成功，直接返回
   if (db) {
     return db
   }
 
-  const dbPath = getDatabasePath()
-
-  // 确保数据库目录存在
-  const dbDir = path.dirname(dbPath)
-
-  try {
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true })
-    }
-  } catch (dirError) {
-    return null
+  // 使用连接池获取一个连接作为主连接
+  const connection = await dbPool.getConnection()
+  if (connection) {
+    db = connection
+    // 不释放这个连接，作为主连接保持
   }
 
-  try {
-    // 动态导入better-sqlite3
-    let SqliteDatabase
-    try {
-      // 导入better-sqlite3模块
-      const SqliteModule = await import('better-sqlite3')
-      SqliteDatabase = SqliteModule.default
-    } catch (importError) {
-      return null
-    }
-
-    db = new SqliteDatabase(dbPath)
-
-    if (db) {
-      // 创建文档历史记录表
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS note_history (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          file_path TEXT NOT NULL,
-          content TEXT NOT NULL,
-          timestamp INTEGER NOT NULL
-        );
-        
-        CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
-        CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
-      `)
-
-      // 验证表是否创建成功
-      const tableCheckStmt = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='note_history'"
-      )
-      const tableExists = tableCheckStmt.get()
-
-      if (!tableExists) {
-        return null
-      }
-    } else {
-      return null
-    }
-
-    return db
-  } catch (error) {
-    return null
-  }
+  return db
 }
 
 // WebDAV同步缓存相关结构和函数
 
-// 初始化WebDAV同步缓存表
+// 初始化WebDAV同步缓存表（使用连接池）
 export async function initWebDAVSyncCacheTable(): Promise<void> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return
-    }
-
+  await withDatabase(async (database) => {
     // 创建WebDAV同步缓存表
     database.exec(`
       CREATE TABLE IF NOT EXISTS webdav_sync_cache (
@@ -130,20 +363,13 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
       
       CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
     `)
-  } catch (error) {
-    // 创建表失败，继续执行
-  }
+    return true
+  })
 }
 
-// 保存或更新WebDAV同步记录
+// 保存或更新WebDAV同步记录（使用连接池）
 export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<boolean> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return false
-    }
-
+  const result = await withDatabase(async (database) => {
     // 检查记录是否已存在
     const checkStmt = database.prepare(
       'SELECT file_path FROM webdav_sync_cache WHERE file_path = ?'
@@ -192,20 +418,14 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     }
 
     return true
-  } catch (error) {
-    return false
-  }
+  })
+
+  return result !== null
 }
 
-// 获取特定文件的WebDAV同步记录
+// 获取特定文件的WebDAV同步记录（使用连接池）
 export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncRecord | null> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return null
-    }
-
+  const result = await withDatabase(async (database) => {
     // 查询记录
     const stmt = database.prepare(`
       SELECT 
@@ -221,30 +441,22 @@ export async function getWebDAVSyncRecord(filePath: string): Promise<WebDAVSyncR
     `)
 
     const record = stmt.get(filePath) as WebDAVSyncRecord | undefined
-
     return record || null
-  } catch (error) {
-    return null
-  }
+  })
+
+  return result
 }
 
-// 清除所有WebDAV同步缓存
+// 清除所有WebDAV同步缓存（使用连接池）
 export async function clearWebDAVSyncCache(): Promise<boolean> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return false
-    }
-
+  const result = await withDatabase(async (database) => {
     // 删除所有记录
     const stmt = database.prepare('DELETE FROM webdav_sync_cache')
     stmt.run()
-
     return true
-  } catch (error) {
-    return false
-  }
+  })
+
+  return result !== null
 }
 
 // 关闭数据库连接
@@ -260,10 +472,33 @@ export function closeDatabase(): void {
   }
 }
 
+// 新增：关闭所有数据库连接（包括连接池）
+export async function closeAllDatabaseConnections(): Promise<void> {
+  await dbPool.closeAll()
+  closeDatabase()
+}
+
+// 新增：获取连接池统计信息
+export function getDatabasePoolStats(): {
+  totalConnections: number
+  activeConnections: number
+  availableConnections: number
+} {
+  return dbPool.getStats()
+}
+
 // 检查数据库是否可用
 export function isDatabaseReady(): boolean {
   // 只依赖于db实例是否存在，不使用可能不准确的isDatabaseAvailable标志
   return db !== null
+}
+
+// 执行数据库内存清理
+export function performDatabaseMemoryCleanup(): {
+  closedConnections: number
+  cacheCleared: boolean
+} {
+  return dbPool.performMemoryCleanup()
 }
 
 // 添加历史记录
@@ -273,14 +508,7 @@ interface AddHistoryParams {
 }
 
 export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
-  try {
-    const database = await initDatabase()
-
-    // 如果数据库不可用，静默返回
-    if (!database) {
-      return
-    }
-
+  await withDatabase(async (database) => {
     const timestamp = Date.now()
 
     // 准备插入语句
@@ -304,7 +532,7 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
       maxDays: 7
     }
 
-    // 同步调用getSetting，移除await
+    // 同步调用getSetting
     const historyManagement = getSetting(
       'historyManagement',
       defaultSettings
@@ -323,9 +551,7 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
         )
       `)
 
-      const result = cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
-      if (result.changes > 0) {
-      }
+      cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
     } else if (historyManagement.type === 'time') {
       // 基于时间的清理策略
       // 计算时间阈值（当前时间减去maxDays天）
@@ -336,13 +562,11 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
         WHERE file_path = ? AND timestamp < ?
       `)
 
-      const result = cleanStmt.run(params.filePath, timeThreshold)
-      if (result.changes > 0) {
-      }
+      cleanStmt.run(params.filePath, timeThreshold)
     }
-  } catch (error) {
-    return
-  }
+
+    return true
+  })
 }
 
 // 获取文档的历史记录
@@ -354,14 +578,7 @@ interface NoteHistoryItem {
 }
 
 export async function getNoteHistory(filePath: string): Promise<NoteHistoryItem[]> {
-  try {
-    const database = await initDatabase()
-
-    // 如果数据库不可用，返回空数组
-    if (!database) {
-      return []
-    }
-
+  const result = await withDatabase(async (database) => {
     // 查询历史记录
     const stmt = database.prepare(
       'SELECT id, file_path as filePath, content, timestamp FROM note_history WHERE file_path = ? ORDER BY timestamp DESC'
@@ -369,21 +586,14 @@ export async function getNoteHistory(filePath: string): Promise<NoteHistoryItem[
 
     // 执行查询并返回结果
     return stmt.all(filePath) as NoteHistoryItem[]
-  } catch (error) {
-    return []
-  }
+  })
+
+  return result || []
 }
 
-// 获取特定ID的历史记录
+// 获取特定ID的历史记录（使用连接池）
 export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | null> {
-  try {
-    const database = await initDatabase()
-
-    // 如果数据库不可用，返回null
-    if (!database) {
-      return null
-    }
-
+  const result = await withDatabase(async (database) => {
     // 查询特定ID的历史记录
     const stmt = database.prepare(
       'SELECT id, file_path as filePath, content, timestamp FROM note_history WHERE id = ?'
@@ -391,9 +601,9 @@ export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | 
 
     // 执行查询并返回结果
     return stmt.get(id) as NoteHistoryItem | null
-  } catch (error) {
-    return null
-  }
+  })
+
+  return result
 }
 
 // 笔记历史记录统计和分析接口
@@ -447,14 +657,7 @@ export interface NoteHistoryStats {
 
 // 获取笔记历史记录统计数据
 export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
-  try {
-    const database = await initDatabase()
-
-    // 如果数据库不可用，返回null
-    if (!database) {
-      return null
-    }
-
+  const result = await withDatabase(async (database) => {
     // 1. 获取笔记总数（去重的文件路径数）
     const totalNotesStmt = database.prepare(
       'SELECT COUNT(DISTINCT file_path) as count FROM note_history'
@@ -604,10 +807,11 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       tagRelations: tagData?.tagRelations || [],
       documentTags: tagData?.documentTags || []
     }
-  } catch (error) {
-    // 统计失败，返回默认值
-    // 发生错误时，返回默认的空统计对象而不是null
-    return {
+  })
+
+  // 如果查询失败，返回默认的空统计对象
+  return (
+    result || {
       totalNotes: 0,
       totalEdits: 0,
       averageEditLength: 0,
@@ -620,7 +824,7 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       tagRelations: [],
       documentTags: []
     }
-  }
+  )
 }
 
 // 用户活动数据
@@ -649,14 +853,7 @@ export interface UserActivityData {
 
 // 获取用户活动数据
 export async function getUserActivityData(days: number = 30): Promise<UserActivityData | null> {
-  try {
-    const database = await initDatabase()
-
-    // 如果数据库不可用，返回null
-    if (!database) {
-      return null
-    }
-
+  const result = await withDatabase(async (database) => {
     // 计算起始时间（过去days天）
     const startTime = Date.now() - days * 24 * 60 * 60 * 1000
 
@@ -800,9 +997,9 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
     result.noteDetails.sort((a, b) => b.editCount - a.editCount)
 
     return result
-  } catch (error) {
-    return null
-  }
+  })
+
+  return result
 }
 
 // 分析缓存项接口
@@ -844,15 +1041,9 @@ export interface AnalysisCacheItem {
   modelId: string
 }
 
-// 初始化数据库时创建分析缓存表
+// 初始化数据库时创建分析缓存表（使用连接池）
 export async function initAnalysisCacheTable(): Promise<void> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return
-    }
-
+  await withDatabase(async (database) => {
     // 只在表不存在时创建表，不再删除现有表
     database.exec(`
       CREATE TABLE IF NOT EXISTS analysis_cache (
@@ -867,20 +1058,13 @@ export async function initAnalysisCacheTable(): Promise<void> {
 
       CREATE INDEX IF NOT EXISTS idx_analysis_cache_date ON analysis_cache(date);
     `)
-  } catch (error) {}
+    return true
+  })
 }
 
-
-
-// 保存分析缓存
+// 保存分析缓存（使用连接池）
 export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolean> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return false
-    }
-
+  const result = await withDatabase(async (database) => {
     // 先检查是否已有当天的数据
     const checkStmt = database.prepare('SELECT id FROM analysis_cache WHERE date = ?')
     const existingRecord = checkStmt.get(data.date) as { id: number } | undefined
@@ -940,20 +1124,14 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
     cleanupStmt.run()
 
     return true
-  } catch (error) {
-    return false
-  }
+  })
+
+  return result !== null
 }
 
-// 获取分析缓存
+// 获取分析缓存（使用连接池）
 export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return null
-    }
-
+  const result = await withDatabase(async (database) => {
     // 获取最新的缓存记录
     const stmt = database.prepare(`
       SELECT date, stats, activity_data, result, model_id
@@ -984,30 +1162,26 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
       result: JSON.parse(record.result),
       modelId: record.model_id
     }
-  } catch (error) {
-    return null
-  }
+  })
+
+  return result
 }
 
-// 重置分析缓存表
+// 重置分析缓存表（使用连接池）
 export async function resetAnalysisCache(): Promise<boolean> {
-  try {
-    const database = await initDatabase()
-
-    if (!database) {
-      return false
-    }
-
+  const result = await withDatabase(async (database) => {
     // 删除并重新创建表
     database.exec(`DROP TABLE IF EXISTS analysis_cache`)
+    return true
+  })
 
+  if (result) {
     // 重新创建表
     await initAnalysisCacheTable()
-
     return true
-  } catch (error) {
-    return false
   }
+
+  return false
 }
 
 // 用于获取文档中的标签数据
@@ -1247,9 +1421,51 @@ export async function checkDatabaseStatus(): Promise<{
       return result
     }
 
-    // 检查数据库是否已初始化
-    const database = await initDatabase()
-    if (!database) {
+    // 检查数据库是否已初始化（使用连接池）
+    const dbResult = await withDatabase(async (database) => {
+      // 检查表是否存在
+      const tablesStmt = database.prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      const tables = tablesStmt.all() as Array<{ name: string }>
+      result.details.tables = tables.map((t) => t.name)
+
+      const hasNoteHistoryTable = result.details.tables.includes('note_history')
+      result.tablesExist = hasNoteHistoryTable
+
+      if (hasNoteHistoryTable) {
+        // 获取note_history表的记录数量
+        const countStmt = database.prepare('SELECT COUNT(*) as count FROM note_history')
+        const countResult = countStmt.get() as { count: number }
+        result.recordCount = countResult.count
+
+        // 获取表结构信息
+        const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
+        const tableInfo = tableInfoStmt.all()
+        result.details.tableInfo.note_history = tableInfo
+
+        if (result.recordCount === 0) {
+          result.details.recommendations.push(
+            '历史记录表存在但为空，这可能是正常的（如果是首次使用）'
+          )
+        } else {
+          result.details.recommendations.push(
+            `历史记录表包含 ${result.recordCount} 条记录，功能正常`
+          )
+        }
+      } else {
+        result.details.recommendations.push('note_history表不存在，可能需要重新初始化数据库')
+      }
+
+      // 检查其他表
+      if (result.details.tables.includes('webdav_sync_cache')) {
+        const webdavCountStmt = database.prepare('SELECT COUNT(*) as count FROM webdav_sync_cache')
+        const webdavCount = webdavCountStmt.get() as { count: number }
+        result.details.tableInfo.webdav_sync_cache = { recordCount: webdavCount.count }
+      }
+
+      return true
+    })
+
+    if (!dbResult) {
       result.lastError = '数据库初始化失败'
       result.details.recommendations.push('数据库初始化失败，请检查SQLite模块是否正确安装')
       result.details.recommendations.push('尝试重启应用程序以重新初始化数据库')
@@ -1257,43 +1473,6 @@ export async function checkDatabaseStatus(): Promise<{
     }
 
     result.isInitialized = true
-
-    // 检查表是否存在
-    const tablesStmt = database.prepare("SELECT name FROM sqlite_master WHERE type='table'")
-    const tables = tablesStmt.all() as Array<{ name: string }>
-    result.details.tables = tables.map((t) => t.name)
-
-    const hasNoteHistoryTable = result.details.tables.includes('note_history')
-    result.tablesExist = hasNoteHistoryTable
-
-    if (hasNoteHistoryTable) {
-      // 获取note_history表的记录数量
-      const countStmt = database.prepare('SELECT COUNT(*) as count FROM note_history')
-      const countResult = countStmt.get() as { count: number }
-      result.recordCount = countResult.count
-
-      // 获取表结构信息
-      const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
-      const tableInfo = tableInfoStmt.all()
-      result.details.tableInfo.note_history = tableInfo
-
-      if (result.recordCount === 0) {
-        result.details.recommendations.push(
-          '历史记录表存在但为空，这可能是正常的（如果是首次使用）'
-        )
-      } else {
-        result.details.recommendations.push(`历史记录表包含 ${result.recordCount} 条记录，功能正常`)
-      }
-    } else {
-      result.details.recommendations.push('note_history表不存在，可能需要重新初始化数据库')
-    }
-
-    // 检查其他表
-    if (result.details.tables.includes('webdav_sync_cache')) {
-      const webdavCountStmt = database.prepare('SELECT COUNT(*) as count FROM webdav_sync_cache')
-      const webdavCount = webdavCountStmt.get() as { count: number }
-      result.details.tableInfo.webdav_sync_cache = { recordCount: webdavCount.count }
-    }
 
     // 如果一切正常，提供积极反馈
     if (
@@ -1313,9 +1492,3 @@ export async function checkDatabaseStatus(): Promise<{
     return result
   }
 }
-
-
-
-
-
-

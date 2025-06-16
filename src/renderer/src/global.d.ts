@@ -325,6 +325,5 @@ interface Window {
     window: {
       setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
     }
-
   }
 }

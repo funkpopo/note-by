@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { modelSelectionService } from '../../services/modelSelectionService'
 import { filterThinkingContent } from '../../utils/filterThinking'
+import { analysisCacheManager } from '../../utils/AnalysisCacheManager'
 
 // 数据指纹计算函数
 const calculateDataFingerprint = (statsData: any, activityData: any): DataFingerprint => {
@@ -129,6 +130,7 @@ export interface AnalysisState {
   retryAnalysis: () => Promise<void>
   clearError: () => void
   resetCacheStatus: () => void
+  preloadCache: () => Promise<void>
 }
 
 // 创建分析状态存储
@@ -222,24 +224,35 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       }
       const activityData = activityResult.success ? activityResult.activityData : null
 
-      // 智能缓存检查（如果不是强制更新）
+      // 智能缓存检查（如果不是强制更新）- 使用LRU缓存
       if (!forceUpdate) {
         set({ progress: 50 })
-        let cacheResult
         try {
-          cacheResult = await window.api.analytics.getAnalysisCache()
-        } catch (error) {
-          console.warn('缓存检查失败:', error)
-          // 缓存失败不阻止分析继续进行
-          cacheResult = { success: false, cache: null }
-        }
+          const today = new Date().toISOString().split('T')[0]
+          const cachedAnalysis = await analysisCacheManager.getCachedAnalysis(
+            today,
+            modelId,
+            statsData,
+            activityData
+          )
 
-        if (cacheResult.success && cacheResult.cache) {
-          try {
+          if (cachedAnalysis) {
+            set({
+              analysisResult: cachedAnalysis.result,
+              isAnalyzing: false,
+              analysisCached: true,
+              progress: 100
+            })
+            return
+          }
+
+          // 如果LRU缓存中没有，尝试从数据库加载
+          const cacheResult = await window.api.analytics.getAnalysisCache()
+          if (cacheResult.success && cacheResult.cache) {
             // 计算当前数据指纹
             const currentFingerprint = calculateDataFingerprint(statsData, activityData)
 
-            // 比较数据指纹而不是日期
+            // 比较数据指纹
             if (cacheResult.cache.dataFingerprint) {
               const cachedFingerprint = cacheResult.cache.dataFingerprint
               const isFingerprintMatch =
@@ -250,18 +263,13 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
                 cachedFingerprint.notesCountHash === currentFingerprint.notesCountHash
 
               if (isFingerprintMatch && cacheResult.cache.modelId === modelId) {
-                set({
-                  analysisResult: cacheResult.cache.result,
-                  isAnalyzing: false,
-                  analysisCached: true,
-                  progress: 100
-                })
-                return
-              }
-            } else {
-              // 兼容旧缓存格式，使用日期检查
-              const today = new Date().toISOString().split('T')[0]
-              if (cacheResult.cache.date === today && cacheResult.cache.modelId === modelId) {
+                // 将数据库缓存加载到LRU缓存中
+                await analysisCacheManager.setCachedAnalysis(
+                  cacheResult.cache,
+                  statsData,
+                  activityData
+                )
+
                 set({
                   analysisResult: cacheResult.cache.result,
                   isAnalyzing: false,
@@ -271,9 +279,10 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
                 return
               }
             }
-          } catch (error) {
-            // 缓存处理失败，继续新的分析
           }
+        } catch (error) {
+          console.warn('缓存检查失败:', error)
+          // 缓存失败不阻止分析继续进行
         }
       }
 
@@ -501,21 +510,28 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           progress: 100
         })
 
-        // 保存到缓存
+        // 保存到缓存（同时保存到数据库和LRU缓存）
         if (result) {
           try {
             const dataFingerprint = calculateDataFingerprint(statsData, activityData)
-            // @ts-ignore - API可能存在但TypeScript不知道
-            await window.api.analytics.saveAnalysisCache({
+            const cacheItem = {
               date: new Date().toISOString().split('T')[0],
               stats: statsData,
               activityData,
               result,
               modelId,
               dataFingerprint
-            })
+            }
+
+            // 保存到数据库
+            // @ts-ignore - API可能存在但TypeScript不知道
+            await window.api.analytics.saveAnalysisCache(cacheItem)
+
+            // 保存到LRU缓存
+            await analysisCacheManager.setCachedAnalysis(cacheItem, statsData, activityData)
           } catch (cacheError) {
             // 缓存保存失败不影响分析结果的显示
+            console.warn('缓存保存失败:', cacheError)
           }
         }
       } catch (jsonError) {
@@ -623,5 +639,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   // 重置缓存状态
   resetCacheStatus: () => {
     set({ analysisCached: false })
+  },
+
+  // 预热缓存
+  preloadCache: async () => {
+    try {
+      await analysisCacheManager.preloadCache()
+    } catch (error) {
+      console.warn('缓存预热失败:', error)
+    }
   }
 }))

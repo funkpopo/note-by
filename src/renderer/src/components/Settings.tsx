@@ -47,8 +47,6 @@ interface HistoryManagementSettings {
   maxDays: number
 }
 
-
-
 const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
@@ -70,8 +68,6 @@ const Settings: React.FC = () => {
     maxDays: 7
   })
 
-
-
   // 加载设置函数
   const loadSettings = useCallback(async (): Promise<void> => {
     try {
@@ -92,16 +88,12 @@ const Settings: React.FC = () => {
       if (settings.historyManagement) {
         setHistoryManagement(settings.historyManagement as HistoryManagementSettings)
       }
-
-
     } catch (error) {
       Toast.error('加载设置失败')
     } finally {
       setIsLoading(false)
     }
   }, [])
-
-
 
   // 加载所有设置
   useEffect(() => {
@@ -550,10 +542,6 @@ const Settings: React.FC = () => {
     }
   }
 
-
-
-
-
   return (
     <div
       style={{
@@ -786,8 +774,6 @@ const Settings: React.FC = () => {
         <TabPane tab="WebDAV同步" itemKey="webdav">
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </TabPane>
-
-
       </Tabs>
 
       {/* 添加/编辑配置模态框 */}
@@ -907,8 +893,6 @@ const Settings: React.FC = () => {
           </div>
         </Form>
       </Modal>
-
-
     </div>
   )
 }

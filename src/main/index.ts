@@ -40,7 +40,6 @@ import {
   saveAnalysisCache,
   resetAnalysisCache,
   initAnalysisCacheTable,
-
   getDocumentTagsData,
   checkDatabaseStatus,
   type AnalysisCacheItem
@@ -49,6 +48,9 @@ import {
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import Showdown from 'showdown'
+import { fileStreamManager } from './utils/FileStreamManager'
+import { memoryMonitor } from './utils/MemoryMonitor'
+import { performDatabaseMemoryCleanup } from './database'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -113,7 +115,15 @@ const IPC_CHANNELS = {
   MINDMAP_LOAD_FILE: 'mindmap:load-file',
   MINDMAP_EXPORT_HTML: 'mindmap:export-html',
   // 添加主题相关IPC通道
-  SET_WINDOW_BACKGROUND: 'window:set-background'
+  SET_WINDOW_BACKGROUND: 'window:set-background',
+  // 添加批量文件操作IPC通道
+  BATCH_READ_FILES: 'files:batch-read',
+  BATCH_WRITE_FILES: 'files:batch-write',
+  // 添加内存监控IPC通道
+  MEMORY_GET_STATS: 'memory:get-stats',
+  MEMORY_GET_REPORT: 'memory:get-report',
+  MEMORY_CLEANUP: 'memory:cleanup',
+  MEMORY_FORCE_GC: 'memory:force-gc'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -667,16 +677,16 @@ app.whenReady().then(() => {
       const folderPath = fullPath.substring(0, fullPath.lastIndexOf('\\'))
       await ensureMarkdownFolders(folderPath)
 
-      // 写入文件
-      await fsPromises.writeFile(fullPath, content, 'utf-8')
+      // 使用流式写入优化大文件处理
+      await fileStreamManager.writeFileStream(fullPath, content, {
+        encoding: 'utf-8'
+      })
 
       // 添加历史记录
       await addNoteHistory({
         filePath,
         content
       })
-
-
 
       return { success: true, path: fullPath }
     } catch (error) {
@@ -783,7 +793,7 @@ app.whenReady().then(() => {
       // 将Markdown转换为DOCX
       const buffer = await markdownToDocx(content)
 
-      // 写入文件
+      // 写入二进制文件
       await fsPromises.writeFile(savePath, buffer)
 
       // 转换成功后打开文件
@@ -1073,8 +1083,10 @@ ${htmlContent}
         return { success: false, error: '文件不存在', content: '' }
       }
 
-      // 读取文件内容
-      const content = await fsPromises.readFile(fullPath, 'utf-8')
+      // 使用流式读取优化大文件处理
+      const content = await fileStreamManager.readFileStream(fullPath, {
+        encoding: 'utf-8'
+      })
 
       return { success: true, content }
     } catch (error) {
@@ -1199,8 +1211,10 @@ ${htmlContent}
         // 文件不存在，可以创建
       }
 
-      // 写入文件
-      await fsPromises.writeFile(filePath, content || '', 'utf-8')
+      // 使用流式写入优化大文件处理
+      await fileStreamManager.writeFileStream(filePath, content || '', {
+        encoding: 'utf-8'
+      })
 
       return { success: true, path: filePath }
     } catch (error) {
@@ -1486,7 +1500,7 @@ ${htmlContent}
           }
 
           try {
-            // 尝试读取文件
+            // 尝试读取文件（二进制文件，不使用流式处理）
             const fileBuffer = await fsPromises.readFile(cleanPath)
             // 转换为base64
             const base64Data = `data:image/${path.extname(cleanPath).substring(1)};base64,${fileBuffer.toString('base64')}`
@@ -1745,7 +1759,9 @@ ${htmlContent}
         return { success: false, error: '用户取消保存' }
       }
 
-      await fsPromises.writeFile(savePath, content, 'utf-8')
+      await fileStreamManager.writeFileStream(savePath, content, {
+        encoding: 'utf-8'
+      })
       return { success: true, path: savePath }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -1771,7 +1787,9 @@ ${htmlContent}
       }
 
       const filePath = filePaths[0]
-      const content = await fsPromises.readFile(filePath, 'utf-8')
+      const content = await fileStreamManager.readFileStream(filePath, {
+        encoding: 'utf-8'
+      })
       return { success: true, data: content }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -1844,7 +1862,9 @@ ${htmlContent}
 </html>`
 
       // 保存HTML内容
-      await fsPromises.writeFile(savePath, htmlContent, 'utf-8')
+      await fileStreamManager.writeFileStream(savePath, htmlContent, {
+        encoding: 'utf-8'
+      })
       return { success: true, path: savePath }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -1864,6 +1884,140 @@ ${htmlContent}
     }
   })
 
+  // 批量读取文件
+  ipcMain.handle(IPC_CHANNELS.BATCH_READ_FILES, async (_, filePaths: string[]) => {
+    try {
+      const markdownRoot = getMarkdownFolderPath()
+      const fullPaths = filePaths.map((filePath) => resolve(markdownRoot, filePath))
+
+      const results = await fileStreamManager.batchReadFiles(fullPaths, {
+        maxConcurrency: 5,
+        encoding: 'utf-8'
+      })
+
+      return {
+        success: true,
+        results: results.map((result, index) => ({
+          filePath: filePaths[index],
+          success: result.success,
+          content: result.content,
+          error: result.error
+        }))
+      }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 批量写入文件
+  ipcMain.handle(
+    IPC_CHANNELS.BATCH_WRITE_FILES,
+    async (_, operations: Array<{ filePath: string; content: string }>) => {
+      try {
+        const markdownRoot = getMarkdownFolderPath()
+        const writeOperations = operations.map((op) => ({
+          filePath: resolve(markdownRoot, op.filePath),
+          content: op.content
+        }))
+
+        const results = await fileStreamManager.batchWriteFiles(writeOperations, {
+          maxConcurrency: 5,
+          encoding: 'utf-8'
+        })
+
+        // 添加历史记录（仅对成功的操作）
+        const historyPromises = operations
+          .filter((_, index) => results[index].success)
+          .map((op) =>
+            addNoteHistory({
+              filePath: op.filePath,
+              content: op.content
+            })
+          )
+
+        await Promise.allSettled(historyPromises)
+
+        return {
+          success: true,
+          results: results.map((result, index) => ({
+            filePath: operations[index].filePath,
+            success: result.success,
+            error: result.error
+          }))
+        }
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
+    }
+  )
+
+  // 获取内存统计
+  ipcMain.handle(IPC_CHANNELS.MEMORY_GET_STATS, async () => {
+    try {
+      const stats = memoryMonitor.getCurrentStats()
+      return { success: true, stats }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取内存报告
+  ipcMain.handle(IPC_CHANNELS.MEMORY_GET_REPORT, async () => {
+    try {
+      const report = memoryMonitor.generateReport()
+      return { success: true, report }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 内存清理
+  ipcMain.handle(IPC_CHANNELS.MEMORY_CLEANUP, async () => {
+    try {
+      const cleanupResults = {
+        memoryMonitor: await memoryMonitor.cleanupMemory(),
+        database: performDatabaseMemoryCleanup(),
+        fileStreamManager: null as any,
+        globalStats: {
+          totalCleanedItems: 0,
+          totalFreedMemory: 0
+        }
+      }
+
+      // 如果有全局标签管理器的引用，也进行清理
+      // 注意：由于全局标签管理器在渲染进程中，我们需要通过IPC通知它进行清理
+      if (mainWindow) {
+        mainWindow.webContents.send('perform-memory-cleanup')
+      }
+
+      // 清理文件流管理器的临时文件
+      try {
+        await fileStreamManager.cleanupFiles([])
+        cleanupResults.fileStreamManager = { cleanedTempFiles: 0 }
+      } catch (error) {
+        cleanupResults.fileStreamManager = { error: String(error) }
+      }
+
+      // 汇总统计信息
+      cleanupResults.globalStats.totalFreedMemory = cleanupResults.memoryMonitor.freedMemory || 0
+
+      return { success: true, result: cleanupResults }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 强制垃圾回收
+  ipcMain.handle(IPC_CHANNELS.MEMORY_FORCE_GC, async () => {
+    try {
+      memoryMonitor.forceGarbageCollection()
+      const stats = memoryMonitor.getCurrentStats()
+      return { success: true, stats }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
   createWindow()
 
   // 应用启动时执行自动同步
@@ -1871,6 +2025,62 @@ ${htmlContent}
 
   // 在应用启动时检查更新
   checkUpdatesOnStartup()
+
+  // 启动内存监控
+  memoryMonitor.start()
+
+  // 设置内存监控事件监听
+  memoryMonitor.on('memoryAlert', (alert) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('memory-alert', alert)
+    }
+
+    // 当内存使用严重时，自动执行清理
+    if (alert.level === 'critical') {
+      setTimeout(async () => {
+        try {
+          // 执行数据库内存清理
+          performDatabaseMemoryCleanup()
+
+          // 通知渲染进程执行内存清理
+          if (mainWindow) {
+            mainWindow.webContents.send('perform-memory-cleanup')
+          }
+        } catch (error) {
+          console.error('自动内存清理失败:', error)
+        }
+      }, 1000) // 延迟1秒执行，避免影响性能
+    }
+  })
+
+  memoryMonitor.on('gcExecuted', (info) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('memory-gc-executed', info)
+    }
+  })
+
+  // 监听内存清理事件，协调各模块的清理工作
+  memoryMonitor.on('memoryCleanup', async (event) => {
+    try {
+      // 清理数据库连接池
+      const dbCleanup = performDatabaseMemoryCleanup()
+
+      // 通知渲染进程清理缓存
+      if (mainWindow) {
+        mainWindow.webContents.send('perform-memory-cleanup', {
+          source: 'memory-monitor',
+          timestamp: event.timestamp
+        })
+      }
+
+      console.log('协调内存清理完成:', {
+        database: dbCleanup,
+        timestamp: event.timestamp
+      })
+    } catch (error) {
+      console.error('协调内存清理失败:', error)
+    }
+  })
 
   // 初始化数据库
   try {

@@ -33,7 +33,7 @@ class ModelSelectionService {
   async getSelectedModelId(): Promise<string> {
     try {
       const selectedModelId = await window.api.settings.get('selectedModelId')
-      return selectedModelId as string || ''
+      return (selectedModelId as string) || ''
     } catch (error) {
       console.error('获取选中模型ID失败:', error)
       return ''
@@ -45,7 +45,7 @@ class ModelSelectionService {
     try {
       await window.api.settings.set('selectedModelId', modelId)
       // 通知所有监听器
-      this.listeners.forEach(listener => listener(modelId))
+      this.listeners.forEach((listener) => listener(modelId))
     } catch (error) {
       console.error('设置选中模型ID失败:', error)
       throw error
@@ -70,7 +70,7 @@ class ModelSelectionService {
       if (!selectedModelId) return null
 
       const availableModels = await this.getAvailableModels()
-      return availableModels.find(model => model.id === selectedModelId) || null
+      return availableModels.find((model) => model.id === selectedModelId) || null
     } catch (error) {
       console.error('获取选中模型配置失败:', error)
       return null
@@ -109,7 +109,7 @@ class ModelSelectionService {
   async isValidModelId(modelId: string): Promise<boolean> {
     try {
       const availableModels = await this.getAvailableModels()
-      return availableModels.some(model => model.id === modelId)
+      return availableModels.some((model) => model.id === modelId)
     } catch (error) {
       console.error('验证模型ID失败:', error)
       return false

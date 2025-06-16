@@ -50,8 +50,6 @@ import { CustomAIMenu } from './AICustomCommands'
 import { EditorSkeleton } from './Skeleton'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 
-
-
 // 添加接口定义
 interface MarkdownAPI {
   save: (
@@ -267,7 +265,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
         // 获取当前选中的模型ID
         const currentSelectedId = await modelSelectionService.getSelectedModelId()
-        if (currentSelectedId && configs.some(config => config.id === currentSelectedId)) {
+        if (currentSelectedId && configs.some((config) => config.id === currentSelectedId)) {
           setSelectedModelId(currentSelectedId)
         } else if (configs.length > 0) {
           // 如果没有选中模型或选中的模型不存在，初始化默认模型

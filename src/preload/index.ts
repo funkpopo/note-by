@@ -74,7 +74,6 @@ const IPC_CHANNELS = {
   DIALOG_SHOW_OPEN: 'dialog:showOpenDialog', // Re-using if a generic one is better, or make specific
   // 添加主题相关IPC通道
   SET_WINDOW_BACKGROUND: 'window:set-background'
-
 }
 
 // 内容生成请求接口

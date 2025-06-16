@@ -54,7 +54,10 @@ const App: React.FC = () => {
   }
 
   return (
-    <Layout className="components-layout-demo" style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
+    <Layout
+      className="components-layout-demo"
+      style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}
+    >
       <Layout style={{ flexDirection: 'row', height: '100vh', width: '100vw' }}>
         <div style={{ display: 'flex', height: '100vh', position: 'relative' }}>
           <Navigation

@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import {
-  Typography,
-  Button,
-  Toast,
-  TextArea,
-  Select,
-  Chat,
-  Space
-} from '@douyinfe/semi-ui'
+import { Typography, Button, Toast, TextArea, Select, Chat, Space } from '@douyinfe/semi-ui'
 import { IconSend } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 
@@ -71,7 +63,7 @@ const ChatInterface: React.FC = () => {
 
       // 获取当前选中的模型ID
       const currentSelectedId = await modelSelectionService.getSelectedModelId()
-      if (currentSelectedId && configs.some(config => config.id === currentSelectedId)) {
+      if (currentSelectedId && configs.some((config) => config.id === currentSelectedId)) {
         setSelectedAiConfig(currentSelectedId)
       } else if (configs.length > 0) {
         // 如果没有选中模型或选中的模型不存在，初始化默认模型
@@ -83,8 +75,6 @@ const ChatInterface: React.FC = () => {
       console.error('加载AI API配置失败:', error)
     }
   }, [])
-
-
 
   // Chat组件的清理上下文回调
   const handleClearContext = useCallback(() => {
@@ -637,7 +627,10 @@ const ChatInterface: React.FC = () => {
       }}
     >
       {/* 标题和设置区域 */}
-      <div className="chat-header" style={{ marginBottom: '16px', flexShrink: 0, padding: '0 16px' }}>
+      <div
+        className="chat-header"
+        style={{ marginBottom: '16px', flexShrink: 0, padding: '0 16px' }}
+      >
         <div
           style={{
             display: 'flex',
@@ -733,8 +726,6 @@ const ChatInterface: React.FC = () => {
             }}
           />
         </div>
-
-
       </div>
     </div>
   )

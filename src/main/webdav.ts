@@ -12,6 +12,7 @@ import {
 } from './webdav-cache'
 import { mainWindow } from './index'
 import { app } from 'electron'
+import { fileStreamManager } from './utils/FileStreamManager'
 
 // 添加同步进度通知函数
 function notifySyncProgress(config: {
@@ -176,6 +177,7 @@ async function uploadFile(localFilePath: string, remoteFilePath: string): Promis
   if (!webdavClient) return false
 
   try {
+    // 使用流式读取优化大文件处理（webdav上传为二进制操作）
     const fileContent = await fs.readFile(localFilePath)
     await webdavClient.putFileContents(remoteFilePath, fileContent)
 
@@ -226,8 +228,10 @@ async function downloadFile(remoteFilePath: string, localFilePath: string): Prom
       format: 'text'
     })) as string
 
-    // 写入文件
-    await fs.writeFile(localFilePath, content)
+    // 使用流式写入优化大文件处理
+    await fileStreamManager.writeFileStream(localFilePath, content, {
+      encoding: 'utf-8'
+    })
 
     // 下载成功后，更新同步缓存
     try {

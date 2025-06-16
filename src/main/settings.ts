@@ -53,8 +53,6 @@ export interface WebDAVConfig {
   encryptionTestPlain?: string // 加密前的原始字符串
 }
 
-
-
 // 默认设置
 const defaultSettings = {
   theme: 'light',
@@ -82,8 +80,7 @@ const defaultSettings = {
     type: 'count', // 'count' 或 'time'
     maxCount: 20, // 保留的最大记录数
     maxDays: 7 // 保留的最大天数
-  },
-
+  }
 }
 
 // 读取设置
@@ -241,5 +238,3 @@ export function decryptWebDAVWithMasterPassword(
 
   return newConfig
 }
-
-
