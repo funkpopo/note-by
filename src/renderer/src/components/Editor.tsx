@@ -17,6 +17,9 @@ import '@blocknote/xl-ai/style.css'
 import { createOpenAI } from '@ai-sdk/openai'
 import './Editor.css'
 import { zhCN } from '../locales'
+// 导入智能保存相关工具
+import { SmartDebouncer } from '../utils/SmartDebouncer'
+import { ConflictDetector } from '../utils/ConflictDetector'
 import {
   BasicTextStyleButton,
   BlockTypeSelect,
@@ -135,9 +138,16 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('') // 保存状态：'', 'saved', 'saving'
   const lastSavedContentRef = useRef<string>('')
   const lastLoadedFileRef = useRef<string | null>(null)
-  // 添加自动保存相关引用
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastUserActionRef = useRef<number>(Date.now())
+  // 智能保存相关实例
+  const smartDebouncerRef = useRef<SmartDebouncer>(
+    new SmartDebouncer({
+      fastTypingDelay: 1500, // 快速输入时1.5秒后保存
+      normalDelay: 2500, // 正常输入时2.5秒后保存
+      pauseDelay: 800, // 停顿后0.8秒保存
+      minContentChange: 5 // 至少5个字符变化才触发保存
+    })
+  )
+  const conflictDetectorRef = useRef<ConflictDetector>(new ConflictDetector())
   // 添加编辑器容器引用，用于定位下拉菜单
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
@@ -612,15 +622,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     lastSavedContentRef.current = ''
     setIsEditing(false)
 
-    // 清除所有定时器
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current)
-      autoSaveTimerRef.current = null
-    }
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = null
-    }
+    // 清除智能防抖器和冲突检测状态
+    smartDebouncerRef.current.cancel()
+    conflictDetectorRef.current.clearAllSnapshots()
   }, [editor])
 
   // Load file content
@@ -701,6 +705,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               try {
                 const standardizedContent = await editor.blocksToMarkdownLossy(editor.document)
                 lastSavedContentRef.current = standardizedContent
+
+                // 创建冲突检测快照
+                await conflictDetectorRef.current.createSnapshot(filePath, standardizedContent)
               } catch (err) {
                 // 设置基准失败，继续执行
               }
@@ -743,15 +750,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     loadFileContent()
   }, [currentFolder, currentFile, loadFileContent])
 
-  // 添加清理函数，在组件卸载时清除定时器
+  // 添加清理函数，在组件卸载时清除智能防抖器
   useEffect(() => {
     return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
+      smartDebouncerRef.current.cancel()
     }
   }, [])
 
@@ -778,15 +780,23 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     return undefined
   }, [editor, currentFile, lastLoadedFileRef.current])
 
-  // Save file content
-  const saveFileContent = useCallback(async () => {
+    // Internal save function with auto-save flag
+  const saveFileContentInternal = useCallback(async (isAutoSave: boolean = false) => {
     if (!currentFolder || !currentFile) {
-      Toast.warning('没有选择文件')
+      if (!isAutoSave) {
+        Toast.warning('没有选择文件')
+      }
       return
     }
 
-    setIsSaving(true)
-    setAutoSaveStatus('saving')
+    // 取消正在进行的自动保存
+    smartDebouncerRef.current.cancel()
+    
+    // 只有手动保存才改变UI状态，自动保存保持完全静默
+    if (!isAutoSave) {
+      setIsSaving(true)
+      setAutoSaveStatus('saving')
+    }
     try {
       // 获取编辑器内容的JSON格式（保留标签信息）
       const blocks = editor.topLevelBlocks
@@ -809,15 +819,29 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       const result = await window.api.markdown.save(filePath, contentWithTags)
 
       if (result.success) {
-        Toast.success('文件保存成功')
-        setIsEditing(false)
-        setAutoSaveStatus('saved')
+        // 只有手动保存才显示成功提示
+        if (!isAutoSave) {
+          Toast.success('文件保存成功')
+          setIsEditing(false) // 只有手动保存才重置编辑状态
+        }
+        
+        // 只有手动保存才更新UI状态
+        if (!isAutoSave) {
+          setAutoSaveStatus('saved')
+          // 5秒后清除"已保存"状态
+          setTimeout(() => {
+            setAutoSaveStatus('')
+          }, 5000)
+        }
 
-        // Update the last saved content
+        // Update the last saved content - 无论是否自动保存都要更新基准
         lastSavedContentRef.current = markdown
 
-        // Notify parent component that file has changed
-        if (onFileChanged) {
+        // 更新冲突检测快照
+        await conflictDetectorRef.current.createSnapshot(filePath, markdown)
+
+        // 只有手动保存才通知父组件文件已改变，避免自动保存引起侧边栏闪烁
+        if (!isAutoSave && onFileChanged) {
           onFileChanged()
         }
 
@@ -825,78 +849,80 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         refreshGlobalTagCache().catch(() => {
           // 刷新失败，继续执行
         })
-
-        // 5秒后清除"已保存"状态
-        setTimeout(() => {
-          setAutoSaveStatus('')
-        }, 5000)
       } else {
-        Toast.error(`保存失败: ${result.error}`)
+        // 只有手动保存才显示错误提示
+        if (!isAutoSave) {
+          Toast.error(`保存失败: ${result.error}`)
+        }
         setAutoSaveStatus('')
       }
     } catch (error) {
-      Toast.error('保存文件内容失败')
+      // 只有手动保存才显示错误提示
+      if (!isAutoSave) {
+        Toast.error('保存文件内容失败')
+      }
       setAutoSaveStatus('')
     } finally {
-      setIsSaving(false)
+      // 只有手动保存才重置loading状态
+      if (!isAutoSave) {
+        setIsSaving(false)
+      }
     }
   }, [currentFolder, currentFile, editor, onFileChanged, setTagList])
 
-  // 添加自动保存触发函数
-  const triggerAutoSave = useCallback(() => {
-    // 清除旧的定时器
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current)
-    }
+  // Public save function for manual saves (button clicks, keyboard shortcuts)
+  const saveFileContent = useCallback(async () => {
+    await saveFileContentInternal(false)
+  }, [saveFileContentInternal])
 
-    // 只有在有文件打开并且内容有修改的情况下才设置自动保存
-    if (currentFile && isEditing) {
-      // 设置10秒后自动保存
-      autoSaveTimerRef.current = setTimeout(async () => {
-        // 检查距离上次用户操作是否已经10秒
-        if (Date.now() - lastUserActionRef.current >= 10000) {
-          await saveFileContent()
-        }
-      }, 10000)
-    }
-  }, [currentFile, isEditing, saveFileContent])
+  // 智能自动保存处理函数
+  const handleSmartAutoSave = useCallback(async () => {
+    if (!currentFile || !currentFolder) return
 
-  // 添加防抖定时器引用
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    try {
+      // 获取当前内容
+      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+      const filePath = `${currentFolder}/${currentFile}`
+
+      // 检查冲突
+      const conflictResult = await conflictDetectorRef.current.checkConflict(filePath, markdown)
+
+      if (conflictResult.hasConflict) {
+        // 发现冲突，暂停自动保存并提示用户
+        Toast.warning(`检测到文件冲突: ${conflictResult.message}`)
+        return
+      }
+
+      // 执行自动保存
+      await saveFileContentInternal(true)
+    } catch (error) {
+      // 保存失败，不显示错误提示（自动保存应该静默失败）
+    }
+  }, [currentFile, currentFolder, editor, saveFileContentInternal])
 
   // Handler for when the editor's content changes
   const handleEditorChange = useCallback(async () => {
     try {
-      // 更新最后用户操作时间
-      lastUserActionRef.current = Date.now()
+      // Convert current blocks to Markdown for comparison
+      const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
 
-      // 清除之前的防抖定时器
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
+      // 标准化内容比较：去除首尾空白字符
+      const normalizedCurrent = currentMarkdown.trim()
+      const normalizedSaved = lastSavedContentRef.current.trim()
+
+      // Only set editing state if content actually changed
+      if (normalizedCurrent !== normalizedSaved) {
+        setIsEditing(true)
+
+        // 使用智能防抖器触发自动保存
+        smartDebouncerRef.current.debounce(currentMarkdown, handleSmartAutoSave)
+      } else {
+        setIsEditing(false)
       }
-
-      // 使用防抖机制，避免频繁的内容比较
-      debounceTimerRef.current = setTimeout(async () => {
-        try {
-          // Convert current blocks to Markdown for comparison
-          const currentMarkdown = await editor.blocksToMarkdownLossy(editor.document)
-
-          // 标准化内容比较：去除首尾空白字符
-          const normalizedCurrent = currentMarkdown.trim()
-          const normalizedSaved = lastSavedContentRef.current.trim()
-
-          // Only set editing state if content actually changed
-          if (normalizedCurrent !== normalizedSaved) {
-            setIsEditing(true)
-            // 触发自动保存计时
-            triggerAutoSave()
-          } else {
-            setIsEditing(false)
-          }
-        } catch (error) {}
-      }, 300) // 300ms防抖延迟
-    } catch (error) {}
-  }, [editor, triggerAutoSave])
+    } catch (error) {
+      // 处理内容变化检测错误
+    }
+  }, [editor, handleSmartAutoSave])
 
   const [showCreateDialog, setShowCreateDialog] = useState<boolean>(false)
   const [createDialogType, setCreateDialogType] = useState<'folder' | 'note'>('note')
