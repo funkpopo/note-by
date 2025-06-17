@@ -2,6 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { LocaleProvider, ConfigProvider } from '@douyinfe/semi-ui'
 import zh_CN from '@douyinfe/semi-ui/lib/es/locale/source/zh_CN'
 import { ThemeContext } from './ThemeContext'
+import { rendererErrorHandler, ErrorCategory } from '../../utils/ErrorHandler'
 
 interface ThemeProviderProps {
   children: ReactNode
@@ -25,14 +26,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           setIsDarkMode(isDark)
           // 初始化时设置窗口背景色
           const backgroundColor = isDark ? '#1f1f1f' : '#f5f5f5'
-          window.api.window.setBackgroundColor(backgroundColor).catch(() => {})
+          window.api.window.setBackgroundColor(backgroundColor).catch((error) => {
+            rendererErrorHandler.warn('Failed to set window background color for saved theme', ErrorCategory.UI, 'ThemeProvider-savedTheme', error)
+          })
         } else {
           // 如果没有保存的主题，则跟随系统
           const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
           setIsDarkMode(isDark)
           // 初始化时设置窗口背景色
           const backgroundColor = isDark ? '#1f1f1f' : '#f5f5f5'
-          window.api.window.setBackgroundColor(backgroundColor).catch(() => {})
+          window.api.window.setBackgroundColor(backgroundColor).catch((error) => {
+            rendererErrorHandler.warn('Failed to set window background color for system theme', ErrorCategory.UI, 'ThemeProvider-systemTheme', error)
+          })
         }
       } catch (error) {
         // 出错时使用系统主题
@@ -73,11 +78,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       document.body.setAttribute('theme-mode', isDarkMode ? 'dark' : 'light')
 
       // 保存到设置
-      window.api.settings.set('theme', isDarkMode ? 'dark' : 'light').catch(() => {})
+      window.api.settings.set('theme', isDarkMode ? 'dark' : 'light').catch((error) => {
+        rendererErrorHandler.warn('Failed to save theme setting', ErrorCategory.STORAGE, 'ThemeProvider-save', error)
+      })
 
       // 通知主进程更新窗口背景色
       const backgroundColor = isDarkMode ? '#1f1f1f' : '#f5f5f5'
-      window.api.window.setBackgroundColor(backgroundColor).catch(() => {})
+      window.api.window.setBackgroundColor(backgroundColor).catch((error) => {
+        rendererErrorHandler.warn('Failed to set window background color during theme switch', ErrorCategory.UI, 'ThemeProvider-switch', error)
+      })
 
       // 移除切换状态类
       setTimeout(() => {

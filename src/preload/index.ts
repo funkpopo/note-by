@@ -1,6 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
+// 简单的错误处理函数
+function logError(message: string, error?: unknown, context?: string): void {
+  const timestamp = new Date().toISOString()
+  const logMessage = `[${timestamp}] [PRELOAD] ${context ? `[${context}] ` : ''}${message}`
+  
+  if (error) {
+    console.error(logMessage, error)
+  } else {
+    console.error(logMessage)
+  }
+}
+
 // API配置接口
 interface AiApiConfig {
   id: string
@@ -226,19 +238,25 @@ const api = {
           if (typeof dataListener === 'function') {
             try {
               ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
-            } catch (err) {}
+            } catch (err) {
+              logError('Failed to remove stream data listener', err, 'timeout-cleanup')
+            }
           }
 
           if (typeof doneListener === 'function') {
             try {
               ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
-            } catch (err) {}
+            } catch (err) {
+              logError('Failed to remove stream done listener', err, 'timeout-cleanup')
+            }
           }
 
           if (typeof errorListener === 'function') {
             try {
               ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
-            } catch (err) {}
+            } catch (err) {
+              logError('Failed to remove stream error listener', err, 'timeout-cleanup')
+            }
           }
 
           callbacks.onError(`请求超时 (${timeoutMs / 1000}秒)`)
@@ -264,19 +282,25 @@ const api = {
             if (typeof dataListener === 'function') {
               try {
                 ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
-              } catch (err) {}
+              } catch (err) {
+                logError('Failed to remove data listener in cleanup', err, 'cleanup')
+              }
             }
 
             if (typeof doneListener === 'function') {
               try {
                 ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
-              } catch (err) {}
+              } catch (err) {
+                logError('Failed to remove done listener in cleanup', err, 'cleanup')
+              }
             }
 
             if (typeof errorListener === 'function') {
               try {
                 ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
-              } catch (err) {}
+              } catch (err) {
+                logError('Failed to remove error listener in cleanup', err, 'cleanup')
+              }
             }
           }
         }
@@ -768,6 +792,48 @@ const api = {
   window: {
     setBackgroundColor: (backgroundColor: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SET_WINDOW_BACKGROUND, backgroundColor)
+  },
+  // 更新相关API
+  updater: {
+    // 检查更新
+    checkForUpdates: (): Promise<{
+      status: string
+      updateInfo?: unknown
+      error?: string
+    }> => ipcRenderer.invoke('updater:check-for-updates'),
+
+    // 下载更新
+    downloadUpdate: (): Promise<{
+      status: string
+      error?: string
+    }> => ipcRenderer.invoke('updater:download-update'),
+
+    // 安装更新
+    installUpdate: (): Promise<void> => ipcRenderer.invoke('updater:install-update'),
+
+    // 获取当前版本
+    getVersion: (): Promise<string> => ipcRenderer.invoke('updater:get-version'),
+
+    // 监听更新状态变化
+    onStatusChanged: (callback: (info: {
+      status: string
+      version?: string
+      progress?: number
+      error?: string
+    }) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, info: {
+        status: string
+        version?: string
+        progress?: number
+        error?: string
+      }): void => {
+        callback(info)
+      }
+      ipcRenderer.on('updater:status-changed', listener)
+      return () => {
+        ipcRenderer.removeListener('updater:status-changed', listener)
+      }
+    }
   }
 }
 
@@ -778,7 +844,9 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {}
+  } catch (error) {
+    logError('Failed to expose context bridge APIs', error, 'contextBridge')
+  }
 } else {
   // @ts-ignore (define in dts)
   window.electron = electronAPI

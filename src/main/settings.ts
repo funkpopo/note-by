@@ -9,6 +9,7 @@ import {
   decryptWithPassword,
   generateEncryptionTest
 } from './encryption'
+import { mainErrorHandler, ErrorCategory } from './utils/ErrorHandler'
 
 // 获取settings.json的存储路径
 // 在开发环境中，文件位于项目根目录下
@@ -114,7 +115,9 @@ export function readSettings(): Record<string, unknown> {
 
       return settings
     }
-  } catch (error) {}
+  } catch (error) {
+    mainErrorHandler.error('Failed to read settings file', error, ErrorCategory.FILE_IO, 'readSettings')
+  }
 
   // 如果文件不存在或读取失败，返回默认设置
 
@@ -151,7 +154,9 @@ export function writeSettings(settings: Record<string, unknown>): void {
     }
 
     fs.writeFileSync(settingsPath, JSON.stringify(settingsToSave, null, 2), 'utf8')
-  } catch (error) {}
+  } catch (error) {
+    mainErrorHandler.error('Failed to write settings file', error, ErrorCategory.FILE_IO, 'writeSettings')
+  }
 }
 
 // 更新单个设置项

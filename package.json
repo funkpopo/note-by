@@ -44,6 +44,7 @@
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "echarts-wordcloud": "^2.1.0",
+    "electron-updater": "^6.6.2",
     "html-to-image": "^1.11.13",
     "lru-cache": "^11.1.0",
     "md-to-pdf": "^5.2.4",

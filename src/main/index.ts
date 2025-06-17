@@ -24,6 +24,7 @@ import {
   cancelSync,
   clearSyncCache
 } from './webdav'
+import { initializeAutoCleanup, stopAutoCleanup } from './webdav-cache'
 import axios from 'axios'
 import http from 'http'
 import https from 'https'
@@ -51,6 +52,8 @@ import Showdown from 'showdown'
 import { fileStreamManager } from './utils/FileStreamManager'
 import { memoryMonitor } from './utils/MemoryMonitor'
 import { performDatabaseMemoryCleanup } from './database'
+import { updaterService } from './updater'
+import { mainErrorHandler, ErrorCategory } from './utils/ErrorHandler'
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -159,7 +162,9 @@ function getMarkdownFolderPath(): string {
     if (!fsSync.existsSync(defaultAssetsFolderPath)) {
       fsSync.mkdirSync(defaultAssetsFolderPath, { recursive: true })
     }
-  } catch (error) {}
+  } catch (error) {
+    mainErrorHandler.error('Failed to create markdown directory structure', error, ErrorCategory.FILE_IO, 'getMarkdownFolderPath')
+  }
 
   return markdownPath
 }
@@ -220,7 +225,13 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    if (mainWindow) mainWindow.show()
+    if (mainWindow) {
+      mainWindow.show()
+      // 设置更新服务的主窗口引用
+      updaterService.setMainWindow(mainWindow)
+      // 初始化自动更新检查
+      updaterService.initializeAutoCheck()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -272,7 +283,9 @@ async function performAutoSync(): Promise<void> {
         })
         break
     }
-  } catch (error) {}
+  } catch (error) {
+    mainErrorHandler.error('WebDAV auto-sync failed', error, ErrorCategory.WEBDAV, 'performAutoSync')
+  }
 }
 
 // GitHub releases API URL
@@ -393,13 +406,18 @@ async function checkUpdatesOnStartup(): Promise<void> {
         }
       }
     }
-  } catch (error) {}
+  } catch (error) {
+    mainErrorHandler.error('Failed to check for updates on startup', error, ErrorCategory.UPDATER, 'checkUpdatesOnStartup')
+  }
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // 设置全局错误处理
+  mainErrorHandler.setupGlobalHandlers()
+  
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron.note-by')
 
@@ -1030,7 +1048,9 @@ ${htmlContent}
               folders.push(...subFolders)
             }
           }
-        } catch (error) {}
+        } catch (error) {
+          mainErrorHandler.warn('Failed to read directory entry during folder scan', ErrorCategory.FILE_IO, 'getAllFolders', error)
+        }
 
         return folders
       }
@@ -2038,6 +2058,9 @@ ${htmlContent}
   // 启动内存监控
   memoryMonitor.start()
 
+  // 初始化WebDAV缓存自动清理
+  initializeAutoCleanup()
+
   // 设置内存监控事件监听
   memoryMonitor.on('memoryAlert', (alert) => {
     if (mainWindow) {
@@ -2107,8 +2130,12 @@ ${htmlContent}
         // 初始化WebDAV同步缓存表
         return initWebDAVSyncCacheTable()
       })
-      .catch(() => {})
-  } catch {}
+      .catch((error) => {
+        mainErrorHandler.error('Failed to initialize database tables', error, ErrorCategory.DATABASE, 'databaseInit')
+      })
+  } catch (error) {
+    mainErrorHandler.error('Failed to initialize database', error, ErrorCategory.DATABASE, 'databaseInit')
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -2119,4 +2146,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  // 停止WebDAV缓存自动清理
+  stopAutoCleanup()
 })

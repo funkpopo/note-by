@@ -50,6 +50,8 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://github.com/funkpopo/note-by
+  provider: github
+  owner: funkpopo
+  repo: note-by
 buildDependenciesFromSource: false
+afterSign: build/notarize.js
