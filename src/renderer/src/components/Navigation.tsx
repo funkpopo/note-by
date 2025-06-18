@@ -103,7 +103,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     type: 'folder'
   })
   const [searchText, setSearchText] = useState<string>('')
-  const [showFilteredOnly] = useState<boolean>(false)
+  const [showFilteredOnly] = useState<boolean>(true)
   const [filteredExpandedKeys, setFilteredExpandedKeys] = useState<string[]>([])
 
   const navWidth = '180px' // 定义固定宽度常量
