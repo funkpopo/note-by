@@ -1133,21 +1133,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // 创建OpenAI实例
       const provider = createOpenAI({
         apiKey: selectedConfig.apiKey,
-        baseURL: selectedConfig.apiUrl,
-        fetch: async (url, options) => {
-          // 使用系统fetch并记录结果
-          try {
-            const response = await fetch(url, options)
-
-            if (!response.ok) {
-              // 不抛出错误，让ai-sdk处理
-            }
-
-            return response
-          } catch (error) {
-            throw error
-          }
-        }
+        baseURL: selectedConfig.apiUrl
       })
 
       const model = provider(selectedConfig.modelName as string)
