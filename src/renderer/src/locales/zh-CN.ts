@@ -404,6 +404,9 @@ export const zhCN: ExtendedDictionary = {
     }
   },
   comments: {
+    edited: '已编辑',
+    save_button_text: '保存',
+    cancel_button_text: '取消',
     actions: {
       add_reaction: '添加回应',
       resolve: '解决',

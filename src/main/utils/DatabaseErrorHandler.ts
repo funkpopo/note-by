@@ -341,8 +341,8 @@ export class DatabaseErrorHandler {
       retryDelay: 1000,
       backoffMultiplier: 2,
       maxDelay: 30000,
-      shouldRetry: (error, attempt) => attempt < 5,
-      onRecovery: async (error, attempt) => {
+      shouldRetry: (_error, attempt) => attempt < 5,
+      onRecovery: async (_error, attempt) => {
         console.log(`Attempting database connection recovery, attempt ${attempt}`)
         // 这里可以添加重新初始化连接池的逻辑
       }
@@ -354,7 +354,7 @@ export class DatabaseErrorHandler {
       retryDelay: 500,
       backoffMultiplier: 2,
       maxDelay: 5000,
-      shouldRetry: (error, attempt) => attempt < 3
+      shouldRetry: (_error, attempt) => attempt < 3
     })
 
     // 超时错误恢复策略
@@ -363,7 +363,7 @@ export class DatabaseErrorHandler {
       retryDelay: 1000,
       backoffMultiplier: 1.5,
       maxDelay: 10000,
-      shouldRetry: (error, attempt) => attempt < 3
+      shouldRetry: (_error, attempt) => attempt < 3
     })
 
     // 锁超时恢复策略
@@ -372,7 +372,7 @@ export class DatabaseErrorHandler {
       retryDelay: 200,
       backoffMultiplier: 1.5,
       maxDelay: 2000,
-      shouldRetry: (error, attempt) => attempt < 5
+      shouldRetry: (_error, attempt) => attempt < 5
     })
   }
 

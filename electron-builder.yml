@@ -49,9 +49,8 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish:
-  provider: github
-  owner: funkpopo
-  repo: note-by
+# publish:
+#   provider: github
+#   owner: funkpopo
+#   repo: note-by
 buildDependenciesFromSource: false
-afterSign: build/notarize.js
