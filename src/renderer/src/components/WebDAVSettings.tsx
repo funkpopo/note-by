@@ -73,7 +73,7 @@ class WebDAVConfigManager {
     try {
       // 创建原子性更新
       const updatedConfig = { ...this.config, ...newConfig }
-      
+
       // 验证配置
       if (!this.validateConfig(updatedConfig)) {
         throw new Error('Invalid configuration')
@@ -86,7 +86,7 @@ class WebDAVConfigManager {
       // 更新本地状态
       this.config = updatedConfig
       this.notifyListeners()
-      
+
       return true
     } catch (error) {
       console.error('Failed to save WebDAV config:', error)
@@ -131,13 +131,13 @@ class WebDAVConfigManager {
           password: masterPassword,
           webdavConfig: this.config
         })
-        
-                 if (result.success) {
-           return await this.saveConfig({
-             useCustomEncryption: true,
-             encryptionTest: (result as any).encryptionTest || '',
-             encryptionTestPlain: (result as any).encryptionTestPlain || ''
-           })
+
+        if (result.success) {
+          return await this.saveConfig({
+            useCustomEncryption: true,
+            encryptionTest: (result as any).encryptionTest || '',
+            encryptionTestPlain: (result as any).encryptionTestPlain || ''
+          })
         }
         return false
       } else if (!enabled) {
@@ -170,20 +170,20 @@ interface WebDAVSettingsProps {
 const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   // 配置管理器
   const configManager = useRef(new WebDAVConfigManager())
-  
+
   // 状态管理
   const [formApi, setFormApi] = useState<FormApi<WebDAVConfig> | null>(null)
   const [config, setConfig] = useState<WebDAVConfig>(() => configManager.current.getConfig())
   const [loading, setLoading] = useState<boolean>(false)
   const [testLoading, setTestLoading] = useState<boolean>(false)
-  
+
   // 同步状态
   const [syncStatus, setSyncStatus] = useState<{
     show: boolean
     type: 'success' | 'warning' | 'danger'
     message: string
   } | null>(null)
-  
+
   const [syncProgress, setSyncProgress] = useState<{
     total: number
     processed: number
@@ -195,16 +195,16 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   const [showSetPasswordModal, setShowSetPasswordModal] = useState<boolean>(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState<boolean>(false)
   const [showDisableEncryptionModal, setShowDisableEncryptionModal] = useState<boolean>(false)
-  
+
   const [masterPassword, setMasterPassword] = useState<string>('')
   const [confirmMasterPassword, setConfirmMasterPassword] = useState<string>('')
   const [currentPassword, setCurrentPassword] = useState<string>('')
   const [newPassword, setNewPassword] = useState<string>('')
   const [confirmNewPassword, setConfirmNewPassword] = useState<string>('')
-  
+
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false)
-  
+
   const [passwordStrength, setPasswordStrength] = useState<{
     score: number
     feedback: string
@@ -276,39 +276,42 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   }, [])
 
   // 处理表单值变化
-  const handleConfigChange = useCallback(async (changedValues: Partial<WebDAVConfig>) => {
-    try {
-      // 特殊处理加密设置变化
-      if ('useCustomEncryption' in changedValues) {
-        const enabled = changedValues.useCustomEncryption
-        
-        if (enabled && !config.useCustomEncryption) {
-          // 要启用加密，显示设置密码对话框
-          setShowSetPasswordModal(true)
-          return
-        } else if (!enabled && config.useCustomEncryption) {
-          // 要禁用加密，显示确认对话框
-          setShowDisableEncryptionModal(true)
-          return
-        }
-      }
+  const handleConfigChange = useCallback(
+    async (changedValues: Partial<WebDAVConfig>) => {
+      try {
+        // 特殊处理加密设置变化
+        if ('useCustomEncryption' in changedValues) {
+          const enabled = changedValues.useCustomEncryption
 
-      // 正常的配置更新
-      const success = await configManager.current.saveConfig(changedValues)
-      if (!success) {
-        // 保存失败，恢复表单值
+          if (enabled && !config.useCustomEncryption) {
+            // 要启用加密，显示设置密码对话框
+            setShowSetPasswordModal(true)
+            return
+          } else if (!enabled && config.useCustomEncryption) {
+            // 要禁用加密，显示确认对话框
+            setShowDisableEncryptionModal(true)
+            return
+          }
+        }
+
+        // 正常的配置更新
+        const success = await configManager.current.saveConfig(changedValues)
+        if (!success) {
+          // 保存失败，恢复表单值
+          if (formApi) {
+            formApi.setValues(config)
+          }
+          Toast.error('保存配置失败')
+        }
+      } catch (error) {
+        console.error('Config change error:', error)
         if (formApi) {
           formApi.setValues(config)
         }
-        Toast.error('保存配置失败')
       }
-    } catch (error) {
-      console.error('Config change error:', error)
-      if (formApi) {
-        formApi.setValues(config)
-      }
-    }
-  }, [config, formApi])
+    },
+    [config, formApi]
+  )
 
   // 测试连接
   const handleTestConnection = useCallback(async () => {
@@ -316,8 +319,8 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
     try {
       setTestLoading(true)
-      const values = await formApi.validate() as WebDAVConfig
-      
+      const values = (await formApi.validate()) as WebDAVConfig
+
       // 先保存当前配置
       await configManager.current.saveConfig(values)
 
@@ -350,21 +353,24 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   }, [formApi])
 
   // 验证主密码并执行操作
-  const executeWithPassword = useCallback(async (operation: (password: string) => Promise<void>) => {
-    if (!config.useCustomEncryption) {
-      await operation('')
-      return
-    }
+  const executeWithPassword = useCallback(
+    async (operation: (password: string) => Promise<void>) => {
+      if (!config.useCustomEncryption) {
+        await operation('')
+        return
+      }
 
-    pendingOperationRef.current = operation
-    setShowPasswordPrompt(true)
-  }, [config.useCustomEncryption])
+      pendingOperationRef.current = operation
+      setShowPasswordPrompt(true)
+    },
+    [config.useCustomEncryption]
+  )
 
   // 处理密码验证
   const handlePasswordVerified = useCallback(async (password: string): Promise<boolean> => {
     try {
       const verified = await window.api.webdav.verifyMasterPassword(password)
-      
+
       if (verified.success && pendingOperationRef.current) {
         setShowPasswordPrompt(false)
         await pendingOperationRef.current(password)
@@ -379,64 +385,80 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   }, [])
 
   // 同步操作
-  const handleSync = useCallback(async (
-    direction: 'localToRemote' | 'remoteToLocal' | 'bidirectional'
-  ) => {
-    if (!formApi) return
+  const handleSync = useCallback(
+    async (direction: 'localToRemote' | 'remoteToLocal' | 'bidirectional') => {
+      if (!formApi) return
 
-    await executeWithPassword(async (password) => {
-      try {
-        setLoading(true)
-        setSyncProgress(null)
-        
-        const values = await formApi.validate() as WebDAVConfig
-        await configManager.current.saveConfig(values)
+      await executeWithPassword(async (password) => {
+        try {
+          setLoading(true)
+          setSyncProgress(null)
 
-        const syncConfig = { ...values, masterPassword: password }
-        let result: any
+          const values = (await formApi.validate()) as WebDAVConfig
+          await configManager.current.saveConfig(values)
 
-        switch (direction) {
-          case 'localToRemote':
-            result = await window.api.webdav.syncLocalToRemote(syncConfig)
-            break
-          case 'remoteToLocal':
-            result = await window.api.webdav.syncRemoteToLocal(syncConfig)
-            break
-          case 'bidirectional':
-            result = await window.api.webdav.syncBidirectional(syncConfig)
-            break
-        }
+          const syncConfig = { ...values, masterPassword: password }
+          let result: any
 
-        if (result.success) {
-          let message = '同步成功'
-          if (direction === 'localToRemote') {
-            message = `上传成功: 上传了 ${result.uploaded} 个文件`
-          } else if (direction === 'remoteToLocal') {
-            message = `下载成功: 下载了 ${result.downloaded} 个文件`
+          switch (direction) {
+            case 'localToRemote':
+              result = await window.api.webdav.syncLocalToRemote(syncConfig)
+              break
+            case 'remoteToLocal':
+              result = await window.api.webdav.syncRemoteToLocal(syncConfig)
+              break
+            case 'bidirectional':
+              result = await window.api.webdav.syncBidirectional(syncConfig)
+              break
+          }
+
+          if (result.success) {
+            let message = '同步成功'
+            if (direction === 'localToRemote') {
+              message = `上传成功: 上传了 ${result.uploaded} 个文件`
+            } else if (direction === 'remoteToLocal') {
+              message = `下载成功: 下载了 ${result.downloaded} 个文件`
+            } else {
+              message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件`
+            }
+
+            if (result.skipped || result.skippedUpload || result.skippedDownload) {
+              const totalSkipped =
+                (result.skipped || 0) + (result.skippedUpload || 0) + (result.skippedDownload || 0)
+              message += `，跳过 ${totalSkipped} 个未修改文件`
+            }
+
+            Toast.success(message)
+            setSyncStatus({
+              show: true,
+              type: 'success',
+              message
+            })
+
+            onSyncComplete?.({
+              success: true,
+              message,
+              direction,
+              cancelled: result.cancelled
+            })
           } else {
-            message = `同步成功: 上传了 ${result.uploaded} 个文件，下载了 ${result.downloaded} 个文件`
+            const message = `同步失败: ${result.message}`
+            Toast.error(message)
+            setSyncStatus({
+              show: true,
+              type: 'danger',
+              message
+            })
+
+            onSyncComplete?.({
+              success: false,
+              message: result.message,
+              direction,
+              cancelled: result.cancelled
+            })
           }
-
-          if (result.skipped || result.skippedUpload || result.skippedDownload) {
-            const totalSkipped = (result.skipped || 0) + (result.skippedUpload || 0) + (result.skippedDownload || 0)
-            message += `，跳过 ${totalSkipped} 个未修改文件`
-          }
-
-          Toast.success(message)
-          setSyncStatus({
-            show: true,
-            type: 'success',
-            message
-          })
-
-          onSyncComplete?.({
-            success: true,
-            message,
-            direction,
-            cancelled: result.cancelled
-          })
-        } else {
-          const message = `同步失败: ${result.message}`
+        } catch (error) {
+          const message = `同步失败: ${error}`
           Toast.error(message)
           setSyncStatus({
             show: true,
@@ -446,31 +468,17 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
           onSyncComplete?.({
             success: false,
-            message: result.message,
-            direction,
-            cancelled: result.cancelled
+            message: String(error),
+            direction
           })
+        } finally {
+          setLoading(false)
+          setSyncProgress(null)
         }
-      } catch (error) {
-        const message = `同步失败: ${error}`
-        Toast.error(message)
-        setSyncStatus({
-          show: true,
-          type: 'danger',
-          message
-        })
-
-        onSyncComplete?.({
-          success: false,
-          message: String(error),
-          direction
-        })
-      } finally {
-        setLoading(false)
-        setSyncProgress(null)
-      }
-    })
-  }, [formApi, executeWithPassword, onSyncComplete])
+      })
+    },
+    [formApi, executeWithPassword, onSyncComplete]
+  )
 
   // 设置主密码
   const handleSetMasterPassword = useCallback(async () => {
@@ -482,7 +490,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     try {
       setLoading(true)
       const success = await configManager.current.toggleEncryption(true, masterPassword)
-      
+
       if (success) {
         Toast.success('主密码设置成功')
         setShowSetPasswordModal(false)
@@ -501,7 +509,12 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
   // 更改主密码
   const handleChangePassword = useCallback(async () => {
-    if (!currentPassword || !newPassword || newPassword !== confirmNewPassword || newPassword.length < 8) {
+    if (
+      !currentPassword ||
+      !newPassword ||
+      newPassword !== confirmNewPassword ||
+      newPassword.length < 8
+    ) {
       setPasswordError('密码验证失败')
       return
     }
@@ -518,7 +531,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
       // 设置新密码
       const success = await configManager.current.toggleEncryption(true, newPassword)
-      
+
       if (success) {
         Toast.success('密码已成功更改')
         setShowChangePasswordModal(false)
@@ -540,7 +553,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   const handleDisableEncryption = useCallback(async () => {
     try {
       const success = await configManager.current.toggleEncryption(false)
-      
+
       if (success) {
         Toast.success('已关闭自定义加密')
         setShowDisableEncryptionModal(false)
@@ -707,16 +720,16 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           </Text>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <Form.Switch
-                field="useCustomEncryption"
-                label="使用自定义加密"
-                noLabel
-              />
+              <Form.Switch field="useCustomEncryption" label="使用自定义加密" noLabel />
               <Text style={{ marginLeft: '16px' }}>使用自定义主密码加密同步数据</Text>
             </div>
             {config.useCustomEncryption && (
               <div style={{ marginTop: '8px', marginBottom: '16px' }}>
-                <Button type="tertiary" icon={<IconLock />} onClick={() => setShowChangePasswordModal(true)}>
+                <Button
+                  type="tertiary"
+                  icon={<IconLock />}
+                  onClick={() => setShowChangePasswordModal(true)}
+                >
                   更改主密码
                 </Button>
               </div>
@@ -825,7 +838,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           <Text>
             请设置用于WebDAV同步的主密码。此密码将用于加密您的同步数据，非常重要，请务必记住。
           </Text>
-          
+
           <div style={{ marginTop: 16 }}>
             <div style={{ marginBottom: '16px' }}>
               <Text>主密码</Text>
@@ -893,7 +906,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <Button 
+              <Button
                 onClick={() => {
                   setShowSetPasswordModal(false)
                   if (formApi) {
@@ -937,7 +950,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       >
         <div style={{ padding: '0 0 20px' }}>
           <Text>请输入当前主密码并设置新的主密码。</Text>
-          
+
           <div style={{ marginTop: 16 }}>
             <div style={{ marginBottom: '16px' }}>
               <Text>当前主密码</Text>
@@ -1049,7 +1062,11 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         width={480}
       >
         <div style={{ padding: '0 0 20px' }}>
-          <Text type="warning" strong style={{ fontSize: '16px', display: 'block', marginBottom: '12px' }}>
+          <Text
+            type="warning"
+            strong
+            style={{ fontSize: '16px', display: 'block', marginBottom: '12px' }}
+          >
             ⚠️ 重要提醒
           </Text>
           <div
@@ -1074,7 +1091,9 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
 
           <Text>确认关闭自定义加密功能吗？</Text>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}
+          >
             <Button onClick={() => setShowDisableEncryptionModal(false)}>取消</Button>
             <Button type="danger" onClick={handleDisableEncryption}>
               确认关闭

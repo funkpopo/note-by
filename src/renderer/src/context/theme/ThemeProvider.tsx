@@ -27,7 +27,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           // 初始化时设置窗口背景色
           const backgroundColor = isDark ? '#1f1f1f' : '#f5f5f5'
           window.api.window.setBackgroundColor(backgroundColor).catch((error) => {
-            rendererErrorHandler.warn('Failed to set window background color for saved theme', ErrorCategory.UI, 'ThemeProvider-savedTheme', error)
+            rendererErrorHandler.warn(
+              'Failed to set window background color for saved theme',
+              ErrorCategory.UI,
+              'ThemeProvider-savedTheme',
+              error
+            )
           })
         } else {
           // 如果没有保存的主题，则跟随系统
@@ -36,7 +41,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           // 初始化时设置窗口背景色
           const backgroundColor = isDark ? '#1f1f1f' : '#f5f5f5'
           window.api.window.setBackgroundColor(backgroundColor).catch((error) => {
-            rendererErrorHandler.warn('Failed to set window background color for system theme', ErrorCategory.UI, 'ThemeProvider-systemTheme', error)
+            rendererErrorHandler.warn(
+              'Failed to set window background color for system theme',
+              ErrorCategory.UI,
+              'ThemeProvider-systemTheme',
+              error
+            )
           })
         }
       } catch (error) {
@@ -79,13 +89,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
       // 保存到设置
       window.api.settings.set('theme', isDarkMode ? 'dark' : 'light').catch((error) => {
-        rendererErrorHandler.warn('Failed to save theme setting', ErrorCategory.STORAGE, 'ThemeProvider-save', error)
+        rendererErrorHandler.warn(
+          'Failed to save theme setting',
+          ErrorCategory.STORAGE,
+          'ThemeProvider-save',
+          error
+        )
       })
 
       // 通知主进程更新窗口背景色
       const backgroundColor = isDarkMode ? '#1f1f1f' : '#f5f5f5'
       window.api.window.setBackgroundColor(backgroundColor).catch((error) => {
-        rendererErrorHandler.warn('Failed to set window background color during theme switch', ErrorCategory.UI, 'ThemeProvider-switch', error)
+        rendererErrorHandler.warn(
+          'Failed to set window background color during theme switch',
+          ErrorCategory.UI,
+          'ThemeProvider-switch',
+          error
+        )
       })
 
       // 移除切换状态类

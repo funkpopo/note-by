@@ -64,21 +64,21 @@ class MainErrorHandler {
   private formatLogMessage(info: ErrorInfo): string {
     const { timestamp, level, category, message, context, details, stack } = info
     const levelStr = LogLevel[level]
-    
+
     let formatted = `[${timestamp}] [${levelStr}] [${category}]`
     if (context) {
       formatted += ` [${context}]`
     }
     formatted += ` ${message}`
-    
+
     if (details) {
       formatted += `\nDetails: ${JSON.stringify(details, null, 2)}`
     }
-    
+
     if (stack) {
       formatted += `\nStack: ${stack}`
     }
-    
+
     return formatted + '\n'
   }
 
@@ -116,7 +116,7 @@ class MainErrorHandler {
       for (let i = this.maxLogFiles - 2; i >= 0; i--) {
         const currentLog = i === 0 ? this.logFile : path.join(logDir, `${basename}.${i}.log`)
         const nextLog = path.join(logDir, `${basename}.${i + 1}.log`)
-        
+
         if (fs.existsSync(currentLog)) {
           await fs.promises.rename(currentLog, nextLog)
         }
@@ -133,7 +133,7 @@ class MainErrorHandler {
     }
 
     const message = this.formatLogMessage(info)
-    
+
     // 输出到控制台
     if (is.dev) {
       switch (info.level) {
@@ -157,7 +157,12 @@ class MainErrorHandler {
   }
 
   // 公共接口方法
-  public debug(message: string, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string, details?: unknown): void {
+  public debug(
+    message: string,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string,
+    details?: unknown
+  ): void {
     this.log({
       level: LogLevel.DEBUG,
       category,
@@ -168,7 +173,12 @@ class MainErrorHandler {
     }).catch(() => {}) // 静默处理日志记录错误
   }
 
-  public info(message: string, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string, details?: unknown): void {
+  public info(
+    message: string,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string,
+    details?: unknown
+  ): void {
     this.log({
       level: LogLevel.INFO,
       category,
@@ -179,7 +189,12 @@ class MainErrorHandler {
     }).catch(() => {})
   }
 
-  public warn(message: string, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string, details?: unknown): void {
+  public warn(
+    message: string,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string,
+    details?: unknown
+  ): void {
     this.log({
       level: LogLevel.WARN,
       category,
@@ -190,7 +205,12 @@ class MainErrorHandler {
     }).catch(() => {})
   }
 
-  public error(message: string, error?: Error | unknown, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string): void {
+  public error(
+    message: string,
+    error?: Error | unknown,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string
+  ): void {
     let details: unknown
     let stack: string | undefined
 
@@ -248,7 +268,7 @@ class MainErrorHandler {
       }
 
       const content = await fs.promises.readFile(this.logFile, 'utf8')
-      const allLines = content.split('\n').filter(line => line.trim())
+      const allLines = content.split('\n').filter((line) => line.trim())
       return allLines.slice(-lines)
     } catch (error) {
       console.error('Failed to read log file:', error)
@@ -261,7 +281,7 @@ class MainErrorHandler {
     try {
       const logDir = path.dirname(this.logFile)
       const files = await fs.promises.readdir(logDir)
-      
+
       for (const file of files) {
         if (file.endsWith('.log')) {
           await fs.promises.unlink(path.join(logDir, file))
@@ -274,4 +294,4 @@ class MainErrorHandler {
 }
 
 // 导出单例实例
-export const mainErrorHandler = new MainErrorHandler() 
+export const mainErrorHandler = new MainErrorHandler()

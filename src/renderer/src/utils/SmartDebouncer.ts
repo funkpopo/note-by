@@ -116,7 +116,7 @@ export class SmartDebouncer {
     if (!content) {
       return false // 空内容不触发保存
     }
-    
+
     if (!this.lastContent) {
       return content.trim().length > 0
     }

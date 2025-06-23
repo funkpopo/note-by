@@ -19,10 +19,13 @@ export interface WebDAVSyncRecord {
 interface SyncCacheData {
   version: string
   lastSync: number
-  files: Record<string, Omit<WebDAVSyncRecord, 'filePath'> & {
-    lastAccessTime?: number // 最后访问时间
-    createdTime?: number // 创建时间
-  }>
+  files: Record<
+    string,
+    Omit<WebDAVSyncRecord, 'filePath'> & {
+      lastAccessTime?: number // 最后访问时间
+      createdTime?: number // 创建时间
+    }
+  >
   settings?: {
     maxCacheAgeMs?: number // 最大缓存时间（毫秒）
     maxCacheEntries?: number // 最大缓存条目数
@@ -148,7 +151,7 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     const cache = await loadCache()
 
     const now = Date.now()
-    
+
     // 存储记录，排除filePath字段（作为键使用）
     cache.files[record.filePath] = {
       remotePath: record.remotePath,
@@ -234,7 +237,12 @@ export async function updateLastGlobalSyncTime(): Promise<boolean> {
     cache.lastSync = Date.now()
     return await saveCache(cache)
   } catch (error) {
-    mainErrorHandler.error('Failed to update global sync time', error, ErrorCategory.WEBDAV, 'updateLastGlobalSyncTime')
+    mainErrorHandler.error(
+      'Failed to update global sync time',
+      error,
+      ErrorCategory.WEBDAV,
+      'updateLastGlobalSyncTime'
+    )
     return false
   }
 }
@@ -272,7 +280,10 @@ export async function cleanupStaleCache(): Promise<{
           `Cleaned stale cache entry: ${filePath}`,
           ErrorCategory.WEBDAV,
           'cleanupStaleCache',
-          { age: age / (24 * 60 * 60 * 1000), maxAge: settings.maxCacheAgeMs! / (24 * 60 * 60 * 1000) }
+          {
+            age: age / (24 * 60 * 60 * 1000),
+            maxAge: settings.maxCacheAgeMs! / (24 * 60 * 60 * 1000)
+          }
         )
         continue
       }
@@ -302,7 +313,12 @@ export async function cleanupStaleCache(): Promise<{
       cleaned: cleanedCount
     }
   } catch (error) {
-    mainErrorHandler.error('Failed to cleanup stale cache', error, ErrorCategory.WEBDAV, 'cleanupStaleCache')
+    mainErrorHandler.error(
+      'Failed to cleanup stale cache',
+      error,
+      ErrorCategory.WEBDAV,
+      'cleanupStaleCache'
+    )
     return {
       success: false,
       cleaned: 0,
@@ -343,7 +359,11 @@ export function stopAutoCleanup(): void {
   if (cleanupTimer) {
     clearInterval(cleanupTimer)
     cleanupTimer = null
-    mainErrorHandler.info('WebDAV cache auto-cleanup stopped', ErrorCategory.WEBDAV, 'stopAutoCleanup')
+    mainErrorHandler.info(
+      'WebDAV cache auto-cleanup stopped',
+      ErrorCategory.WEBDAV,
+      'stopAutoCleanup'
+    )
   }
 }
 
@@ -362,7 +382,7 @@ export async function getCacheStats(): Promise<{
   try {
     const cache = await loadCache()
     const entries = Object.values(cache.files)
-    
+
     if (entries.length === 0) {
       return {
         success: true,
@@ -376,8 +396,8 @@ export async function getCacheStats(): Promise<{
       }
     }
 
-    const times = entries.map(entry => entry.lastAccessTime || entry.lastSyncTime || 0)
-    const sizes = entries.map(entry => entry.fileSize || 0)
+    const times = entries.map((entry) => entry.lastAccessTime || entry.lastSyncTime || 0)
+    const sizes = entries.map((entry) => entry.fileSize || 0)
 
     return {
       success: true,
@@ -390,7 +410,12 @@ export async function getCacheStats(): Promise<{
       }
     }
   } catch (error) {
-    mainErrorHandler.error('Failed to get cache stats', error, ErrorCategory.WEBDAV, 'getCacheStats')
+    mainErrorHandler.error(
+      'Failed to get cache stats',
+      error,
+      ErrorCategory.WEBDAV,
+      'getCacheStats'
+    )
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -399,19 +424,21 @@ export async function getCacheStats(): Promise<{
 }
 
 // 更新缓存设置
-export async function updateCacheSettings(newSettings: Partial<typeof DEFAULT_CACHE_SETTINGS>): Promise<boolean> {
+export async function updateCacheSettings(
+  newSettings: Partial<typeof DEFAULT_CACHE_SETTINGS>
+): Promise<boolean> {
   try {
     const cache = await loadCache()
     cache.settings = { ...DEFAULT_CACHE_SETTINGS, ...cache.settings, ...newSettings }
-    
+
     const result = await saveCache(cache)
-    
+
     if (result) {
       // 重新初始化自动清理（如果清理间隔改变了）
       if (newSettings.cleanupIntervalMs) {
         initializeAutoCleanup()
       }
-      
+
       mainErrorHandler.info(
         'Cache settings updated',
         ErrorCategory.WEBDAV,
@@ -419,10 +446,15 @@ export async function updateCacheSettings(newSettings: Partial<typeof DEFAULT_CA
         newSettings
       )
     }
-    
+
     return result
   } catch (error) {
-    mainErrorHandler.error('Failed to update cache settings', error, ErrorCategory.WEBDAV, 'updateCacheSettings')
+    mainErrorHandler.error(
+      'Failed to update cache settings',
+      error,
+      ErrorCategory.WEBDAV,
+      'updateCacheSettings'
+    )
     return false
   }
 }

@@ -216,7 +216,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       editorMemoryManager.removeEventListener('warning', handleMemoryEvent)
       editorMemoryManager.removeEventListener('critical', handleMemoryEvent)
       editorMemoryManager.removeEventListener('cleanup', handleMemoryEvent)
-      
+
       if (memoryCheckIntervalRef.current) {
         clearInterval(memoryCheckIntervalRef.current)
       }
@@ -467,7 +467,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             try {
               // 读取文件为Blob
               const originalBlob = new Blob([file], { type: file.type })
-              
+
               // 使用内存管理器优化图片
               const optimizedBlob = await editorMemoryManager.optimizeAndCacheImage(
                 `upload_${Date.now()}_${file.name}`,
@@ -479,11 +479,13 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   format: 'auto'
                 }
               )
-              
+
               // 创建优化后的File对象
               processedFile = new File([optimizedBlob], file.name, { type: optimizedBlob.type })
-              
-              console.log(`Image optimized: ${(file.size / 1024).toFixed(2)}KB -> ${(processedFile.size / 1024).toFixed(2)}KB`)
+
+              console.log(
+                `Image optimized: ${(file.size / 1024).toFixed(2)}KB -> ${(processedFile.size / 1024).toFixed(2)}KB`
+              )
             } catch (optimizationError) {
               console.warn('Image optimization failed, using original file:', optimizationError)
               // 优化失败时使用原文件
@@ -511,7 +513,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             })
 
             // 通过IPC调用上传文件
-            const result = await window.api.markdown.uploadFile(filePath, fileContent, processedFile.name)
+            const result = await window.api.markdown.uploadFile(
+              filePath,
+              fileContent,
+              processedFile.name
+            )
 
             if (!result.success) {
               throw new Error(result.error || '文件上传失败')
@@ -544,7 +550,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           })
 
           // 通过IPC调用上传文件
-          const result = await window.api.markdown.uploadFile(filePath, fileContent, processedFile.name)
+          const result = await window.api.markdown.uploadFile(
+            filePath,
+            fileContent,
+            processedFile.name
+          )
 
           if (!result.success) {
             throw new Error(result.error || '文件上传失败')
@@ -883,104 +893,107 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     return undefined
   }, [editor, currentFile, lastLoadedFileRef.current])
 
-    // Internal save function with auto-save flag
-  const saveFileContentInternal = useCallback(async (isAutoSave: boolean = false) => {
-    if (!currentFolder || !currentFile) {
-      if (!isAutoSave) {
-        Toast.warning('没有选择文件')
+  // Internal save function with auto-save flag
+  const saveFileContentInternal = useCallback(
+    async (isAutoSave: boolean = false) => {
+      if (!currentFolder || !currentFile) {
+        if (!isAutoSave) {
+          Toast.warning('没有选择文件')
+        }
+        return
       }
-      return
-    }
 
-    // 记录保存开始时间
-    const saveStartTime = performance.now()
+      // 记录保存开始时间
+      const saveStartTime = performance.now()
 
-    // 取消正在进行的自动保存
-    smartDebouncerRef.current.cancel()
-    
-    // 只有手动保存才改变UI状态，自动保存保持完全静默
-    if (!isAutoSave) {
-      setIsSaving(true)
-      setAutoSaveStatus('saving')
-    }
-    try {
-      // 获取编辑器内容的JSON格式（保留标签信息）
-      const blocks = editor.topLevelBlocks
+      // 取消正在进行的自动保存
+      smartDebouncerRef.current.cancel()
 
-      // 提取标签信息
-      const tags = extractTags(blocks)
+      // 只有手动保存才改变UI状态，自动保存保持完全静默
+      if (!isAutoSave) {
+        setIsSaving(true)
+        setAutoSaveStatus('saving')
+      }
+      try {
+        // 获取编辑器内容的JSON格式（保留标签信息）
+        const blocks = editor.topLevelBlocks
 
-      // 更新标签列表状态
-      setTagList(tags)
+        // 提取标签信息
+        const tags = extractTags(blocks)
 
-      // Convert blocks to Markdown for saving
-      const markdown = await editor.blocksToMarkdownLossy(editor.document)
+        // 更新标签列表状态
+        setTagList(tags)
 
-      const filePath = `${currentFolder}/${currentFile}`
+        // Convert blocks to Markdown for saving
+        const markdown = await editor.blocksToMarkdownLossy(editor.document)
 
-      // 将标签信息添加到保存数据中
-      const tagsHeader = tags.length > 0 ? `<!-- tags: ${tags.join(',')} -->\n\n` : ''
-      const contentWithTags = tagsHeader + markdown
+        const filePath = `${currentFolder}/${currentFile}`
 
-      const result = await window.api.markdown.save(filePath, contentWithTags)
+        // 将标签信息添加到保存数据中
+        const tagsHeader = tags.length > 0 ? `<!-- tags: ${tags.join(',')} -->\n\n` : ''
+        const contentWithTags = tagsHeader + markdown
 
-      if (result.success) {
-        // 记录保存完成时间和性能指标
-        const saveEndTime = performance.now()
-        const saveDuration = saveEndTime - saveStartTime
-        performanceMonitor.recordEditorPerformance('save', saveDuration)
-        performanceMonitor.recordUserAction('save')
+        const result = await window.api.markdown.save(filePath, contentWithTags)
 
-        // 只有手动保存才显示成功提示
-        if (!isAutoSave) {
-          Toast.success('文件保存成功')
-          setIsEditing(false) // 只有手动保存才重置编辑状态
+        if (result.success) {
+          // 记录保存完成时间和性能指标
+          const saveEndTime = performance.now()
+          const saveDuration = saveEndTime - saveStartTime
+          performanceMonitor.recordEditorPerformance('save', saveDuration)
+          performanceMonitor.recordUserAction('save')
+
+          // 只有手动保存才显示成功提示
+          if (!isAutoSave) {
+            Toast.success('文件保存成功')
+            setIsEditing(false) // 只有手动保存才重置编辑状态
+          }
+
+          // 只有手动保存才更新UI状态
+          if (!isAutoSave) {
+            setAutoSaveStatus('saved')
+            // 5秒后清除"已保存"状态
+            setTimeout(() => {
+              setAutoSaveStatus('')
+            }, 5000)
+          }
+
+          // Update the last saved content - 无论是否自动保存都要更新基准
+          lastSavedContentRef.current = markdown
+
+          // 更新冲突检测快照
+          await conflictDetectorRef.current.createSnapshot(filePath, markdown)
+
+          // 只有手动保存才通知父组件文件已改变，避免自动保存引起侧边栏闪烁
+          if (!isAutoSave && onFileChanged) {
+            onFileChanged()
+          }
+
+          // 刷新全局标签缓存（异步执行，不阻塞保存流程）
+          refreshGlobalTagCache().catch(() => {
+            // 刷新失败，继续执行
+          })
+        } else {
+          // 只有手动保存才显示错误提示
+          if (!isAutoSave) {
+            Toast.error(`保存失败: ${result.error}`)
+          }
+          setAutoSaveStatus('')
         }
-        
-        // 只有手动保存才更新UI状态
-        if (!isAutoSave) {
-          setAutoSaveStatus('saved')
-          // 5秒后清除"已保存"状态
-          setTimeout(() => {
-            setAutoSaveStatus('')
-          }, 5000)
-        }
-
-        // Update the last saved content - 无论是否自动保存都要更新基准
-        lastSavedContentRef.current = markdown
-
-        // 更新冲突检测快照
-        await conflictDetectorRef.current.createSnapshot(filePath, markdown)
-
-        // 只有手动保存才通知父组件文件已改变，避免自动保存引起侧边栏闪烁
-        if (!isAutoSave && onFileChanged) {
-          onFileChanged()
-        }
-
-        // 刷新全局标签缓存（异步执行，不阻塞保存流程）
-        refreshGlobalTagCache().catch(() => {
-          // 刷新失败，继续执行
-        })
-      } else {
+      } catch (error) {
         // 只有手动保存才显示错误提示
         if (!isAutoSave) {
-          Toast.error(`保存失败: ${result.error}`)
+          Toast.error('保存文件内容失败')
         }
         setAutoSaveStatus('')
+      } finally {
+        // 只有手动保存才重置loading状态
+        if (!isAutoSave) {
+          setIsSaving(false)
+        }
       }
-    } catch (error) {
-      // 只有手动保存才显示错误提示
-      if (!isAutoSave) {
-        Toast.error('保存文件内容失败')
-      }
-      setAutoSaveStatus('')
-    } finally {
-      // 只有手动保存才重置loading状态
-      if (!isAutoSave) {
-        setIsSaving(false)
-      }
-    }
-  }, [currentFolder, currentFile, editor, onFileChanged, setTagList])
+    },
+    [currentFolder, currentFile, editor, onFileChanged, setTagList]
+  )
 
   // Public save function for manual saves (button clicks, keyboard shortcuts)
   const saveFileContent = useCallback(async () => {

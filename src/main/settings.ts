@@ -167,12 +167,16 @@ class EnhancedSettingsManager {
 
       // 执行写入
       const success = await this.performWrite(settings)
-      
+
       transaction.completed = true
       transaction.success = success
 
       if (success) {
-        mainErrorHandler.info('Settings updated successfully', ErrorCategory.SYSTEM, 'writeSettingsAtomic')
+        mainErrorHandler.info(
+          'Settings updated successfully',
+          ErrorCategory.SYSTEM,
+          'writeSettingsAtomic'
+        )
       } else {
         throw new Error('Failed to write settings to disk')
       }
@@ -181,7 +185,12 @@ class EnhancedSettingsManager {
     } catch (error) {
       // 发生错误时回滚
       await this.rollbackTransaction(transactionId)
-      mainErrorHandler.error('Settings write failed, rolled back', error, ErrorCategory.SYSTEM, 'writeSettingsAtomic')
+      mainErrorHandler.error(
+        'Settings write failed, rolled back',
+        error,
+        ErrorCategory.SYSTEM,
+        'writeSettingsAtomic'
+      )
       throw error
     } finally {
       this.isLocked = false
@@ -195,10 +204,10 @@ class EnhancedSettingsManager {
   async updateMultipleSettings(updates: Record<string, unknown>): Promise<boolean> {
     const currentSettings = await this.readSettingsAtomic()
     const mergedSettings = { ...currentSettings, ...updates }
-    
+
     // 添加更新时间戳
     mergedSettings._lastUpdated = Date.now()
-    
+
     return await this.writeSettingsAtomic(mergedSettings)
   }
 
@@ -210,7 +219,12 @@ class EnhancedSettingsManager {
       const updates = { [key]: value }
       return await this.updateMultipleSettings(updates)
     } catch (error) {
-      mainErrorHandler.error(`Failed to update setting ${key}`, error, ErrorCategory.SYSTEM, 'updateSettingSafe')
+      mainErrorHandler.error(
+        `Failed to update setting ${key}`,
+        error,
+        ErrorCategory.SYSTEM,
+        'updateSettingSafe'
+      )
       return false
     }
   }
@@ -223,7 +237,12 @@ class EnhancedSettingsManager {
       const settings = await this.readSettingsAtomic()
       return settings[key] !== undefined ? settings[key] : defaultValue
     } catch (error) {
-      mainErrorHandler.error(`Failed to get setting ${key}`, error, ErrorCategory.SYSTEM, 'getSettingSafe')
+      mainErrorHandler.error(
+        `Failed to get setting ${key}`,
+        error,
+        ErrorCategory.SYSTEM,
+        'getSettingSafe'
+      )
       return defaultValue
     }
   }
@@ -248,7 +267,7 @@ class EnhancedSettingsManager {
     // WebDAV配置验证
     if (settings.webdav && typeof settings.webdav === 'object') {
       const webdav = settings.webdav as WebDAVConfig
-      
+
       if (webdav.enabled) {
         if (!webdav.url || typeof webdav.url !== 'string') {
           result.errors.push('WebDAV URL is required when enabled')
@@ -259,7 +278,7 @@ class EnhancedSettingsManager {
         if (!webdav.password || typeof webdav.password !== 'string') {
           result.errors.push('WebDAV password is required when enabled')
         }
-        
+
         // URL 格式验证
         if (webdav.url) {
           try {
@@ -281,7 +300,7 @@ class EnhancedSettingsManager {
     // API配置验证
     if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
       const apiConfigs = settings.AiApiConfigs as AiApiConfig[]
-      
+
       for (let i = 0; i < apiConfigs.length; i++) {
         const config = apiConfigs[i]
         if (!config.id || !config.name || !config.apiUrl) {
@@ -293,7 +312,9 @@ class EnhancedSettingsManager {
     // 版本兼容性检查
     if (settings._version && typeof settings._version === 'string') {
       if (!CURRENT_CONFIG_VERSION.compatibleVersions.includes(settings._version)) {
-        result.warnings.push(`Configuration version ${settings._version} may not be fully compatible`)
+        result.warnings.push(
+          `Configuration version ${settings._version} may not be fully compatible`
+        )
       }
     }
 
@@ -331,7 +352,11 @@ class EnhancedSettingsManager {
       try {
         settings.webdav.password = decrypt(settings.webdav.password)
       } catch (error) {
-        mainErrorHandler.warn('Failed to decrypt WebDAV password', ErrorCategory.SYSTEM, 'performRead')
+        mainErrorHandler.warn(
+          'Failed to decrypt WebDAV password',
+          ErrorCategory.SYSTEM,
+          'performRead'
+        )
       }
     }
 
@@ -369,7 +394,7 @@ class EnhancedSettingsManager {
       }
 
       const settingsPath = getSettingsPath()
-      
+
       // 确保目录存在
       const settingsDir = path.dirname(settingsPath)
       if (!fs.existsSync(settingsDir)) {
@@ -383,7 +408,12 @@ class EnhancedSettingsManager {
 
       return true
     } catch (error) {
-      mainErrorHandler.error('Failed to write settings', error, ErrorCategory.FILE_IO, 'performWrite')
+      mainErrorHandler.error(
+        'Failed to write settings',
+        error,
+        ErrorCategory.FILE_IO,
+        'performWrite'
+      )
       return false
     }
   }
@@ -393,7 +423,7 @@ class EnhancedSettingsManager {
    */
   private mergeWithDefaults(settings: Record<string, unknown>): Record<string, unknown> {
     const merged = { ...defaultSettings }
-    
+
     for (const [key, value] of Object.entries(settings)) {
       if (value !== null && value !== undefined) {
         if (typeof value === 'object' && typeof merged[key] === 'object') {
@@ -418,14 +448,23 @@ class EnhancedSettingsManager {
 
     try {
       const success = await this.performWrite(transaction.originalConfig)
-      
+
       if (success) {
-        mainErrorHandler.info(`Transaction ${transactionId} rolled back successfully`, ErrorCategory.SYSTEM, 'rollbackTransaction')
+        mainErrorHandler.info(
+          `Transaction ${transactionId} rolled back successfully`,
+          ErrorCategory.SYSTEM,
+          'rollbackTransaction'
+        )
       }
-      
+
       return success
     } catch (error) {
-      mainErrorHandler.error(`Failed to rollback transaction ${transactionId}`, error, ErrorCategory.SYSTEM, 'rollbackTransaction')
+      mainErrorHandler.error(
+        `Failed to rollback transaction ${transactionId}`,
+        error,
+        ErrorCategory.SYSTEM,
+        'rollbackTransaction'
+      )
       return false
     }
   }
@@ -444,14 +483,14 @@ const enhancedSettings = new EnhancedSettingsManager()
 // 向后兼容的API - 使用增强的设置管理器
 export function readSettings(): Record<string, unknown> {
   let settings: Record<string, unknown> = {}
-  
+
   try {
     const settingsPath = getSettingsPath()
-    
+
     if (fs.existsSync(settingsPath)) {
       const data = fs.readFileSync(settingsPath, 'utf8')
       settings = JSON.parse(data)
-      
+
       // 解密敏感数据
       if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
         settings.AiApiConfigs.forEach((config: AiApiConfig) => {
@@ -464,10 +503,12 @@ export function readSettings(): Record<string, unknown> {
           }
         })
       }
-      
+
       if (settings.webdav && (settings.webdav as WebDAVConfig).password) {
         try {
-          (settings.webdav as WebDAVConfig).password = decrypt((settings.webdav as WebDAVConfig).password)
+          ;(settings.webdav as WebDAVConfig).password = decrypt(
+            (settings.webdav as WebDAVConfig).password
+          )
         } catch (error) {
           // 解密失败，保持原值
         }
@@ -476,18 +517,18 @@ export function readSettings(): Record<string, unknown> {
   } catch (error) {
     console.error('Failed to read settings:', error)
   }
-  
+
   return { ...defaultSettings, ...settings }
 }
 
 export function writeSettings(settings: Record<string, unknown>): void {
-  enhancedSettings.writeSettingsAtomic(settings).catch(error => {
+  enhancedSettings.writeSettingsAtomic(settings).catch((error) => {
     console.error('Failed to write settings:', error)
   })
 }
 
 export function updateSetting(key: string, value: unknown): void {
-  enhancedSettings.updateSettingSafe(key, value).catch(error => {
+  enhancedSettings.updateSettingSafe(key, value).catch((error) => {
     console.error(`Failed to update setting ${key}:`, error)
   })
 }
@@ -502,7 +543,8 @@ export const enhancedSettingsAPI = {
   read: () => enhancedSettings.readSettingsAtomic(),
   write: (settings: Record<string, unknown>) => enhancedSettings.writeSettingsAtomic(settings),
   update: (key: string, value: unknown) => enhancedSettings.updateSettingSafe(key, value),
-  updateMultiple: (updates: Record<string, unknown>) => enhancedSettings.updateMultipleSettings(updates),
+  updateMultiple: (updates: Record<string, unknown>) =>
+    enhancedSettings.updateMultipleSettings(updates),
   get: <T>(key: string, defaultValue?: T) => enhancedSettings.getSettingSafe(key, defaultValue)
 }
 
@@ -517,11 +559,11 @@ export function updateWebDAVConfig(config: WebDAVConfig): void {
 }
 
 export function encryptWebDAVWithMasterPassword(
-  config: WebDAVConfig, 
+  config: WebDAVConfig,
   masterPassword: string
 ): WebDAVConfig {
   const result = { ...config }
-  
+
   try {
     const testPlain = generateEncryptionTest()
     result.encryptionTestPlain = testPlain
@@ -531,7 +573,7 @@ export function encryptWebDAVWithMasterPassword(
     console.error('Failed to encrypt WebDAV config:', error)
     throw new Error('加密失败')
   }
-  
+
   return result
 }
 
@@ -539,7 +581,7 @@ export function verifyMasterPassword(config: WebDAVConfig, masterPassword: strin
   if (!config.encryptionTest || !config.encryptionTestPlain) {
     return false
   }
-  
+
   try {
     const decrypted = decryptWithPassword(config.encryptionTest, masterPassword)
     return decrypted === config.encryptionTestPlain
@@ -549,12 +591,12 @@ export function verifyMasterPassword(config: WebDAVConfig, masterPassword: strin
 }
 
 export function decryptWebDAVWithMasterPassword(
-  config: WebDAVConfig, 
+  config: WebDAVConfig,
   masterPassword: string
 ): WebDAVConfig {
   if (!verifyMasterPassword(config, masterPassword)) {
     throw new Error('密码验证失败')
   }
-  
+
   return { ...config, useCustomEncryption: false }
 }

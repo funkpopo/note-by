@@ -57,7 +57,7 @@ class EnhancedDatabasePool {
   private readonly healthCheckInterval: number = 60000 // 1分钟
   private readonly maxRetries: number = 3
   private readonly reconnectDelay: number = 1000 // 1秒
-  
+
   private SqliteDatabase: any = null
   private dbPath: string = ''
   private isInitialized: boolean = false
@@ -138,9 +138,11 @@ class EnhancedDatabasePool {
 
   private findAvailableConnection(): ConnectionItem | null {
     for (const item of this.connections.values()) {
-      if (item.status === ConnectionStatus.IDLE && 
-          item.health.isHealthy && 
-          item.activeOperations === 0) {
+      if (
+        item.status === ConnectionStatus.IDLE &&
+        item.health.isHealthy &&
+        item.activeOperations === 0
+      ) {
         return item
       }
     }
@@ -331,8 +333,7 @@ class EnhancedDatabasePool {
     const unhealthyConnections: string[] = []
 
     for (const [id, item] of this.connections) {
-      if (item.status === ConnectionStatus.ERROR || 
-          item.status === ConnectionStatus.RECONNECTING) {
+      if (item.status === ConnectionStatus.ERROR || item.status === ConnectionStatus.RECONNECTING) {
         continue
       }
 
@@ -378,10 +379,12 @@ class EnhancedDatabasePool {
 
     for (const [id, item] of this.connections) {
       // 移除超时的空闲连接（保留至少1个连接）
-      if (item.status === ConnectionStatus.IDLE && 
-          item.activeOperations === 0 &&
-          now - item.lastUsed > this.connectionTimeout &&
-          this.connections.size > 1) {
+      if (
+        item.status === ConnectionStatus.IDLE &&
+        item.activeOperations === 0 &&
+        now - item.lastUsed > this.connectionTimeout &&
+        this.connections.size > 1
+      ) {
         connectionsToRemove.push(id)
       }
     }
@@ -399,7 +402,7 @@ class EnhancedDatabasePool {
 
     try {
       item.status = ConnectionStatus.RECONNECTING
-      
+
       // Close existing connection
       if (item.connection && typeof item.connection.close === 'function') {
         item.connection.close()
@@ -433,7 +436,7 @@ class EnhancedDatabasePool {
       } catch (error) {
         console.warn(`Failed to close connection ${connectionId}:`, error)
       }
-      
+
       this.connections.delete(connectionId)
       console.log(`Removed database connection: ${connectionId}`)
     }
@@ -447,14 +450,12 @@ class EnhancedDatabasePool {
       this.healthCheckTimer = undefined
     }
 
-    const promises = Array.from(this.connections.keys()).map(id => 
-      this.removeConnection(id)
-    )
+    const promises = Array.from(this.connections.keys()).map((id) => this.removeConnection(id))
 
     await Promise.all(promises)
     this.connections.clear()
     this.isInitialized = false
-    
+
     console.log('Enhanced database pool shut down successfully')
   }
 
@@ -465,7 +466,10 @@ class EnhancedDatabasePool {
     errorConnections: number
     healthyConnections: number
   } {
-    let active = 0, idle = 0, error = 0, healthy = 0
+    let active = 0,
+      idle = 0,
+      error = 0,
+      healthy = 0
 
     for (const item of this.connections.values()) {
       switch (item.status) {
@@ -533,12 +537,15 @@ class EnhancedDatabasePool {
       result.analyzed = true
 
       // 更新最后维护时间
-      connection.prepare(`
+      connection
+        .prepare(
+          `
         UPDATE system_metadata 
         SET value = ?, updated_at = strftime('%s', 'now')
         WHERE key = 'last_maintenance'
-      `).run(Date.now().toString())
-
+      `
+        )
+        .run(Date.now().toString())
     } catch (error) {
       result.errors.push(`维护操作失败: ${error}`)
     } finally {
@@ -565,10 +572,13 @@ class EnhancedDatabasePool {
     const connectionsToClose: string[] = []
 
     for (const [id, item] of this.connections) {
-      if (item.status === ConnectionStatus.IDLE && 
-          item.activeOperations === 0 &&
-          this.connections.size > 1 && 
-          now - item.lastUsed > 5000) { // 5秒未使用
+      if (
+        item.status === ConnectionStatus.IDLE &&
+        item.activeOperations === 0 &&
+        this.connections.size > 1 &&
+        now - item.lastUsed > 5000
+      ) {
+        // 5秒未使用
         connectionsToClose.push(id)
       }
     }
@@ -637,11 +647,11 @@ async function withDatabase<T>(
     } catch (error) {
       lastError = error as Error
       console.error(`数据库操作失败 (attempt ${attempt}/${retries}):`, error)
-      
+
       // 对于严重错误，立即重试；对于普通错误，等待后重试
       if (attempt < retries) {
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000) // 指数退避，最大5秒
-        await new Promise(resolve => setTimeout(resolve, delay))
+        await new Promise((resolve) => setTimeout(resolve, delay))
       }
     } finally {
       enhancedDbPool.releaseConnection(connection)

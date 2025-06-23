@@ -94,13 +94,13 @@ export class DatabaseErrorHandler {
     }
   ): Promise<DatabaseError> {
     const dbError = this.classifyError(originalError, context)
-    
+
     // 记录错误
     this.recordError(dbError)
-    
+
     // 上报错误
     this.reportError(dbError)
-    
+
     // 尝试自动恢复
     if (dbError.autoRetry && dbError.recoverable) {
       await this.attemptRecovery(dbError)
@@ -128,62 +128,73 @@ export class DatabaseErrorHandler {
     let autoRetry = false
 
     // 连接错误
-    if (message.includes('database is locked') || 
-        message.includes('cannot open database') ||
-        message.includes('database disk image is malformed')) {
+    if (
+      message.includes('database is locked') ||
+      message.includes('cannot open database') ||
+      message.includes('database disk image is malformed')
+    ) {
       type = DatabaseErrorType.CONNECTION_FAILED
       severity = ErrorSeverity.HIGH
       recoverable = true
       autoRetry = true
     }
     // 查询错误
-    else if (message.includes('syntax error') || 
-             message.includes('no such table') ||
-             message.includes('no such column')) {
+    else if (
+      message.includes('syntax error') ||
+      message.includes('no such table') ||
+      message.includes('no such column')
+    ) {
       type = DatabaseErrorType.QUERY_FAILED
       severity = ErrorSeverity.MEDIUM
       recoverable = false
       autoRetry = false
     }
     // 事务错误
-    else if (message.includes('transaction') || 
-             message.includes('rollback') ||
-             message.includes('commit')) {
+    else if (
+      message.includes('transaction') ||
+      message.includes('rollback') ||
+      message.includes('commit')
+    ) {
       type = DatabaseErrorType.TRANSACTION_FAILED
       severity = ErrorSeverity.MEDIUM
       recoverable = true
       autoRetry = true
     }
     // 数据库损坏
-    else if (message.includes('corrupt') || 
-             message.includes('malformed') ||
-             message.includes('integrity')) {
+    else if (
+      message.includes('corrupt') ||
+      message.includes('malformed') ||
+      message.includes('integrity')
+    ) {
       type = DatabaseErrorType.CORRUPTION
       severity = ErrorSeverity.CRITICAL
       recoverable = false
       autoRetry = false
     }
     // 权限错误
-    else if (message.includes('permission') || 
-             message.includes('access') ||
-             message.includes('readonly')) {
+    else if (
+      message.includes('permission') ||
+      message.includes('access') ||
+      message.includes('readonly')
+    ) {
       type = DatabaseErrorType.PERMISSION_DENIED
       severity = ErrorSeverity.HIGH
       recoverable = false
       autoRetry = false
     }
     // 磁盘空间不足
-    else if (message.includes('disk full') || 
-             message.includes('no space') ||
-             message.includes('write failed')) {
+    else if (
+      message.includes('disk full') ||
+      message.includes('no space') ||
+      message.includes('write failed')
+    ) {
       type = DatabaseErrorType.DISK_FULL
       severity = ErrorSeverity.CRITICAL
       recoverable = false
       autoRetry = false
     }
     // 超时错误
-    else if (message.includes('timeout') || 
-             message.includes('busy')) {
+    else if (message.includes('timeout') || message.includes('busy')) {
       type = DatabaseErrorType.TIMEOUT
       severity = ErrorSeverity.MEDIUM
       recoverable = true
@@ -215,7 +226,7 @@ export class DatabaseErrorHandler {
   private recordError(error: DatabaseError): void {
     // 添加到历史记录
     this.errorHistory.push(error)
-    
+
     // 保持历史记录大小限制
     if (this.errorHistory.length > this.maxHistorySize) {
       this.errorHistory = this.errorHistory.slice(-this.maxHistorySize)
@@ -254,11 +265,9 @@ export class DatabaseErrorHandler {
   private calculateErrorRate(): void {
     const now = Date.now()
     const oneMinuteAgo = now - 60000
-    
-    const recentErrors = this.errorHistory.filter(
-      error => error.timestamp > oneMinuteAgo
-    ).length
-    
+
+    const recentErrors = this.errorHistory.filter((error) => error.timestamp > oneMinuteAgo).length
+
     this.errorStats.errorRate = recentErrors
   }
 
@@ -295,7 +304,7 @@ export class DatabaseErrorHandler {
     }
 
     const retryCount = error.context?.retryCount || 0
-    
+
     if (!strategy.shouldRetry(error, retryCount)) {
       return false
     }
@@ -306,8 +315,8 @@ export class DatabaseErrorHandler {
         strategy.retryDelay * Math.pow(strategy.backoffMultiplier, retryCount),
         strategy.maxDelay
       )
-      
-      await new Promise(resolve => setTimeout(resolve, delay))
+
+      await new Promise((resolve) => setTimeout(resolve, delay))
 
       // 执行恢复回调
       if (strategy.onRecovery) {
@@ -400,12 +409,11 @@ export class DatabaseErrorHandler {
     const fiveMinutesAgo = now - 300000 // 5分钟
 
     // 检查最近5分钟的错误
-    const recentErrors = this.errorHistory.filter(
-      error => error.timestamp > fiveMinutesAgo
-    )
+    const recentErrors = this.errorHistory.filter((error) => error.timestamp > fiveMinutesAgo)
 
     // 检查错误率是否过高
-    if (recentErrors.length > 50) { // 5分钟内超过50个错误
+    if (recentErrors.length > 50) {
+      // 5分钟内超过50个错误
       console.warn('Database error rate is high:', {
         recentErrors: recentErrors.length,
         errorRate: this.errorStats.errorRate,
@@ -414,14 +422,12 @@ export class DatabaseErrorHandler {
     }
 
     // 检查严重错误
-    const criticalErrors = recentErrors.filter(
-      error => error.severity === ErrorSeverity.CRITICAL
-    )
+    const criticalErrors = recentErrors.filter((error) => error.severity === ErrorSeverity.CRITICAL)
 
     if (criticalErrors.length > 0) {
       console.error('Critical database errors detected in the last 5 minutes:', {
         count: criticalErrors.length,
-        errors: criticalErrors.map(e => ({ type: e.type, message: e.message }))
+        errors: criticalErrors.map((e) => ({ type: e.type, message: e.message }))
       })
     }
 
@@ -440,8 +446,8 @@ export class DatabaseErrorHandler {
    * 获取最近的错误历史
    */
   getRecentErrors(minutes: number = 60): DatabaseError[] {
-    const cutoff = Date.now() - (minutes * 60000)
-    return this.errorHistory.filter(error => error.timestamp > cutoff)
+    const cutoff = Date.now() - minutes * 60000
+    return this.errorHistory.filter((error) => error.timestamp > cutoff)
   }
 
   /**
@@ -463,13 +469,14 @@ export class DatabaseErrorHandler {
    */
   shouldBlockOperation(): boolean {
     // 如果错误率过高，阻止新操作
-    if (this.errorStats.errorRate > 20) { // 每分钟超过20个错误
+    if (this.errorStats.errorRate > 20) {
+      // 每分钟超过20个错误
       return true
     }
 
     // 如果最近有严重错误，可能需要阻止操作
     const recentCriticalErrors = this.getRecentErrors(5).filter(
-      error => error.severity === ErrorSeverity.CRITICAL
+      (error) => error.severity === ErrorSeverity.CRITICAL
     )
 
     return recentCriticalErrors.length > 3 // 5分钟内超过3个严重错误
@@ -497,13 +504,13 @@ export class DatabaseErrorHandler {
         return await operation()
       } catch (error) {
         const dbError = await this.handleError(error as Error, context)
-        
+
         // 对于可恢复的错误，可能需要重试
         if (dbError.recoverable && dbError.autoRetry) {
           // 重试逻辑已在handleError中处理
           // 这里返回null表示操作失败
         }
-        
+
         return null
       }
     }
@@ -511,4 +518,4 @@ export class DatabaseErrorHandler {
 }
 
 // 导出全局实例
-export const databaseErrorHandler = new DatabaseErrorHandler() 
+export const databaseErrorHandler = new DatabaseErrorHandler()

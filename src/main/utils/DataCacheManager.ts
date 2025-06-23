@@ -233,7 +233,7 @@ export class DataCacheManager {
     try {
       const keys = Array.from(this.memoryCache.keys())
       this.memoryCache.clear()
-      
+
       this.stats.totalItems = 0
       this.stats.totalSize = 0
 
@@ -261,7 +261,7 @@ export class DataCacheManager {
     for (const [key, item] of this.memoryCache) {
       if (key.startsWith(prefix) && !this.isExpired(item)) {
         result.set(key, item.data as T)
-        
+
         // 更新访问统计
         item.accessCount++
         item.lastAccess = Date.now()
@@ -548,7 +548,7 @@ export class DataCacheManager {
     if (totalRequests === 1) {
       this.stats.averageAccessTime = accessTime
     } else {
-      this.stats.averageAccessTime = 
+      this.stats.averageAccessTime =
         (this.stats.averageAccessTime * (totalRequests - 1) + accessTime) / totalRequests
     }
   }
@@ -633,7 +633,8 @@ export class DataCacheManager {
     this.updateMemoryUsage()
 
     // 如果内存使用过高，执行额外的清理
-    if (this.stats.memoryUsage > 0.8) { // 超过80%
+    if (this.stats.memoryUsage > 0.8) {
+      // 超过80%
       await this.performEmergencyCleanup()
     }
   }
@@ -739,4 +740,4 @@ export const globalDataCache = new DataCacheManager({
   maxItems: 5000,
   defaultTTL: 15 * 60 * 1000, // 15分钟
   evictionPolicy: 'LRU'
-}) 
+})

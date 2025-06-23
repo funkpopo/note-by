@@ -195,11 +195,14 @@ class UpdaterService {
     }, 5000) // 5秒后检查
 
     // 设置定期检查（每4小时）
-    setInterval(() => {
-      if (!is.dev && !this.updateCheckInProgress) {
-        this.checkForUpdates()
-      }
-    }, 4 * 60 * 60 * 1000) // 4小时
+    setInterval(
+      () => {
+        if (!is.dev && !this.updateCheckInProgress) {
+          this.checkForUpdates()
+        }
+      },
+      4 * 60 * 60 * 1000
+    ) // 4小时
   }
 
   private async checkForUpdates(): Promise<void> {
@@ -212,4 +215,4 @@ class UpdaterService {
 }
 
 // 导出单例实例
-export const updaterService = new UpdaterService() 
+export const updaterService = new UpdaterService()

@@ -11,7 +11,7 @@ export interface PerformanceMetrics {
     percentage: number
     timestamp: number
   }
-  
+
   // 编辑器性能
   editorPerformance: {
     loadTime: number
@@ -19,7 +19,7 @@ export interface PerformanceMetrics {
     renderTime: number
     timestamp: number
   }
-  
+
   // 用户操作统计
   userActions: {
     editorChanges: number
@@ -28,7 +28,7 @@ export interface PerformanceMetrics {
     searches: number
     timestamp: number
   }
-  
+
   // 网络性能（WebDAV同步等）
   networkPerformance: {
     uploadSpeed: number
@@ -105,12 +105,12 @@ class PerformanceMonitor {
     if (this.isMonitoring) return
 
     this.isMonitoring = true
-    
+
     // 每5秒更新一次内存使用统计
     this.monitoringInterval = setInterval(() => {
       this.updateMemoryMetrics()
     }, 5000)
-    
+
     // 监听页面可见性变化
     document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this))
   }
@@ -122,12 +122,12 @@ class PerformanceMonitor {
     if (!this.isMonitoring) return
 
     this.isMonitoring = false
-    
+
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval)
       this.monitoringInterval = null
     }
-    
+
     document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this))
   }
 
@@ -181,7 +181,6 @@ class PerformanceMonitor {
 
       // 检查内存压力
       this.checkMemoryPressure()
-      
     } catch (error) {
       this.emitEvent({
         type: 'error',
@@ -207,14 +206,14 @@ class PerformanceMonitor {
    */
   private checkMemoryPressure(): void {
     const { percentage } = this.metrics.memoryUsage
-    
+
     if (percentage > 90) {
       this.emitEvent({
         type: 'memory',
-        data: { 
-          level: 'critical', 
+        data: {
+          level: 'critical',
           message: '内存使用率超过90%，建议立即清理',
-          percentage 
+          percentage
         },
         timestamp: Date.now(),
         source: 'PerformanceMonitor'
@@ -222,10 +221,10 @@ class PerformanceMonitor {
     } else if (percentage > 75) {
       this.emitEvent({
         type: 'memory',
-        data: { 
-          level: 'warning', 
+        data: {
+          level: 'warning',
           message: '内存使用率较高，建议适当清理',
-          percentage 
+          percentage
         },
         timestamp: Date.now(),
         source: 'PerformanceMonitor'
@@ -238,7 +237,7 @@ class PerformanceMonitor {
    */
   recordEditorPerformance(type: 'load' | 'save' | 'render', duration: number): void {
     const timestamp = Date.now()
-    
+
     switch (type) {
       case 'load':
         this.metrics.editorPerformance.loadTime = duration
@@ -252,10 +251,10 @@ class PerformanceMonitor {
         this.metrics.editorPerformance.renderTime = duration
         break
     }
-    
+
     this.metrics.editorPerformance.timestamp = timestamp
     this.metrics.userActions.timestamp = timestamp
-    
+
     this.emitEvent({
       type: 'editor',
       data: { type, duration, metrics: this.metrics.editorPerformance },
@@ -269,7 +268,7 @@ class PerformanceMonitor {
    */
   recordUserAction(action: 'edit' | 'save' | 'load' | 'search'): void {
     const timestamp = Date.now()
-    
+
     switch (action) {
       case 'edit':
         this.metrics.userActions.editorChanges++
@@ -284,9 +283,9 @@ class PerformanceMonitor {
         this.metrics.userActions.searches++
         break
     }
-    
+
     this.metrics.userActions.timestamp = timestamp
-    
+
     this.emitEvent({
       type: 'user',
       data: { action, metrics: this.metrics.userActions },
@@ -298,25 +297,27 @@ class PerformanceMonitor {
   /**
    * 记录网络性能
    */
-  recordNetworkPerformance(type: 'upload' | 'download', 
-                          bytes: number, 
-                          duration: number,
-                          latency?: number): void {
+  recordNetworkPerformance(
+    type: 'upload' | 'download',
+    bytes: number,
+    duration: number,
+    latency?: number
+  ): void {
     const speed = bytes / (duration / 1000) // bytes per second
     const timestamp = Date.now()
-    
+
     if (type === 'upload') {
       this.metrics.networkPerformance.uploadSpeed = speed
     } else {
       this.metrics.networkPerformance.downloadSpeed = speed
     }
-    
+
     if (latency !== undefined) {
       this.metrics.networkPerformance.latency = latency
     }
-    
+
     this.metrics.networkPerformance.timestamp = timestamp
-    
+
     this.emitEvent({
       type: 'network',
       data: { type, speed, latency, metrics: this.metrics.networkPerformance },
@@ -356,7 +357,7 @@ class PerformanceMonitor {
     recommendations: string[]
   } {
     const history = this.metricsHistory.slice(-10) // 最近10个数据点
-    
+
     if (history.length === 0) {
       return {
         summary: {
@@ -375,17 +376,20 @@ class PerformanceMonitor {
 
     // 计算平均值
     const avgMemory = history.reduce((sum, m) => sum + m.memoryUsage.percentage, 0) / history.length
-    const avgLoadTime = history.reduce((sum, m) => sum + m.editorPerformance.loadTime, 0) / history.length
-    const avgSaveTime = history.reduce((sum, m) => sum + m.editorPerformance.saveTime, 0) / history.length
-    const totalActions = this.metrics.userActions.editorChanges + 
-                        this.metrics.userActions.saves + 
-                        this.metrics.userActions.loads + 
-                        this.metrics.userActions.searches
+    const avgLoadTime =
+      history.reduce((sum, m) => sum + m.editorPerformance.loadTime, 0) / history.length
+    const avgSaveTime =
+      history.reduce((sum, m) => sum + m.editorPerformance.saveTime, 0) / history.length
+    const totalActions =
+      this.metrics.userActions.editorChanges +
+      this.metrics.userActions.saves +
+      this.metrics.userActions.loads +
+      this.metrics.userActions.searches
 
     // 分析趋势
-    const memoryTrend = this.analyzeTrend(history.map(h => h.memoryUsage.percentage))
-    const loadTimeTrend = this.analyzeTrend(history.map(h => h.editorPerformance.loadTime))
-    
+    const memoryTrend = this.analyzeTrend(history.map((h) => h.memoryUsage.percentage))
+    const loadTimeTrend = this.analyzeTrend(history.map((h) => h.editorPerformance.loadTime))
+
     let performanceTrend: 'improving' | 'declining' | 'stable' = 'stable'
     if (loadTimeTrend === 'decreasing') {
       performanceTrend = 'improving' // 加载时间减少表示性能提升
@@ -395,23 +399,23 @@ class PerformanceMonitor {
 
     // 生成建议
     const recommendations: string[] = []
-    
+
     if (avgMemory > 75) {
       recommendations.push('内存使用率较高，建议定期清理浏览器缓存')
     }
-    
+
     if (avgLoadTime > 2000) {
       recommendations.push('文件加载时间较长，建议优化大文件处理')
     }
-    
+
     if (avgSaveTime > 1000) {
       recommendations.push('文件保存时间较长，建议检查网络连接')
     }
-    
+
     if (memoryTrend === 'increasing') {
       recommendations.push('内存使用呈上升趋势，可能存在内存泄露')
     }
-    
+
     if (recommendations.length === 0) {
       recommendations.push('性能表现良好，继续保持')
     }
@@ -436,12 +440,12 @@ class PerformanceMonitor {
    */
   private analyzeTrend(data: number[]): 'increasing' | 'decreasing' | 'stable' {
     if (data.length < 3) return 'stable'
-    
+
     const recentAvg = data.slice(-3).reduce((sum, val) => sum + val, 0) / 3
     const earlierAvg = data.slice(0, 3).reduce((sum, val) => sum + val, 0) / 3
-    
+
     const threshold = Math.abs(earlierAvg) * 0.1 // 10%变化阈值
-    
+
     if (recentAvg > earlierAvg + threshold) {
       return 'increasing'
     } else if (recentAvg < earlierAvg - threshold) {
@@ -474,14 +478,14 @@ class PerformanceMonitor {
   private emitEvent(event: PerformanceEvent): void {
     // 更新历史记录
     this.metricsHistory.push({ ...this.metrics })
-    
+
     // 保持历史记录大小限制
     if (this.metricsHistory.length > this.historySize) {
       this.metricsHistory.shift()
     }
-    
+
     // 通知监听器
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(event)
       } catch (error) {
@@ -496,7 +500,7 @@ class PerformanceMonitor {
   resetMetrics(): void {
     this.metrics = this.initializeMetrics()
     this.metricsHistory = []
-    
+
     this.emitEvent({
       type: 'user',
       data: { action: 'reset', message: 'Performance metrics reset' },
@@ -515,7 +519,7 @@ class PerformanceMonitor {
       report: this.generatePerformanceReport(),
       exportTime: new Date().toISOString()
     }
-    
+
     return JSON.stringify(exportData, null, 2)
   }
 
@@ -532,4 +536,4 @@ class PerformanceMonitor {
 
 // 导出单例实例
 export const performanceMonitor = PerformanceMonitor.getInstance()
-export default performanceMonitor 
+export default performanceMonitor

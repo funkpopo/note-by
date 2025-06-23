@@ -16,7 +16,15 @@ import {
   TabPane,
   Radio
 } from '@douyinfe/semi-ui'
-import { IconPulse, IconPlus, IconDelete, IconEdit, IconRefresh, IconPieChartStroked, IconDownload } from '@douyinfe/semi-icons'
+import {
+  IconPulse,
+  IconPlus,
+  IconDelete,
+  IconEdit,
+  IconRefresh,
+  IconPieChartStroked,
+  IconDownload
+} from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
 // 导入性能监控器
@@ -566,7 +574,7 @@ const Settings: React.FC = () => {
     try {
       setIsExportingPerformance(true)
       const data = performanceMonitor.exportData()
-      
+
       // 创建下载链接
       const blob = new Blob([data], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -577,7 +585,7 @@ const Settings: React.FC = () => {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-      
+
       Toast.success('性能数据导出成功')
     } catch (error) {
       Toast.error('导出性能数据失败')
@@ -609,10 +617,10 @@ const Settings: React.FC = () => {
   // 加载性能指标和设置定时刷新
   useEffect(() => {
     loadPerformanceMetrics()
-    
+
     // 每10秒更新一次性能指标
     const interval = setInterval(loadPerformanceMetrics, 10000)
-    
+
     return () => clearInterval(interval)
   }, [loadPerformanceMetrics])
 
@@ -893,10 +901,20 @@ const Settings: React.FC = () => {
               }
             >
               {performanceMetrics ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                <div
+                  style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}
+                >
                   {/* 内存使用 */}
-                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
-                    <Title heading={6} style={{ marginBottom: '12px' }}>内存使用</Title>
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'var(--semi-color-fill-0)',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <Title heading={6} style={{ marginBottom: '12px' }}>
+                      内存使用
+                    </Title>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">已使用: </Text>
                       <Text>{formatBytes(performanceMetrics.memoryUsage.used)}</Text>
@@ -907,13 +925,14 @@ const Settings: React.FC = () => {
                     </div>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">使用率: </Text>
-                      <Text 
-                        style={{ 
-                          color: performanceMetrics.memoryUsage.percentage > 75 
-                            ? 'var(--semi-color-warning)' 
-                            : performanceMetrics.memoryUsage.percentage > 90
-                            ? 'var(--semi-color-danger)'
-                            : 'var(--semi-color-success)'
+                      <Text
+                        style={{
+                          color:
+                            performanceMetrics.memoryUsage.percentage > 75
+                              ? 'var(--semi-color-warning)'
+                              : performanceMetrics.memoryUsage.percentage > 90
+                                ? 'var(--semi-color-danger)'
+                                : 'var(--semi-color-success)'
                         }}
                       >
                         {performanceMetrics.memoryUsage.percentage.toFixed(1)}%
@@ -922,8 +941,16 @@ const Settings: React.FC = () => {
                   </div>
 
                   {/* 编辑器性能 */}
-                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
-                    <Title heading={6} style={{ marginBottom: '12px' }}>编辑器性能</Title>
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'var(--semi-color-fill-0)',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <Title heading={6} style={{ marginBottom: '12px' }}>
+                      编辑器性能
+                    </Title>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">加载时间: </Text>
                       <Text>{formatTime(performanceMetrics.editorPerformance.loadTime)}</Text>
@@ -939,8 +966,16 @@ const Settings: React.FC = () => {
                   </div>
 
                   {/* 用户操作统计 */}
-                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
-                    <Title heading={6} style={{ marginBottom: '12px' }}>操作统计</Title>
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'var(--semi-color-fill-0)',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <Title heading={6} style={{ marginBottom: '12px' }}>
+                      操作统计
+                    </Title>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">编辑次数: </Text>
                       <Text>{performanceMetrics.userActions.editorChanges}</Text>
@@ -960,33 +995,38 @@ const Settings: React.FC = () => {
                   </div>
 
                   {/* 网络性能 */}
-                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
-                    <Title heading={6} style={{ marginBottom: '12px' }}>网络性能</Title>
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'var(--semi-color-fill-0)',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <Title heading={6} style={{ marginBottom: '12px' }}>
+                      网络性能
+                    </Title>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">上传速度: </Text>
                       <Text>
-                        {performanceMetrics.networkPerformance.uploadSpeed > 0 
+                        {performanceMetrics.networkPerformance.uploadSpeed > 0
                           ? formatSpeed(performanceMetrics.networkPerformance.uploadSpeed)
-                          : '未记录'
-                        }
+                          : '未记录'}
                       </Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">下载速度: </Text>
                       <Text>
-                        {performanceMetrics.networkPerformance.downloadSpeed > 0 
+                        {performanceMetrics.networkPerformance.downloadSpeed > 0
                           ? formatSpeed(performanceMetrics.networkPerformance.downloadSpeed)
-                          : '未记录'
-                        }
+                          : '未记录'}
                       </Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
                       <Text type="tertiary">延迟: </Text>
                       <Text>
-                        {performanceMetrics.networkPerformance.latency > 0 
+                        {performanceMetrics.networkPerformance.latency > 0
                           ? `${performanceMetrics.networkPerformance.latency.toFixed(0)}ms`
-                          : '未记录'
-                        }
+                          : '未记录'}
                       </Text>
                     </div>
                   </div>
@@ -1001,14 +1041,29 @@ const Settings: React.FC = () => {
               {/* 性能报告 */}
               {performanceMetrics && (
                 <div style={{ marginTop: '24px' }}>
-                  <Title heading={6} style={{ marginBottom: '12px' }}>性能分析报告</Title>
+                  <Title heading={6} style={{ marginBottom: '12px' }}>
+                    性能分析报告
+                  </Title>
                   {(() => {
                     const report = performanceMonitor.generatePerformanceReport()
                     return (
-                      <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
+                      <div
+                        style={{
+                          padding: '16px',
+                          background: 'var(--semi-color-fill-0)',
+                          borderRadius: '6px'
+                        }}
+                      >
                         <div style={{ marginBottom: '16px' }}>
                           <Text strong>性能摘要</Text>
-                          <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                          <div
+                            style={{
+                              marginTop: '8px',
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(2, 1fr)',
+                              gap: '8px'
+                            }}
+                          >
                             <div>
                               <Text type="tertiary">平均内存使用: </Text>
                               <Text>{report.summary.averageMemoryUsage}%</Text>
@@ -1033,34 +1088,40 @@ const Settings: React.FC = () => {
                           <div style={{ marginTop: '8px' }}>
                             <div style={{ marginBottom: '4px' }}>
                               <Text type="tertiary">内存趋势: </Text>
-                              <Text 
-                                style={{ 
-                                  color: report.trends.memoryTrend === 'increasing' 
-                                    ? 'var(--semi-color-warning)' 
-                                    : report.trends.memoryTrend === 'decreasing'
-                                    ? 'var(--semi-color-success)'
-                                    : 'var(--semi-color-text-2)'
+                              <Text
+                                style={{
+                                  color:
+                                    report.trends.memoryTrend === 'increasing'
+                                      ? 'var(--semi-color-warning)'
+                                      : report.trends.memoryTrend === 'decreasing'
+                                        ? 'var(--semi-color-success)'
+                                        : 'var(--semi-color-text-2)'
                                 }}
                               >
-                                {report.trends.memoryTrend === 'increasing' ? '上升' 
-                                  : report.trends.memoryTrend === 'decreasing' ? '下降' 
-                                  : '稳定'}
+                                {report.trends.memoryTrend === 'increasing'
+                                  ? '上升'
+                                  : report.trends.memoryTrend === 'decreasing'
+                                    ? '下降'
+                                    : '稳定'}
                               </Text>
                             </div>
                             <div>
                               <Text type="tertiary">性能趋势: </Text>
-                              <Text 
-                                style={{ 
-                                  color: report.trends.performanceTrend === 'improving' 
-                                    ? 'var(--semi-color-success)' 
-                                    : report.trends.performanceTrend === 'declining'
-                                    ? 'var(--semi-color-warning)'
-                                    : 'var(--semi-color-text-2)'
+                              <Text
+                                style={{
+                                  color:
+                                    report.trends.performanceTrend === 'improving'
+                                      ? 'var(--semi-color-success)'
+                                      : report.trends.performanceTrend === 'declining'
+                                        ? 'var(--semi-color-warning)'
+                                        : 'var(--semi-color-text-2)'
                                 }}
                               >
-                                {report.trends.performanceTrend === 'improving' ? '提升' 
-                                  : report.trends.performanceTrend === 'declining' ? '下降' 
-                                  : '稳定'}
+                                {report.trends.performanceTrend === 'improving'
+                                  ? '提升'
+                                  : report.trends.performanceTrend === 'declining'
+                                    ? '下降'
+                                    : '稳定'}
                               </Text>
                             </div>
                           </div>
@@ -1082,7 +1143,9 @@ const Settings: React.FC = () => {
                 </div>
               )}
 
-              <Paragraph style={{ marginTop: '16px', color: 'var(--semi-color-text-2)', fontSize: '13px' }}>
+              <Paragraph
+                style={{ marginTop: '16px', color: 'var(--semi-color-text-2)', fontSize: '13px' }}
+              >
                 性能数据每10秒自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。
               </Paragraph>
             </Card>

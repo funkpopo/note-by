@@ -5,7 +5,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 function logError(message: string, error?: unknown, context?: string): void {
   const timestamp = new Date().toISOString()
   const logMessage = `[${timestamp}] [PRELOAD] ${context ? `[${context}] ` : ''}${message}`
-  
+
   if (error) {
     console.error(logMessage, error)
   } else {
@@ -815,18 +815,23 @@ const api = {
     getVersion: (): Promise<string> => ipcRenderer.invoke('updater:get-version'),
 
     // 监听更新状态变化
-    onStatusChanged: (callback: (info: {
-      status: string
-      version?: string
-      progress?: number
-      error?: string
-    }) => void): (() => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, info: {
+    onStatusChanged: (
+      callback: (info: {
         status: string
         version?: string
         progress?: number
         error?: string
-      }): void => {
+      }) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        info: {
+          status: string
+          version?: string
+          progress?: number
+          error?: string
+        }
+      ): void => {
         callback(info)
       }
       ipcRenderer.on('updater:status-changed', listener)

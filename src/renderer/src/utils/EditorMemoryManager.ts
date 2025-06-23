@@ -66,39 +66,39 @@ interface EditorCacheItem {
  */
 export class EditorMemoryManager {
   private static instance: EditorMemoryManager | null = null
-  
+
   // 配置参数
   private readonly warningThreshold = 0.7 // 70%内存使用时警告
   private readonly criticalThreshold = 0.85 // 85%内存使用时严重警告
   private readonly cleanupThreshold = 0.8 // 80%内存使用时触发清理
   private readonly monitorInterval = 5000 // 5秒监控间隔
-  
+
   // 状态管理
   private isMonitoring = false
   private currentPressureLevel = MemoryPressureLevel.LOW
   private lastCleanupTime = 0
   private cleanupCooldown = 30000 // 30秒清理冷却时间
-  
+
   // 事件监听器
   private eventListeners: Map<MemoryEventType, Set<MemoryEventListener>> = new Map()
-  
+
   // 内存清理策略
   private cleanupStrategies: MemoryCleanupStrategy[] = []
-  
+
   // 编辑器内容缓存
   private contentCache: Map<string, EditorCacheItem> = new Map()
   private maxCacheSize = 50 * 1024 * 1024 // 50MB
   private currentCacheSize = 0
-  
+
   // 图片缓存和优化
   private imageCache: Map<string, { data: Blob; size: number; lastAccess: number }> = new Map()
   private maxImageCacheSize = 100 * 1024 * 1024 // 100MB
   private currentImageCacheSize = 0
-  
+
   // 计时器
   private monitorTimer?: NodeJS.Timeout
   private cleanupTimer?: NodeJS.Timeout
-  
+
   // 图片优化配置
   private imageOptimization: ImageOptimizationConfig = {
     enabled: true,
@@ -130,10 +130,10 @@ export class EditorMemoryManager {
    */
   async getCurrentMemoryUsage(): Promise<MemoryUsage> {
     const performance = (window as any).performance
-    
+
     // 获取基本内存信息
     let memoryInfo: any = {}
-    
+
     if (performance?.memory) {
       memoryInfo = performance.memory
     } else if ((navigator as any).deviceMemory) {
@@ -151,7 +151,8 @@ export class EditorMemoryManager {
     const jsHeapLimit = (memoryInfo.jsHeapSizeLimit || 0) / (1024 * 1024) // MB
 
     // 估算总内存使用（包括缓存等）
-    const cacheMemory = this.currentCacheSize / (1024 * 1024) + this.currentImageCacheSize / (1024 * 1024)
+    const cacheMemory =
+      this.currentCacheSize / (1024 * 1024) + this.currentImageCacheSize / (1024 * 1024)
     const totalUsed = jsHeapUsed + cacheMemory
     const totalAvailable = Math.max(jsHeapLimit, totalUsed * 1.5) // 估算总可用内存
 
@@ -187,7 +188,7 @@ export class EditorMemoryManager {
     if (!this.isMonitoring) return
 
     this.isMonitoring = false
-    
+
     if (this.monitorTimer) {
       clearInterval(this.monitorTimer)
       this.monitorTimer = undefined
@@ -222,7 +223,6 @@ export class EditorMemoryManager {
 
       // 根据压力级别采取行动
       await this.handleMemoryPressure(usage, newPressureLevel)
-
     } catch (error) {
       console.error('Memory check failed:', error)
     }
@@ -246,7 +246,10 @@ export class EditorMemoryManager {
   /**
    * 处理内存压力
    */
-  private async handleMemoryPressure(usage: MemoryUsage, level: MemoryPressureLevel): Promise<void> {
+  private async handleMemoryPressure(
+    usage: MemoryUsage,
+    level: MemoryPressureLevel
+  ): Promise<void> {
     switch (level) {
       case MemoryPressureLevel.MODERATE:
         this.emitEvent('warning', {
@@ -293,7 +296,7 @@ export class EditorMemoryManager {
 
     // 按优先级执行清理策略
     const sortedStrategies = [...this.cleanupStrategies].sort((a, b) => a.priority - b.priority)
-    
+
     for (const strategy of sortedStrategies) {
       if (strategy.condition(startUsage)) {
         try {
@@ -312,7 +315,7 @@ export class EditorMemoryManager {
     // 执行垃圾回收（如果可用）
     if ((window as any).gc) {
       try {
-        (window as any).gc()
+        ;(window as any).gc()
         strategiesUsed.push('Garbage Collection')
       } catch (error) {
         console.warn('Manual garbage collection failed:', error)
@@ -320,7 +323,7 @@ export class EditorMemoryManager {
     }
 
     this.lastCleanupTime = Date.now()
-    
+
     const endUsage = await this.getCurrentMemoryUsage()
     const actualMemoryFreed = (startUsage.used - endUsage.used) * 1024 * 1024 // MB to bytes
 
@@ -367,7 +370,7 @@ export class EditorMemoryManager {
    */
   cacheContent(id: string, content: string, priority = 3): void {
     const size = new Blob([content]).size
-    
+
     // 检查缓存大小限制
     if (this.currentCacheSize + size > this.maxCacheSize) {
       this.evictCacheItems(size)
@@ -438,7 +441,7 @@ export class EditorMemoryManager {
 
     for (const item of allItems) {
       if (spaceToFree <= 0) break
-      
+
       itemsToEvict.push(item)
       spaceToFree -= item.size
     }
@@ -454,12 +457,12 @@ export class EditorMemoryManager {
    * 优化图片并缓存
    */
   async optimizeAndCacheImage(
-    url: string, 
+    url: string,
     blob: Blob,
     options?: Partial<ImageOptimizationConfig>
   ): Promise<Blob> {
     const config = { ...this.imageOptimization, ...options }
-    
+
     if (!config.enabled) {
       return blob
     }
@@ -474,7 +477,7 @@ export class EditorMemoryManager {
 
       // 优化图片
       const optimizedBlob = await this.optimizeImage(blob, config)
-      
+
       // 缓存优化后的图片
       const size = optimizedBlob.size
       if (this.currentImageCacheSize + size > this.maxImageCacheSize) {
@@ -579,7 +582,7 @@ export class EditorMemoryManager {
 
     for (const item of itemsToEvict) {
       if (spaceToFree <= 0) break
-      
+
       this.imageCache.delete(item.url)
       this.currentImageCacheSize -= item.size
       spaceToFree -= item.size
@@ -650,7 +653,7 @@ export class EditorMemoryManager {
         action: async () => {
           if ((window as any).gc) {
             try {
-              (window as any).gc()
+              ;(window as any).gc()
               return {
                 success: true,
                 memoryFreed: 0, // 无法准确测量
@@ -723,7 +726,7 @@ export class EditorMemoryManager {
     lastCleanupTime: number
   }> {
     const usage = await this.getCurrentMemoryUsage()
-    
+
     return {
       usage,
       pressureLevel: this.currentPressureLevel,
@@ -744,25 +747,27 @@ export class EditorMemoryManager {
   /**
    * 更新配置
    */
-  updateConfig(config: Partial<{
-    warningThreshold: number
-    criticalThreshold: number
-    cleanupThreshold: number
-    monitorInterval: number
-    maxCacheSize: number
-    imageOptimization: Partial<ImageOptimizationConfig>
-  }>): void {
+  updateConfig(
+    config: Partial<{
+      warningThreshold: number
+      criticalThreshold: number
+      cleanupThreshold: number
+      monitorInterval: number
+      maxCacheSize: number
+      imageOptimization: Partial<ImageOptimizationConfig>
+    }>
+  ): void {
     if (config.warningThreshold !== undefined) {
-      (this as any).warningThreshold = config.warningThreshold
+      ;(this as any).warningThreshold = config.warningThreshold
     }
     if (config.criticalThreshold !== undefined) {
-      (this as any).criticalThreshold = config.criticalThreshold
+      ;(this as any).criticalThreshold = config.criticalThreshold
     }
     if (config.cleanupThreshold !== undefined) {
-      (this as any).cleanupThreshold = config.cleanupThreshold
+      ;(this as any).cleanupThreshold = config.cleanupThreshold
     }
     if (config.monitorInterval !== undefined) {
-      (this as any).monitorInterval = config.monitorInterval
+      ;(this as any).monitorInterval = config.monitorInterval
       // 重启监控以应用新间隔
       if (this.isMonitoring) {
         this.stopMonitoring()
@@ -790,4 +795,4 @@ export class EditorMemoryManager {
 }
 
 // 导出单例实例
-export const editorMemoryManager = EditorMemoryManager.getInstance() 
+export const editorMemoryManager = EditorMemoryManager.getInstance()

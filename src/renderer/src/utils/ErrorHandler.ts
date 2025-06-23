@@ -42,21 +42,21 @@ class RendererErrorHandler {
   private formatLogMessage(info: ErrorInfo): string {
     const { timestamp, level, category, message, context, details, stack } = info
     const levelStr = LogLevel[level]
-    
+
     let formatted = `[${timestamp}] [${levelStr}] [${category}]`
     if (context) {
       formatted += ` [${context}]`
     }
     formatted += ` ${message}`
-    
+
     if (details) {
       formatted += `\nDetails: ${JSON.stringify(details, null, 2)}`
     }
-    
+
     if (stack) {
       formatted += `\nStack: ${stack}`
     }
-    
+
     return formatted
   }
 
@@ -68,14 +68,14 @@ class RendererErrorHandler {
 
     // 添加到内存中的日志队列
     this.logEntries.push(info)
-    
+
     // 保持日志队列大小
     if (this.logEntries.length > this.maxLogEntries) {
       this.logEntries.shift()
     }
 
     const message = this.formatLogMessage(info)
-    
+
     // 输出到控制台
     switch (info.level) {
       case LogLevel.DEBUG:
@@ -104,7 +104,12 @@ class RendererErrorHandler {
   }
 
   // 公共接口方法
-  public debug(message: string, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string, details?: unknown): void {
+  public debug(
+    message: string,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string,
+    details?: unknown
+  ): void {
     this.log({
       level: LogLevel.DEBUG,
       category,
@@ -117,7 +122,12 @@ class RendererErrorHandler {
     })
   }
 
-  public info(message: string, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string, details?: unknown): void {
+  public info(
+    message: string,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string,
+    details?: unknown
+  ): void {
     this.log({
       level: LogLevel.INFO,
       category,
@@ -130,7 +140,12 @@ class RendererErrorHandler {
     })
   }
 
-  public warn(message: string, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string, details?: unknown): void {
+  public warn(
+    message: string,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string,
+    details?: unknown
+  ): void {
     this.log({
       level: LogLevel.WARN,
       category,
@@ -143,7 +158,12 @@ class RendererErrorHandler {
     })
   }
 
-  public error(message: string, error?: Error | unknown, category: ErrorCategory = ErrorCategory.UNKNOWN, context?: string): void {
+  public error(
+    message: string,
+    error?: Error | unknown,
+    category: ErrorCategory = ErrorCategory.UNKNOWN,
+    context?: string
+  ): void {
     let details: unknown
     let stack: string | undefined
 
@@ -173,13 +193,8 @@ class RendererErrorHandler {
 
   // 处理React错误边界
   public handleReactError(error: Error, errorInfo: { componentStack: string }): void {
-    this.error(
-      'React Error Boundary Caught Error',
-      error,
-      ErrorCategory.UI,
-      'ReactErrorBoundary'
-    )
-    
+    this.error('React Error Boundary Caught Error', error, ErrorCategory.UI, 'ReactErrorBoundary')
+
     this.error(
       'React Component Stack',
       { componentStack: errorInfo.componentStack },
@@ -227,21 +242,25 @@ class RendererErrorHandler {
     })
 
     // 处理资源加载错误
-    window.addEventListener('error', (event) => {
-      const target = event.target
-      if (target && target instanceof HTMLElement) {
-        this.error(
-          'Resource Load Error',
-          {
-            tagName: target.tagName,
-            src: (target as HTMLImageElement | HTMLScriptElement).src,
-            href: (target as HTMLLinkElement).href
-          },
-          ErrorCategory.NETWORK,
-          'resourceerror'
-        )
-      }
-    }, true)
+    window.addEventListener(
+      'error',
+      (event) => {
+        const target = event.target
+        if (target && target instanceof HTMLElement) {
+          this.error(
+            'Resource Load Error',
+            {
+              tagName: target.tagName,
+              src: (target as HTMLImageElement | HTMLScriptElement).src,
+              href: (target as HTMLLinkElement).href
+            },
+            ErrorCategory.NETWORK,
+            'resourceerror'
+          )
+        }
+      },
+      true
+    )
   }
 
   // 设置日志级别
@@ -261,9 +280,7 @@ class RendererErrorHandler {
 
   // 导出日志（用于调试）
   public exportLogs(): string {
-    return this.logEntries
-      .map(entry => this.formatLogMessage(entry))
-      .join('\n')
+    return this.logEntries.map((entry) => this.formatLogMessage(entry)).join('\n')
   }
 
   // 获取错误统计
@@ -284,7 +301,7 @@ class RendererErrorHandler {
       const levelStr = LogLevel[entry.level]
       byLevel[levelStr] = (byLevel[levelStr] || 0) + 1
       byCategory[entry.category] = (byCategory[entry.category] || 0) + 1
-      
+
       const entryTime = new Date(entry.timestamp).getTime()
       if (entryTime > oneHourAgo) {
         recent++
@@ -301,4 +318,4 @@ class RendererErrorHandler {
 }
 
 // 导出单例实例
-export const rendererErrorHandler = new RendererErrorHandler() 
+export const rendererErrorHandler = new RendererErrorHandler()

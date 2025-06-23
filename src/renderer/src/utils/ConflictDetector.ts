@@ -47,8 +47,8 @@ export class ConflictDetector {
   constructor(options: ConflictDetectorOptions = {}) {
     this.options = {
       enableContentHash: true,
-      enableSizeCheck: false,      // 暂时禁用大小检测
-      enableModTimeCheck: false,   // 暂时禁用修改时间检测，因为无法准确获取文件时间
+      enableSizeCheck: false, // 暂时禁用大小检测
+      enableModTimeCheck: false, // 暂时禁用修改时间检测，因为无法准确获取文件时间
       timeToleranceMs: 1000, // 1秒的时间容忍度
       ...options
     }
@@ -114,18 +114,18 @@ export class ConflictDetector {
 
     // 检查冲突：主要依赖内容比较
     const conflicts: ConflictCheckResult[] = []
-    
+
     // 只有当启用相应检测时才进行检查
     if (this.options.enableModTimeCheck) {
       const modTimeConflict = this.checkExternalModification(previousSnapshot, currentSnapshot)
       if (modTimeConflict.hasConflict) conflicts.push(modTimeConflict)
     }
-    
+
     if (this.options.enableSizeCheck) {
       const sizeConflict = this.checkSizeMismatch(previousSnapshot, currentSnapshot)
       if (sizeConflict.hasConflict) conflicts.push(sizeConflict)
     }
-    
+
     if (this.options.enableContentHash) {
       const contentConflict = this.checkConcurrentEdit(previousSnapshot, currentSnapshot)
       if (contentConflict.hasConflict) conflicts.push(contentConflict)

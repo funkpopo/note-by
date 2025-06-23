@@ -163,7 +163,12 @@ function getMarkdownFolderPath(): string {
       fsSync.mkdirSync(defaultAssetsFolderPath, { recursive: true })
     }
   } catch (error) {
-    mainErrorHandler.error('Failed to create markdown directory structure', error, ErrorCategory.FILE_IO, 'getMarkdownFolderPath')
+    mainErrorHandler.error(
+      'Failed to create markdown directory structure',
+      error,
+      ErrorCategory.FILE_IO,
+      'getMarkdownFolderPath'
+    )
   }
 
   return markdownPath
@@ -284,7 +289,12 @@ async function performAutoSync(): Promise<void> {
         break
     }
   } catch (error) {
-    mainErrorHandler.error('WebDAV auto-sync failed', error, ErrorCategory.WEBDAV, 'performAutoSync')
+    mainErrorHandler.error(
+      'WebDAV auto-sync failed',
+      error,
+      ErrorCategory.WEBDAV,
+      'performAutoSync'
+    )
   }
 }
 
@@ -407,7 +417,12 @@ async function checkUpdatesOnStartup(): Promise<void> {
       }
     }
   } catch (error) {
-    mainErrorHandler.error('Failed to check for updates on startup', error, ErrorCategory.UPDATER, 'checkUpdatesOnStartup')
+    mainErrorHandler.error(
+      'Failed to check for updates on startup',
+      error,
+      ErrorCategory.UPDATER,
+      'checkUpdatesOnStartup'
+    )
   }
 }
 
@@ -417,7 +432,7 @@ async function checkUpdatesOnStartup(): Promise<void> {
 app.whenReady().then(() => {
   // 设置全局错误处理
   mainErrorHandler.setupGlobalHandlers()
-  
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron.note-by')
 
@@ -1049,7 +1064,12 @@ ${htmlContent}
             }
           }
         } catch (error) {
-          mainErrorHandler.warn('Failed to read directory entry during folder scan', ErrorCategory.FILE_IO, 'getAllFolders', error)
+          mainErrorHandler.warn(
+            'Failed to read directory entry during folder scan',
+            ErrorCategory.FILE_IO,
+            'getAllFolders',
+            error
+          )
         }
 
         return folders
@@ -2131,10 +2151,20 @@ ${htmlContent}
         return initWebDAVSyncCacheTable()
       })
       .catch((error) => {
-        mainErrorHandler.error('Failed to initialize database tables', error, ErrorCategory.DATABASE, 'databaseInit')
+        mainErrorHandler.error(
+          'Failed to initialize database tables',
+          error,
+          ErrorCategory.DATABASE,
+          'databaseInit'
+        )
       })
   } catch (error) {
-    mainErrorHandler.error('Failed to initialize database', error, ErrorCategory.DATABASE, 'databaseInit')
+    mainErrorHandler.error(
+      'Failed to initialize database',
+      error,
+      ErrorCategory.DATABASE,
+      'databaseInit'
+    )
   }
 
   app.on('activate', function () {
