@@ -106,10 +106,10 @@ class PerformanceMonitor {
 
     this.isMonitoring = true
 
-    // 每5秒更新一次内存使用统计
+    // 每1分钟更新一次内存使用统计
     this.monitoringInterval = setInterval(() => {
       this.updateMemoryMetrics()
-    }, 5000)
+    }, 60000)
 
     // 监听页面可见性变化
     document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this))
