@@ -24,7 +24,6 @@ import {
   cancelSync,
   clearSyncCache
 } from './webdav'
-import { initializeAutoCleanup, stopAutoCleanup } from './webdav-cache'
 import axios from 'axios'
 import http from 'http'
 import https from 'https'
@@ -2078,9 +2077,6 @@ ${htmlContent}
   // 启动内存监控
   memoryMonitor.start()
 
-  // 初始化WebDAV缓存自动清理
-  initializeAutoCleanup()
-
   // 设置内存监控事件监听
   memoryMonitor.on('memoryAlert', (alert) => {
     if (mainWindow) {
@@ -2176,9 +2172,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
-})
-
-app.on('before-quit', () => {
-  // 停止WebDAV缓存自动清理
-  stopAutoCleanup()
 })
