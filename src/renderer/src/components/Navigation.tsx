@@ -25,6 +25,8 @@ import RenameDialog from './RenameDialog'
 import CreateDialog from './CreateDialog'
 import { NavigationSkeleton } from './Skeleton'
 import { useTheme } from '../context/theme/useTheme'
+// 导入性能监控器
+import { performanceMonitor } from '../utils/PerformanceMonitor'
 
 // 定义导航项类型
 interface NavItem {
@@ -900,6 +902,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
   // 处理搜索结果及展开的节点
   const handleSearch = (_value: string, expandedKeys: string[]): void => {
+    // 记录搜索操作
+    performanceMonitor.recordUserAction('search')
     setFilteredExpandedKeys(expandedKeys)
   }
 

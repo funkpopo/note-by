@@ -16,9 +16,11 @@ import {
   TabPane,
   Radio
 } from '@douyinfe/semi-ui'
-import { IconPulse, IconPlus, IconDelete, IconEdit, IconRefresh } from '@douyinfe/semi-icons'
+import { IconPulse, IconPlus, IconDelete, IconEdit, IconRefresh, IconPieChartStroked, IconDownload } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
+// 导入性能监控器
+import { performanceMonitor, type PerformanceMetrics } from '../utils/PerformanceMonitor'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -67,6 +69,10 @@ const Settings: React.FC = () => {
     maxCount: 20,
     maxDays: 7
   })
+
+  // 性能监控相关状态
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null)
+  const [isExportingPerformance, setIsExportingPerformance] = useState(false)
 
   // 加载设置函数
   const loadSettings = useCallback(async (): Promise<void> => {
@@ -542,6 +548,74 @@ const Settings: React.FC = () => {
     }
   }
 
+  // 加载性能指标
+  const loadPerformanceMetrics = useCallback(() => {
+    const metrics = performanceMonitor.getCurrentMetrics()
+    setPerformanceMetrics(metrics)
+  }, [])
+
+  // 重置性能统计
+  const handleResetPerformanceMetrics = useCallback(() => {
+    performanceMonitor.resetMetrics()
+    loadPerformanceMetrics()
+    Toast.success('性能统计已重置')
+  }, [loadPerformanceMetrics])
+
+  // 导出性能数据
+  const handleExportPerformanceData = useCallback(async () => {
+    try {
+      setIsExportingPerformance(true)
+      const data = performanceMonitor.exportData()
+      
+      // 创建下载链接
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `performance-data-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      Toast.success('性能数据导出成功')
+    } catch (error) {
+      Toast.error('导出性能数据失败')
+    } finally {
+      setIsExportingPerformance(false)
+    }
+  }, [])
+
+  // 格式化字节数
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  // 格式化时间
+  const formatTime = (ms: number): string => {
+    if (ms < 1000) return `${Math.round(ms)}ms`
+    return `${(ms / 1000).toFixed(2)}s`
+  }
+
+  // 格式化速度
+  const formatSpeed = (bytesPerSecond: number): string => {
+    return `${formatBytes(bytesPerSecond)}/s`
+  }
+
+  // 加载性能指标和设置定时刷新
+  useEffect(() => {
+    loadPerformanceMetrics()
+    
+    // 每10秒更新一次性能指标
+    const interval = setInterval(loadPerformanceMetrics, 10000)
+    
+    return () => clearInterval(interval)
+  }, [loadPerformanceMetrics])
+
   return (
     <div
       style={{
@@ -773,6 +847,246 @@ const Settings: React.FC = () => {
 
         <TabPane tab="WebDAV同步" itemKey="webdav">
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
+        </TabPane>
+
+        <TabPane tab="性能监控" itemKey="performance">
+          <div className="settings-scroll-container">
+            {/* 性能统计卡片 */}
+            <Card
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <IconPieChartStroked />
+                  <span>性能统计</span>
+                </div>
+              }
+              style={{ marginBottom: 20 }}
+              headerExtraContent={
+                <ButtonGroup>
+                  <Button
+                    icon={<IconRefresh />}
+                    onClick={loadPerformanceMetrics}
+                    theme="borderless"
+                    type="tertiary"
+                    size="small"
+                  >
+                    刷新
+                  </Button>
+                  <Button
+                    icon={<IconDownload />}
+                    onClick={handleExportPerformanceData}
+                    loading={isExportingPerformance}
+                    theme="borderless"
+                    type="primary"
+                    size="small"
+                  >
+                    导出数据
+                  </Button>
+                  <Button
+                    onClick={handleResetPerformanceMetrics}
+                    theme="borderless"
+                    type="danger"
+                    size="small"
+                  >
+                    重置统计
+                  </Button>
+                </ButtonGroup>
+              }
+            >
+              {performanceMetrics ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  {/* 内存使用 */}
+                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
+                    <Title heading={6} style={{ marginBottom: '12px' }}>内存使用</Title>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">已使用: </Text>
+                      <Text>{formatBytes(performanceMetrics.memoryUsage.used)}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">总量: </Text>
+                      <Text>{formatBytes(performanceMetrics.memoryUsage.total)}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">使用率: </Text>
+                      <Text 
+                        style={{ 
+                          color: performanceMetrics.memoryUsage.percentage > 75 
+                            ? 'var(--semi-color-warning)' 
+                            : performanceMetrics.memoryUsage.percentage > 90
+                            ? 'var(--semi-color-danger)'
+                            : 'var(--semi-color-success)'
+                        }}
+                      >
+                        {performanceMetrics.memoryUsage.percentage.toFixed(1)}%
+                      </Text>
+                    </div>
+                  </div>
+
+                  {/* 编辑器性能 */}
+                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
+                    <Title heading={6} style={{ marginBottom: '12px' }}>编辑器性能</Title>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">加载时间: </Text>
+                      <Text>{formatTime(performanceMetrics.editorPerformance.loadTime)}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">保存时间: </Text>
+                      <Text>{formatTime(performanceMetrics.editorPerformance.saveTime)}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">渲染时间: </Text>
+                      <Text>{formatTime(performanceMetrics.editorPerformance.renderTime)}</Text>
+                    </div>
+                  </div>
+
+                  {/* 用户操作统计 */}
+                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
+                    <Title heading={6} style={{ marginBottom: '12px' }}>操作统计</Title>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">编辑次数: </Text>
+                      <Text>{performanceMetrics.userActions.editorChanges}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">保存次数: </Text>
+                      <Text>{performanceMetrics.userActions.saves}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">加载次数: </Text>
+                      <Text>{performanceMetrics.userActions.loads}</Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">搜索次数: </Text>
+                      <Text>{performanceMetrics.userActions.searches}</Text>
+                    </div>
+                  </div>
+
+                  {/* 网络性能 */}
+                  <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
+                    <Title heading={6} style={{ marginBottom: '12px' }}>网络性能</Title>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">上传速度: </Text>
+                      <Text>
+                        {performanceMetrics.networkPerformance.uploadSpeed > 0 
+                          ? formatSpeed(performanceMetrics.networkPerformance.uploadSpeed)
+                          : '未记录'
+                        }
+                      </Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">下载速度: </Text>
+                      <Text>
+                        {performanceMetrics.networkPerformance.downloadSpeed > 0 
+                          ? formatSpeed(performanceMetrics.networkPerformance.downloadSpeed)
+                          : '未记录'
+                        }
+                      </Text>
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text type="tertiary">延迟: </Text>
+                      <Text>
+                        {performanceMetrics.networkPerformance.latency > 0 
+                          ? `${performanceMetrics.networkPerformance.latency.toFixed(0)}ms`
+                          : '未记录'
+                        }
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <Spin size="large" />
+                  <Paragraph style={{ marginTop: '16px' }}>加载性能数据中...</Paragraph>
+                </div>
+              )}
+
+              {/* 性能报告 */}
+              {performanceMetrics && (
+                <div style={{ marginTop: '24px' }}>
+                  <Title heading={6} style={{ marginBottom: '12px' }}>性能分析报告</Title>
+                  {(() => {
+                    const report = performanceMonitor.generatePerformanceReport()
+                    return (
+                      <div style={{ padding: '16px', background: 'var(--semi-color-fill-0)', borderRadius: '6px' }}>
+                        <div style={{ marginBottom: '16px' }}>
+                          <Text strong>性能摘要</Text>
+                          <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                            <div>
+                              <Text type="tertiary">平均内存使用: </Text>
+                              <Text>{report.summary.averageMemoryUsage}%</Text>
+                            </div>
+                            <div>
+                              <Text type="tertiary">平均加载时间: </Text>
+                              <Text>{formatTime(report.summary.averageLoadTime)}</Text>
+                            </div>
+                            <div>
+                              <Text type="tertiary">平均保存时间: </Text>
+                              <Text>{formatTime(report.summary.averageSaveTime)}</Text>
+                            </div>
+                            <div>
+                              <Text type="tertiary">总操作次数: </Text>
+                              <Text>{report.summary.totalUserActions}</Text>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <Text strong>性能趋势</Text>
+                          <div style={{ marginTop: '8px' }}>
+                            <div style={{ marginBottom: '4px' }}>
+                              <Text type="tertiary">内存趋势: </Text>
+                              <Text 
+                                style={{ 
+                                  color: report.trends.memoryTrend === 'increasing' 
+                                    ? 'var(--semi-color-warning)' 
+                                    : report.trends.memoryTrend === 'decreasing'
+                                    ? 'var(--semi-color-success)'
+                                    : 'var(--semi-color-text-2)'
+                                }}
+                              >
+                                {report.trends.memoryTrend === 'increasing' ? '上升' 
+                                  : report.trends.memoryTrend === 'decreasing' ? '下降' 
+                                  : '稳定'}
+                              </Text>
+                            </div>
+                            <div>
+                              <Text type="tertiary">性能趋势: </Text>
+                              <Text 
+                                style={{ 
+                                  color: report.trends.performanceTrend === 'improving' 
+                                    ? 'var(--semi-color-success)' 
+                                    : report.trends.performanceTrend === 'declining'
+                                    ? 'var(--semi-color-warning)'
+                                    : 'var(--semi-color-text-2)'
+                                }}
+                              >
+                                {report.trends.performanceTrend === 'improving' ? '提升' 
+                                  : report.trends.performanceTrend === 'declining' ? '下降' 
+                                  : '稳定'}
+                              </Text>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Text strong>优化建议</Text>
+                          <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                            {report.recommendations.map((rec, index) => (
+                              <li key={index} style={{ marginBottom: '4px' }}>
+                                <Text type="tertiary">{rec}</Text>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+
+              <Paragraph style={{ marginTop: '16px', color: 'var(--semi-color-text-2)', fontSize: '13px' }}>
+                性能数据每10秒自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。
+              </Paragraph>
+            </Card>
+          </div>
         </TabPane>
       </Tabs>
 

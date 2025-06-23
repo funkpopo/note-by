@@ -20,6 +20,10 @@ import { zhCN } from '../locales'
 // 导入智能保存相关工具
 import { SmartDebouncer } from '../utils/SmartDebouncer'
 import { ConflictDetector } from '../utils/ConflictDetector'
+// 导入内存管理器
+import { editorMemoryManager } from '../utils/EditorMemoryManager'
+// 导入性能监控器
+import { performanceMonitor } from '../utils/PerformanceMonitor'
 import {
   BasicTextStyleButton,
   BlockTypeSelect,
@@ -158,6 +162,66 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
 
   // 存储标签列表的状态
   const [tagList, setTagList] = useState<string[]>([])
+
+  // 内存管理相关状态
+  const [memoryWarning, setMemoryWarning] = useState<string>('')
+  const memoryCheckIntervalRef = useRef<NodeJS.Timeout>()
+
+  // 初始化内存管理
+  useEffect(() => {
+    // 监听内存事件
+    const handleMemoryEvent = (
+      eventType: 'pressure' | 'cleanup' | 'warning' | 'critical',
+      data: {
+        level: 'low' | 'moderate' | 'high' | 'critical'
+        usage: any
+        message: string
+        timestamp: number
+      }
+    ) => {
+      switch (eventType) {
+        case 'warning':
+          setMemoryWarning(data.message)
+          // 5秒后清除警告
+          setTimeout(() => setMemoryWarning(''), 5000)
+          break
+        case 'critical':
+          Toast.warning(data.message)
+          setMemoryWarning('内存使用严重！正在清理...')
+          break
+        case 'cleanup':
+          if (memoryWarning) {
+            setMemoryWarning('')
+          }
+          break
+      }
+    }
+
+    // 注册事件监听器
+    editorMemoryManager.addEventListener('warning', handleMemoryEvent)
+    editorMemoryManager.addEventListener('critical', handleMemoryEvent)
+    editorMemoryManager.addEventListener('cleanup', handleMemoryEvent)
+
+    // 定期检查内存并缓存内容
+    memoryCheckIntervalRef.current = setInterval(async () => {
+      // 缓存当前编辑器内容（如果有文件打开）
+      if (currentFile && editorContent) {
+        const cacheKey = `${currentFolder}/${currentFile}`
+        editorMemoryManager.cacheContent(cacheKey, editorContent, 4) // 高优先级
+      }
+    }, 30000) // 每30秒检查一次
+
+    return () => {
+      // 清理事件监听器
+      editorMemoryManager.removeEventListener('warning', handleMemoryEvent)
+      editorMemoryManager.removeEventListener('critical', handleMemoryEvent)
+      editorMemoryManager.removeEventListener('cleanup', handleMemoryEvent)
+      
+      if (memoryCheckIntervalRef.current) {
+        clearInterval(memoryCheckIntervalRef.current)
+      }
+    }
+  }, [currentFile, currentFolder, editorContent, memoryWarning])
 
   // 添加复制事件监听，处理代码块复制问题
   useEffect(() => {
@@ -394,9 +458,39 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           class: 'custom-blocknote-editor'
         }
       },
-      // 添加uploadFile函数，用于处理文件上传
+      // 添加uploadFile函数，用于处理文件上传（集成内存管理和图片优化）
       uploadFile: async (file: File): Promise<string> => {
         try {
+          // 如果是图片文件，先进行优化
+          let processedFile = file
+          if (file.type.startsWith('image/')) {
+            try {
+              // 读取文件为Blob
+              const originalBlob = new Blob([file], { type: file.type })
+              
+              // 使用内存管理器优化图片
+              const optimizedBlob = await editorMemoryManager.optimizeAndCacheImage(
+                `upload_${Date.now()}_${file.name}`,
+                originalBlob,
+                {
+                  maxWidth: 1920,
+                  maxHeight: 1080,
+                  quality: 0.8,
+                  format: 'auto'
+                }
+              )
+              
+              // 创建优化后的File对象
+              processedFile = new File([optimizedBlob], file.name, { type: optimizedBlob.type })
+              
+              console.log(`Image optimized: ${(file.size / 1024).toFixed(2)}KB -> ${(processedFile.size / 1024).toFixed(2)}KB`)
+            } catch (optimizationError) {
+              console.warn('Image optimization failed, using original file:', optimizationError)
+              // 优化失败时使用原文件
+              processedFile = file
+            }
+          }
+
           // 确保有当前文件夹和文件
           if (!currentFolder || !currentFile) {
             // 构造默认文件路径（使用纯文件名，不包含目录部分）
@@ -413,11 +507,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 }
               }
               reader.onerror = () => reject(reader.error)
-              reader.readAsDataURL(file) // 读取为Data URL (base64格式)
+              reader.readAsDataURL(processedFile) // 使用处理后的文件
             })
 
             // 通过IPC调用上传文件
-            const result = await window.api.markdown.uploadFile(filePath, fileContent, file.name)
+            const result = await window.api.markdown.uploadFile(filePath, fileContent, processedFile.name)
 
             if (!result.success) {
               throw new Error(result.error || '文件上传失败')
@@ -446,11 +540,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
               }
             }
             reader.onerror = () => reject(reader.error)
-            reader.readAsDataURL(file) // 读取为Data URL (base64格式)
+            reader.readAsDataURL(processedFile) // 使用处理后的文件
           })
 
           // 通过IPC调用上传文件
-          const result = await window.api.markdown.uploadFile(filePath, fileContent, file.name)
+          const result = await window.api.markdown.uploadFile(filePath, fileContent, processedFile.name)
 
           if (!result.success) {
             throw new Error(result.error || '文件上传失败')
@@ -640,6 +734,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       return
     }
 
+    // 记录加载开始时间
+    const loadStartTime = performance.now()
+
     // 在加载新文件之前，将当前编辑器内容清空
     clearEditor()
     setIsLoading(true)
@@ -699,6 +796,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             // 使用处理后的块更新编辑器
             editor.replaceBlocks(editor.document, blocks)
             setIsEditing(false)
+
+            // 记录加载完成时间和性能指标
+            const loadEndTime = performance.now()
+            const loadDuration = loadEndTime - loadStartTime
+            performanceMonitor.recordEditorPerformance('load', loadDuration)
+            performanceMonitor.recordUserAction('load')
 
             // 延迟设置正确的比较基准，确保与handleEditorChange中的格式一致
             setTimeout(async () => {
@@ -789,6 +892,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       return
     }
 
+    // 记录保存开始时间
+    const saveStartTime = performance.now()
+
     // 取消正在进行的自动保存
     smartDebouncerRef.current.cancel()
     
@@ -819,6 +925,12 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       const result = await window.api.markdown.save(filePath, contentWithTags)
 
       if (result.success) {
+        // 记录保存完成时间和性能指标
+        const saveEndTime = performance.now()
+        const saveDuration = saveEndTime - saveStartTime
+        performanceMonitor.recordEditorPerformance('save', saveDuration)
+        performanceMonitor.recordUserAction('save')
+
         // 只有手动保存才显示成功提示
         if (!isAutoSave) {
           Toast.success('文件保存成功')
@@ -913,6 +1025,9 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       // Only set editing state if content actually changed
       if (normalizedCurrent !== normalizedSaved) {
         setIsEditing(true)
+
+        // 记录编辑操作
+        performanceMonitor.recordUserAction('edit')
 
         // 使用智能防抖器触发自动保存
         smartDebouncerRef.current.debounce(currentMarkdown, handleSmartAutoSave)
@@ -1327,6 +1442,11 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 </Dropdown>
                 {autoSaveStatus === 'saving' && (
                   <Typography.Text type="tertiary">自动保存...</Typography.Text>
+                )}
+                {memoryWarning && (
+                  <Typography.Text type="warning" style={{ fontSize: '12px' }}>
+                    {memoryWarning}
+                  </Typography.Text>
                 )}
               </>
             )}

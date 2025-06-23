@@ -20,53 +20,79 @@ export interface WebDAVSyncRecord {
   fileSize: number
 }
 
+// 数据库连接状态枚举
+enum ConnectionStatus {
+  IDLE = 'idle',
+  ACTIVE = 'active',
+  ERROR = 'error',
+  RECONNECTING = 'reconnecting'
+}
+
+// 连接健康状态
+interface ConnectionHealth {
+  isHealthy: boolean
+  lastCheck: number
+  errorCount: number
+  lastError?: Error
+}
+
+// 连接项接口
+interface ConnectionItem {
+  id: string
+  connection: Database.Database
+  status: ConnectionStatus
+  lastUsed: number
+  health: ConnectionHealth
+  activeOperations: number
+}
+
 /**
- * 数据库连接池管理器
- * 管理SQLite连接的创建、复用和销毁
+ * 重构后的数据库连接池管理器
+ * 提供更可靠的连接管理、智能复用、自动故障恢复
  */
-class DatabasePool {
-  private connections: Array<{
-    connection: Database.Database
-    inUse: boolean
-    lastUsed: number
-  }> = []
-  private readonly maxConnections: number = 5
+class EnhancedDatabasePool {
+  private connections: Map<string, ConnectionItem> = new Map()
+  private readonly maxConnections: number = 10
   private readonly connectionTimeout: number = 30000 // 30秒
+  private readonly healthCheckInterval: number = 60000 // 1分钟
+  private readonly maxRetries: number = 3
+  private readonly reconnectDelay: number = 1000 // 1秒
+  
   private SqliteDatabase: any = null
   private dbPath: string = ''
   private isInitialized: boolean = false
+  private healthCheckTimer?: NodeJS.Timeout
+  private isShuttingDown: boolean = false
 
   async initialize(): Promise<boolean> {
     if (this.isInitialized) {
       return true
     }
 
-    this.dbPath = getDatabasePath()
-
-    // 确保数据库目录存在
-    const dbDir = path.dirname(this.dbPath)
     try {
+      this.dbPath = getDatabasePath()
+
+      // 确保数据库目录存在
+      const dbDir = path.dirname(this.dbPath)
       if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true })
+        await fsPromises.mkdir(dbDir, { recursive: true })
       }
-    } catch (dirError) {
-      return false
-    }
 
-    // 动态导入better-sqlite3
-    try {
+      // 动态导入better-sqlite3
       const SqliteModule = await import('better-sqlite3')
       this.SqliteDatabase = SqliteModule.default
-    } catch (importError) {
+
+      this.isInitialized = true
+
+      // 启动健康检查定时器
+      this.startHealthCheck()
+
+      console.log('Enhanced database pool initialized successfully')
+      return true
+    } catch (error) {
+      console.error('Failed to initialize enhanced database pool:', error)
       return false
     }
-
-    this.isInitialized = true
-
-    // 启动连接清理定时器
-    this.startConnectionCleanup()
-
-    return true
   }
 
   async getConnection(): Promise<Database.Database | null> {
@@ -77,165 +103,449 @@ class DatabasePool {
       }
     }
 
-    // 查找可用的连接
-    const availableConnection = this.connections.find((conn) => !conn.inUse)
+    if (this.isShuttingDown) {
+      return null
+    }
+
+    // 查找可用的健康连接
+    const availableConnection = this.findAvailableConnection()
     if (availableConnection) {
-      availableConnection.inUse = true
-      availableConnection.lastUsed = Date.now()
+      this.markConnectionAsActive(availableConnection.id)
       return availableConnection.connection
     }
 
     // 如果没有可用连接且未达到最大连接数，创建新连接
-    if (this.connections.length < this.maxConnections) {
-      const newConnection = this.createConnection()
+    if (this.connections.size < this.maxConnections) {
+      const newConnection = await this.createConnection()
       if (newConnection) {
-        const connectionItem = {
-          connection: newConnection,
-          inUse: true,
-          lastUsed: Date.now()
-        }
-        this.connections.push(connectionItem)
-        return newConnection
+        this.markConnectionAsActive(newConnection.id)
+        return newConnection.connection
       }
     }
 
-    // 所有连接都在使用中，等待可用连接
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        const availableConn = this.connections.find((conn) => !conn.inUse)
-        if (availableConn) {
-          clearInterval(checkInterval)
-          availableConn.inUse = true
-          availableConn.lastUsed = Date.now()
-          resolve(availableConn.connection)
-        }
-      }, 10)
-
-      // 设置超时
-      setTimeout(() => {
-        clearInterval(checkInterval)
-        resolve(null)
-      }, 5000)
-    })
+    // 等待可用连接，带超时机制
+    return this.waitForAvailableConnection()
   }
 
   releaseConnection(connection: Database.Database): void {
-    const connectionItem = this.connections.find((conn) => conn.connection === connection)
-    if (connectionItem) {
-      connectionItem.inUse = false
-      connectionItem.lastUsed = Date.now()
+    for (const [id, item] of this.connections) {
+      if (item.connection === connection) {
+        this.markConnectionAsIdle(id)
+        break
+      }
     }
   }
 
-  private createConnection(): Database.Database | null {
+  private findAvailableConnection(): ConnectionItem | null {
+    for (const item of this.connections.values()) {
+      if (item.status === ConnectionStatus.IDLE && 
+          item.health.isHealthy && 
+          item.activeOperations === 0) {
+        return item
+      }
+    }
+    return null
+  }
+
+  private async createConnection(): Promise<ConnectionItem | null> {
     try {
+      const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const connection = new this.SqliteDatabase(this.dbPath)
 
-      // 设置WAL模式以提高并发性能
-      connection.pragma('journal_mode = WAL')
-      connection.pragma('synchronous = NORMAL')
-      connection.pragma('cache_size = 1000')
-      connection.pragma('temp_store = memory')
+      // 设置SQLite优化参数
+      this.configureSQLiteConnection(connection)
 
       // 创建必要的表
       this.initializeTables(connection)
 
-      return connection
+      const connectionItem: ConnectionItem = {
+        id: connectionId,
+        connection,
+        status: ConnectionStatus.IDLE,
+        lastUsed: Date.now(),
+        health: {
+          isHealthy: true,
+          lastCheck: Date.now(),
+          errorCount: 0
+        },
+        activeOperations: 0
+      }
+
+      this.connections.set(connectionId, connectionItem)
+      console.log(`Created new database connection: ${connectionId}`)
+      return connectionItem
     } catch (error) {
-      console.error('创建数据库连接失败:', error)
+      console.error('Failed to create database connection:', error)
       return null
     }
   }
 
-  private initializeTables(connection: Database.Database): void {
-    // 创建文档历史记录表
-    connection.exec(`
-      CREATE TABLE IF NOT EXISTS note_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_path TEXT NOT NULL,
-        content TEXT NOT NULL,
-        timestamp INTEGER NOT NULL
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
-      CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
-    `)
-
-    // 创建WebDAV同步缓存表
-    connection.exec(`
-      CREATE TABLE IF NOT EXISTS webdav_sync_cache (
-        file_path TEXT PRIMARY KEY,
-        remote_path TEXT NOT NULL,
-        last_sync_time INTEGER NOT NULL,
-        last_modified_local INTEGER NOT NULL,
-        last_modified_remote INTEGER,
-        content_hash TEXT NOT NULL,
-        file_size INTEGER NOT NULL
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
-    `)
-
-    // 创建分析缓存表
-    connection.exec(`
-      CREATE TABLE IF NOT EXISTS analysis_cache (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL,
-        model_id TEXT NOT NULL,
-        stats_data TEXT NOT NULL,
-        activity_data TEXT NOT NULL,
-        result_data TEXT NOT NULL,
-        data_fingerprint TEXT,
-        created_at INTEGER NOT NULL
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_analysis_cache_date_model ON analysis_cache(date, model_id);
-    `)
+  private configureSQLiteConnection(connection: Database.Database): void {
+    try {
+      // 设置WAL模式以提高并发性能
+      connection.pragma('journal_mode = WAL')
+      connection.pragma('synchronous = NORMAL')
+      connection.pragma('cache_size = 2000')
+      connection.pragma('temp_store = memory')
+      connection.pragma('mmap_size = 268435456') // 256MB
+      connection.pragma('foreign_keys = ON')
+    } catch (error) {
+      console.warn('Failed to configure SQLite connection:', error)
+    }
   }
 
-  private startConnectionCleanup(): void {
-    setInterval(() => {
-      const now = Date.now()
-      this.connections = this.connections.filter((conn) => {
-        if (!conn.inUse && now - conn.lastUsed > this.connectionTimeout) {
-          try {
-            conn.connection.close()
-            return false
-          } catch (error) {
-            console.error('关闭超时连接失败:', error)
-            return false
-          }
+  private initializeTables(connection: Database.Database): void {
+    try {
+      // 创建文档历史记录表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS note_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          file_path TEXT NOT NULL,
+          content TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          content_hash TEXT,
+          file_size INTEGER DEFAULT 0,
+          created_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
+        CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_note_history_created_at ON note_history(created_at);
+      `)
+
+      // 创建WebDAV同步缓存表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS webdav_sync_cache (
+          file_path TEXT PRIMARY KEY,
+          remote_path TEXT NOT NULL,
+          last_sync_time INTEGER NOT NULL,
+          last_modified_local INTEGER NOT NULL,
+          last_modified_remote INTEGER,
+          content_hash TEXT NOT NULL,
+          file_size INTEGER NOT NULL,
+          sync_status TEXT DEFAULT 'synced',
+          error_count INTEGER DEFAULT 0,
+          last_error TEXT,
+          created_at INTEGER DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_webdav_sync_remote_path ON webdav_sync_cache(remote_path);
+        CREATE INDEX IF NOT EXISTS idx_webdav_sync_status ON webdav_sync_cache(sync_status);
+        CREATE INDEX IF NOT EXISTS idx_webdav_sync_updated_at ON webdav_sync_cache(updated_at);
+      `)
+
+      // 创建分析缓存表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS analysis_cache (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          stats_data TEXT NOT NULL,
+          activity_data TEXT NOT NULL,
+          result_data TEXT NOT NULL,
+          data_fingerprint TEXT,
+          cache_version INTEGER DEFAULT 1,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER,
+          access_count INTEGER DEFAULT 0,
+          last_access INTEGER
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_analysis_cache_date_model ON analysis_cache(date, model_id);
+        CREATE INDEX IF NOT EXISTS idx_analysis_cache_expires_at ON analysis_cache(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_analysis_cache_created_at ON analysis_cache(created_at);
+      `)
+
+      // 创建系统元数据表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS system_metadata (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          type TEXT DEFAULT 'string',
+          created_at INTEGER DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+        
+        INSERT OR IGNORE INTO system_metadata (key, value, type) 
+        VALUES ('db_version', '2.0', 'version');
+        INSERT OR IGNORE INTO system_metadata (key, value, type) 
+        VALUES ('last_maintenance', '0', 'timestamp');
+      `)
+    } catch (error) {
+      console.error('Failed to initialize database tables:', error)
+      throw error
+    }
+  }
+
+  private markConnectionAsActive(connectionId: string): void {
+    const item = this.connections.get(connectionId)
+    if (item) {
+      item.status = ConnectionStatus.ACTIVE
+      item.lastUsed = Date.now()
+      item.activeOperations += 1
+    }
+  }
+
+  private markConnectionAsIdle(connectionId: string): void {
+    const item = this.connections.get(connectionId)
+    if (item) {
+      item.status = ConnectionStatus.IDLE
+      item.lastUsed = Date.now()
+      item.activeOperations = Math.max(0, item.activeOperations - 1)
+    }
+  }
+
+  private async waitForAvailableConnection(): Promise<Database.Database | null> {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval)
+        resolve(null)
+      }, 10000) // 10秒超时
+
+      const checkInterval = setInterval(() => {
+        const availableConnection = this.findAvailableConnection()
+        if (availableConnection) {
+          clearTimeout(timeout)
+          clearInterval(checkInterval)
+          this.markConnectionAsActive(availableConnection.id)
+          resolve(availableConnection.connection)
         }
-        return true
-      })
-    }, 60000) // 每分钟清理一次
+      }, 50) // 每50ms检查一次
+    })
+  }
+
+  private startHealthCheck(): void {
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer)
+    }
+
+    this.healthCheckTimer = setInterval(async () => {
+      await this.performHealthCheck()
+      this.cleanupIdleConnections()
+    }, this.healthCheckInterval)
+  }
+
+  private async performHealthCheck(): Promise<void> {
+    const now = Date.now()
+    const unhealthyConnections: string[] = []
+
+    for (const [id, item] of this.connections) {
+      if (item.status === ConnectionStatus.ERROR || 
+          item.status === ConnectionStatus.RECONNECTING) {
+        continue
+      }
+
+      try {
+        // 执行简单的健康检查查询
+        const result = item.connection.prepare('SELECT 1 as health_check').get()
+        if (result) {
+          item.health.isHealthy = true
+          item.health.lastCheck = now
+          item.health.errorCount = 0
+        } else {
+          throw new Error('Health check query returned no result')
+        }
+      } catch (error) {
+        item.health.isHealthy = false
+        item.health.lastCheck = now
+        item.health.errorCount += 1
+        item.health.lastError = error as Error
+        item.status = ConnectionStatus.ERROR
+
+        console.warn(`Connection ${id} failed health check:`, error)
+
+        if (item.health.errorCount >= this.maxRetries) {
+          unhealthyConnections.push(id)
+        } else {
+          // Schedule reconnection attempt
+          setTimeout(async () => {
+            await this.attemptReconnection(id)
+          }, this.reconnectDelay * item.health.errorCount)
+        }
+      }
+    }
+
+    // 移除不健康的连接
+    for (const id of unhealthyConnections) {
+      await this.removeConnection(id)
+    }
+  }
+
+  private cleanupIdleConnections(): void {
+    const now = Date.now()
+    const connectionsToRemove: string[] = []
+
+    for (const [id, item] of this.connections) {
+      // 移除超时的空闲连接（保留至少1个连接）
+      if (item.status === ConnectionStatus.IDLE && 
+          item.activeOperations === 0 &&
+          now - item.lastUsed > this.connectionTimeout &&
+          this.connections.size > 1) {
+        connectionsToRemove.push(id)
+      }
+    }
+
+    for (const id of connectionsToRemove) {
+      this.removeConnection(id)
+    }
+  }
+
+  private async attemptReconnection(connectionId: string): Promise<void> {
+    const item = this.connections.get(connectionId)
+    if (!item || item.status !== ConnectionStatus.ERROR) {
+      return
+    }
+
+    try {
+      item.status = ConnectionStatus.RECONNECTING
+      
+      // Close existing connection
+      if (item.connection && typeof item.connection.close === 'function') {
+        item.connection.close()
+      }
+
+      // Create new connection
+      const newConnection = new this.SqliteDatabase(this.dbPath)
+      this.configureSQLiteConnection(newConnection)
+
+      // Update connection item
+      item.connection = newConnection
+      item.status = ConnectionStatus.IDLE
+      item.health.isHealthy = true
+      item.health.errorCount = 0
+      item.lastUsed = Date.now()
+
+      console.log(`Successfully reconnected database connection: ${connectionId}`)
+    } catch (error) {
+      console.error(`Failed to reconnect database connection ${connectionId}:`, error)
+      await this.removeConnection(connectionId)
+    }
+  }
+
+  private async removeConnection(connectionId: string): Promise<void> {
+    const item = this.connections.get(connectionId)
+    if (item) {
+      try {
+        if (item.connection && typeof item.connection.close === 'function') {
+          item.connection.close()
+        }
+      } catch (error) {
+        console.warn(`Failed to close connection ${connectionId}:`, error)
+      }
+      
+      this.connections.delete(connectionId)
+      console.log(`Removed database connection: ${connectionId}`)
+    }
   }
 
   async closeAll(): Promise<void> {
-    const promises = this.connections.map(async (conn) => {
-      try {
-        conn.connection.close()
-      } catch (error) {
-        console.error('关闭数据库连接失败:', error)
-      }
-    })
+    this.isShuttingDown = true
+
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer)
+      this.healthCheckTimer = undefined
+    }
+
+    const promises = Array.from(this.connections.keys()).map(id => 
+      this.removeConnection(id)
+    )
 
     await Promise.all(promises)
-    this.connections = []
+    this.connections.clear()
     this.isInitialized = false
+    
+    console.log('Enhanced database pool shut down successfully')
   }
 
   getStats(): {
     totalConnections: number
     activeConnections: number
-    availableConnections: number
+    idleConnections: number
+    errorConnections: number
+    healthyConnections: number
   } {
-    const activeConnections = this.connections.filter((conn) => conn.inUse).length
-    return {
-      totalConnections: this.connections.length,
-      activeConnections,
-      availableConnections: this.connections.length - activeConnections
+    let active = 0, idle = 0, error = 0, healthy = 0
+
+    for (const item of this.connections.values()) {
+      switch (item.status) {
+        case ConnectionStatus.ACTIVE:
+          active++
+          break
+        case ConnectionStatus.IDLE:
+          idle++
+          break
+        case ConnectionStatus.ERROR:
+        case ConnectionStatus.RECONNECTING:
+          error++
+          break
+      }
+
+      if (item.health.isHealthy) {
+        healthy++
+      }
     }
+
+    return {
+      totalConnections: this.connections.size,
+      activeConnections: active,
+      idleConnections: idle,
+      errorConnections: error,
+      healthyConnections: healthy
+    }
+  }
+
+  /**
+   * 执行数据库维护操作
+   */
+  async performMaintenance(): Promise<{
+    optimized: boolean
+    vacuumed: boolean
+    analyzed: boolean
+    errors: string[]
+  }> {
+    const result = {
+      optimized: false,
+      vacuumed: false,
+      analyzed: false,
+      errors: [] as string[]
+    }
+
+    const connection = await this.getConnection()
+    if (!connection) {
+      result.errors.push('无法获取数据库连接')
+      return result
+    }
+
+    try {
+      // 优化数据库
+      connection.pragma('optimize')
+      result.optimized = true
+
+      // 执行VACUUM操作（小心使用，会锁定数据库）
+      if (this.connections.size === 1) {
+        connection.exec('VACUUM')
+        result.vacuumed = true
+      }
+
+      // 分析表统计信息
+      connection.exec('ANALYZE')
+      result.analyzed = true
+
+      // 更新最后维护时间
+      connection.prepare(`
+        UPDATE system_metadata 
+        SET value = ?, updated_at = strftime('%s', 'now')
+        WHERE key = 'last_maintenance'
+      `).run(Date.now().toString())
+
+    } catch (error) {
+      result.errors.push(`维护操作失败: ${error}`)
+    } finally {
+      this.releaseConnection(connection)
+    }
+
+    return result
   }
 
   /**
@@ -244,70 +554,102 @@ class DatabasePool {
   performMemoryCleanup(): {
     closedConnections: number
     cacheCleared: boolean
+    maintenancePerformed: boolean
   } {
     let closedConnections = 0
+    let cacheCleared = false
+    let maintenancePerformed = false
 
     // 关闭空闲连接（保留至少1个连接）
     const now = Date.now()
-    this.connections = this.connections.filter((conn) => {
-      if (!conn.inUse && this.connections.length > 1 && now - conn.lastUsed > 10000) {
-        try {
-          conn.connection.close()
-          closedConnections++
-          return false
-        } catch (error) {
-          console.error('关闭空闲连接失败:', error)
-          return true
-        }
+    const connectionsToClose: string[] = []
+
+    for (const [id, item] of this.connections) {
+      if (item.status === ConnectionStatus.IDLE && 
+          item.activeOperations === 0 &&
+          this.connections.size > 1 && 
+          now - item.lastUsed > 5000) { // 5秒未使用
+        connectionsToClose.push(id)
       }
-      return true
-    })
+    }
+
+    for (const id of connectionsToClose) {
+      this.removeConnection(id)
+      closedConnections++
+    }
 
     // 清理SQLite内存缓存
-    let cacheCleared = false
-    this.connections.forEach((conn) => {
-      if (!conn.inUse) {
+    for (const item of this.connections.values()) {
+      if (item.status === ConnectionStatus.IDLE && item.activeOperations === 0) {
         try {
           // 清理SQLite的页面缓存
-          conn.connection.pragma('cache_size = 0')
-          conn.connection.pragma('cache_size = 1000')
-          // 执行VACUUM操作清理内存碎片
-          conn.connection.pragma('optimize')
+          item.connection.pragma('shrink_memory')
+          item.connection.pragma('cache_size = 100') // 临时减少缓存
+          item.connection.pragma('cache_size = 2000') // 恢复缓存大小
           cacheCleared = true
         } catch (error) {
-          console.error('清理数据库缓存失败:', error)
+          console.warn('清理数据库缓存失败:', error)
         }
       }
-    })
+    }
+
+    // 执行快速优化
+    if (this.connections.size > 0) {
+      const item = Array.from(this.connections.values())[0]
+      if (item.status === ConnectionStatus.IDLE && item.activeOperations === 0) {
+        try {
+          item.connection.pragma('optimize')
+          maintenancePerformed = true
+        } catch (error) {
+          console.warn('执行数据库优化失败:', error)
+        }
+      }
+    }
 
     return {
       closedConnections,
-      cacheCleared
+      cacheCleared,
+      maintenancePerformed
     }
   }
 }
 
 // 全局连接池实例
-const dbPool = new DatabasePool()
+const enhancedDbPool = new EnhancedDatabasePool()
 
-// 连接池包装器函数
+// 增强的连接池包装器函数
 async function withDatabase<T>(
-  operation: (db: Database.Database) => T | Promise<T>
+  operation: (db: Database.Database) => T | Promise<T>,
+  retries: number = 3
 ): Promise<T | null> {
-  const connection = await dbPool.getConnection()
-  if (!connection) {
-    return null
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const connection = await enhancedDbPool.getConnection()
+    if (!connection) {
+      lastError = new Error(`无法获取数据库连接 (attempt ${attempt}/${retries})`)
+      continue
+    }
+
+    try {
+      const result = await operation(connection)
+      return result
+    } catch (error) {
+      lastError = error as Error
+      console.error(`数据库操作失败 (attempt ${attempt}/${retries}):`, error)
+      
+      // 对于严重错误，立即重试；对于普通错误，等待后重试
+      if (attempt < retries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000) // 指数退避，最大5秒
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    } finally {
+      enhancedDbPool.releaseConnection(connection)
+    }
   }
 
-  try {
-    const result = await operation(connection)
-    return result
-  } catch (error) {
-    console.error('数据库操作失败:', error)
-    return null
-  } finally {
-    dbPool.releaseConnection(connection)
-  }
+  console.error('数据库操作最终失败:', lastError)
+  return null
 }
 
 // 保持向后兼容的单例数据库连接（标记为已弃用）
@@ -335,7 +677,7 @@ export async function initDatabase(): Promise<Database.Database | null> {
   }
 
   // 使用连接池获取一个连接作为主连接
-  const connection = await dbPool.getConnection()
+  const connection = await enhancedDbPool.getConnection()
   if (connection) {
     db = connection
     // 不释放这个连接，作为主连接保持
@@ -474,7 +816,7 @@ export function closeDatabase(): void {
 
 // 新增：关闭所有数据库连接（包括连接池）
 export async function closeAllDatabaseConnections(): Promise<void> {
-  await dbPool.closeAll()
+  await enhancedDbPool.closeAll()
   closeDatabase()
 }
 
@@ -482,9 +824,11 @@ export async function closeAllDatabaseConnections(): Promise<void> {
 export function getDatabasePoolStats(): {
   totalConnections: number
   activeConnections: number
-  availableConnections: number
+  idleConnections: number
+  errorConnections: number
+  healthyConnections: number
 } {
-  return dbPool.getStats()
+  return enhancedDbPool.getStats()
 }
 
 // 检查数据库是否可用
@@ -497,8 +841,9 @@ export function isDatabaseReady(): boolean {
 export function performDatabaseMemoryCleanup(): {
   closedConnections: number
   cacheCleared: boolean
+  maintenancePerformed: boolean
 } {
-  return dbPool.performMemoryCleanup()
+  return enhancedDbPool.performMemoryCleanup()
 }
 
 // 添加历史记录
