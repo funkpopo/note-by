@@ -1,6 +1,7 @@
-import React, { useState, Suspense } from 'react'
+import React, { useState, Suspense, useEffect } from 'react'
 import { Layout } from '@douyinfe/semi-ui'
 import Navigation from './components/Navigation'
+import { performanceMonitor } from './utils/PerformanceMonitor'
 import {
   LazySettings,
   LazyEditor,
@@ -36,6 +37,17 @@ const App: React.FC = () => {
   const handleFileChanged = (): void => {
     setFileListVersion((prev) => prev + 1)
   }
+
+  // 启动性能监控
+  useEffect(() => {
+    // 启动性能监控并立即执行首次数据收集
+    performanceMonitor.startMonitoring(true)
+
+    // 组件卸载时清理性能监控
+    return () => {
+      performanceMonitor.cleanup()
+    }
+  }, [])
 
   const renderContent = (): React.ReactNode => {
     switch (currentView) {

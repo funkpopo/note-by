@@ -58,7 +58,7 @@ class PerformanceMonitor {
 
   private constructor() {
     this.metrics = this.initializeMetrics()
-    this.startMonitoring()
+    // 不在构造函数中自动启动监控，由外部控制启动时机
   }
 
   static getInstance(): PerformanceMonitor {
@@ -101,10 +101,15 @@ class PerformanceMonitor {
   /**
    * 开始性能监控
    */
-  startMonitoring(): void {
+  startMonitoring(immediate = false): void {
     if (this.isMonitoring) return
 
     this.isMonitoring = true
+
+    // 如果需要立即执行首次更新
+    if (immediate) {
+      this.updateMemoryMetrics()
+    }
 
     // 每1分钟更新一次内存使用统计
     this.monitoringInterval = setInterval(() => {

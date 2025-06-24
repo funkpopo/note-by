@@ -39,7 +39,7 @@ import {
   getAnalysisCache,
   saveAnalysisCache,
   resetAnalysisCache,
-  initAnalysisCacheTable,
+
   getDocumentTagsData,
   checkDatabaseStatus,
   type AnalysisCacheItem
@@ -2132,19 +2132,15 @@ ${htmlContent}
 
   // 初始化数据库
   try {
-    // 确保数据库初始化成功后立即创建分析缓存表
     initDatabase()
       .then((db) => {
         if (db) {
-          // 立即初始化分析缓存表，并返回Promise以继续链式操作
-          return initAnalysisCacheTable()
+          // analysis_cache表已在initializeTables中自动创建
+          // 初始化WebDAV同步缓存表
+          return initWebDAVSyncCacheTable()
         } else {
           throw new Error('数据库初始化失败')
         }
-      })
-      .then(() => {
-        // 初始化WebDAV同步缓存表
-        return initWebDAVSyncCacheTable()
       })
       .catch((error) => {
         mainErrorHandler.error(

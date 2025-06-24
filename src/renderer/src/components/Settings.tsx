@@ -614,11 +614,11 @@ const Settings: React.FC = () => {
     return `${formatBytes(bytesPerSecond)}/s`
   }
 
-  // 加载性能指标和设置定时刷新
+  // 加载性能指标和设置定时刷新 (仅用于显示，不启动全局监控)
   useEffect(() => {
     loadPerformanceMetrics()
 
-    // 每10秒更新一次性能指标
+    // 每10秒更新一次性能指标显示
     const interval = setInterval(loadPerformanceMetrics, 10000)
 
     return () => clearInterval(interval)
@@ -1146,7 +1146,7 @@ const Settings: React.FC = () => {
               <Paragraph
                 style={{ marginTop: '16px', color: 'var(--semi-color-text-2)', fontSize: '13px' }}
               >
-                性能数据每10秒自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。
+                性能数据每1分钟自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。
               </Paragraph>
             </Card>
           </div>

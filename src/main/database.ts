@@ -1396,26 +1396,7 @@ export interface AnalysisCacheItem {
   modelId: string
 }
 
-// 初始化数据库时创建分析缓存表（使用连接池）
-export async function initAnalysisCacheTable(): Promise<void> {
-  await withDatabase(async (database) => {
-    // 只在表不存在时创建表，不再删除现有表
-    database.exec(`
-      CREATE TABLE IF NOT EXISTS analysis_cache (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL UNIQUE,
-        stats TEXT NOT NULL,
-        activity_data TEXT NOT NULL,
-        result TEXT NOT NULL,
-        model_id TEXT NOT NULL,
-        timestamp INTEGER NOT NULL
-      );
 
-      CREATE INDEX IF NOT EXISTS idx_analysis_cache_date ON analysis_cache(date);
-    `)
-    return true
-  })
-}
 
 // 保存分析缓存（使用连接池）
 export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolean> {
@@ -1428,7 +1409,7 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
       // 更新现有记录
       const updateStmt = database.prepare(`
         UPDATE analysis_cache 
-        SET stats = ?, activity_data = ?, result = ?, model_id = ?, timestamp = ?
+        SET stats_data = ?, activity_data = ?, result_data = ?, model_id = ?, created_at = ?
         WHERE date = ?
       `)
 
@@ -1448,7 +1429,7 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
       // 插入新记录
       const insertStmt = database.prepare(`
         INSERT INTO analysis_cache 
-        (date, stats, activity_data, result, model_id, timestamp)
+        (date, stats_data, activity_data, result_data, model_id, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `)
 
@@ -1489,7 +1470,7 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
   const result = await withDatabase(async (database) => {
     // 获取最新的缓存记录
     const stmt = database.prepare(`
-      SELECT date, stats, activity_data, result, model_id
+      SELECT date, stats_data, activity_data, result_data, model_id
       FROM analysis_cache
       ORDER BY date DESC
       LIMIT 1
@@ -1498,9 +1479,9 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
     const record = stmt.get() as
       | {
           date: string
-          stats: string
+          stats_data: string
           activity_data: string
-          result: string
+          result_data: string
           model_id: string
         }
       | undefined
@@ -1512,9 +1493,9 @@ export async function getAnalysisCache(): Promise<AnalysisCacheItem | null> {
     // 解析JSON字段并返回
     return {
       date: record.date,
-      stats: JSON.parse(record.stats),
+      stats: JSON.parse(record.stats_data),
       activityData: JSON.parse(record.activity_data),
-      result: JSON.parse(record.result),
+      result: JSON.parse(record.result_data),
       modelId: record.model_id
     }
   })
@@ -1531,8 +1512,7 @@ export async function resetAnalysisCache(): Promise<boolean> {
   })
 
   if (result) {
-    // 重新创建表
-    await initAnalysisCacheTable()
+    // 表已在 initializeTables 中创建，无需额外初始化
     return true
   }
 
