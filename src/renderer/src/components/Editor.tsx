@@ -25,15 +25,6 @@ import { editorMemoryManager } from '../utils/EditorMemoryManager'
 // 导入性能监控器
 import { performanceMonitor } from '../utils/PerformanceMonitor'
 import {
-  BasicTextStyleButton,
-  BlockTypeSelect,
-  ColorStyleButton,
-  CreateLinkButton,
-  FileCaptionButton,
-  FileReplaceButton,
-  FormattingToolbar,
-  FormattingToolbarController,
-  TextAlignButton,
   SuggestionMenuController,
   getDefaultReactSlashMenuItems
 } from '@blocknote/react'
@@ -56,6 +47,98 @@ import { zh as aiLocales } from '@blocknote/xl-ai/locales'
 import { CustomAIMenu } from './AICustomCommands'
 import { EditorSkeleton } from './Skeleton'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
+import {
+  BasicTextStyleButton,
+  BlockTypeSelect,
+  ColorStyleButton,
+  CreateLinkButton,
+  FileCaptionButton,
+  FileReplaceButton,
+  FormattingToolbar,
+  FormattingToolbarController,
+  TextAlignButton
+} from '@blocknote/react'
+
+// 创建包含AI按钮的格式工具栏组件
+const FormattingToolbarWithAI = ({
+  currentAiModel
+}: {
+  currentAiModel: LanguageModelV1 | null
+}): JSX.Element => {
+  return (
+    <FormattingToolbarController
+      formattingToolbar={() => (
+        <FormattingToolbar>
+          <BlockTypeSelect key="blockTypeSelect" />
+          <FileCaptionButton key="fileCaptionButton" />
+          <FileReplaceButton key="replaceFileButton" />
+          <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
+          <BasicTextStyleButton basicTextStyle="italic" key="italicStyleButton" />
+          <BasicTextStyleButton basicTextStyle="underline" key="underlineStyleButton" />
+          <BasicTextStyleButton basicTextStyle="strike" key="strikeStyleButton" />
+          <BasicTextStyleButton basicTextStyle="code" key="codeStyleButton" />
+          <TextAlignButton textAlignment="left" key="textAlignLeftButton" />
+          <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
+          <TextAlignButton textAlignment="right" key="textAlignRightButton" />
+          <ColorStyleButton key="colorStyleButton" />
+          <CreateLinkButton key="createLinkButton" />
+          {currentAiModel && <AIToolbarButton key="aiToolbarButton" />}
+        </FormattingToolbar>
+      )}
+    />
+  )
+}
+
+// 创建包含AI选项的斜杠菜单组件
+const SuggestionMenuWithAI = ({
+  editor,
+  currentAiModel
+}: {
+  editor: any
+  currentAiModel: LanguageModelV1 | null
+}): JSX.Element => {
+  return (
+    <SuggestionMenuController
+      triggerCharacter="/"
+      getItems={async (query) => {
+        // 获取默认斜杠菜单项
+        const defaultItems = getDefaultReactSlashMenuItems(editor)
+
+        // 过滤掉Video、Audio和File插入选项，只保留Image和其他选项
+        const filteredItems = defaultItems.filter((item) => {
+          return !(
+            (item.title.includes('Video') ||
+              item.title.includes('视频') ||
+              item.title.includes('Audio') ||
+              item.title.includes('音频') ||
+              item.title.includes('File') ||
+              item.title.includes('文件')) &&
+            !(item.title.includes('Image') || item.title.includes('图片'))
+          )
+        })
+
+        // 添加AI菜单项（如果有可用的OpenAI模型）
+        const menuItems = currentAiModel
+          ? [...filteredItems, ...getAISlashMenuItems(editor)]
+          : filteredItems
+
+        // 根据用户输入的查询过滤菜单项
+        return menuItems.filter((item) => {
+          const itemTitle = item.title.toLowerCase()
+          const itemSubtext = (item.subtext || '').toLowerCase()
+          const itemAliases = item.aliases || []
+          const queryLower = query.toLowerCase()
+
+          return (
+            itemTitle.includes(queryLower) ||
+            itemSubtext.includes(queryLower) ||
+            itemAliases.some((alias) => alias.toLowerCase().includes(queryLower))
+          )
+        })
+      }}
+    />
+  )
+}
 
 // 添加接口定义
 interface MarkdownAPI {
@@ -1295,77 +1378,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [selectedModelId, AiApiConfigs, createOpenAIModel, aiStatus])
 
-  // 创建包含AI按钮的格式工具栏组件
-  const FormattingToolbarWithAI = (): JSX.Element => {
-    return (
-      <FormattingToolbarController
-        formattingToolbar={() => (
-          <FormattingToolbar>
-            <BlockTypeSelect key="blockTypeSelect" />
-            <FileCaptionButton key="fileCaptionButton" />
-            <FileReplaceButton key="replaceFileButton" />
-            <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
-            <BasicTextStyleButton basicTextStyle="italic" key="italicStyleButton" />
-            <BasicTextStyleButton basicTextStyle="underline" key="underlineStyleButton" />
-            <BasicTextStyleButton basicTextStyle="strike" key="strikeStyleButton" />
-            <BasicTextStyleButton basicTextStyle="code" key="codeStyleButton" />
-            <TextAlignButton textAlignment="left" key="textAlignLeftButton" />
-            <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
-            <TextAlignButton textAlignment="right" key="textAlignRightButton" />
-            <ColorStyleButton key="colorStyleButton" />
-            <CreateLinkButton key="createLinkButton" />
-            {currentAiModel && <AIToolbarButton key="aiToolbarButton" />}
-          </FormattingToolbar>
-        )}
-      />
-    )
-  }
-
-  // 创建包含AI选项的斜杠菜单组件
-  const SuggestionMenuWithAI = (): JSX.Element => {
-    return (
-      <SuggestionMenuController
-        triggerCharacter="/"
-        getItems={async (query) => {
-          // 获取默认斜杠菜单项
-          const defaultItems = getDefaultReactSlashMenuItems(editor)
-
-          // 过滤掉Video、Audio和File插入选项，只保留Image和其他选项
-          const filteredItems = defaultItems.filter((item) => {
-            return !(
-              (item.title.includes('Video') ||
-                item.title.includes('视频') ||
-                item.title.includes('Audio') ||
-                item.title.includes('音频') ||
-                item.title.includes('File') ||
-                item.title.includes('文件')) &&
-              !(item.title.includes('Image') || item.title.includes('图片'))
-            )
-          })
-
-          // 添加AI菜单项（如果有可用的OpenAI模型）
-          const menuItems = currentAiModel
-            ? [...filteredItems, ...getAISlashMenuItems(editor)]
-            : filteredItems
-
-          // 根据用户输入的查询过滤菜单项
-          return menuItems.filter((item) => {
-            const itemTitle = item.title.toLowerCase()
-            const itemSubtext = (item.subtext || '').toLowerCase()
-            const itemAliases = item.aliases || []
-            const queryLower = query.toLowerCase()
-
-            return (
-              itemTitle.includes(queryLower) ||
-              itemSubtext.includes(queryLower) ||
-              itemAliases.some((alias) => alias.toLowerCase().includes(queryLower))
-            )
-          })
-        }}
-      />
-    )
-  }
-
   return (
     <div
       className="editor-container"
@@ -1605,16 +1617,19 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             editor={editor}
             key={editorKey}
             theme={editorThemes}
-            formattingToolbar={false}
-            filePanel={true}
-            linkToolbar={true}
+            // 禁用默认的 slash menu 以使用自定义的
             slashMenu={false}
+            // 禁用默认的 formatting toolbar
+            formattingToolbar={false}
             onChange={handleEditorChange}
             style={{ height: '100%' }}
           >
             {/* 添加AI菜单控制器 */}
             {currentAiModel && <AIMenuController aiMenu={CustomAIMenu} />}
-            <FormattingToolbarWithAI />
+            {/* 使用包含AI按钮的自定义格式工具栏 */}
+            <FormattingToolbarWithAI currentAiModel={currentAiModel} />
+            {/* 使用包含AI选项的自定义斜杠菜单 */}
+            <SuggestionMenuWithAI editor={editor} currentAiModel={currentAiModel} />
             {/* 恢复标签功能的@菜单 - 支持全局标签 */}
             <SuggestionMenuController
               triggerCharacter="@"
@@ -1653,7 +1668,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                 }
               }}
             />
-            <SuggestionMenuWithAI />
           </BlockNoteView>
         )}
       </div>
