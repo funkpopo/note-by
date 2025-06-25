@@ -1396,8 +1396,6 @@ export interface AnalysisCacheItem {
   modelId: string
 }
 
-
-
 // 保存分析缓存（使用连接池）
 export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolean> {
   const result = await withDatabase(async (database) => {

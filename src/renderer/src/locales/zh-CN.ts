@@ -1,7 +1,7 @@
 import { Dictionary } from '@blocknote/core'
 
 // 扩展字典接口以包含自定义模块
-interface ExtendedDictionary extends Dictionary {
+export interface ExtendedDictionary extends Dictionary {
   dataAnalysis?: {
     title: string
     analysisButton: string
@@ -69,10 +69,52 @@ export const zhCN: ExtendedDictionary = {
       aliases: ['h3', 'heading3', 'subheading', '标题3', '子标题'],
       group: '标题'
     },
+    heading_4: {
+      title: '标题 4',
+      subtext: '小节标题',
+      aliases: ['h4', 'heading4', '标题4'],
+      group: '标题'
+    },
+    heading_5: {
+      title: '标题 5',
+      subtext: '子小节标题',
+      aliases: ['h5', 'heading5', '标题5'],
+      group: '标题'
+    },
+    heading_6: {
+      title: '标题 6',
+      subtext: '最小标题',
+      aliases: ['h6', 'heading6', '标题6'],
+      group: '标题'
+    },
+    toggle_heading: {
+      title: '折叠标题 1',
+      subtext: '可折叠的顶级标题',
+      aliases: ['toggle', 'toggleheading', 'collapsible', '折叠标题', '可折叠标题'],
+      group: '标题'
+    },
+    toggle_heading_2: {
+      title: '折叠标题 2',
+      subtext: '可折叠的主要段落标题',
+      aliases: ['toggleh2', 'toggleheading2', 'collapsible2', '折叠标题2'],
+      group: '标题'
+    },
+    toggle_heading_3: {
+      title: '折叠标题 3',
+      subtext: '可折叠的子段落标题',
+      aliases: ['toggleh3', 'toggleheading3', 'collapsible3', '折叠标题3'],
+      group: '标题'
+    },
     quote: {
       title: '引用',
       subtext: '引用或摘录',
       aliases: ['quotation', 'blockquote', 'bq', '引用'],
+      group: '基本块'
+    },
+    toggle_list: {
+      title: '折叠列表',
+      subtext: '可折叠的列表',
+      aliases: ['togglelist', 'collapsiblelist', 'foldlist', '折叠列表', '可折叠列表'],
       group: '基本块'
     },
     numbered_list: {
