@@ -290,9 +290,14 @@ async function needUpload(
 
     // 首先检查本地缓存
     const syncRecord = await getWebDAVSyncRecord(localFilePath)
+    const remoteFile = remoteFiles.find((file) => file.filename === remoteFilePath)
 
     // 如果有缓存记录，先通过缓存判断是否需要上传
     if (syncRecord) {
+      // 即使有同步记录，如果远程文件丢失了，也必须重新上传
+      if (!remoteFile) {
+        return true
+      }
       // 如果本地文件未修改（时间戳和大小与上次同步时相同），无需上传
       if (localModTime === syncRecord.lastModifiedLocal && fileSize === syncRecord.fileSize) {
         return false
@@ -311,7 +316,6 @@ async function needUpload(
 
     // 如果没有缓存记录，回退到原来的逻辑
     // 检查远程文件是否存在
-    const remoteFile = remoteFiles.find((file) => file.filename === remoteFilePath)
     if (!remoteFile) {
       // 远程文件不存在，需要上传
       return true
@@ -512,43 +516,14 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
     // 缓存远程文件列表(按目录)
     const remoteFilesCache = new Map<string, FileStat[]>()
 
-    // 文件列表收集，用于预计算总文件数
-    const filesToSync: { localPath: string; remotePath: string }[] = []
-
-    // 递归同步函数 - 第一阶段：收集文件
-    async function collectFiles(localDir: string, remoteDir: string): Promise<void> {
-      // 获取本地文件列表
-      const localEntries = await fs.readdir(localDir, { withFileTypes: true })
-
-      for (const entry of localEntries) {
-        const localPath = path.join(localDir, entry.name)
-        const remotePath = path.join(remoteDir, entry.name).replace(/\\/g, '/')
-
-        // 检查是否在.assets目录内
-        const isInAssetsDir = path.basename(localDir) === '.assets'
-
-        if (entry.isDirectory()) {
-          // 递归收集子目录文件
-          await collectFiles(localPath, remotePath)
-        } else if (entry.isFile() && (entry.name.endsWith('.md') || isInAssetsDir)) {
-          // 添加到同步文件列表
-          filesToSync.push({ localPath, remotePath })
-        }
-      }
-    }
-
-    // 首先收集所有需要处理的文件
-    await collectFiles(config.localPath, config.remotePath)
-    totalFiles = filesToSync.length
-
-    // 通知总文件数
+    // 初始进度通知
     notifySyncProgress({
       total: totalFiles,
-      processed: 0,
+      processed: processedFiles,
       action: 'upload'
     })
 
-    // 递归同步函数 - 第二阶段：处理文件
+    // 递归同步函数 - 合并了收集和处理
     async function syncDirectory(localDir: string, remoteDir: string): Promise<void> {
       // 确保远程目录存在
       await ensureRemoteDirectory(remoteDir)
@@ -562,13 +537,19 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
 
       // 获取本地文件列表
       const localEntries = await fs.readdir(localDir, { withFileTypes: true })
+      const isInAssetsDir = path.basename(localDir) === '.assets'
+
+      // 动态更新文件总数
+      totalFiles += localEntries.filter(
+        (entry) => entry.isFile() && (entry.name.endsWith('.md') || isInAssetsDir)
+      ).length
 
       for (const entry of localEntries) {
         const localPath = path.join(localDir, entry.name)
         const remotePath = path.join(remoteDir, entry.name).replace(/\\/g, '/')
 
         // 检查是否在.assets目录内
-        const isInAssetsDir = path.basename(localDir) === '.assets'
+        // const isInAssetsDir = path.basename(localDir) === '.assets'
 
         if (entry.isDirectory()) {
           // 递归同步子目录
@@ -606,6 +587,9 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
     await syncDirectory(config.localPath, config.remotePath)
 
     // 最后一次进度更新，确保UI显示100%
+    if (totalFiles > 0 && processedFiles < totalFiles) {
+      processedFiles = totalFiles
+    }
     notifySyncProgress({
       total: totalFiles,
       processed: totalFiles,
@@ -672,47 +656,25 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
     // 确保本地根目录存在
     await fs.mkdir(config.localPath, { recursive: true })
 
-    // 文件列表收集，用于预计算总文件数
-    const filesToSync: { remotePath: string; localPath: string }[] = []
-
-    // 递归收集文件 - 第一阶段：收集文件
-    async function collectFiles(remotePath: string, localPath: string): Promise<void> {
-      // 获取远程文件列表
-      const remoteEntries = await getRemoteFiles(remotePath)
-
-      for (const entry of remoteEntries) {
-        const entryRemotePath = entry.filename
-        const entryName = path.basename(entryRemotePath)
-        const entryLocalPath = path.join(localPath, entryName)
-
-        // 检查是否在.assets目录内
-        const isInAssetsDir = path.basename(remotePath) === '.assets'
-
-        if (entry.type === 'directory') {
-          // 递归收集子目录文件
-          await collectFiles(entryRemotePath, entryLocalPath)
-        } else if (entry.type === 'file' && (entryName.endsWith('.md') || isInAssetsDir)) {
-          // 添加到同步文件列表
-          filesToSync.push({ remotePath: entryRemotePath, localPath: entryLocalPath })
-        }
-      }
-    }
-
-    // 首先收集所有需要处理的文件
-    await collectFiles(config.remotePath, config.localPath)
-    totalFiles = filesToSync.length
-
-    // 通知总文件数
+    // 初始进度通知
     notifySyncProgress({
       total: totalFiles,
-      processed: 0,
+      processed: processedFiles,
       action: 'download'
     })
 
-    // 递归同步函数 - 第二阶段：处理文件
+    // 递归同步函数 - 合并了收集和处理
     async function syncDirectory(remotePath: string, localPath: string): Promise<void> {
       // 获取远程文件列表
       const remoteEntries = await getRemoteFiles(remotePath)
+
+      // 动态更新总文件数
+      totalFiles += remoteEntries.filter(
+        (entry) =>
+          entry.type === 'file' &&
+          (path.basename(entry.filename).endsWith('.md') ||
+            path.basename(path.dirname(entry.filename)) === '.assets')
+      ).length
 
       for (const entry of remoteEntries) {
         const entryRemotePath = entry.filename
@@ -758,9 +720,13 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
     await syncDirectory(config.remotePath, config.localPath)
 
     // 最后一次进度更新，确保UI显示100%
+    if (totalFiles > 0 && processedFiles < totalFiles) {
+      // 在循环结束后，如果仍有未处理的文件（例如在并行场景下），确保进度条达到100%
+      processedFiles = totalFiles
+    }
     notifySyncProgress({
       total: totalFiles,
-      processed: totalFiles,
+      processed: processedFiles,
       action: 'download'
     })
 
@@ -816,6 +782,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
   let skippedUpload = 0
   let skippedDownload = 0
   let processedCount = 0
+  let totalCount = 0
 
   try {
     // 确保本地和远程根目录存在
@@ -834,7 +801,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
     }
 
     // 获取上次同步时间，用于筛选文件
-    const lastSyncTime = await getLastGlobalSyncTime()
+    await getLastGlobalSyncTime()
 
     // 缓存远程文件列表(按目录)，在整个同步过程中共享
     const remoteFilesCache = new Map<string, FileStat[]>()
@@ -852,10 +819,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       action?: 'upload' | 'download' | 'compare' | 'skip'
     }
 
-    const filesToProcess: FileSyncInfo[] = []
-
-    // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
-    const TIME_THRESHOLD = 3000 // 毫秒
+      const filesToProcess: FileSyncInfo[] = []
 
     // 收集需要同步的文件信息
     async function collectFilesToSync(localDir: string, remoteDir: string): Promise<void> {
@@ -890,6 +854,8 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
       // 2. 获取本地文件列表
       const localEntries = await fs.readdir(localDir, { withFileTypes: true })
+      // 更新总数
+      totalCount += localEntries.length + remoteFilesMap.size
 
       // 创建本地文件索引映射
       const localFilesMap = new Map<string, fsTypes.Dirent>()
@@ -944,46 +910,10 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
             if (!remoteExists) {
               // 远程不存在，需要上传
-              if (localModTime > lastSyncTime) {
-                // 本地有修改，上传
-                action = 'upload'
-              } else {
-                // 本地没有修改，跳过
-                action = 'skip'
-                skippedUpload++
-              }
-            } else if (syncRecord) {
-              // 有同步记录
-              if (
-                localModTime > syncRecord.lastModifiedLocal &&
-                remoteModTime > syncRecord.lastModifiedRemote
-              ) {
-                // 本地和远程都有更新，需要比较内容
-                action = 'compare'
-              } else if (localModTime > syncRecord.lastModifiedLocal) {
-                // 只有本地更新
-                action = 'upload'
-              } else if (remoteModTime > syncRecord.lastModifiedRemote) {
-                // 只有远程更新
-                action = 'download'
-              } else {
-                // 双方都没更新
-                action = 'skip'
-                skippedUpload++
-                skippedDownload++
-              }
+              action = 'upload'
             } else {
-              // 无同步记录，基于修改时间判断
-              if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
-                // 时间相近，需要比较内容
-                action = 'compare'
-              } else if (localModTime > remoteModTime) {
-                // 本地更新，上传
-                action = 'upload'
-              } else {
-                // 远程更新，下载
-                action = 'download'
-              }
+              // 远程存在，标记为比较
+              action = 'compare'
             }
 
             // 将文件信息加入处理列表
@@ -1002,6 +932,9 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
             failed++
           }
         }
+        // 更新进度
+        processedCount++
+        notifySyncProgress({ total: totalCount, processed: processedCount, action: 'compare' })
       }
 
       // 4. 处理仅存在于远程的文件
@@ -1031,16 +964,20 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
             action: 'download'
           })
         }
+        // 更新进度
+        processedCount++
+        notifySyncProgress({ total: totalCount, processed: processedCount, action: 'compare' })
       }
     }
 
-    // 收集所有文件信息
+    // 收集所有文件信息, 初始通知
+    notifySyncProgress({ total: 0, processed: 0, action: 'compare' })
     await collectFilesToSync(config.localPath, config.remotePath)
 
-    // 通知总文件数
+    // 比较阶段结束，确保进度条满
     notifySyncProgress({
-      total: filesToProcess.length,
-      processed: 0,
+      total: totalCount,
+      processed: totalCount,
       action: 'compare'
     })
 
@@ -1050,6 +987,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       const uploadFiles = filesToProcess.filter((file) => file.action === 'upload')
       const downloadFiles = filesToProcess.filter((file) => file.action === 'download')
       const compareFiles = filesToProcess.filter((file) => file.action === 'compare')
+      let filesProcessedInSecondPhase = 0
 
       // 处理上传文件
       if (uploadFiles.length > 0) {
@@ -1057,11 +995,11 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
           uploadFiles,
           async (item) => {
             const success = await uploadFile(item.localPath, item.remotePath)
-            processedCount++
+            filesProcessedInSecondPhase++
             // 更新处理进度
             notifySyncProgress({
-              total: filesToProcess.length,
-              processed: processedCount,
+              total: uploadFiles.length,
+              processed: filesProcessedInSecondPhase,
               action: 'upload'
             })
             return { success, item }
@@ -1081,15 +1019,16 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
       // 处理下载文件
       if (downloadFiles.length > 0) {
+        filesProcessedInSecondPhase = 0 // 重置计数器
         const downloadResults = await processBatchesInParallel(
           downloadFiles,
           async (item) => {
             const success = await downloadFile(item.remotePath, item.localPath)
-            processedCount++
+            filesProcessedInSecondPhase++
             // 更新处理进度
             notifySyncProgress({
-              total: filesToProcess.length,
-              processed: processedCount,
+              total: downloadFiles.length,
+              processed: filesProcessedInSecondPhase,
               action: 'download'
             })
             return { success, item }
@@ -1109,74 +1048,49 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
       // 处理需要比较内容的文件
       if (compareFiles.length > 0) {
+        filesProcessedInSecondPhase = 0 // 重置计数器
         const compareResults = await processBatchesInParallel(
           compareFiles,
           async (item) => {
+            let currentAction: 'upload' | 'download' | 'skip' | 'compare' = 'compare'
+            let success = false
+
             if (!item.remotePath || !item.localPath) {
-              processedCount++
-              // 更新处理进度
-              notifySyncProgress({
-                total: filesToProcess.length,
-                processed: processedCount,
-                action: 'compare'
-              })
-              return {
-                action: 'skip' as const,
-                success: true,
-                item
+              currentAction = 'skip'
+              success = true
+            } else {
+              // 比较内容
+              const needSync = await compareFileContent(item.localPath, item.remotePath)
+
+              if (needSync) {
+                // 内容不同，以最新修改时间为准
+                if ((item.localModTime || 0) > (item.remoteModTime || 0)) {
+                  // 以本地为准，上传
+                  currentAction = 'upload'
+                  success = await uploadFile(item.localPath, item.remotePath)
+                } else {
+                  // 以远程为准，下载
+                  currentAction = 'download'
+                  success = await downloadFile(item.remotePath, item.localPath)
+                }
+              } else {
+                // 内容相同，不需要同步
+                currentAction = 'skip'
+                success = true
               }
             }
 
-            // 比较内容
-            const needSync = await compareFileContent(item.localPath, item.remotePath)
-
-            if (needSync) {
-              // 内容不同，以最新修改时间为准
-              if ((item.localModTime || 0) > (item.remoteModTime || 0)) {
-                // 以本地为准，上传
-                const success = await uploadFile(item.localPath, item.remotePath)
-                processedCount++
-                // 更新处理进度
-                notifySyncProgress({
-                  total: filesToProcess.length,
-                  processed: processedCount,
-                  action: 'upload'
-                })
-                return {
-                  action: 'upload' as const,
-                  success,
-                  item
-                }
-              } else {
-                // 以远程为准，下载
-                const success = await downloadFile(item.remotePath, item.localPath)
-                processedCount++
-                // 更新处理进度
-                notifySyncProgress({
-                  total: filesToProcess.length,
-                  processed: processedCount,
-                  action: 'download'
-                })
-                return {
-                  action: 'download' as const,
-                  success,
-                  item
-                }
-              }
-            } else {
-              // 内容相同，不需要同步
-              processedCount++
-              // 更新处理进度
-              notifySyncProgress({
-                total: filesToProcess.length,
-                processed: processedCount,
-                action: 'compare'
-              })
-              return {
-                action: 'skip' as const,
-                success: true,
-                item
-              }
+            filesProcessedInSecondPhase++
+            // 更新处理进度
+            notifySyncProgress({
+              total: compareFiles.length,
+              processed: filesProcessedInSecondPhase,
+              action: currentAction === 'skip' ? 'compare' : currentAction
+            })
+            return {
+              action: currentAction,
+              success,
+              item
             }
           },
           3,
@@ -1203,8 +1117,8 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
     // 最后一次进度更新，确保UI显示100%
     notifySyncProgress({
-      total: filesToProcess.length,
-      processed: filesToProcess.length,
+      total: 1,
+      processed: 1,
       action: 'compare'
     })
 

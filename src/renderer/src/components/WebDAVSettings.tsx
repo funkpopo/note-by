@@ -771,13 +771,17 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
       )}
 
       {/* 显示当前同步进度 */}
-      {syncProgress && !loading && (
+      {syncProgress && loading && (
         <Banner
           type="info"
           description={
             <div style={{ marginTop: '8px' }}>
               <Progress
-                percent={Math.floor((syncProgress.processed / syncProgress.total) * 100)}
+                percent={
+                  syncProgress.total > 0
+                    ? Math.floor((syncProgress.processed / syncProgress.total) * 100)
+                    : 0
+                }
                 showInfo
                 format={() => `${syncProgress.processed}/${syncProgress.total}`}
                 stroke={
