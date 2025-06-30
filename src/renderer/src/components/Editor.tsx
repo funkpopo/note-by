@@ -1395,7 +1395,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         </div>
         <div className="editor-right">
           <Space>
-            {AiApiConfigs.length > 0 && (
+            {currentFile && AiApiConfigs.length > 0 && (
               <>
                 <Select
                   value={selectedModelId}
