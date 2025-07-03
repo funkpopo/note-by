@@ -1048,7 +1048,7 @@ const DataAnalysis: React.FC = () => {
     }
 
     return (
-      <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
+      <div style={{ maxWidth: '100%', height: 350, marginBottom: 16 }}>
         <Title
           heading={6}
           style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
@@ -1205,7 +1205,7 @@ const DataAnalysis: React.FC = () => {
     }
 
     return (
-      <div style={{ maxWidth: '100%', height: vertical ? 350 : 250, marginBottom: 24 }}>
+      <div style={{ maxWidth: '100%', height: vertical ? 350 : 250, marginBottom: 16 }}>
         <Title
           heading={6}
           style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
@@ -1330,7 +1330,7 @@ const DataAnalysis: React.FC = () => {
     }
 
     return (
-      <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
+      <div style={{ maxWidth: '100%', height: 350, marginBottom: 16 }}>
         <Title
           heading={6}
           style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
@@ -1401,7 +1401,7 @@ const DataAnalysis: React.FC = () => {
     }
 
     return (
-      <div style={{ maxWidth: '100%', height: 350, marginBottom: 24 }}>
+      <div style={{ maxWidth: '100%', height: 350, marginBottom: 16 }}>
         <Title
           heading={6}
           style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
@@ -1494,7 +1494,7 @@ const DataAnalysis: React.FC = () => {
     }
 
     return (
-      <div style={{ maxWidth: '100%', height: 500, marginBottom: 24 }}>
+      <div style={{ maxWidth: '100%', height: 500, marginBottom: 16 }}>
         <Title
           heading={6}
           style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
@@ -1662,7 +1662,7 @@ const DataAnalysis: React.FC = () => {
       }
 
       return (
-        <div style={{ maxWidth: '100%', height: graphHeight + 50, marginBottom: 24 }}>
+        <div style={{ maxWidth: '100%', height: graphHeight + 50, marginBottom: 16 }}>
           <Title
             heading={6}
             style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
@@ -1945,12 +1945,12 @@ const DataAnalysis: React.FC = () => {
   return (
     <div
       style={{
-        padding: '16px',
-        maxWidth: '1200px',
+        padding: '8px 12px',
+        maxWidth: '1400px',
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 32px)' // 减去上下padding
+        height: 'calc(100vh - 16px)' // 减去上下padding
       }}
     >
       <Title heading={3} style={{ margin: 0, color: 'var(--semi-color-text-0)' }}>
@@ -1962,8 +1962,8 @@ const DataAnalysis: React.FC = () => {
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            marginBottom: 24,
-            marginTop: 20
+            marginBottom: 16,
+            marginTop: 16
           }}
         >
           <Space>
@@ -2071,7 +2071,7 @@ const DataAnalysis: React.FC = () => {
         )}
 
         {analysisResult && !isLoading && (
-          <div style={{ marginTop: 24, marginBottom: 24 }}>
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
             {analysisCached && (
               <div
                 style={{
@@ -2106,14 +2106,14 @@ const DataAnalysis: React.FC = () => {
               </div>
             )}
 
-            <Card style={{ padding: '8px 16px', marginBottom: '16px' }}>
+            <Card style={{ padding: '4px 12px', marginBottom: '16px' }}>
               <Title heading={4} style={{ margin: '16px 24px', color: 'var(--semi-color-text-0)' }}>
                 {analysisResult.summary}
               </Title>
 
               <Tabs type="line" style={{ marginTop: 16 }}>
                 <TabPane tab="写作习惯" itemKey="habits">
-                  <div style={{ padding: '16px 24px' }}>
+                  <div style={{ padding: '12px 16px' }}>
                     <Title
                       heading={5}
                       style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
@@ -2139,7 +2139,7 @@ const DataAnalysis: React.FC = () => {
                 </TabPane>
 
                 <TabPane tab="内容分析" itemKey="content">
-                  <div style={{ padding: '16px 24px' }}>
+                  <div style={{ padding: '12px 16px' }}>
                     <Title
                       heading={5}
                       style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
@@ -2199,7 +2199,7 @@ const DataAnalysis: React.FC = () => {
                 </TabPane>
 
                 <TabPane tab="改进建议" itemKey="suggestions">
-                  <div style={{ padding: '16px 24px' }}>
+                  <div style={{ padding: '12px 16px' }}>
                     <Title
                       heading={5}
                       style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
@@ -2274,7 +2274,7 @@ const DataAnalysis: React.FC = () => {
 
                 <TabPane tab="数据可视化" itemKey="visualization">
                   {statsData && activityData && (
-                    <div style={{ padding: '16px 24px' }}>
+                    <div style={{ padding: '12px 16px' }}>
                       <div
                         style={{
                           display: 'flex',

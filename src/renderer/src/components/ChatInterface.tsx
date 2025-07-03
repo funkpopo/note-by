@@ -486,7 +486,7 @@ const ChatInterface: React.FC = () => {
       return (
         <div
           style={{
-            margin: '16px',
+            margin: '8px',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
@@ -629,7 +629,7 @@ const ChatInterface: React.FC = () => {
       {/* 标题和设置区域 */}
       <div
         className="chat-header"
-        style={{ marginBottom: '16px', flexShrink: 0, padding: '0 16px' }}
+        style={{ marginBottom: '8px', flexShrink: 0, padding: '8px 16px 0' }}
       >
         <div
           style={{
@@ -678,10 +678,9 @@ const ChatInterface: React.FC = () => {
         style={{
           flex: 1,
           display: 'flex',
-          gap: '16px',
           minHeight: 0, // 确保flex收缩正常工作
           overflow: 'hidden', // 防止子元素溢出
-          padding: '0 16px 16px 16px' // 保留左右边距和少量底部边距
+          padding: '0 8px' // 保留左右边距和少量底部边距
         }}
       >
         {/* 主对话区域 */}
