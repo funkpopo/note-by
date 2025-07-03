@@ -9,7 +9,6 @@ import {
   Form,
   Modal,
   Empty,
-  Popconfirm,
   Spin,
   ButtonGroup,
   Tabs,
@@ -27,6 +26,7 @@ import {
 } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
+import './Settings.css'
 // 导入性能监控器
 import { performanceMonitor, type PerformanceMetrics } from '../utils/PerformanceMonitor'
 
@@ -333,15 +333,15 @@ const Settings: React.FC = () => {
                 >
                   编辑
                 </Button>
-                <Popconfirm
-                  title="确定要删除这个API配置吗？"
-                  content="删除后无法恢复"
-                  onConfirm={() => handleDeleteConfig(config.id)}
+                <Button
+                  icon={<IconDelete />}
+                  theme="borderless"
+                  type="danger"
+                  size="small"
+                  onClick={() => handleDeleteConfig(config.id)}
                 >
-                  <Button icon={<IconDelete />} theme="borderless" type="danger" size="small">
-                    删除
-                  </Button>
-                </Popconfirm>
+                  删除
+                </Button>
               </ButtonGroup>
             }
           >
@@ -627,12 +627,12 @@ const Settings: React.FC = () => {
   return (
     <div
       style={{
-        padding: '16px',
+        padding: '0px',
         maxWidth: '1200px',
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 32px)' // 减去上下padding
+        height: '100%'
       }}
     >
       <Title heading={2}>设置</Title>
