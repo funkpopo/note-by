@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, Notification } from 'electron'
 import path, { join, resolve } from 'path'
 import fsSync from 'fs' // 添加同步fs模块
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -52,6 +52,8 @@ import { memoryMonitor } from './utils/MemoryMonitor'
 import { performDatabaseMemoryCleanup } from './database'
 import { updaterService } from './updater'
 import { mainErrorHandler, ErrorCategory } from './utils/ErrorHandler'
+
+let tray: Tray | null = null
 
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
@@ -184,7 +186,70 @@ async function ensureMarkdownFolders(folderPath: string): Promise<void> {
 // 导出mainWindow，用于在其他模块中发送事件
 export let mainWindow: BrowserWindow | null = null
 
+function createTray(): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const appWithIsQuitting = app as any
+  tray = new Tray(icon)
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示 Note-by',
+      click: (): void => {
+        mainWindow?.show()
+      }
+    },
+    {
+      label: '立即同步',
+      click: async (): Promise<void> => {
+        const config = getWebDAVConfig()
+        if (!config.enabled) {
+          new Notification({
+            title: 'Note-by 同步',
+            body: 'WebDAV 同步未启用，请在设置中配置并启用。'
+          }).show()
+          return
+        }
+
+        new Notification({
+          title: 'Note-by 同步',
+          body: '正在准备同步...'
+        }).show()
+        try {
+          // 为配置添加运行时需要的本地路径
+          const fullConfig = { ...config, localPath: getMarkdownFolderPath() }
+          await syncBidirectional(fullConfig)
+          new Notification({
+            title: 'Note-by 同步',
+            body: '数据同步完成。'
+          }).show()
+        } catch (error) {
+          mainErrorHandler.error('Bidirectional sync from tray failed', error, ErrorCategory.WEBDAV)
+          new Notification({
+            title: 'Note-by 同步',
+            body: '同步失败，请检查配置或网络。'
+          }).show()
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: (): void => {
+        appWithIsQuitting.isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+  tray.setToolTip('Note-by')
+  tray.setContextMenu(contextMenu)
+  tray.on('click', () => {
+    mainWindow?.show()
+  })
+}
+
 function createWindow(): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const appWithIsQuitting = app as any
+  appWithIsQuitting.isQuitting = false
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 900,
@@ -249,6 +314,13 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  mainWindow.on('close', (event) => {
+    if (!appWithIsQuitting.isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
+  })
 }
 
 // 执行WebDAV自动同步
@@ -2066,6 +2138,7 @@ ${htmlContent}
   })
 
   createWindow()
+  createTray()
 
   // 应用启动时执行自动同步
   performAutoSync()
@@ -2159,10 +2232,21 @@ ${htmlContent}
   }
 
   app.on('activate', function () {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
+app.on('before-quit', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const appWithIsQuitting = app as any
+  appWithIsQuitting.isQuitting = true
+})
+
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()

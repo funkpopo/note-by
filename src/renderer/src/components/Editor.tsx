@@ -1387,7 +1387,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       <div className="editor-header">
         <div className="editor-title-container">
           <Typography.Title heading={4} style={{ margin: 0 }}>
-            {title || '未选择文件'}
+            {title || ''}
           </Typography.Title>
           {isEditing && (
             <span style={{ marginLeft: 10, color: 'var(--semi-color-warning)' }}>*</span>
