@@ -325,5 +325,12 @@ interface Window {
     window: {
       setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
     }
+    // 应用导航相关API
+    navigation: {
+      // 导航到指定视图
+      navigateToView: (viewKey: string) => Promise<{ success: boolean; error?: string }>
+      // 监听导航事件
+      onNavigate: (callback: (viewKey: string) => void) => () => void
+    }
   }
 }

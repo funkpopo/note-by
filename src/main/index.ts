@@ -126,7 +126,9 @@ const IPC_CHANNELS = {
   MEMORY_GET_STATS: 'memory:get-stats',
   MEMORY_GET_REPORT: 'memory:get-report',
   MEMORY_CLEANUP: 'memory:cleanup',
-  MEMORY_FORCE_GC: 'memory:force-gc'
+  MEMORY_FORCE_GC: 'memory:force-gc',
+  // 添加应用导航IPC通道
+  NAVIGATE_TO_VIEW: 'app:navigate-to-view'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -190,15 +192,63 @@ function createTray(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appWithIsQuitting = app as any
   tray = new Tray(icon)
+  
+  // 导航到指定视图的辅助函数
+  const navigateToView = async (viewKey: string): Promise<void> => {
+    try {
+      if (mainWindow) {
+        mainWindow.show()
+        mainWindow.focus()
+        // 发送导航事件到渲染进程
+        mainWindow.webContents.send('navigate-to-view', viewKey)
+      }
+    } catch (error) {
+      console.error('导航失败:', error)
+    }
+  }
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '显示 Note-by',
       click: (): void => {
         mainWindow?.show()
+        mainWindow?.focus()
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '📝 笔记',
+      click: (): void => {
+        navigateToView('Editor')
       }
     },
     {
-      label: '立即同步',
+      label: '📊 数据分析',
+      click: (): void => {
+        navigateToView('DataAnalysis')
+      }
+    },
+    {
+      label: '🧠 思维导图',
+      click: (): void => {
+        navigateToView('MindMap')
+      }
+    },
+    {
+      label: '💬 对话',
+      click: (): void => {
+        navigateToView('Chat')
+      }
+    },
+    {
+      label: '⚙️ 设置',
+      click: (): void => {
+        navigateToView('Settings')
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '🔄 立即同步',
       click: async (): Promise<void> => {
         const config = getWebDAVConfig()
         if (!config.enabled) {
@@ -243,6 +293,7 @@ function createTray(): void {
   tray.setContextMenu(contextMenu)
   tray.on('click', () => {
     mainWindow?.show()
+    mainWindow?.focus()
   })
 }
 
@@ -2132,6 +2183,22 @@ ${htmlContent}
       memoryMonitor.forceGarbageCollection()
       const stats = memoryMonitor.getCurrentStats()
       return { success: true, stats }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 应用导航处理器
+  ipcMain.handle(IPC_CHANNELS.NAVIGATE_TO_VIEW, async (_, viewKey: string) => {
+    try {
+      // 显示主窗口
+      if (mainWindow) {
+        mainWindow.show()
+        mainWindow.focus()
+        // 发送导航事件到渲染进程
+        mainWindow.webContents.send('navigate-to-view', viewKey)
+      }
+      return { success: true, viewKey }
     } catch (error) {
       return { success: false, error: String(error) }
     }

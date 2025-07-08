@@ -45,7 +45,7 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, fileListVersion }) => {
   const { isDarkMode, toggleTheme } = useTheme()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
   const [selectedKeys, setSelectedKeys] = useState<string[]>(['Editor'])
@@ -854,21 +854,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
             }}
             selectedKeys={selectedKeys}
             collapsed={collapsed}
-            onCollapseChange={handleCollapseChange}
             isCollapsed={collapsed}
             items={processedNavItems}
-            footer={{
-              collapseButton: (
-                <Button
-                  icon={collapsed ? <IconChevronRight /> : <IconChevronLeft />}
-                  onClick={(): void => handleCollapseChange(!collapsed)}
-                  type="tertiary"
-                  theme="borderless"
-                  style={{ display: 'block', margin: '12px auto' }}
-                  aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
-                />
-              )
-            }}
           />
 
           {/* 二级导航栏 */}

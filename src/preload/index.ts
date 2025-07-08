@@ -85,7 +85,9 @@ const IPC_CHANNELS = {
   DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
   DIALOG_SHOW_OPEN: 'dialog:showOpenDialog', // Re-using if a generic one is better, or make specific
   // 添加主题相关IPC通道
-  SET_WINDOW_BACKGROUND: 'window:set-background'
+  SET_WINDOW_BACKGROUND: 'window:set-background',
+  // 添加应用导航IPC通道
+  NAVIGATE_TO_VIEW: 'app:navigate-to-view'
 }
 
 // 内容生成请求接口
@@ -792,6 +794,23 @@ const api = {
   window: {
     setBackgroundColor: (backgroundColor: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SET_WINDOW_BACKGROUND, backgroundColor)
+  },
+  // 应用导航相关API
+  navigation: {
+    // 导航到指定视图
+    navigateToView: (viewKey: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.NAVIGATE_TO_VIEW, viewKey),
+    
+    // 监听导航事件
+    onNavigate: (callback: (viewKey: string) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, viewKey: string): void => {
+        callback(viewKey)
+      }
+      ipcRenderer.on('navigate-to-view', listener)
+      return () => {
+        ipcRenderer.removeListener('navigate-to-view', listener)
+      }
+    }
   },
   // 更新相关API
   updater: {

@@ -252,6 +252,15 @@ interface TagsAPI {
   }>
 }
 
+// 应用导航API接口定义
+interface NavigationAPI {
+  // 导航到指定视图
+  navigateToView: (viewKey: string) => Promise<{ success: boolean; error?: string }>
+  
+  // 监听导航事件
+  onNavigate: (callback: (viewKey: string) => void) => () => void
+}
+
 // 全局API接口定义
 interface API {
   settings: SettingsAPI
@@ -335,6 +344,7 @@ interface API {
   }
   analytics: AnalyticsAPI
   tags: TagsAPI
+  navigation: NavigationAPI
 }
 
 declare global {

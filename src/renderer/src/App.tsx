@@ -49,6 +49,17 @@ const App: React.FC = () => {
     }
   }, [])
 
+  // 监听来自主进程的导航事件
+  useEffect(() => {
+    const removeListener = window.api.navigation.onNavigate((viewKey: string) => {
+      console.log('收到导航事件:', viewKey)
+      handleNavChange(viewKey)
+    })
+
+    // 组件卸载时移除监听器
+    return removeListener
+  }, [])
+
   const renderContent = (): React.ReactNode => {
     switch (currentView) {
       case 'Settings':
