@@ -1384,100 +1384,102 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
       tabIndex={0} // 确保div可以接收键盘事件
       ref={editorContainerRef}
     >
-      <div className="editor-header">
-        <div className="editor-title-container">
-          <Typography.Title heading={4} style={{ margin: 0 }}>
-            {title || ''}
-          </Typography.Title>
-          {isEditing && (
-            <span style={{ marginLeft: 10, color: 'var(--semi-color-warning)' }}>*</span>
-          )}
-        </div>
-        <div className="editor-right">
-          <Space>
-            {currentFile && AiApiConfigs.length > 0 && (
-              <>
-                <Select
-                  value={selectedModelId}
-                  onChange={async (value) => {
-                    const modelId = value as string
-                    setSelectedModelId(modelId)
-                    try {
-                      await modelSelectionService.setSelectedModelId(modelId)
-                    } catch (error) {
-                      console.error('保存选中模型失败:', error)
-                      Toast.error('保存模型选择失败')
-                    }
-                  }}
-                  style={{ width: 150 }}
-                  placeholder="选择AI模型"
-                  disabled={AiApiConfigs.length === 0 || aiStatus === 'loading'}
-                >
-                  {AiApiConfigs.map((config) => (
-                    <Select.Option key={config.id} value={config.id}>
-                      {config.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </>
+      {currentFile && (
+        <div className="editor-header">
+          <div className="editor-title-container">
+            <Typography.Title heading={4} style={{ margin: 0 }}>
+              {title || ''}
+            </Typography.Title>
+            {isEditing && (
+              <span style={{ marginLeft: 10, color: 'var(--semi-color-warning)' }}>*</span>
             )}
-            {currentFile && (
-              <>
-                <HistoryDropdown
-                  filePath={
-                    currentFolder && currentFile ? `${currentFolder}/${currentFile}` : undefined
-                  }
-                  onRestore={handleRestoreHistory}
-                  disabled={!currentFile}
-                  containerRef={editorContainerRef}
-                />
-                <Button
-                  theme="solid"
-                  type="primary"
-                  icon={<IconSave />}
-                  onClick={saveFileContent}
-                  loading={isSaving}
-                  disabled={!currentFile}
-                >
-                  保存
-                </Button>
-                <Dropdown
-                  render={
-                    <Dropdown.Menu>
-                      <Dropdown.Item onClick={exportToPdf}>导出PDF</Dropdown.Item>
-                      <Dropdown.Item onClick={exportToDocx}>导出DOCX</Dropdown.Item>
-                      <Dropdown.Item onClick={exportToHtml}>导出HTML</Dropdown.Item>
-                    </Dropdown.Menu>
-                  }
-                  position="leftBottom"
-                  autoAdjustOverflow={false}
-                  trigger="click"
-                  getPopupContainer={() => editorContainerRef.current || document.body}
-                >
+          </div>
+          <div className="editor-right">
+            <Space>
+              {currentFile && AiApiConfigs.length > 0 && (
+                <>
+                  <Select
+                    value={selectedModelId}
+                    onChange={async (value) => {
+                      const modelId = value as string
+                      setSelectedModelId(modelId)
+                      try {
+                        await modelSelectionService.setSelectedModelId(modelId)
+                      } catch (error) {
+                        console.error('保存选中模型失败:', error)
+                        Toast.error('保存模型选择失败')
+                      }
+                    }}
+                    style={{ width: 150 }}
+                    placeholder="选择AI模型"
+                    disabled={AiApiConfigs.length === 0 || aiStatus === 'loading'}
+                  >
+                    {AiApiConfigs.map((config) => (
+                      <Select.Option key={config.id} value={config.id}>
+                        {config.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </>
+              )}
+              {currentFile && (
+                <>
+                  <HistoryDropdown
+                    filePath={
+                      currentFolder && currentFile ? `${currentFolder}/${currentFile}` : undefined
+                    }
+                    onRestore={handleRestoreHistory}
+                    disabled={!currentFile}
+                    containerRef={editorContainerRef}
+                  />
                   <Button
                     theme="solid"
-                    type="tertiary"
-                    icon={<IconFile />}
-                    suffix={<IconChevronDown />}
-                    loading={isExporting}
+                    type="primary"
+                    icon={<IconSave />}
+                    onClick={saveFileContent}
+                    loading={isSaving}
                     disabled={!currentFile}
                   >
-                    导出
+                    保存
                   </Button>
-                </Dropdown>
-                {autoSaveStatus === 'saving' && (
-                  <Typography.Text type="tertiary">自动保存...</Typography.Text>
-                )}
-                {memoryWarning && (
-                  <Typography.Text type="warning" style={{ fontSize: '12px' }}>
-                    {memoryWarning}
-                  </Typography.Text>
-                )}
-              </>
-            )}
-          </Space>
+                  <Dropdown
+                    render={
+                      <Dropdown.Menu>
+                        <Dropdown.Item onClick={exportToPdf}>导出PDF</Dropdown.Item>
+                        <Dropdown.Item onClick={exportToDocx}>导出DOCX</Dropdown.Item>
+                        <Dropdown.Item onClick={exportToHtml}>导出HTML</Dropdown.Item>
+                      </Dropdown.Menu>
+                    }
+                    position="leftBottom"
+                    autoAdjustOverflow={false}
+                    trigger="click"
+                    getPopupContainer={() => editorContainerRef.current || document.body}
+                  >
+                    <Button
+                      theme="solid"
+                      type="tertiary"
+                      icon={<IconFile />}
+                      suffix={<IconChevronDown />}
+                      loading={isExporting}
+                      disabled={!currentFile}
+                    >
+                      导出
+                    </Button>
+                  </Dropdown>
+                  {autoSaveStatus === 'saving' && (
+                    <Typography.Text type="tertiary">自动保存...</Typography.Text>
+                  )}
+                  {memoryWarning && (
+                    <Typography.Text type="warning" style={{ fontSize: '12px' }}>
+                      {memoryWarning}
+                    </Typography.Text>
+                  )}
+                </>
+              )}
+            </Space>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         style={{
