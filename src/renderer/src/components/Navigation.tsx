@@ -11,8 +11,6 @@ import {
   IconSearch,
   IconSearchStroked,
   IconClose,
-  IconChevronRight,
-  IconChevronLeft,
   IconMoreStroked,
   IconMoon,
   IconSun,
@@ -110,11 +108,6 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
   const navWidth = '160px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
-
-  // 使用 useCallback 记忆化这些函数
-  const handleCollapseChange = useCallback((status: boolean): void => {
-    setCollapsed(status)
-  }, [])
 
   const toggleSecondaryNav = useCallback((): void => {
     const newShowState = !showSecondaryNav
@@ -409,6 +402,12 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const handleContextMenu = (e: React.MouseEvent, itemKey: string, isFolder: boolean): void => {
     e.preventDefault()
     e.stopPropagation()
+
+    // 确保itemKey存在
+    if (!itemKey) {
+      console.warn('右键菜单: itemKey为空')
+      return
+    }
 
     // 计算菜单位置，确保不超出窗口边界
     const { x, y } = calculateMenuPosition(e.clientX, e.clientY, isFolder, false)
@@ -824,7 +823,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         prefix={<IconSearch />}
         placeholder="搜索笔记和文件夹..."
         size="small"
-        style={{ margin: '8px 0' }}
+        style={{ margin: '0px 2px 0px 2px' }}
         onChange={(value) => {
           setSearchText(value)
           if (searchProps.onChange) {
@@ -879,7 +878,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
               <div
                 className="empty-area"
                 style={{
-                  padding: '8px',
+                  padding: '8px 8px 8px 4px',
                   overflow: 'auto',
                   width: '100%',
                   height: '100%'
@@ -908,7 +907,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 ) : (
                   <div
                     className="secondary-nav-tree"
-                    style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px' }}
+                    style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '0px 0px 0px 0px' }}
                   >
                     <Tree
                       treeData={convertNavItemsToTreeData(navItems)}
@@ -917,10 +916,18 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                       onExpand={handleTreeExpand}
                       expandedKeys={searchText ? filteredExpandedKeys : expandedKeys}
                       onContextMenu={(e, node): void => {
-                        // 通过节点的key判断是文件夹还是文件
-                        const { itemKey, isFolder } = node.nodeData as NavItem & TreeNodeData
-                        const nodeKey = itemKey.toString()
-                        handleContextMenu(e, nodeKey, isFolder ?? false)
+                        e.preventDefault()
+                        e.stopPropagation()
+                        
+                        // 直接从node获取数据，Semi Design的Tree组件node就是TreeNodeData
+                        const nodeData = node as TreeNodeData & NavItem
+                        const nodeKey = nodeData.key?.toString() || ''
+                        
+                        // 根据key的格式判断是文件夹还是文件
+                        // folder:xxx 格式是文件夹，file:xxx:xxx 格式是文件
+                        const isFolder = nodeKey.startsWith('folder:')
+                        
+                        handleContextMenu(e, nodeKey, isFolder)
                       }}
                       emptyContent={
                         <Typography.Text type="tertiary" className="empty-area">
@@ -935,6 +942,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                       showFilteredOnly={showFilteredOnly}
                       searchRender={renderSearch}
                       onSearch={handleSearch}
+                      showLine={true}
+                      motion={false}
                     />
                   </div>
                 )}
