@@ -24,6 +24,8 @@ import { ConflictDetector } from '../utils/ConflictDetector'
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
 // 导入性能监控器
 import { performanceMonitor } from '../utils/PerformanceMonitor'
+// 导入渲染优化器
+import { scheduleRenderTask, processBatch } from '../utils/RenderOptimizer'
 import {
   SuggestionMenuController,
   getDefaultReactSlashMenuItems
@@ -814,7 +816,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     conflictDetectorRef.current.clearAllSnapshots()
   }, [editor])
 
-  // Load file content
+  // Load file content - 优化版本，使用渲染优化器
   const loadFileContent = useCallback(async () => {
     if (!currentFolder || !currentFile) {
       return
@@ -842,76 +844,101 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         // 更新当前加载的文件路径
         lastLoadedFileRef.current = filePath
 
-        // 尝试从内容中提取标签信息
-        const tagsMatch = result.content.match(/<!-- tags: ([^>]*) -->/)
-        let extractedTags: string[] = []
+        // 使用渲染优化器进行内容处理
+        const processedData = await scheduleRenderTask({
+          id: `process-content-${filePath}`,
+          priority: 'high',
+          callback: async () => {
+            // 尝试从内容中提取标签信息
+            const tagsMatch = result.content!.match(/<!-- tags: ([^>]*) -->/)
+            let extractedTags: string[] = []
 
-        if (tagsMatch && tagsMatch[1]) {
-          extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
-        }
+            if (tagsMatch && tagsMatch[1]) {
+              extractedTags = tagsMatch[1].split(',').map((tag) => tag.trim())
+            }
 
-        // 移除标签信息行，避免在编辑器中显示
-        let contentWithoutTags = result.content.replace(/<!-- tags: ([^>]*) -->\n\n/, '')
+            // 移除标签信息行，避免在编辑器中显示
+            let contentWithoutTags = result.content!.replace(/<!-- tags: ([^>]*) -->\n\n/, '')
 
-        // 预处理Markdown内容，将@tag格式转换为可识别的特殊格式
-        // 同时提取内联的@标签
-        const inlineTagsFromMarkdown = extractTagsFromMarkdown(contentWithoutTags)
+            // 预处理Markdown内容，将@tag格式转换为可识别的特殊格式
+            // 同时提取内联的@标签
+            const inlineTagsFromMarkdown = extractTagsFromMarkdown(contentWithoutTags)
 
-        // 合并所有标签
-        const allTags = [...new Set([...extractedTags, ...inlineTagsFromMarkdown])]
-        setTagList(allTags)
+            // 合并所有标签
+            const allTags = [...new Set([...extractedTags, ...inlineTagsFromMarkdown])]
 
-        // 预处理Markdown将@tag转换为特殊标记以便后续处理
-        contentWithoutTags = preprocessMarkdownForTags(contentWithoutTags)
+            // 预处理Markdown将@tag转换为特殊标记以便后续处理
+            contentWithoutTags = preprocessMarkdownForTags(contentWithoutTags)
 
-        // 存储内容
-        setEditorContent(contentWithoutTags)
+            return { contentWithoutTags, allTags }
+          }
+        })
 
-        // 生成新的key强制重新挂载编辑器
+        // 立即设置状态
+        setTagList(processedData.allTags)
+        setEditorContent(processedData.contentWithoutTags)
         setEditorKey(`editor-${Date.now()}`)
-
-        // 从文件名设置标题
         setTitle(currentFile.replace('.md', ''))
 
-        // 在下一个事件循环中延迟加载内容到编辑器
-        // 这确保了组件状态已经更新
-        setTimeout(async () => {
-          try {
-            // 确保content是字符串
-            const content = contentWithoutTags || ''
+        // 异步处理编辑器渲染（中等优先级）
+        scheduleRenderTask({
+          id: `render-editor-${filePath}`,
+          priority: 'medium',
+          callback: async () => {
+            try {
+              // 解析Markdown内容为块结构
+              let blocks = await editor.tryParseMarkdownToBlocks(processedData.contentWithoutTags)
 
-            // 解析Markdown内容为块结构
-            let blocks = await editor.tryParseMarkdownToBlocks(content)
-
-            // 后处理块，将特殊标记转换为Tag内联内容
-            blocks = postprocessBlocksForTags(blocks)
-
-            // 使用处理后的块更新编辑器
-            editor.replaceBlocks(editor.document, blocks)
-            setIsEditing(false)
-
-            // 记录加载完成时间和性能指标
-            const loadEndTime = performance.now()
-            const loadDuration = loadEndTime - loadStartTime
-            performanceMonitor.recordEditorPerformance('load', loadDuration)
-            performanceMonitor.recordUserAction('load')
-
-            // 延迟设置正确的比较基准，确保与handleEditorChange中的格式一致
-            setTimeout(async () => {
-              try {
-                const standardizedContent = await editor.blocksToMarkdownLossy(editor.document)
-                lastSavedContentRef.current = standardizedContent
-
-                // 创建冲突检测快照
-                await conflictDetectorRef.current.createSnapshot(filePath, standardizedContent)
-              } catch (err) {
-                // 设置基准失败，继续执行
+              // 使用批处理优化标签后处理
+              if (blocks.length > 10) {
+                blocks = await processBatch(
+                  blocks,
+                  async (block) => {
+                    const processedBlocks = postprocessBlocksForTags([block])
+                    return processedBlocks[0]
+                  },
+                  { batchSize: 10, useIdleCallback: true }
+                )
+              } else {
+                blocks = postprocessBlocksForTags(blocks)
               }
-            }, 100)
-          } catch (err) {
-            // 解析失败，继续执行
+
+              // 使用处理后的块更新编辑器
+              editor.replaceBlocks(editor.document, blocks)
+              setIsEditing(false)
+
+              // 记录加载完成时间和性能指标
+              const loadEndTime = performance.now()
+              const loadDuration = loadEndTime - loadStartTime
+              performanceMonitor.recordEditorPerformance('load', loadDuration)
+              performanceMonitor.recordUserAction('load')
+
+              return blocks
+            } catch (err) {
+              console.warn('编辑器内容解析失败:', err)
+              return []
+            }
           }
-        }, 0)
+        })
+
+        // 异步设置基准内容（低优先级）
+        scheduleRenderTask({
+          id: `set-baseline-${filePath}`,
+          priority: 'low',
+          callback: async () => {
+            try {
+              await new Promise(resolve => setTimeout(resolve, 100)) // 等待编辑器稳定
+              const standardizedContent = await editor.blocksToMarkdownLossy(editor.document)
+              lastSavedContentRef.current = standardizedContent
+
+              // 创建冲突检测快照
+              await conflictDetectorRef.current.createSnapshot(filePath, standardizedContent)
+            } catch (err) {
+              console.warn('设置基准内容失败:', err)
+            }
+          }
+        })
+
       } else {
         Toast.error('无法加载文件内容')
         lastLoadedFileRef.current = null
@@ -922,7 +949,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     } finally {
       setIsLoading(false)
     }
-  }, [currentFolder, currentFile, editor, clearEditor, setTagList])
+  }, [currentFolder, currentFile, editor, clearEditor, setTagList, editorContent])
 
   // Effect to reset editor when the key changes
   useEffect(() => {

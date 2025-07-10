@@ -90,6 +90,11 @@ export class EditorMemoryManager {
   private maxCacheSize = 50 * 1024 * 1024 // 50MB
   private currentCacheSize = 0
 
+  // 渲染结果缓存
+  private renderCache: Map<string, { result: any; size: number; lastAccess: number }> = new Map()
+  private maxRenderCacheSize = 20 * 1024 * 1024 // 20MB
+  private currentRenderCacheSize = 0
+
   // 图片缓存和优化
   private imageCache: Map<string, { data: Blob; size: number; lastAccess: number }> = new Map()
   private maxImageCacheSize = 100 * 1024 * 1024 // 100MB
@@ -152,7 +157,9 @@ export class EditorMemoryManager {
 
     // 估算总内存使用（包括缓存等）
     const cacheMemory =
-      this.currentCacheSize / (1024 * 1024) + this.currentImageCacheSize / (1024 * 1024)
+      this.currentCacheSize / (1024 * 1024) + 
+      this.currentImageCacheSize / (1024 * 1024) + 
+      this.currentRenderCacheSize / (1024 * 1024)
     const totalUsed = jsHeapUsed + cacheMemory
     const totalAvailable = Math.max(jsHeapLimit, totalUsed * 1.5) // 估算总可用内存
 
@@ -352,6 +359,10 @@ export class EditorMemoryManager {
     this.imageCache.clear()
     this.currentImageCacheSize = 0
 
+    // 清空渲染缓存
+    this.renderCache.clear()
+    this.currentRenderCacheSize = 0
+
     // 强制执行清理
     await this.performMemoryCleanup(true)
 
@@ -420,6 +431,83 @@ export class EditorMemoryManager {
       return true
     }
     return false
+  }
+
+  /**
+   * 缓存渲染结果
+   */
+  cacheRenderResult(id: string, result: any): void {
+    const size = new Blob([JSON.stringify(result)]).size
+
+    // 检查缓存大小限制
+    if (this.currentRenderCacheSize + size > this.maxRenderCacheSize) {
+      this.evictRenderCache(size)
+    }
+
+    // 删除旧的缓存项
+    const oldItem = this.renderCache.get(id)
+    if (oldItem) {
+      this.currentRenderCacheSize -= oldItem.size
+    }
+
+    // 添加新的缓存项
+    this.renderCache.set(id, {
+      result,
+      size,
+      lastAccess: Date.now()
+    })
+    this.currentRenderCacheSize += size
+  }
+
+  /**
+   * 获取缓存的渲染结果
+   */
+  getCachedRenderResult(id: string): any | null {
+    const item = this.renderCache.get(id)
+    if (item) {
+      item.lastAccess = Date.now()
+      return item.result
+    }
+    return null
+  }
+
+  /**
+   * 清除渲染缓存项
+   */
+  clearCachedRenderResult(id: string): boolean {
+    const item = this.renderCache.get(id)
+    if (item) {
+      this.renderCache.delete(id)
+      this.currentRenderCacheSize -= item.size
+      return true
+    }
+    return false
+  }
+
+  /**
+   * 淘汰渲染缓存项
+   */
+  private evictRenderCache(requiredSpace: number): void {
+    const itemsToEvict: Array<{ id: string; item: any }> = []
+    let spaceToFree = requiredSpace
+
+    // 按最后访问时间排序（旧的先淘汰）
+    const allItems = Array.from(this.renderCache.entries()).sort(
+      ([, a], [, b]) => a.lastAccess - b.lastAccess
+    )
+
+    for (const [id, item] of allItems) {
+      if (spaceToFree <= 0) break
+
+      itemsToEvict.push({ id, item })
+      spaceToFree -= item.size
+    }
+
+    // 淘汰选中的项目
+    for (const { id, item } of itemsToEvict) {
+      this.renderCache.delete(id)
+      this.currentRenderCacheSize -= item.size
+    }
   }
 
   /**
@@ -722,6 +810,7 @@ export class EditorMemoryManager {
     cacheStats: {
       contentCache: { items: number; size: number }
       imageCache: { items: number; size: number }
+      renderCache: { items: number; size: number }
     }
     lastCleanupTime: number
   }> {
@@ -738,6 +827,10 @@ export class EditorMemoryManager {
         imageCache: {
           items: this.imageCache.size,
           size: this.currentImageCacheSize
+        },
+        renderCache: {
+          items: this.renderCache.size,
+          size: this.currentRenderCacheSize
         }
       },
       lastCleanupTime: this.lastCleanupTime

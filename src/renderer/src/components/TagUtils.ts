@@ -1,4 +1,5 @@
 import globalTagManager from '../utils/GlobalTagManager'
+import { processBatch } from '../utils/RenderOptimizer'
 
 export interface Editor {
   insertInlineContent: (content: unknown) => void
@@ -293,6 +294,101 @@ export const postprocessBlocksForTags = (blocks: any): any => {
   processedBlocks.forEach(processBlock)
 
   return processedBlocks
+}
+
+// 新增: 异步版本的标签后处理函数，适用于大量块数据
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const postprocessBlocksForTagsAsync = async (blocks: any): Promise<any> => {
+  if (!blocks || !Array.isArray(blocks)) return blocks
+
+  // 对于少量块，直接使用同步版本
+  if (blocks.length <= 20) {
+    return postprocessBlocksForTags(blocks)
+  }
+
+  // 深拷贝以避免修改原始内容
+  const processedBlocks = JSON.parse(JSON.stringify(blocks))
+
+  // 使用批处理进行异步处理
+  const processedResults = await processBatch(
+    processedBlocks,
+    async (block) => {
+      // 递归处理块内容
+      const processBlock = (blockToProcess: any): void => {
+        // 处理块的内容
+        if (Array.isArray(blockToProcess.content)) {
+          // 创建新的内容数组
+          const newContent: any[] = []
+
+          blockToProcess.content.forEach((item: any) => {
+            // 检查文本内容是否包含标签标记 {{@tagname}}
+            if (item.type === 'text' && item.text) {
+              const tagRegex = /\{\{@([a-zA-Z0-9_\u4e00-\u9fa5]+)\}\}/g
+              let lastIndex = 0
+              let match
+
+              // 重置正则表达式
+              tagRegex.lastIndex = 0
+
+              // 查找所有标签标记
+              while ((match = tagRegex.exec(item.text)) !== null) {
+                // 添加标记前的文本
+                if (match.index > lastIndex) {
+                  newContent.push({
+                    type: 'text',
+                    text: item.text.substring(lastIndex, match.index),
+                    styles: { ...item.styles }
+                  })
+                }
+
+                // 添加标签
+                newContent.push({
+                  type: 'tag',
+                  props: {
+                    name: match[1]
+                  }
+                })
+
+                lastIndex = tagRegex.lastIndex
+              }
+
+              // 添加剩余文本
+              if (lastIndex < item.text.length) {
+                newContent.push({
+                  type: 'text',
+                  text: item.text.substring(lastIndex),
+                  styles: { ...item.styles }
+                })
+              }
+            } else {
+              // 保留非文本内容
+              newContent.push(item)
+            }
+          })
+
+          // 更新块内容
+          blockToProcess.content = newContent
+        }
+
+        // 递归处理子块
+        if (Array.isArray(blockToProcess.children)) {
+          blockToProcess.children.forEach((child: any) => {
+            processBlock(child)
+          })
+        }
+      }
+
+      processBlock(block)
+      return block
+    },
+    {
+      batchSize: 10,
+      useIdleCallback: true,
+      delayBetweenBatches: 8
+    }
+  )
+
+  return processedResults
 }
 
 // 新增: 获取全局标签建议（用于编辑器集成）
