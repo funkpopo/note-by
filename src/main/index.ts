@@ -53,6 +53,29 @@ import { performDatabaseMemoryCleanup } from './database'
 import { updaterService } from './updater'
 import { mainErrorHandler, ErrorCategory } from './utils/ErrorHandler'
 
+// 导出mainWindow，用于在其他模块中发送事件
+export let mainWindow: BrowserWindow | null = null
+
+// 实现单实例锁，确保只有一个应用实例在运行
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  console.log('应用已经在运行中，退出当前实例')
+  app.quit()
+} else {
+  // 监听第二个实例的启动
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // 如果用户尝试打开第二个实例，我们应该聚焦到主窗口
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
 let tray: Tray | null = null
 
 // 设置的IPC通信频道
@@ -184,9 +207,6 @@ async function ensureMarkdownFolders(folderPath: string): Promise<void> {
     throw error
   }
 }
-
-// 导出mainWindow，用于在其他模块中发送事件
-export let mainWindow: BrowserWindow | null = null
 
 function createTray(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
