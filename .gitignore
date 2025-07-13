@@ -11,4 +11,5 @@ note_history.db
 webdav_sync_cache.json
 .serena
 .codelf
+.webpack
 issues
