@@ -48,6 +48,7 @@ import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import Showdown from 'showdown'
 import { fileStreamManager } from './utils/FileStreamManager'
+import { memoryService, MemoryConfig } from './memory'
 import { memoryMonitor } from './utils/MemoryMonitor'
 import { performDatabaseMemoryCleanup } from './database'
 import { updaterService } from './updater'
@@ -148,6 +149,16 @@ const IPC_CHANNELS = {
   // 添加内存监控IPC通道
   MEMORY_GET_STATS: 'memory:get-stats',
   MEMORY_GET_REPORT: 'memory:get-report',
+  // 添加记忆功能IPC通道
+  MEM0_INITIALIZE: 'mem0:initialize',
+  MEM0_ADD_MEMORY: 'mem0:add-memory',
+  MEM0_ADD_CONVERSATION: 'mem0:add-conversation',
+  MEM0_SEARCH_MEMORIES: 'mem0:search-memories',
+  MEM0_GET_ALL_MEMORIES: 'mem0:get-all-memories',
+  MEM0_DELETE_MEMORY: 'mem0:delete-memory',
+  MEM0_UPDATE_MEMORY: 'mem0:update-memory',
+  MEM0_GET_CONFIG: 'mem0:get-config',
+  MEM0_UPDATE_CONFIG: 'mem0:update-config',
   MEMORY_CLEANUP: 'memory:cleanup',
   MEMORY_FORCE_GC: 'memory:force-gc',
   // 添加应用导航IPC通道
@@ -2208,6 +2219,100 @@ ${htmlContent}
     }
   })
 
+  // ===============================
+  // 记忆功能相关IPC处理函数
+  // ===============================
+
+  // 初始化记忆服务
+  ipcMain.handle(IPC_CHANNELS.MEM0_INITIALIZE, async (_, config: MemoryConfig) => {
+    try {
+      const result = await memoryService.initialize(config)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 添加单个记忆
+  ipcMain.handle(IPC_CHANNELS.MEM0_ADD_MEMORY, async (_, content: string, userId: string, metadata?: Record<string, any>) => {
+    try {
+      const result = await memoryService.addMemory(content, userId, metadata)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 添加对话记忆
+  ipcMain.handle(IPC_CHANNELS.MEM0_ADD_CONVERSATION, async (_, messages: Array<{ role: 'user' | 'assistant'; content: string }>, userId: string, metadata?: Record<string, any>) => {
+    try {
+      const result = await memoryService.addConversation(messages, userId, metadata)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 搜索记忆
+  ipcMain.handle(IPC_CHANNELS.MEM0_SEARCH_MEMORIES, async (_, query: string, userId: string, limit = 10) => {
+    try {
+      const result = await memoryService.searchMemories(query, userId, limit)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取所有记忆
+  ipcMain.handle(IPC_CHANNELS.MEM0_GET_ALL_MEMORIES, async (_, userId: string) => {
+    try {
+      const result = await memoryService.getAllMemories(userId)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 删除记忆
+  ipcMain.handle(IPC_CHANNELS.MEM0_DELETE_MEMORY, async (_, memoryId: string) => {
+    try {
+      const result = await memoryService.deleteMemory(memoryId)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 更新记忆
+  ipcMain.handle(IPC_CHANNELS.MEM0_UPDATE_MEMORY, async (_, memoryId: string, newContent: string) => {
+    try {
+      const result = await memoryService.updateMemory(memoryId, newContent)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取记忆配置
+  ipcMain.handle(IPC_CHANNELS.MEM0_GET_CONFIG, async () => {
+    try {
+      const config = memoryService.getConfig()
+      return { success: true, config }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 更新记忆配置
+  ipcMain.handle(IPC_CHANNELS.MEM0_UPDATE_CONFIG, async (_, config: MemoryConfig) => {
+    try {
+      const result = await memoryService.updateConfig(config)
+      return result
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
   // 应用导航处理器
   ipcMain.handle(IPC_CHANNELS.NAVIGATE_TO_VIEW, async (_, viewKey: string) => {
     try {
@@ -2232,6 +2337,23 @@ ${htmlContent}
 
   // 在应用启动时检查更新
   checkUpdatesOnStartup()
+
+  // 检测并创建memories文件夹
+  const ensureMemoriesDir = () => {
+    try {
+      const memoriesPath = is.dev 
+        ? path.join(process.cwd(), 'markdown', '.assets', 'memories')
+        : path.join(path.dirname(app.getPath('exe')), 'markdown', '.assets', 'memories')
+      
+      if (!fsSync.existsSync(memoriesPath)) {
+        fsSync.mkdirSync(memoriesPath, { recursive: true })
+        console.log('Created memories directory:', memoriesPath)
+      }
+    } catch (error) {
+      console.error('Failed to create memories directory:', error)
+    }
+  }
+  ensureMemoriesDir()
 
   // 启动内存监控
   memoryMonitor.start()

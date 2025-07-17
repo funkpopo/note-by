@@ -47,6 +47,7 @@
     "html-to-image": "^1.11.13",
     "lru-cache": "^11.1.0",
     "md-to-pdf": "^5.2.4",
+    "mem0ai": "^2.1.36",
     "openai": "^5.8.3",
     "react-markdown": "^10.1.0",
     "react-window-infinite-loader": "^1.0.10",

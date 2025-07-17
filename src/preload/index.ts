@@ -87,7 +87,17 @@ const IPC_CHANNELS = {
   // 添加主题相关IPC通道
   SET_WINDOW_BACKGROUND: 'window:set-background',
   // 添加应用导航IPC通道
-  NAVIGATE_TO_VIEW: 'app:navigate-to-view'
+  NAVIGATE_TO_VIEW: 'app:navigate-to-view',
+  // 添加记忆功能IPC通道
+  MEM0_INITIALIZE: 'mem0:initialize',
+  MEM0_ADD_MEMORY: 'mem0:add-memory',
+  MEM0_ADD_CONVERSATION: 'mem0:add-conversation',
+  MEM0_SEARCH_MEMORIES: 'mem0:search-memories',
+  MEM0_GET_ALL_MEMORIES: 'mem0:get-all-memories',
+  MEM0_DELETE_MEMORY: 'mem0:delete-memory',
+  MEM0_UPDATE_MEMORY: 'mem0:update-memory',
+  MEM0_GET_CONFIG: 'mem0:get-config',
+  MEM0_UPDATE_CONFIG: 'mem0:update-config'
 }
 
 // 内容生成请求接口
@@ -794,6 +804,71 @@ const api = {
   window: {
     setBackgroundColor: (backgroundColor: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.SET_WINDOW_BACKGROUND, backgroundColor)
+  },
+  // 记忆功能相关API
+  memory: {
+    // 初始化记忆服务
+    initialize: (config: any): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MEM0_INITIALIZE, config),
+    
+    // 添加单个记忆
+    addMemory: (content: string, userId: string, metadata?: Record<string, any>): Promise<{
+      success: boolean
+      memoryId?: string
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_ADD_MEMORY, content, userId, metadata),
+    
+    // 添加对话记忆
+    addConversation: (
+      messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+      userId: string,
+      metadata?: Record<string, any>
+    ): Promise<{
+      success: boolean
+      memoryId?: string
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_ADD_CONVERSATION, messages, userId, metadata),
+    
+    // 搜索记忆
+    searchMemories: (query: string, userId: string, limit?: number): Promise<{
+      success: boolean
+      memories?: Array<{
+        id: string
+        content: string
+        metadata?: Record<string, any>
+        score?: number
+        created_at?: string
+      }>
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_SEARCH_MEMORIES, query, userId, limit),
+    
+    // 获取所有记忆
+    getAllMemories: (userId: string): Promise<{
+      success: boolean
+      memories?: Array<{
+        id: string
+        content: string
+        metadata?: Record<string, any>
+        created_at?: string
+      }>
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_GET_ALL_MEMORIES, userId),
+    
+    // 删除记忆
+    deleteMemory: (memoryId: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MEM0_DELETE_MEMORY, memoryId),
+    
+    // 更新记忆
+    updateMemory: (memoryId: string, newContent: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MEM0_UPDATE_MEMORY, memoryId, newContent),
+    
+    // 获取配置
+    getConfig: (): Promise<{ success: boolean; config?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MEM0_GET_CONFIG),
+    
+    // 更新配置
+    updateConfig: (config: any): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.MEM0_UPDATE_CONFIG, config)
   },
   // 应用导航相关API
   navigation: {

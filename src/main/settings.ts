@@ -9,6 +9,7 @@ import {
   decryptWithPassword,
   generateEncryptionTest
 } from './encryption'
+import { MemoryConfig } from './memory'
 
 // 获取settings.json的存储路径
 // 在开发环境中，文件位于项目根目录下
@@ -71,6 +72,13 @@ const defaultSettings = {
     encryptionTest: '',
     encryptionTestPlain: ''
   } as WebDAVConfig,
+  // 默认记忆功能配置
+  memory: {
+    enabled: false,
+    apiKey: '',
+    model: 'gpt-4o-mini',
+    temperature: 0.1
+  } as MemoryConfig,
   // 默认更新设置
   checkUpdatesOnStartup: true,
   // 默认历史记录管理设置

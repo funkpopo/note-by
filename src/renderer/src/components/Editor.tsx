@@ -1082,6 +1082,32 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           refreshGlobalTagCache().catch(() => {
             // 刷新失败，继续执行
           })
+
+          // 记忆保存：将markdown内容添加到记忆中（异步执行，不阻塞保存流程）
+          try {
+            // 检查记忆功能是否启用
+            const memoryConfigResult = await (window as any).api.memory.getConfig()
+            if (memoryConfigResult.success && memoryConfigResult.config?.enabled && markdown.trim()) {
+              // 构建记忆内容
+              const memoryContent = `文件：${currentFile}\n内容：${markdown.slice(0, 1000)}${markdown.length > 1000 ? '...' : ''}`
+              
+              // 构建元数据
+              const metadata = {
+                source: 'markdown_save',
+                filename: currentFile,
+                folder: currentFolder,
+                tags: tags,
+                timestamp: new Date().toISOString(),
+                content_length: markdown.length
+              }
+
+              // 添加到记忆
+              await (window as any).api.memory.addMemory(memoryContent, 'user', metadata)
+            }
+          } catch (memoryError) {
+            // 记忆保存失败不影响主要功能，只在控制台记录
+            console.warn('Failed to save to memory:', memoryError)
+          }
         } else {
           // 只有手动保存才显示错误提示
           if (!isAutoSave) {

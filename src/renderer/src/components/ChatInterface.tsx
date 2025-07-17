@@ -108,6 +108,31 @@ const ChatInterface: React.FC = () => {
           throw new Error('请先配置AI API')
         }
 
+        // 记忆检索：尝试从记忆中获取相关信息来增强提示
+        let enhancedPrompt = userContent
+        try {
+          const memoryConfigResult = await (window as any).api.memory.getConfig()
+          if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
+            // 搜索相关记忆
+            const memorySearchResult = await (window as any).api.memory.searchMemories(userContent, 'user', 5)
+            if (memorySearchResult.success && memorySearchResult.memories?.length > 0) {
+              const relevantMemories = memorySearchResult.memories
+                .map(memory => `记忆：${memory.content}`)
+                .join('\n')
+              
+              enhancedPrompt = `基于以下记忆内容回答用户问题：
+${relevantMemories}
+
+用户问题：${userContent}
+
+请根据记忆内容提供个性化的回答，如果记忆内容与问题相关，请充分利用这些信息。`
+            }
+          }
+        } catch (memoryError) {
+          console.warn('Memory retrieval failed:', memoryError)
+          // 记忆检索失败不影响正常对话
+        }
+
         // 创建初始的流式消息
         const streamMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -121,13 +146,13 @@ const ChatInterface: React.FC = () => {
         setMessages((prev) => [...prev, streamMessage])
         setStreamingMessageId(streamMessage.id?.toString() || null)
 
-        // 调用流式AI API
+        // 调用流式AI API，使用增强的提示
         const streamResult = await window.api.openai.streamGenerateContent(
           {
             apiKey: aiConfig.apiKey,
             apiUrl: aiConfig.apiUrl,
             modelName: aiConfig.modelName,
-            prompt: userContent,
+            prompt: enhancedPrompt,
             maxTokens: parseInt(aiConfig.maxTokens || '2000')
           },
           {
@@ -161,6 +186,33 @@ const ChatInterface: React.FC = () => {
                 }
                 return newMessages
               })
+
+              // 保存对话记忆（异步执行，不阻塞UI）
+              setTimeout(async () => {
+                try {
+                  const memoryConfigResult = await (window as any).api.memory.getConfig()
+                  if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
+                    // 构建对话消息数组
+                    const conversationMessages = [
+                      { role: 'user' as const, content: userContent },
+                      { role: 'assistant' as const, content: fullContent }
+                    ]
+
+                    // 构建元数据
+                    const metadata = {
+                      source: 'chat_conversation',
+                      timestamp: new Date().toISOString(),
+                      ai_config: aiConfig.name,
+                      model: aiConfig.modelName
+                    }
+
+                    // 保存对话到记忆
+                    await (window as any).api.memory.addConversation(conversationMessages, 'user', metadata)
+                  }
+                } catch (memoryError) {
+                  console.warn('Failed to save conversation to memory:', memoryError)
+                }
+              }, 100)
 
               // 清理状态
               setIsGenerating(false)

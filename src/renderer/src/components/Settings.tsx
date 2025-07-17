@@ -82,6 +82,16 @@ const Settings: React.FC = () => {
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null)
   const [isExportingPerformance, setIsExportingPerformance] = useState(false)
 
+  // 记忆功能相关状态
+  const [memoryConfig, setMemoryConfig] = useState({
+    enabled: false,
+    apiKey: '',
+    model: 'gpt-4o-mini',
+    temperature: 0.1
+  })
+  const [isTestingMemory, setIsTestingMemory] = useState(false)
+  const [memoryTestResult, setMemoryTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
   // 加载设置函数
   const loadSettings = useCallback(async (): Promise<void> => {
     try {
@@ -101,6 +111,11 @@ const Settings: React.FC = () => {
       // 加载历史记录管理设置
       if (settings.historyManagement) {
         setHistoryManagement(settings.historyManagement as HistoryManagementSettings)
+      }
+
+      // 加载记忆功能设置
+      if (settings.memory) {
+        setMemoryConfig(settings.memory as typeof memoryConfig)
       }
     } catch (error) {
       Toast.error('加载设置失败')
@@ -569,6 +584,53 @@ const Settings: React.FC = () => {
     Toast.success('性能统计已重置')
   }, [loadPerformanceMetrics])
 
+  // 记忆功能相关处理函数
+  const handleMemoryConfigChange = async (field: string, value: any): Promise<void> => {
+    try {
+      const newConfig = { ...memoryConfig, [field]: value }
+      setMemoryConfig(newConfig)
+      
+      // 保存到设置
+      await window.api.settings.set('memory', newConfig)
+      
+      // 如果启用状态改变，需要初始化或关闭服务
+      if (field === 'enabled' || field === 'apiKey') {
+        await (window as any).api.memory.updateConfig(newConfig)
+      }
+      
+      Toast.success('记忆功能配置已保存')
+    } catch (error) {
+      Toast.error('保存记忆配置失败')
+      console.error('Memory config save error:', error)
+    }
+  }
+
+  const handleTestMemoryConnection = async (): Promise<void> => {
+    try {
+      setIsTestingMemory(true)
+      setMemoryTestResult(null)
+      
+      if (!memoryConfig.apiKey) {
+        setMemoryTestResult({ success: false, message: '请先配置Mem0 API密钥' })
+        return
+      }
+      
+      // 测试记忆服务初始化
+      const result = await (window as any).api.memory.initialize(memoryConfig)
+      
+      if (result.success) {
+        setMemoryTestResult({ success: true, message: '记忆服务连接成功！' })
+      } else {
+        setMemoryTestResult({ success: false, message: result.error || '连接失败' })
+      }
+    } catch (error) {
+      setMemoryTestResult({ success: false, message: '测试连接时发生错误' })
+      console.error('Memory test error:', error)
+    } finally {
+      setIsTestingMemory(false)
+    }
+  }
+
   // 导出性能数据
   const handleExportPerformanceData = useCallback(async () => {
     try {
@@ -847,6 +909,126 @@ const Settings: React.FC = () => {
                   {historyManagement.type === 'count'
                     ? `系统将为每个文件保留最近的 ${historyManagement.maxCount} 条历史记录。超出的记录将被自动清理。`
                     : `系统将自动清理 ${historyManagement.maxDays} 天前的历史记录。`}
+                </Paragraph>
+              </Form>
+            </Card>
+          </div>
+        </TabPane>
+
+        <TabPane tab="记忆功能" itemKey="memory">
+          <div className="settings-scroll-container">
+            <Card
+              title="记忆功能设置"
+              style={{ marginBottom: 20 }}
+            >
+              <Form onValueChange={(values) => console.log('Memory form values:', values)}>
+                <div style={{ maxWidth: 600 }}>
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>启用记忆功能</Text>
+                  </div>
+                  <Switch
+                    checked={memoryConfig.enabled}
+                    onChange={(checked) => handleMemoryConfigChange('enabled', checked)}
+                  />
+                  <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                    开启后，AI将能够记住对话内容和笔记信息
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>Mem0 API 密钥</Text>
+                  </div>
+                  <Form.Input
+                    field="memoryApiKey"
+                    type="password"
+                    initValue={memoryConfig.apiKey}
+                    onChange={(value) => handleMemoryConfigChange('apiKey', value)}
+                    placeholder="请输入Mem0 API密钥"
+                    disabled={!memoryConfig.enabled}
+                  />
+                  <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                    从 <a href="https://app.mem0.ai" target="_blank" rel="noopener noreferrer">app.mem0.ai</a> 获取API密钥
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>AI模型</Text>
+                  </div>
+                  <Form.Select
+                    field="memoryModel"
+                    initValue={memoryConfig.model}
+                    onChange={(value) => handleMemoryConfigChange('model', value)}
+                    disabled={!memoryConfig.enabled}
+                    style={{ width: '100%' }}
+                  >
+                    <Form.Select.Option value="gpt-4o-mini">GPT-4o Mini</Form.Select.Option>
+                    <Form.Select.Option value="gpt-4o">GPT-4o</Form.Select.Option>
+                    <Form.Select.Option value="gpt-4-turbo">GPT-4 Turbo</Form.Select.Option>
+                    <Form.Select.Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Form.Select.Option>
+                  </Form.Select>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>温度参数</Text>
+                  </div>
+                  <Form.InputNumber
+                    field="memoryTemperature"
+                    initValue={memoryConfig.temperature}
+                    onChange={(value) => handleMemoryConfigChange('temperature', value)}
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    disabled={!memoryConfig.enabled}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                    控制AI回复的随机性，越低越稳定 (0.0 - 2.0)
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <Button
+                    theme="solid"
+                    type="primary"
+                    onClick={handleTestMemoryConnection}
+                    loading={isTestingMemory}
+                    disabled={!memoryConfig.enabled || !memoryConfig.apiKey}
+                    icon={<IconPulse />}
+                  >
+                    测试连接
+                  </Button>
+                  {memoryTestResult && (
+                    <div style={{ marginTop: '8px' }}>
+                      <Text
+                        type={memoryTestResult.success ? 'success' : 'danger'}
+                        size="small"
+                      >
+                        {memoryTestResult.message}
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+                <Paragraph
+                  style={{ 
+                    fontSize: '14px', 
+                    color: 'var(--semi-color-text-2)', 
+                    marginTop: '16px',
+                    padding: '12px',
+                    backgroundColor: 'var(--semi-color-fill-0)',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <strong>记忆功能说明：</strong><br />
+                  • 启用后，AI能够记住您的对话内容和偏好<br />
+                  • 记忆数据将保存在本地 /markdown/.assets/memories/ 目录<br />
+                  • 支持笔记内容自动记忆和智能关联<br />
+                  • 可通过搜索功能快速找到相关记忆
                 </Paragraph>
               </Form>
             </Card>
