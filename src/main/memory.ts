@@ -2,6 +2,7 @@ import { app } from 'electron'
 import path from 'path'
 import { connect, Table } from "@lancedb/lancedb"
 import { is } from '@electron-toolkit/utils'
+import * as arrow from "apache-arrow";
 
 // Memory service configuration interface
 export interface MemoryConfig {
@@ -46,6 +47,17 @@ class MemoryService {
   }
   private initialized = false
 
+  // LanceDB表schema定义
+  private static readonly MEMORIES_SCHEMA = {
+    fields: [
+      { name: 'id', type: new arrow.Utf8(), nullable: false },
+      { name: 'content', type: new arrow.Utf8(), nullable: false },
+      { name: 'metadata', type: new arrow.Utf8(), nullable: true },
+      { name: 'userId', type: new arrow.Utf8(), nullable: false },
+      { name: 'created_at', type: new arrow.Utf8(), nullable: false },
+    ]
+  };
+
   private getStoragePath(): string {
     if (is.dev) {
       return path.join(process.cwd(), 'markdown', '.assets', 'lancedb')
@@ -67,6 +79,12 @@ class MemoryService {
       // LanceDB 初始化
       const dbPath = this.getStoragePath()
       this.db = await connect(dbPath)
+      // 检查 memories 表是否存在
+      const tableNames: string[] = await this.db.tableNames();
+      if (!tableNames.includes('memories')) {
+        // 创建空 memories 表，带 schema
+        await this.db.createTable('memories', [], { schema: MemoryService.MEMORIES_SCHEMA });
+      }
       this.table = await this.db.openTable('memories')
       this.initialized = true
       return { success: true }
@@ -105,7 +123,7 @@ class MemoryService {
   }
 
   // 相似度检索
-  async searchMemories(query: string, _userId: string, limit = 10): Promise<MemorySearchResult> {
+  async searchMemories(_query: string, _userId: string, _limit = 10): Promise<MemorySearchResult> {
     try {
       if (!this.isEnabled() || !this.table) return { success: false, error: 'Memory not enabled' }
       return { success: true, memories: [] }
