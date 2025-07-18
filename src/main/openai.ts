@@ -24,7 +24,7 @@ export async function testOpenAIConnection(
   AiApiConfig: AiApiConfig
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const { apiKey, apiUrl, modelName } = AiApiConfig
+    const { apiKey, apiUrl, modelName, type } = AiApiConfig
 
     if (!apiKey) {
       return { success: false, message: 'API Key 未设置' }
@@ -47,40 +47,58 @@ export async function testOpenAIConnection(
       baseURL: normalizedApiUrl
     })
 
-    // 发送一个简单的测试请求
-    const response = await openai.chat.completions.create({
-      model: modelName,
-      messages: [{ role: 'user', content: 'ping. Just reply "pong"' }],
-      max_tokens: 20
-    })
+    // 根据API类型选择不同的测试方法
+    if (type === 'embedding') {
+      // 测试embedding API
+      const response = await openai.embeddings.create({
+        model: modelName,
+        input: 'test embedding connection'
+      })
 
-    // 增强检查响应格式
-
-    // 尝试提取内容
-    let content = ''
-
-    try {
-      // 标准OpenAI格式
-      if (response?.choices?.[0]?.message?.content) {
-        content = response.choices[0].message.content
-      }
-      // 兼容其他可能的返回格式
-      else if (response && typeof response === 'object') {
-        if ('text' in response && typeof response.text === 'string') {
-          content = response.text
-        } else if ('content' in response && typeof response.content === 'string') {
-          content = response.content
-        } else {
-          content = '已收到响应 (非标准格式)'
+      // 检查embedding响应格式
+      if (response?.data?.[0]?.embedding && Array.isArray(response.data[0].embedding)) {
+        return { 
+          success: true, 
+          message: `连接成功！模型 ${modelName} 可正常使用，返回了 ${response.data[0].embedding.length} 维向量` 
         }
+      } else {
+        return { success: false, message: '响应格式不正确，无法解析嵌入向量' }
       }
-    } catch (err) {
-      content = '解析响应内容时出错'
-    }
+    } else {
+      // 测试LLM chat completions API (原有逻辑)
+      const response = await openai.chat.completions.create({
+        model: modelName,
+        messages: [{ role: 'user', content: 'ping. Just reply "pong"' }],
+        max_tokens: 20
+      })
 
-    return {
-      success: true,
-      message: content ? `` : '连接成功!'
+      // 增强检查响应格式
+      // 尝试提取内容
+      let content = ''
+
+      try {
+        // 标准OpenAI格式
+        if (response?.choices?.[0]?.message?.content) {
+          content = response.choices[0].message.content
+        }
+        // 兼容其他可能的返回格式
+        else if (response && typeof response === 'object') {
+          if ('text' in response && typeof response.text === 'string') {
+            content = response.text
+          } else if ('content' in response && typeof response.content === 'string') {
+            content = response.content
+          } else {
+            content = '已收到响应 (非标准格式)'
+          }
+        }
+      } catch (err) {
+        content = '解析响应内容时出错'
+      }
+
+      return {
+        success: true,
+        message: content ? `连接成功！模型 ${modelName} 响应: ${content.trim()}` : '连接成功!'
+      }
     }
   } catch (error: unknown) {
     // 提取更友好的错误信息

@@ -421,18 +421,22 @@ const Settings: React.FC = () => {
                 </Text>
                 <Text>{config.modelName || '未设置'}</Text>
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="tertiary" style={{ marginRight: 6 }}>
-                  温度:
-                </Text>
-                <Text>{config.temperature || '0.7'}</Text>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="tertiary" style={{ marginRight: 6 }}>
-                  最大Token:
-                </Text>
-                <Text>{config.maxTokens || '2000'}</Text>
-              </div>
+              {config.type === 'llm' && (
+                <>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="tertiary" style={{ marginRight: 6 }}>
+                      温度:
+                    </Text>
+                    <Text>{config.temperature || '0.7'}</Text>
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="tertiary" style={{ marginRight: 6 }}>
+                      最大Token:
+                    </Text>
+                    <Text>{config.maxTokens || '2000'}</Text>
+                  </div>
+                </>
+              )}
 
               {/* 测试结果显示区域 */}
               {testResults[config.id] && (

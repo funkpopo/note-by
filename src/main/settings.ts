@@ -31,6 +31,7 @@ const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword', 'memoryLlmApiKey', 'memoryEm
 export interface AiApiConfig {
   id: string
   name: string
+  type: 'llm' | 'embedding'
   apiKey: string
   apiUrl: string
   modelName: string
