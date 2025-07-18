@@ -22,10 +22,6 @@ export interface MemoryConfig {
     apiUrl?: string
     model: string
   }
-  vectorStore?: {
-    provider: 'chroma'
-    path?: string
-  }
 }
 
 // Memory result interfaces
