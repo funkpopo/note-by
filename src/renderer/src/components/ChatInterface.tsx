@@ -114,12 +114,16 @@ const ChatInterface: React.FC = () => {
           const memoryConfigResult = await (window as any).api.memory.getConfig()
           if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
             // 搜索相关记忆
-            const memorySearchResult = await (window as any).api.memory.searchMemories(userContent, 'user', 5)
+            const memorySearchResult = await (window as any).api.memory.searchMemories(
+              userContent,
+              'user',
+              5
+            )
             if (memorySearchResult.success && memorySearchResult.memories?.length > 0) {
               const relevantMemories = memorySearchResult.memories
-                .map(memory => `记忆：${memory.content}`)
+                .map((memory) => `记忆：${memory.content}`)
                 .join('\n')
-              
+
               enhancedPrompt = `基于以下记忆内容回答用户问题：
 ${relevantMemories}
 
@@ -207,7 +211,11 @@ ${relevantMemories}
                     }
 
                     // 保存对话到记忆
-                    await (window as any).api.memory.addConversation(conversationMessages, 'user', metadata)
+                    await (window as any).api.memory.addConversation(
+                      conversationMessages,
+                      'user',
+                      metadata
+                    )
                   }
                 } catch (memoryError) {
                   console.warn('Failed to save conversation to memory:', memoryError)

@@ -39,6 +39,7 @@
     "@xyflow/react": "^12.6.4",
     "axios": "^1.10.0",
     "better-sqlite3": "^12.2.0",
+    "chromadb": "^3.0.9",
     "docx": "^9.5.1",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",

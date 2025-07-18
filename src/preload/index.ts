@@ -810,14 +810,18 @@ const api = {
     // 初始化记忆服务
     initialize: (config: any): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MEM0_INITIALIZE, config),
-    
+
     // 添加单个记忆
-    addMemory: (content: string, userId: string, metadata?: Record<string, any>): Promise<{
+    addMemory: (
+      content: string,
+      userId: string,
+      metadata?: Record<string, any>
+    ): Promise<{
       success: boolean
       memoryId?: string
       error?: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_ADD_MEMORY, content, userId, metadata),
-    
+
     // 添加对话记忆
     addConversation: (
       messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -828,9 +832,13 @@ const api = {
       memoryId?: string
       error?: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_ADD_CONVERSATION, messages, userId, metadata),
-    
+
     // 搜索记忆
-    searchMemories: (query: string, userId: string, limit?: number): Promise<{
+    searchMemories: (
+      query: string,
+      userId: string,
+      limit?: number
+    ): Promise<{
       success: boolean
       memories?: Array<{
         id: string
@@ -841,9 +849,11 @@ const api = {
       }>
       error?: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_SEARCH_MEMORIES, query, userId, limit),
-    
+
     // 获取所有记忆
-    getAllMemories: (userId: string): Promise<{
+    getAllMemories: (
+      userId: string
+    ): Promise<{
       success: boolean
       memories?: Array<{
         id: string
@@ -853,19 +863,22 @@ const api = {
       }>
       error?: string
     }> => ipcRenderer.invoke(IPC_CHANNELS.MEM0_GET_ALL_MEMORIES, userId),
-    
+
     // 删除记忆
     deleteMemory: (memoryId: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MEM0_DELETE_MEMORY, memoryId),
-    
+
     // 更新记忆
-    updateMemory: (memoryId: string, newContent: string): Promise<{ success: boolean; error?: string }> =>
+    updateMemory: (
+      memoryId: string,
+      newContent: string
+    ): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MEM0_UPDATE_MEMORY, memoryId, newContent),
-    
+
     // 获取配置
     getConfig: (): Promise<{ success: boolean; config?: any; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MEM0_GET_CONFIG),
-    
+
     // 更新配置
     updateConfig: (config: any): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.MEM0_UPDATE_CONFIG, config)
@@ -875,7 +888,7 @@ const api = {
     // 导航到指定视图
     navigateToView: (viewKey: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.NAVIGATE_TO_VIEW, viewKey),
-    
+
     // 监听导航事件
     onNavigate: (callback: (viewKey: string) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, viewKey: string): void => {

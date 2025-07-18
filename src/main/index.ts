@@ -223,7 +223,7 @@ function createTray(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appWithIsQuitting = app as any
   tray = new Tray(icon)
-  
+
   // 导航到指定视图的辅助函数
   const navigateToView = async (viewKey: string): Promise<void> => {
     try {
@@ -2234,34 +2234,48 @@ ${htmlContent}
   })
 
   // 添加单个记忆
-  ipcMain.handle(IPC_CHANNELS.MEM0_ADD_MEMORY, async (_, content: string, userId: string, metadata?: Record<string, any>) => {
-    try {
-      const result = await memoryService.addMemory(content, userId, metadata)
-      return result
-    } catch (error) {
-      return { success: false, error: String(error) }
+  ipcMain.handle(
+    IPC_CHANNELS.MEM0_ADD_MEMORY,
+    async (_, content: string, userId: string, metadata?: Record<string, any>) => {
+      try {
+        const result = await memoryService.addMemory(content, userId, metadata)
+        return result
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
     }
-  })
+  )
 
   // 添加对话记忆
-  ipcMain.handle(IPC_CHANNELS.MEM0_ADD_CONVERSATION, async (_, messages: Array<{ role: 'user' | 'assistant'; content: string }>, userId: string, metadata?: Record<string, any>) => {
-    try {
-      const result = await memoryService.addConversation(messages, userId, metadata)
-      return result
-    } catch (error) {
-      return { success: false, error: String(error) }
+  ipcMain.handle(
+    IPC_CHANNELS.MEM0_ADD_CONVERSATION,
+    async (
+      _,
+      messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+      userId: string,
+      metadata?: Record<string, any>
+    ) => {
+      try {
+        const result = await memoryService.addConversation(messages, userId, metadata)
+        return result
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
     }
-  })
+  )
 
   // 搜索记忆
-  ipcMain.handle(IPC_CHANNELS.MEM0_SEARCH_MEMORIES, async (_, query: string, userId: string, limit = 10) => {
-    try {
-      const result = await memoryService.searchMemories(query, userId, limit)
-      return result
-    } catch (error) {
-      return { success: false, error: String(error) }
+  ipcMain.handle(
+    IPC_CHANNELS.MEM0_SEARCH_MEMORIES,
+    async (_, query: string, userId: string, limit = 10) => {
+      try {
+        const result = await memoryService.searchMemories(query, userId, limit)
+        return result
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
     }
-  })
+  )
 
   // 获取所有记忆
   ipcMain.handle(IPC_CHANNELS.MEM0_GET_ALL_MEMORIES, async (_, userId: string) => {
@@ -2284,14 +2298,17 @@ ${htmlContent}
   })
 
   // 更新记忆
-  ipcMain.handle(IPC_CHANNELS.MEM0_UPDATE_MEMORY, async (_, memoryId: string, newContent: string) => {
-    try {
-      const result = await memoryService.updateMemory(memoryId, newContent)
-      return result
-    } catch (error) {
-      return { success: false, error: String(error) }
+  ipcMain.handle(
+    IPC_CHANNELS.MEM0_UPDATE_MEMORY,
+    async (_, memoryId: string, newContent: string) => {
+      try {
+        const result = await memoryService.updateMemory(memoryId, newContent)
+        return result
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
     }
-  })
+  )
 
   // 获取记忆配置
   ipcMain.handle(IPC_CHANNELS.MEM0_GET_CONFIG, async () => {
@@ -2341,10 +2358,10 @@ ${htmlContent}
   // 检测并创建memories文件夹
   const ensureMemoriesDir = () => {
     try {
-      const memoriesPath = is.dev 
+      const memoriesPath = is.dev
         ? path.join(process.cwd(), 'markdown', '.assets', 'memories')
         : path.join(path.dirname(app.getPath('exe')), 'markdown', '.assets', 'memories')
-      
+
       if (!fsSync.existsSync(memoriesPath)) {
         fsSync.mkdirSync(memoriesPath, { recursive: true })
         console.log('Created memories directory:', memoriesPath)

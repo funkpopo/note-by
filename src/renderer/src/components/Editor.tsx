@@ -26,10 +26,7 @@ import { editorMemoryManager } from '../utils/EditorMemoryManager'
 import { performanceMonitor } from '../utils/PerformanceMonitor'
 // 导入渲染优化器
 import { scheduleRenderTask, processBatch } from '../utils/RenderOptimizer'
-import {
-  SuggestionMenuController,
-  getDefaultReactSlashMenuItems
-} from '@blocknote/react'
+import { SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react'
 import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core'
 import CreateDialog from './CreateDialog'
 import HistoryDropdown from './HistoryDropdown'
@@ -927,7 +924,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           priority: 'low',
           callback: async () => {
             try {
-              await new Promise(resolve => setTimeout(resolve, 100)) // 等待编辑器稳定
+              await new Promise((resolve) => setTimeout(resolve, 100)) // 等待编辑器稳定
               const standardizedContent = await editor.blocksToMarkdownLossy(editor.document)
               lastSavedContentRef.current = standardizedContent
 
@@ -938,7 +935,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             }
           }
         })
-
       } else {
         Toast.error('无法加载文件内容')
         lastLoadedFileRef.current = null
@@ -1087,10 +1083,14 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           try {
             // 检查记忆功能是否启用
             const memoryConfigResult = await (window as any).api.memory.getConfig()
-            if (memoryConfigResult.success && memoryConfigResult.config?.enabled && markdown.trim()) {
+            if (
+              memoryConfigResult.success &&
+              memoryConfigResult.config?.enabled &&
+              markdown.trim()
+            ) {
               // 构建记忆内容
               const memoryContent = `文件：${currentFile}\n内容：${markdown.slice(0, 1000)}${markdown.length > 1000 ? '...' : ''}`
-              
+
               // 构建元数据
               const metadata = {
                 source: 'markdown_save',

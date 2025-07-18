@@ -287,8 +287,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const fetchFileList = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { success: foldersSuccess, folders, error: foldersError } =
-        await window.api.markdown.getFolders()
+      const {
+        success: foldersSuccess,
+        folders,
+        error: foldersError
+      } = await window.api.markdown.getFolders()
       if (!foldersSuccess) {
         throw new Error(foldersError || 'Failed to get folders')
       }
@@ -322,7 +325,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       }
       setNavItems(newNavItems)
     } catch (error) {
-      Toast.error(`Error loading file list: ${error instanceof Error ? error.message : String(error)}`)
+      Toast.error(
+        `Error loading file list: ${error instanceof Error ? error.message : String(error)}`
+      )
       console.error('Error fetching file list:', error)
     } finally {
       setIsLoading(false)
@@ -907,7 +912,12 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 ) : (
                   <div
                     className="secondary-nav-tree"
-                    style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '0px 0px 0px 0px' }}
+                    style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      padding: '0px 0px 0px 0px'
+                    }}
                   >
                     <Tree
                       treeData={convertNavItemsToTreeData(navItems)}
@@ -918,15 +928,15 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                       onContextMenu={(e, node): void => {
                         e.preventDefault()
                         e.stopPropagation()
-                        
+
                         // 直接从node获取数据，Semi Design的Tree组件node就是TreeNodeData
                         const nodeData = node as TreeNodeData & NavItem
                         const nodeKey = nodeData.key?.toString() || ''
-                        
+
                         // 根据key的格式判断是文件夹还是文件
                         // folder:xxx 格式是文件夹，file:xxx:xxx 格式是文件
                         const isFolder = nodeKey.startsWith('folder:')
-                        
+
                         handleContextMenu(e, nodeKey, isFolder)
                       }}
                       emptyContent={
@@ -979,7 +989,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleCreateNoteInFolder}
                       >
-                        <IconPlus style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                        <IconPlus
+                          style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                        />
                         <Typography.Text>新建笔记</Typography.Text>
                       </div>
                       <div
@@ -993,7 +1005,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleCreateSubFolder}
                       >
-                        <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                        <IconFolder
+                          style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
+                        />
                         <Typography.Text>新建子文件夹</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1008,7 +1022,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleRenameFolder}
                       >
-                        <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
+                        <IconEdit
+                          style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
+                        />
                         <Typography.Text>重命名文件夹</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1033,7 +1049,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                           hideContextMenu()
                         }}
                       >
-                        <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                        <IconDelete
+                          style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
+                        />
                         <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
                           删除文件夹
                         </Typography.Text>
@@ -1054,7 +1072,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleRenameFile}
                       >
-                        <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
+                        <IconEdit
+                          style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
+                        />
                         <Typography.Text>重命名笔记</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1079,12 +1099,19 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                               'danger'
                             )
                           } else {
-                            openConfirmDialog('删除笔记', '确定要删除此笔记吗？', handleDelete, 'danger')
+                            openConfirmDialog(
+                              '删除笔记',
+                              '确定要删除此笔记吗？',
+                              handleDelete,
+                              'danger'
+                            )
                           }
                           hideContextMenu()
                         }}
                       >
-                        <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                        <IconDelete
+                          style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
+                        />
                         <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
                           删除笔记
                         </Typography.Text>
@@ -1105,7 +1132,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleCreateFolder}
                       >
-                        <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                        <IconFolder
+                          style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
+                        />
                         <Typography.Text>新建文件夹</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1120,7 +1149,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={() => handleCreateNote()}
                       >
-                        <IconFile style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                        <IconFile
+                          style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                        />
                         <Typography.Text>新建笔记</Typography.Text>
                       </div>
                     </>

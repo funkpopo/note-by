@@ -265,14 +265,18 @@ interface MemoryConfig {
 interface MemoryAPI {
   // 初始化记忆服务
   initialize: (config: MemoryConfig) => Promise<{ success: boolean; error?: string }>
-  
+
   // 添加单个记忆
-  addMemory: (content: string, userId: string, metadata?: Record<string, any>) => Promise<{
+  addMemory: (
+    content: string,
+    userId: string,
+    metadata?: Record<string, any>
+  ) => Promise<{
     success: boolean
     memoryId?: string
     error?: string
   }>
-  
+
   // 添加对话记忆
   addConversation: (
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -283,9 +287,13 @@ interface MemoryAPI {
     memoryId?: string
     error?: string
   }>
-  
+
   // 搜索记忆
-  searchMemories: (query: string, userId: string, limit?: number) => Promise<{
+  searchMemories: (
+    query: string,
+    userId: string,
+    limit?: number
+  ) => Promise<{
     success: boolean
     memories?: Array<{
       id: string
@@ -296,7 +304,7 @@ interface MemoryAPI {
     }>
     error?: string
   }>
-  
+
   // 获取所有记忆
   getAllMemories: (userId: string) => Promise<{
     success: boolean
@@ -308,16 +316,19 @@ interface MemoryAPI {
     }>
     error?: string
   }>
-  
+
   // 删除记忆
   deleteMemory: (memoryId: string) => Promise<{ success: boolean; error?: string }>
-  
+
   // 更新记忆
-  updateMemory: (memoryId: string, newContent: string) => Promise<{ success: boolean; error?: string }>
-  
+  updateMemory: (
+    memoryId: string,
+    newContent: string
+  ) => Promise<{ success: boolean; error?: string }>
+
   // 获取配置
   getConfig: () => Promise<{ success: boolean; config?: MemoryConfig; error?: string }>
-  
+
   // 更新配置
   updateConfig: (config: MemoryConfig) => Promise<{ success: boolean; error?: string }>
 }
@@ -326,7 +337,7 @@ interface MemoryAPI {
 interface NavigationAPI {
   // 导航到指定视图
   navigateToView: (viewKey: string) => Promise<{ success: boolean; error?: string }>
-  
+
   // 监听导航事件
   onNavigate: (callback: (viewKey: string) => void) => () => void
 }

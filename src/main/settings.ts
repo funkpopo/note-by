@@ -25,7 +25,7 @@ function getSettingsPath(): string {
 }
 
 // 需要加密的设置项键名列表
-const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword']
+const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword', 'memoryLlmApiKey', 'memoryEmbedderApiKey']
 
 // API配置接口
 export interface AiApiConfig {
@@ -75,9 +75,14 @@ const defaultSettings = {
   // 默认记忆功能配置
   memory: {
     enabled: false,
-    apiKey: '',
-    model: 'gpt-4o-mini',
-    temperature: 0.1
+    selectedLlmId: '',
+    embedder: {
+      provider: 'openai',
+      name: 'OpenAI Embeddings',
+      apiKey: '',
+      apiUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small'
+    }
   } as MemoryConfig,
   // 默认更新设置
   checkUpdatesOnStartup: true,
@@ -118,6 +123,25 @@ export function readSettings(): Record<string, unknown> {
         settings.webdav.password = decrypt(settings.webdav.password)
       }
 
+      // 解密记忆功能API密钥
+      if (settings.memory && typeof settings.memory === 'object') {
+        const memoryConfig = settings.memory as any
+        if (memoryConfig.llm?.apiKey) {
+          try {
+            memoryConfig.llm.apiKey = decrypt(memoryConfig.llm.apiKey)
+          } catch (decryptError) {
+            // 保留原始加密值
+          }
+        }
+        if (memoryConfig.embedder?.apiKey) {
+          try {
+            memoryConfig.embedder.apiKey = decrypt(memoryConfig.embedder.apiKey)
+          } catch (decryptError) {
+            // 保留原始加密值
+          }
+        }
+      }
+
       return settings
     }
   } catch (error) {}
@@ -156,6 +180,18 @@ export function writeSettings(settings: Record<string, unknown>): void {
       settingsToSave.webdav = webdavConfig
     }
 
+    // 加密记忆功能API密钥
+    if (settingsToSave.memory && typeof settingsToSave.memory === 'object') {
+      const memoryConfig = JSON.parse(JSON.stringify(settingsToSave.memory))
+      if (memoryConfig.llm?.apiKey && memoryConfig.llm.apiKey !== '') {
+        memoryConfig.llm.apiKey = encrypt(memoryConfig.llm.apiKey)
+      }
+      if (memoryConfig.embedder?.apiKey && memoryConfig.embedder.apiKey !== '') {
+        memoryConfig.embedder.apiKey = encrypt(memoryConfig.embedder.apiKey)
+      }
+      settingsToSave.memory = memoryConfig
+    }
+
     fs.writeFileSync(settingsPath, JSON.stringify(settingsToSave, null, 2), 'utf8')
   } catch (error) {}
 }
@@ -185,6 +221,19 @@ export function getWebDAVConfig(): WebDAVConfig {
 export function updateWebDAVConfig(config: WebDAVConfig): void {
   const settings = readSettings()
   settings.webdav = config
+  writeSettings(settings)
+}
+
+// 获取记忆功能配置
+export function getMemoryConfig(): MemoryConfig {
+  const settings = readSettings()
+  return (settings.memory as MemoryConfig) || defaultSettings.memory
+}
+
+// 更新记忆功能配置
+export function updateMemoryConfig(config: MemoryConfig): void {
+  const settings = readSettings()
+  settings.memory = config
   writeSettings(settings)
 }
 

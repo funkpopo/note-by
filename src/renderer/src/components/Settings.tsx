@@ -85,12 +85,20 @@ const Settings: React.FC = () => {
   // 记忆功能相关状态
   const [memoryConfig, setMemoryConfig] = useState({
     enabled: false,
-    apiKey: '',
-    model: 'gpt-4o-mini',
-    temperature: 0.1
+    selectedLlmId: '',
+    embedder: {
+      provider: 'openai' as const,
+      name: 'OpenAI Embeddings',
+      apiKey: '',
+      apiUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small'
+    }
   })
   const [isTestingMemory, setIsTestingMemory] = useState(false)
-  const [memoryTestResult, setMemoryTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [memoryTestResult, setMemoryTestResult] = useState<{
+    success: boolean
+    message: string
+  } | null>(null)
 
   // 加载设置函数
   const loadSettings = useCallback(async (): Promise<void> => {
@@ -115,7 +123,25 @@ const Settings: React.FC = () => {
 
       // 加载记忆功能设置
       if (settings.memory) {
-        setMemoryConfig(settings.memory as typeof memoryConfig)
+        const memorySettings = settings.memory as any
+        // 处理旧版本配置向新版本的迁移
+        if (memorySettings.apiKey && !memorySettings.selectedLlmId) {
+          // 旧版本配置迁移
+          setMemoryConfig({
+            enabled: memorySettings.enabled || false,
+            selectedLlmId: '',
+            embedder: {
+              provider: 'openai',
+              name: 'OpenAI Embeddings',
+              apiKey: memorySettings.apiKey || '',
+              apiUrl: 'https://api.openai.com/v1',
+              model: memorySettings.model || 'text-embedding-3-small'
+            }
+          })
+        } else {
+          // 新版本配置
+          setMemoryConfig(memorySettings)
+        }
       }
     } catch (error) {
       Toast.error('加载设置失败')
@@ -587,17 +613,31 @@ const Settings: React.FC = () => {
   // 记忆功能相关处理函数
   const handleMemoryConfigChange = async (field: string, value: any): Promise<void> => {
     try {
-      const newConfig = { ...memoryConfig, [field]: value }
+      let newConfig = { ...memoryConfig }
+
+      // 处理嵌套配置
+      if (field === 'embedderName') {
+        newConfig.embedder = { ...newConfig.embedder, name: value }
+      } else if (field === 'embedderApiKey') {
+        newConfig.embedder = { ...newConfig.embedder, apiKey: value }
+      } else if (field === 'embedderApiUrl') {
+        newConfig.embedder = { ...newConfig.embedder, apiUrl: value }
+      } else if (field === 'embedderModel') {
+        newConfig.embedder = { ...newConfig.embedder, model: value }
+      } else {
+        newConfig = { ...newConfig, [field]: value }
+      }
+
       setMemoryConfig(newConfig)
-      
+
       // 保存到设置
       await window.api.settings.set('memory', newConfig)
-      
-      // 如果启用状态改变，需要初始化或关闭服务
-      if (field === 'enabled' || field === 'apiKey') {
+
+      // 如果启用状态改变或API密钥改变，需要初始化或关闭服务
+      if (field === 'enabled' || field.includes('ApiKey')) {
         await (window as any).api.memory.updateConfig(newConfig)
       }
-      
+
       Toast.success('记忆功能配置已保存')
     } catch (error) {
       Toast.error('保存记忆配置失败')
@@ -609,15 +649,15 @@ const Settings: React.FC = () => {
     try {
       setIsTestingMemory(true)
       setMemoryTestResult(null)
-      
-      if (!memoryConfig.apiKey) {
-        setMemoryTestResult({ success: false, message: '请先配置Mem0 API密钥' })
+
+      if (!memoryConfig.selectedLlmId && !memoryConfig.embedder?.apiKey) {
+        setMemoryTestResult({ success: false, message: '请先选择LLM配置并配置嵌入模型API密钥' })
         return
       }
-      
+
       // 测试记忆服务初始化
       const result = await (window as any).api.memory.initialize(memoryConfig)
-      
+
       if (result.success) {
         setMemoryTestResult({ success: true, message: '记忆服务连接成功！' })
       } else {
@@ -917,118 +957,158 @@ const Settings: React.FC = () => {
 
         <TabPane tab="记忆功能" itemKey="memory">
           <div className="settings-scroll-container">
-            <Card
-              title="记忆功能设置"
-              style={{ marginBottom: 20 }}
-            >
+            <Card title="记忆功能设置" style={{ marginBottom: 20 }}>
               <Form onValueChange={(values) => console.log('Memory form values:', values)}>
                 <div style={{ maxWidth: 600 }}>
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <Text strong>启用记忆功能</Text>
-                  </div>
-                  <Switch
-                    checked={memoryConfig.enabled}
-                    onChange={(checked) => handleMemoryConfigChange('enabled', checked)}
-                  />
-                  <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
-                    开启后，AI将能够记住对话内容和笔记信息
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <Text strong>Mem0 API 密钥</Text>
-                  </div>
-                  <Form.Input
-                    field="memoryApiKey"
-                    type="password"
-                    initValue={memoryConfig.apiKey}
-                    onChange={(value) => handleMemoryConfigChange('apiKey', value)}
-                    placeholder="请输入Mem0 API密钥"
-                    disabled={!memoryConfig.enabled}
-                  />
-                  <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
-                    从 <a href="https://app.mem0.ai" target="_blank" rel="noopener noreferrer">app.mem0.ai</a> 获取API密钥
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <Text strong>AI模型</Text>
-                  </div>
-                  <Form.Select
-                    field="memoryModel"
-                    initValue={memoryConfig.model}
-                    onChange={(value) => handleMemoryConfigChange('model', value)}
-                    disabled={!memoryConfig.enabled}
-                    style={{ width: '100%' }}
-                  >
-                    <Form.Select.Option value="gpt-4o-mini">GPT-4o Mini</Form.Select.Option>
-                    <Form.Select.Option value="gpt-4o">GPT-4o</Form.Select.Option>
-                    <Form.Select.Option value="gpt-4-turbo">GPT-4 Turbo</Form.Select.Option>
-                    <Form.Select.Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Form.Select.Option>
-                  </Form.Select>
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <Text strong>温度参数</Text>
-                  </div>
-                  <Form.InputNumber
-                    field="memoryTemperature"
-                    initValue={memoryConfig.temperature}
-                    onChange={(value) => handleMemoryConfigChange('temperature', value)}
-                    min={0}
-                    max={2}
-                    step={0.1}
-                    disabled={!memoryConfig.enabled}
-                    style={{ width: '100%' }}
-                  />
-                  <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
-                    控制AI回复的随机性，越低越稳定 (0.0 - 2.0)
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <Button
-                    theme="solid"
-                    type="primary"
-                    onClick={handleTestMemoryConnection}
-                    loading={isTestingMemory}
-                    disabled={!memoryConfig.enabled || !memoryConfig.apiKey}
-                    icon={<IconPulse />}
-                  >
-                    测试连接
-                  </Button>
-                  {memoryTestResult && (
-                    <div style={{ marginTop: '8px' }}>
-                      <Text
-                        type={memoryTestResult.success ? 'success' : 'danger'}
-                        size="small"
-                      >
-                        {memoryTestResult.message}
-                      </Text>
+                  <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text strong>启用记忆功能</Text>
                     </div>
-                  )}
+                    <Switch
+                      checked={memoryConfig.enabled}
+                      onChange={(checked) => handleMemoryConfigChange('enabled', checked)}
+                    />
+                    <div
+                      style={{
+                        color: 'var(--semi-color-text-2)',
+                        fontSize: '12px',
+                        marginTop: '4px'
+                      }}
+                    >
+                      开启后，AI将能够记住对话内容和笔记信息
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text strong>选择 LLM 配置</Text>
+                    </div>
+                    <Form.Select
+                      field="memoryLlmConfig"
+                      initValue={memoryConfig.selectedLlmId || ''}
+                      onChange={(value) => handleMemoryConfigChange('selectedLlmId', value)}
+                      disabled={!memoryConfig.enabled}
+                      style={{ width: '100%' }}
+                      placeholder="请选择已配置的 AI API"
+                    >
+                      {AiApiConfigs.map((config) => (
+                        <Form.Select.Option key={config.id} value={config.id}>
+                          {config.name} ({config.modelName})
+                        </Form.Select.Option>
+                      ))}
+                    </Form.Select>
+                    <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                      请在 "AI API设置" 页面先配置 LLM，然后在此选择
+                    </div>
+                  </div>
+
+                  <Card 
+                    title="嵌入模型配置" 
+                    style={{ 
+                      marginBottom: '16px', 
+                      border: '1px solid var(--semi-color-border)', 
+                      borderRadius: '8px' 
+                    }}
+                  >
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text strong>配置名称</Text>
+                      </div>
+                      <Form.Input
+                        field="memoryEmbedderName"
+                        initValue={memoryConfig.embedder?.name || 'OpenAI Embeddings'}
+                        onChange={(value) => handleMemoryConfigChange('embedderName', value)}
+                        placeholder="为此配置输入一个名称"
+                        disabled={!memoryConfig.enabled}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text strong>API 密钥</Text>
+                      </div>
+                      <Form.Input
+                        field="memoryEmbedderApiKey"
+                        type="password"
+                        initValue={memoryConfig.embedder?.apiKey || ''}
+                        onChange={(value) => handleMemoryConfigChange('embedderApiKey', value)}
+                        placeholder="请输入 API 密钥"
+                        disabled={!memoryConfig.enabled}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text strong>API URL</Text>
+                      </div>
+                      <Form.Input
+                        field="memoryEmbedderApiUrl"
+                        initValue={memoryConfig.embedder?.apiUrl || 'https://api.openai.com/v1'}
+                        onChange={(value) => handleMemoryConfigChange('embedderApiUrl', value)}
+                        placeholder="请输入 API URL"
+                        disabled={!memoryConfig.enabled}
+                      />
+                    </div>
+
+                    <div>
+                      <div style={{ marginBottom: '8px' }}>
+                        <Text strong>模型名称</Text>
+                      </div>
+                      <Form.Input
+                        field="memoryEmbedderModel"
+                        initValue={memoryConfig.embedder?.model || 'text-embedding-3-small'}
+                        onChange={(value) => handleMemoryConfigChange('embedderModel', value)}
+                        placeholder="请输入模型名称"
+                        disabled={!memoryConfig.enabled}
+                      />
+                      <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                        例如：text-embedding-3-small, text-embedding-3-large
+                      </div>
+                    </div>
+                  </Card>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <Button
+                      theme="solid"
+                      type="primary"
+                      onClick={handleTestMemoryConnection}
+                      loading={isTestingMemory}
+                      disabled={
+                        !memoryConfig.enabled ||
+                        (!memoryConfig.selectedLlmId && !memoryConfig.embedder?.apiKey)
+                      }
+                      icon={<IconPulse />}
+                    >
+                      测试连接
+                    </Button>
+                    {memoryTestResult && (
+                      <div style={{ marginTop: '8px' }}>
+                        <Text type={memoryTestResult.success ? 'success' : 'danger'} size="small">
+                          {memoryTestResult.message}
+                        </Text>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
                 <Paragraph
-                  style={{ 
-                    fontSize: '14px', 
-                    color: 'var(--semi-color-text-2)', 
+                  style={{
+                    fontSize: '14px',
+                    color: 'var(--semi-color-text-2)',
                     marginTop: '16px',
                     padding: '12px',
                     backgroundColor: 'var(--semi-color-fill-0)',
                     borderRadius: '6px'
                   }}
                 >
-                  <strong>记忆功能说明：</strong><br />
-                  • 启用后，AI能够记住您的对话内容和偏好<br />
-                  • 记忆数据将保存在本地 /markdown/.assets/memories/ 目录<br />
-                  • 支持笔记内容自动记忆和智能关联<br />
-                  • 可通过搜索功能快速找到相关记忆
+                  <strong>记忆功能说明：</strong>
+                  <br />
+                  • 启用后，AI能够记住您的对话内容和偏好
+                  <br />
+                  • 记忆数据将保存在本地 /markdown/.assets/memories/ 目录
+                  <br />
+                  • 支持笔记内容自动记忆和智能关联
+                  <br />• 可通过搜索功能快速找到相关记忆
                 </Paragraph>
               </Form>
             </Card>
