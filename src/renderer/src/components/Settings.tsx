@@ -29,6 +29,8 @@ import WebDAVSettings from './WebDAVSettings'
 import './Settings.css'
 // 导入性能监控器
 import { performanceMonitor, type PerformanceMetrics } from '../utils/PerformanceMonitor'
+// 导入多语言hook
+import { useTranslation } from '../locales'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -36,6 +38,7 @@ const { Title, Paragraph, Text } = Typography
 interface AiApiConfig {
   id: string
   name: string
+  type: 'llm' | 'embedding'
   apiKey: string
   apiUrl: string
   modelName: string
@@ -58,6 +61,9 @@ interface HistoryManagementSettings {
 }
 
 const Settings: React.FC = () => {
+  // 多语言支持
+  const { t, formatMessage } = useTranslation()
+  
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
@@ -86,19 +92,8 @@ const Settings: React.FC = () => {
   const [memoryConfig, setMemoryConfig] = useState({
     enabled: false,
     selectedLlmId: '',
-    embedder: {
-      provider: 'openai' as const,
-      name: 'OpenAI Embeddings',
-      apiKey: '',
-      apiUrl: 'https://api.openai.com/v1',
-      model: 'text-embedding-3-small'
-    }
+    selectedEmbeddingId: ''
   })
-  const [isTestingMemory, setIsTestingMemory] = useState(false)
-  const [memoryTestResult, setMemoryTestResult] = useState<{
-    success: boolean
-    message: string
-  } | null>(null)
 
   // 加载设置函数
   const loadSettings = useCallback(async (): Promise<void> => {
@@ -130,13 +125,7 @@ const Settings: React.FC = () => {
           setMemoryConfig({
             enabled: memorySettings.enabled || false,
             selectedLlmId: '',
-            embedder: {
-              provider: 'openai',
-              name: 'OpenAI Embeddings',
-              apiKey: memorySettings.apiKey || '',
-              apiUrl: 'https://api.openai.com/v1',
-              model: memorySettings.model || 'text-embedding-3-small'
-            }
+            selectedEmbeddingId: ''
           })
         } else {
           // 新版本配置
@@ -144,7 +133,7 @@ const Settings: React.FC = () => {
         }
       }
     } catch (error) {
-      Toast.error('加载设置失败')
+      Toast.error(t('common.loadingFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -170,6 +159,7 @@ const Settings: React.FC = () => {
     setCurrentConfig({
       id: uuidv4(),
       name: '',
+      type: 'llm',
       apiKey: '',
       apiUrl: '',
       modelName: '',
@@ -192,7 +182,7 @@ const Settings: React.FC = () => {
     try {
       // 校验必填字段
       if (!currentConfig?.name.trim()) {
-        Toast.error('请输入配置名称')
+        Toast.error(t('settings.basic.apiConfig.toast.nameRequired'))
         return
       }
 
@@ -200,7 +190,7 @@ const Settings: React.FC = () => {
       const result = await window.api.api.saveConfig(currentConfig)
 
       if (result.success) {
-        Toast.success(isEditMode ? '配置已更新' : '配置已添加')
+        Toast.success(isEditMode ? t('settings.basic.apiConfig.toast.updated') : t('settings.basic.apiConfig.toast.saved'))
         setIsModalOpen(false)
         // 重新加载配置
         await loadSettings()
@@ -214,10 +204,10 @@ const Settings: React.FC = () => {
           })
         }
       } else {
-        Toast.error('保存配置失败: ' + (result.error || '未知错误'))
+        Toast.error(`${t('settings.basic.apiConfig.toast.saveFailed')}: ${result.error || '未知错误'}`)
       }
     } catch (error) {
-      Toast.error('保存配置失败')
+      Toast.error(t('settings.basic.apiConfig.toast.saveFailed'))
     }
   }
 
@@ -227,7 +217,7 @@ const Settings: React.FC = () => {
       const result = await window.api.api.deleteConfig(configId)
 
       if (result.success) {
-        Toast.success('配置已删除')
+        Toast.success(t('settings.basic.apiConfig.toast.deleted'))
         // 重新加载配置
         await loadSettings()
 
@@ -240,10 +230,10 @@ const Settings: React.FC = () => {
           })
         }
       } else {
-        Toast.error('删除配置失败: ' + (result.error || '未知错误'))
+        Toast.error(`${t('settings.basic.apiConfig.toast.deleteFailed')}: ${result.error || '未知错误'}`)
       }
     } catch (error) {
-      Toast.error('删除配置失败')
+      Toast.error(t('settings.basic.apiConfig.toast.deleteFailed'))
     }
   }
 
@@ -296,9 +286,9 @@ const Settings: React.FC = () => {
 
       // 显示测试结果提示
       if (result.success) {
-        Toast.success('连接测试成功')
+        Toast.success(t('settings.basic.apiConfig.toast.testSuccess'))
       } else {
-        Toast.error('连接测试失败')
+        Toast.error(t('settings.basic.apiConfig.toast.testFailed'))
       }
 
       // 设置5秒后自动消失
@@ -316,7 +306,7 @@ const Settings: React.FC = () => {
         ...prev,
         [config.id]: { success: false, message: '测试过程出错' }
       }))
-      Toast.error('连接测试出错')
+      Toast.error(t('settings.basic.apiConfig.toast.testError'))
 
       // 错误情况下也设置5秒后自动消失
       testResultTimersRef.current[config.id] = setTimeout(() => {
@@ -338,20 +328,40 @@ const Settings: React.FC = () => {
       return (
         <Empty
           image={<IconPlus size="large" />}
-          title="暂无API配置"
-          description="点击上方'添加API配置'按钮创建新的API配置"
+          title={t('settings.basic.apiConfig.noConfigs')}
+          description={t('settings.basic.apiConfig.noConfigsDesc')}
         />
       )
     }
 
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-        {AiApiConfigs.map((config) => (
+        {AiApiConfigs.map((config) => {
+          const isLLM = config.type === 'llm'
+          const cardStyle = {
+            border: `2px solid ${isLLM ? 'rgba(0, 100, 250, 0.3)' : 'rgba(0, 180, 42, 0.3)'}`,
+            backgroundColor: isLLM ? 'rgba(0, 100, 250, 0.05)' : 'rgba(0, 180, 42, 0.05)'
+          }
+          
+          return (
           <Card
             key={config.id}
             headerLine={true}
+            style={cardStyle}
             title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>{/* 从标题中移除名称 */}</div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ 
+                  padding: '2px 8px', 
+                  borderRadius: '12px', 
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  backgroundColor: isLLM ? '#0064fa' : '#00b42a',
+                  marginRight: '8px'
+                }}>
+                  {isLLM ? 'LLM' : 'Embedding'}
+                </span>
+              </div>
             }
             headerExtraContent={
               <ButtonGroup>
@@ -363,7 +373,7 @@ const Settings: React.FC = () => {
                   type="primary"
                   size="small"
                 >
-                  测试连接
+                  {t('settings.basic.apiConfig.testConnection')}
                 </Button>
                 <Button
                   icon={<IconEdit />}
@@ -372,7 +382,7 @@ const Settings: React.FC = () => {
                   type="tertiary"
                   size="small"
                 >
-                  编辑
+                  {t('settings.basic.apiConfig.edit')}
                 </Button>
                 <Button
                   icon={<IconDelete />}
@@ -381,7 +391,7 @@ const Settings: React.FC = () => {
                   size="small"
                   onClick={() => handleDeleteConfig(config.id)}
                 >
-                  删除
+                  {t('settings.basic.apiConfig.delete')}
                 </Button>
               </ButtonGroup>
             }
@@ -446,7 +456,9 @@ const Settings: React.FC = () => {
                       strong
                       style={{ color: testResults[config.id].success ? '#00b42a' : '#fd4d4d' }}
                     >
-                      {testResults[config.id].success ? '✓ 连接成功' : '✗ 连接失败'}
+                      {testResults[config.id].success 
+                        ? `✓ ${t('settings.basic.apiConfig.testResult.success')}` 
+                        : `✗ ${t('settings.basic.apiConfig.testResult.failed')}`}
                     </Text>
                   </div>
                   <Text style={{ marginTop: 4, fontSize: '13px' }}>
@@ -456,7 +468,8 @@ const Settings: React.FC = () => {
               )}
             </div>
           </Card>
-        ))}
+          )
+        })}
       </div>
     )
   }
@@ -476,10 +489,10 @@ const Settings: React.FC = () => {
       const success = await window.api.settings.setAll(updatedSettings)
 
       if (!success) {
-        Toast.error('保存更新检查设置失败')
+        Toast.error(t('common.saveFailed'))
       }
     } catch (error) {
-      Toast.error('保存更新检查设置失败')
+      Toast.error(t('common.saveFailed'))
     }
   }
 
@@ -494,7 +507,7 @@ const Settings: React.FC = () => {
       // 检查是否有错误信息
       if (result.error) {
         // 有错误信息表示检查失败
-        Toast.error(`检查更新失败: ${result.error}`)
+        Toast.error(`${t('settings.basic.updateResult.checkFailedWithError')}: ${result.error}`)
         setUpdateResult({
           hasUpdate: false,
           latestVersion: '',
@@ -503,15 +516,15 @@ const Settings: React.FC = () => {
         })
       } else if (result.hasUpdate) {
         // 有更新
-        Toast.info(`发现新版本: ${result.latestVersion}`)
+        Toast.info(`${t('settings.basic.updateResult.hasUpdatePrefix')}: ${result.latestVersion}`)
         setUpdateResult(result)
       } else if (result.latestVersion) {
         // 已是最新版本
-        Toast.info('当前已是最新版本')
+        Toast.info(t('settings.basic.updateResult.noUpdatePrefix'))
         setUpdateResult(result)
       } else {
         // 检查失败，但没有详细错误信息
-        Toast.error('检查更新失败，请检查网络连接')
+        Toast.error(t('settings.basic.updateResult.networkCheckFailed'))
         setUpdateResult({
           ...result,
           error: '无法连接到更新服务器'
@@ -536,7 +549,7 @@ const Settings: React.FC = () => {
       latestVersion: string
       currentVersion: string
     }): void => {
-      Toast.info(`发现新版本: ${updateInfo.latestVersion}`)
+      Toast.info(`${t('settings.basic.updateResult.hasUpdatePrefix')}: ${updateInfo.latestVersion}`)
       setUpdateResult({
         hasUpdate: true,
         ...updateInfo
@@ -558,9 +571,9 @@ const Settings: React.FC = () => {
       }
 
       await window.api.settings.set('historyManagement', settingsToSave)
-      Toast.success('历史记录管理设置已保存')
+      Toast.success(t('common.success'))
     } catch (error) {
-      Toast.error('保存历史记录管理设置失败')
+      Toast.error(t('common.saveFailed'))
     }
   }
 
@@ -607,7 +620,7 @@ const Settings: React.FC = () => {
   const handleResetPerformanceMetrics = useCallback(() => {
     performanceMonitor.resetMetrics()
     loadPerformanceMetrics()
-    Toast.success('性能统计已重置')
+    Toast.success(t('settings.performance.resetSuccess'))
   }, [loadPerformanceMetrics])
 
   // 记忆功能相关处理函数
@@ -616,14 +629,10 @@ const Settings: React.FC = () => {
       let newConfig = { ...memoryConfig }
 
       // 处理嵌套配置
-      if (field === 'embedderName') {
-        newConfig.embedder = { ...newConfig.embedder, name: value }
-      } else if (field === 'embedderApiKey') {
-        newConfig.embedder = { ...newConfig.embedder, apiKey: value }
-      } else if (field === 'embedderApiUrl') {
-        newConfig.embedder = { ...newConfig.embedder, apiUrl: value }
-      } else if (field === 'embedderModel') {
-        newConfig.embedder = { ...newConfig.embedder, model: value }
+      if (field === 'selectedLlmId') {
+        newConfig.selectedLlmId = value
+      } else if (field === 'selectedEmbeddingId') {
+        newConfig.selectedEmbeddingId = value
       } else {
         newConfig = { ...newConfig, [field]: value }
       }
@@ -634,40 +643,14 @@ const Settings: React.FC = () => {
       await window.api.settings.set('memory', newConfig)
 
       // 如果启用状态改变或API密钥改变，需要初始化或关闭服务
-      if (field === 'enabled' || field.includes('ApiKey')) {
+      if (field === 'enabled') {
         await (window as any).api.memory.updateConfig(newConfig)
       }
 
-      Toast.success('记忆功能配置已保存')
-    } catch (error) {
-      Toast.error('保存记忆配置失败')
+              Toast.success(t('common.success'))
+      } catch (error) {
+        Toast.error(t('common.saveFailed'))
       console.error('Memory config save error:', error)
-    }
-  }
-
-  const handleTestMemoryConnection = async (): Promise<void> => {
-    try {
-      setIsTestingMemory(true)
-      setMemoryTestResult(null)
-
-      if (!memoryConfig.selectedLlmId && !memoryConfig.embedder?.apiKey) {
-        setMemoryTestResult({ success: false, message: '请先选择LLM配置并配置嵌入模型API密钥' })
-        return
-      }
-
-      // 测试记忆服务初始化
-      const result = await (window as any).api.memory.initialize(memoryConfig)
-
-      if (result.success) {
-        setMemoryTestResult({ success: true, message: '记忆服务连接成功！' })
-      } else {
-        setMemoryTestResult({ success: false, message: result.error || '连接失败' })
-      }
-    } catch (error) {
-      setMemoryTestResult({ success: false, message: '测试连接时发生错误' })
-      console.error('Memory test error:', error)
-    } finally {
-      setIsTestingMemory(false)
     }
   }
 
@@ -688,9 +671,9 @@ const Settings: React.FC = () => {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      Toast.success('性能数据导出成功')
+      Toast.success(t('settings.performance.exportSuccess'))
     } catch (error) {
-      Toast.error('导出性能数据失败')
+      Toast.error(t('settings.performance.exportFailed'))
     } finally {
       setIsExportingPerformance(false)
     }
@@ -737,7 +720,7 @@ const Settings: React.FC = () => {
         height: '100%'
       }}
     >
-      <Title heading={2}>设置</Title>
+      <Title heading={2}>{t('settings.title')}</Title>
 
       <Tabs
         type="line"
@@ -754,7 +737,7 @@ const Settings: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        <TabPane tab="基本设置" itemKey="basic">
+        <TabPane tab={t('settings.tabs.basic')} itemKey="basic">
           <div className="settings-scroll-container">
             {/* 更新检查设置卡片 */}
             <Card style={{ marginBottom: 20 }}>
@@ -762,9 +745,9 @@ const Settings: React.FC = () => {
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
               >
                 <div>
-                  <Text strong>自动检查更新</Text>
+                  <Text strong>{t('settings.basic.autoUpdate.title')}</Text>
                   <Paragraph spacing="normal" type="tertiary">
-                    应用启动时自动检查是否有新版本
+                    {t('settings.basic.autoUpdate.description')}
                   </Paragraph>
                 </div>
                 <Switch
@@ -779,9 +762,9 @@ const Settings: React.FC = () => {
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
               >
                 <div>
-                  <Text strong>手动检查更新</Text>
+                  <Text strong>{t('settings.basic.manualUpdate.title')}</Text>
                   <Paragraph spacing="normal" type="tertiary">
-                    检查GitHub上是否有新版本发布
+                    {t('settings.basic.manualUpdate.description')}
                   </Paragraph>
                 </div>
                 <Button
@@ -791,7 +774,7 @@ const Settings: React.FC = () => {
                   theme="solid"
                   type="tertiary"
                 >
-                  检查更新
+                  {t('settings.basic.manualUpdate.button')}
                 </Button>
               </div>
 
@@ -827,18 +810,18 @@ const Settings: React.FC = () => {
                       }}
                     >
                       {updateResult.error
-                        ? `❌ 检查更新失败`
+                        ? `❌ ${t('settings.basic.updateResult.checkFailed')}`
                         : updateResult.hasUpdate
-                          ? `✓ 发现新版本: ${updateResult.latestVersion}`
-                          : '✓ 当前已是最新版本'}
+                          ? `✓ ${t('settings.basic.updateResult.hasUpdatePrefix')}: ${updateResult.latestVersion}`
+                          : `✓ ${t('settings.basic.updateResult.noUpdatePrefix')}`}
                     </Text>
                   </div>
                   <Text style={{ marginTop: 4, fontSize: '13px' }}>
                     {updateResult.error
-                      ? `错误信息: ${updateResult.error}`
+                      ? `${t('settings.basic.updateResult.errorInfo')}: ${updateResult.error}`
                       : updateResult.hasUpdate
-                        ? `您当前的版本为 ${updateResult.currentVersion}，可以前往 GitHub 下载最新版本`
-                        : `当前版本: ${updateResult.currentVersion}`}
+                        ? formatMessage(t('settings.basic.updateResult.canDownload'), { currentVersion: updateResult.currentVersion })
+                        : `${t('settings.basic.updateResult.currentVersion')}: ${updateResult.currentVersion}`}
                   </Text>
                   {updateResult.hasUpdate && !updateResult.error && (
                     <div style={{ marginTop: 8 }}>
@@ -849,7 +832,7 @@ const Settings: React.FC = () => {
                           window.open('https://github.com/funkpopo/note-by/releases', '_blank')
                         }
                       >
-                        前往下载
+                        {t('settings.basic.updateResult.goToDownload')}
                       </Button>
                     </div>
                   )}
@@ -858,7 +841,7 @@ const Settings: React.FC = () => {
 
               <Divider />
               <Paragraph type="tertiary" style={{ fontSize: '13px' }}>
-                更新检查会连接GitHub查询最新版本信息，确保你可以访问GitHub
+                {t('settings.basic.updateResult.networkTip')}
               </Paragraph>
             </Card>
 
@@ -871,7 +854,7 @@ const Settings: React.FC = () => {
                 marginBottom: 16
               }}
             >
-              <Title heading={5}>AI API配置</Title>
+              <Title heading={5}>{t('settings.basic.apiConfig.title')}</Title>
               <ButtonGroup>
                 <Button
                   icon={<IconPlus />}
@@ -880,7 +863,7 @@ const Settings: React.FC = () => {
                   type="primary"
                   size="small"
                 >
-                  添加API配置
+                  {t('settings.basic.apiConfig.addButton')}
                 </Button>
               </ButtonGroup>
             </div>
@@ -895,33 +878,33 @@ const Settings: React.FC = () => {
           </div>
         </TabPane>
 
-        <TabPane tab="历史记录管理" itemKey="history">
+        <TabPane tab={t('settings.tabs.history')} itemKey="history">
           <div className="settings-scroll-container">
             {/* 历史记录管理设置卡片 */}
             <Card
-              title="历史记录管理"
+              title={t('settings.history.title')}
               style={{ marginTop: 20, marginBottom: '16px' }}
               headerExtraContent={
                 <Button type="primary" theme="solid" onClick={saveHistoryManagement}>
-                  保存
+                  {t('settings.history.saveButton')}
                 </Button>
               }
             >
               <Form>
                 <Form.RadioGroup
                   field="historyType"
-                  label="历史记录保留方式"
+                  label={t('settings.history.type.label')}
                   initValue={historyManagement.type}
                   onChange={handleHistoryTypeChange}
                 >
-                  <Radio value="count">按数量保留</Radio>
-                  <Radio value="time">按时间保留</Radio>
+                  <Radio value="count">{t('settings.history.type.byCount')}</Radio>
+                  <Radio value="time">{t('settings.history.type.byTime')}</Radio>
                 </Form.RadioGroup>
 
                 {historyManagement.type === 'count' && (
                   <Form.InputNumber
                     field="maxCount"
-                    label="保留最近的记录数量"
+                    label={t('settings.history.maxCount.label')}
                     initValue={historyManagement.maxCount}
                     onChange={handleMaxCountChange}
                     min={1}
@@ -934,35 +917,35 @@ const Settings: React.FC = () => {
                 {historyManagement.type === 'time' && (
                   <Form.InputNumber
                     field="maxDays"
-                    label="保留天数"
+                    label={t('settings.history.maxDays.label')}
                     initValue={historyManagement.maxDays}
                     onChange={handleMaxDaysChange}
                     min={1}
                     max={365}
                     step={1}
-                    suffix="天"
+                    suffix={t('settings.history.maxDays.unit')}
                     style={{ width: '200px' }}
                   />
                 )}
 
                 <Paragraph style={{ marginTop: '16px', color: 'var(--semi-color-text-2)' }}>
                   {historyManagement.type === 'count'
-                    ? `系统将为每个文件保留最近的 ${historyManagement.maxCount} 条历史记录。超出的记录将被自动清理。`
-                    : `系统将自动清理 ${historyManagement.maxDays} 天前的历史记录。`}
+                    ? formatMessage(t('settings.history.description.byCount'), { count: historyManagement.maxCount })
+                    : formatMessage(t('settings.history.description.byTime'), { days: historyManagement.maxDays })}
                 </Paragraph>
               </Form>
             </Card>
           </div>
         </TabPane>
 
-        <TabPane tab="记忆功能" itemKey="memory">
+        <TabPane tab={t('settings.tabs.memory')} itemKey="memory">
           <div className="settings-scroll-container">
-            <Card title="记忆功能设置" style={{ marginBottom: 20 }}>
+            <Card title={t('settings.memory.title')} style={{ marginBottom: 20 }}>
               <Form onValueChange={(values) => console.log('Memory form values:', values)}>
                 <div style={{ maxWidth: 600 }}>
                   <div style={{ marginBottom: '24px' }}>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text strong>启用记忆功能</Text>
+                      <Text strong>{t('settings.memory.enable.label')}</Text>
                     </div>
                     <Switch
                       checked={memoryConfig.enabled}
@@ -975,119 +958,54 @@ const Settings: React.FC = () => {
                         marginTop: '4px'
                       }}
                     >
-                      开启后，AI将能够记住对话内容和笔记信息
+                      {t('settings.memory.enable.description')}
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text strong>选择 LLM 配置</Text>
+                      <Text strong>{t('settings.memory.llmConfig.label')}</Text>
                     </div>
                     <Form.Select
-                      field="memoryLlmConfig"
+                      field="LLM 选择"
                       initValue={memoryConfig.selectedLlmId || ''}
                       onChange={(value) => handleMemoryConfigChange('selectedLlmId', value)}
                       disabled={!memoryConfig.enabled}
                       style={{ width: '100%' }}
-                      placeholder="请选择已配置的 AI API"
+                      placeholder={t('settings.memory.llmConfig.placeholder')}
                     >
-                      {AiApiConfigs.map((config) => (
+                      {AiApiConfigs.filter(config => config.type === 'llm').map((config) => (
                         <Form.Select.Option key={config.id} value={config.id}>
                           {config.name} ({config.modelName})
                         </Form.Select.Option>
                       ))}
                     </Form.Select>
                     <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
-                      请在 "AI API设置" 页面先配置 LLM，然后在此选择
+                      {t('settings.memory.llmConfig.tip')}
                     </div>
                   </div>
 
-                  <Card 
-                    title="嵌入模型配置" 
-                    style={{ 
-                      marginBottom: '16px', 
-                      border: '1px solid var(--semi-color-border)', 
-                      borderRadius: '8px' 
-                    }}
-                  >
-                    <div style={{ marginBottom: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <Text strong>配置名称</Text>
-                      </div>
-                      <Form.Input
-                        field="memoryEmbedderName"
-                        initValue={memoryConfig.embedder?.name || 'OpenAI Embeddings'}
-                        onChange={(value) => handleMemoryConfigChange('embedderName', value)}
-                        placeholder="为此配置输入一个名称"
-                        disabled={!memoryConfig.enabled}
-                      />
-                    </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <Text strong>API 密钥</Text>
-                      </div>
-                      <Form.Input
-                        field="memoryEmbedderApiKey"
-                        type="password"
-                        initValue={memoryConfig.embedder?.apiKey || ''}
-                        onChange={(value) => handleMemoryConfigChange('embedderApiKey', value)}
-                        placeholder="请输入 API 密钥"
-                        disabled={!memoryConfig.enabled}
-                      />
-                    </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <Text strong>API URL</Text>
-                      </div>
-                      <Form.Input
-                        field="memoryEmbedderApiUrl"
-                        initValue={memoryConfig.embedder?.apiUrl || 'https://api.openai.com/v1'}
-                        onChange={(value) => handleMemoryConfigChange('embedderApiUrl', value)}
-                        placeholder="请输入 API URL"
-                        disabled={!memoryConfig.enabled}
-                      />
-                    </div>
-
-                    <div>
-                      <div style={{ marginBottom: '8px' }}>
-                        <Text strong>模型名称</Text>
-                      </div>
-                      <Form.Input
-                        field="memoryEmbedderModel"
-                        initValue={memoryConfig.embedder?.model || 'text-embedding-3-small'}
-                        onChange={(value) => handleMemoryConfigChange('embedderModel', value)}
-                        placeholder="请输入模型名称"
-                        disabled={!memoryConfig.enabled}
-                      />
-                      <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
-                        例如：text-embedding-3-small, text-embedding-3-large
-                      </div>
-                    </div>
-                  </Card>
-
                   <div style={{ marginBottom: '24px' }}>
-                    <Button
-                      theme="solid"
-                      type="primary"
-                      onClick={handleTestMemoryConnection}
-                      loading={isTestingMemory}
-                      disabled={
-                        !memoryConfig.enabled ||
-                        (!memoryConfig.selectedLlmId && !memoryConfig.embedder?.apiKey)
-                      }
-                      icon={<IconPulse />}
+                    <div style={{ marginBottom: '8px' }}>
+                      <Text strong>{t('settings.memory.embeddingConfig.label')}</Text>
+                    </div>
+                    <Form.Select
+                      field="Text Embedding 选择"
+                      initValue={memoryConfig.selectedEmbeddingId || ''}
+                      onChange={(value) => handleMemoryConfigChange('selectedEmbeddingId', value)}
+                      disabled={!memoryConfig.enabled}
+                      style={{ width: '100%' }}
+                      placeholder={t('settings.memory.embeddingConfig.placeholder')}
                     >
-                      测试连接
-                    </Button>
-                    {memoryTestResult && (
-                      <div style={{ marginTop: '8px' }}>
-                        <Text type={memoryTestResult.success ? 'success' : 'danger'} size="small">
-                          {memoryTestResult.message}
-                        </Text>
-                      </div>
-                    )}
+                      {AiApiConfigs.filter(config => config.type === 'embedding').map((config) => (
+                        <Form.Select.Option key={config.id} value={config.id}>
+                          {config.name} ({config.modelName})
+                        </Form.Select.Option>
+                      ))}
+                    </Form.Select>
+                    <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                      {t('settings.memory.embeddingConfig.tip')}
+                    </div>
                   </div>
                 </div>
 
@@ -1101,32 +1019,32 @@ const Settings: React.FC = () => {
                     borderRadius: '6px'
                   }}
                 >
-                  <strong>记忆功能说明：</strong>
+                  <strong>{t('settings.memory.description.title')}</strong>
                   <br />
-                  • 启用后，AI能够记住您的对话内容和偏好
+                  {t('settings.memory.description.line1')}
                   <br />
-                  • 记忆数据将保存在本地 /markdown/.assets/memories/ 目录
+                  {t('settings.memory.description.line2')}
                   <br />
-                  • 支持笔记内容自动记忆和智能关联
-                  <br />• 可通过搜索功能快速找到相关记忆
+                  {t('settings.memory.description.line3')}
+                  <br />{t('settings.memory.description.line4')}
                 </Paragraph>
               </Form>
             </Card>
           </div>
         </TabPane>
 
-        <TabPane tab="WebDAV同步" itemKey="webdav">
+        <TabPane tab={t('settings.tabs.webdav')} itemKey="webdav">
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </TabPane>
 
-        <TabPane tab="性能监控" itemKey="performance">
+        <TabPane tab={t('settings.tabs.performance')} itemKey="performance">
           <div className="settings-scroll-container">
             {/* 性能统计卡片 */}
             <Card
               title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <IconPieChartStroked />
-                  <span>性能统计</span>
+                  <span>{t('settings.performance.title')}</span>
                 </div>
               }
               style={{ marginBottom: 20 }}
@@ -1139,7 +1057,7 @@ const Settings: React.FC = () => {
                     type="tertiary"
                     size="small"
                   >
-                    刷新
+                    {t('settings.performance.refresh')}
                   </Button>
                   <Button
                     icon={<IconDownload />}
@@ -1149,7 +1067,7 @@ const Settings: React.FC = () => {
                     type="primary"
                     size="small"
                   >
-                    导出数据
+                    {t('settings.performance.export')}
                   </Button>
                   <Button
                     onClick={handleResetPerformanceMetrics}
@@ -1157,7 +1075,7 @@ const Settings: React.FC = () => {
                     type="danger"
                     size="small"
                   >
-                    重置统计
+                    {t('settings.performance.reset')}
                   </Button>
                 </ButtonGroup>
               }
@@ -1175,18 +1093,18 @@ const Settings: React.FC = () => {
                     }}
                   >
                     <Title heading={6} style={{ marginBottom: '12px' }}>
-                      内存使用
+                      {t('settings.performance.memory.title')}
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">已使用: </Text>
+                      <Text type="tertiary">{t('settings.performance.memory.used')}: </Text>
                       <Text>{formatBytes(performanceMetrics.memoryUsage.used)}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">总量: </Text>
+                      <Text type="tertiary">{t('settings.performance.memory.total')}: </Text>
                       <Text>{formatBytes(performanceMetrics.memoryUsage.total)}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">使用率: </Text>
+                      <Text type="tertiary">{t('settings.performance.memory.usage')}: </Text>
                       <Text
                         style={{
                           color:
@@ -1211,18 +1129,18 @@ const Settings: React.FC = () => {
                     }}
                   >
                     <Title heading={6} style={{ marginBottom: '12px' }}>
-                      编辑器性能
+                      {t('settings.performance.editor.title')}
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">加载时间: </Text>
+                      <Text type="tertiary">{t('settings.performance.editor.loadTime')}: </Text>
                       <Text>{formatTime(performanceMetrics.editorPerformance.loadTime)}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">保存时间: </Text>
+                      <Text type="tertiary">{t('settings.performance.editor.saveTime')}: </Text>
                       <Text>{formatTime(performanceMetrics.editorPerformance.saveTime)}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">渲染时间: </Text>
+                      <Text type="tertiary">{t('settings.performance.editor.renderTime')}: </Text>
                       <Text>{formatTime(performanceMetrics.editorPerformance.renderTime)}</Text>
                     </div>
                   </div>
@@ -1236,22 +1154,22 @@ const Settings: React.FC = () => {
                     }}
                   >
                     <Title heading={6} style={{ marginBottom: '12px' }}>
-                      操作统计
+                      {t('settings.performance.userActions.title')}
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">编辑次数: </Text>
+                      <Text type="tertiary">{t('settings.performance.userActions.editorChanges')}: </Text>
                       <Text>{performanceMetrics.userActions.editorChanges}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">保存次数: </Text>
+                      <Text type="tertiary">{t('settings.performance.userActions.saves')}: </Text>
                       <Text>{performanceMetrics.userActions.saves}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">加载次数: </Text>
+                      <Text type="tertiary">{t('settings.performance.userActions.loads')}: </Text>
                       <Text>{performanceMetrics.userActions.loads}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">搜索次数: </Text>
+                      <Text type="tertiary">{t('settings.performance.userActions.searches')}: </Text>
                       <Text>{performanceMetrics.userActions.searches}</Text>
                     </div>
                   </div>
@@ -1265,30 +1183,30 @@ const Settings: React.FC = () => {
                     }}
                   >
                     <Title heading={6} style={{ marginBottom: '12px' }}>
-                      网络性能
+                      {t('settings.performance.network.title')}
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">上传速度: </Text>
+                      <Text type="tertiary">{t('settings.performance.network.uploadSpeed')}: </Text>
                       <Text>
                         {performanceMetrics.networkPerformance.uploadSpeed > 0
                           ? formatSpeed(performanceMetrics.networkPerformance.uploadSpeed)
-                          : '未记录'}
+                          : t('settings.performance.network.notRecorded')}
                       </Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">下载速度: </Text>
+                      <Text type="tertiary">{t('settings.performance.network.downloadSpeed')}: </Text>
                       <Text>
                         {performanceMetrics.networkPerformance.downloadSpeed > 0
                           ? formatSpeed(performanceMetrics.networkPerformance.downloadSpeed)
-                          : '未记录'}
+                          : t('settings.performance.network.notRecorded')}
                       </Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">延迟: </Text>
+                      <Text type="tertiary">{t('settings.performance.network.latency')}: </Text>
                       <Text>
                         {performanceMetrics.networkPerformance.latency > 0
                           ? `${performanceMetrics.networkPerformance.latency.toFixed(0)}ms`
-                          : '未记录'}
+                          : t('settings.performance.network.notRecorded')}
                       </Text>
                     </div>
                   </div>
@@ -1296,7 +1214,7 @@ const Settings: React.FC = () => {
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 0' }}>
                   <Spin size="large" />
-                  <Paragraph style={{ marginTop: '16px' }}>加载性能数据中...</Paragraph>
+                  <Paragraph style={{ marginTop: '16px' }}>{t('settings.performance.loading')}</Paragraph>
                 </div>
               )}
 
@@ -1304,7 +1222,7 @@ const Settings: React.FC = () => {
               {performanceMetrics && (
                 <div style={{ marginTop: '24px' }}>
                   <Title heading={6} style={{ marginBottom: '12px' }}>
-                    性能分析报告
+                    {t('settings.performance.report.title')}
                   </Title>
                   {(() => {
                     const report = performanceMonitor.generatePerformanceReport()
@@ -1317,7 +1235,7 @@ const Settings: React.FC = () => {
                         }}
                       >
                         <div style={{ marginBottom: '16px' }}>
-                          <Text strong>性能摘要</Text>
+                          <Text strong>{t('settings.performance.report.summary.title')}</Text>
                           <div
                             style={{
                               marginTop: '8px',
@@ -1327,29 +1245,29 @@ const Settings: React.FC = () => {
                             }}
                           >
                             <div>
-                              <Text type="tertiary">平均内存使用: </Text>
+                              <Text type="tertiary">{t('settings.performance.report.summary.averageMemory')}: </Text>
                               <Text>{report.summary.averageMemoryUsage}%</Text>
                             </div>
                             <div>
-                              <Text type="tertiary">平均加载时间: </Text>
+                              <Text type="tertiary">{t('settings.performance.report.summary.averageLoadTime')}: </Text>
                               <Text>{formatTime(report.summary.averageLoadTime)}</Text>
                             </div>
                             <div>
-                              <Text type="tertiary">平均保存时间: </Text>
+                              <Text type="tertiary">{t('settings.performance.report.summary.averageSaveTime')}: </Text>
                               <Text>{formatTime(report.summary.averageSaveTime)}</Text>
                             </div>
                             <div>
-                              <Text type="tertiary">总操作次数: </Text>
+                              <Text type="tertiary">{t('settings.performance.report.summary.totalActions')}: </Text>
                               <Text>{report.summary.totalUserActions}</Text>
                             </div>
                           </div>
                         </div>
 
                         <div style={{ marginBottom: '16px' }}>
-                          <Text strong>性能趋势</Text>
+                          <Text strong>{t('settings.performance.report.trends.title')}</Text>
                           <div style={{ marginTop: '8px' }}>
                             <div style={{ marginBottom: '4px' }}>
-                              <Text type="tertiary">内存趋势: </Text>
+                              <Text type="tertiary">{t('common.memoryTrend')}: </Text>
                               <Text
                                 style={{
                                   color:
@@ -1361,14 +1279,14 @@ const Settings: React.FC = () => {
                                 }}
                               >
                                 {report.trends.memoryTrend === 'increasing'
-                                  ? '上升'
+                                  ? t('settings.performance.report.trends.memory.increasing')
                                   : report.trends.memoryTrend === 'decreasing'
-                                    ? '下降'
-                                    : '稳定'}
+                                    ? t('settings.performance.report.trends.memory.decreasing')
+                                    : t('settings.performance.report.trends.memory.stable')}
                               </Text>
                             </div>
                             <div>
-                              <Text type="tertiary">性能趋势: </Text>
+                              <Text type="tertiary">{t('common.performanceTrend')}: </Text>
                               <Text
                                 style={{
                                   color:
@@ -1380,17 +1298,17 @@ const Settings: React.FC = () => {
                                 }}
                               >
                                 {report.trends.performanceTrend === 'improving'
-                                  ? '提升'
+                                  ? t('settings.performance.report.trends.performance.improving')
                                   : report.trends.performanceTrend === 'declining'
-                                    ? '下降'
-                                    : '稳定'}
+                                    ? t('settings.performance.report.trends.performance.declining')
+                                    : t('settings.performance.report.trends.performance.stable')}
                               </Text>
                             </div>
                           </div>
                         </div>
 
                         <div>
-                          <Text strong>优化建议</Text>
+                          <Text strong>{t('settings.performance.report.recommendations.title')}</Text>
                           <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
                             {report.recommendations.map((rec, index) => (
                               <li key={index} style={{ marginBottom: '4px' }}>
@@ -1408,7 +1326,7 @@ const Settings: React.FC = () => {
               <Paragraph
                 style={{ marginTop: '16px', color: 'var(--semi-color-text-2)', fontSize: '13px' }}
               >
-                性能数据每1分钟自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。
+                {t('settings.performance.tip')}
               </Paragraph>
             </Card>
           </div>
@@ -1417,7 +1335,7 @@ const Settings: React.FC = () => {
 
       {/* 添加/编辑配置模态框 */}
       <Modal
-        title={isEditMode ? '编辑API配置' : '添加API配置'}
+        title={isEditMode ? t('settings.basic.apiConfig.modal.editTitle') : t('settings.basic.apiConfig.modal.addTitle')}
         visible={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         centered
@@ -1425,20 +1343,61 @@ const Settings: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <ButtonGroup>
               <Button type="tertiary" onClick={() => setIsModalOpen(false)}>
-                取消
+                {t('settings.basic.apiConfig.modal.cancel')}
               </Button>
               <Button type="primary" onClick={handleSaveConfig}>
-                保存
+                {t('settings.basic.apiConfig.modal.save')}
               </Button>
             </ButtonGroup>
           </div>
         }
       >
         <Form<AiApiConfig> labelPosition="left" labelWidth={100}>
+          <Form.Select
+            field="type"
+            label="API类型"
+            placeholder="请选择API类型"
+            initValue={currentConfig?.type || 'llm'}
+            onChange={(value) => handleConfigChange('type', value as string)}
+            style={{ width: '100%' }}
+          >
+            <Form.Select.Option value="llm">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ 
+                  padding: '2px 6px', 
+                  borderRadius: '8px', 
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  backgroundColor: '#0064fa',
+                  marginRight: '8px'
+                }}>
+                  {t('settings.basic.apiConfig.types.llm')}
+                </span>
+                {t('settings.basic.apiConfig.types.llm')}
+              </div>
+            </Form.Select.Option>
+            <Form.Select.Option value="embedding">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ 
+                  padding: '2px 6px', 
+                  borderRadius: '8px', 
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  backgroundColor: '#00b42a',
+                  marginRight: '8px'
+                }}>
+                  Embedding
+                </span>
+                {t('settings.basic.apiConfig.types.embedding')}
+              </div>
+            </Form.Select.Option>
+          </Form.Select>
           <Form.Input
             field="name"
-            label="配置名称"
-            placeholder="请输入配置名称，如OpenAI、Claude等"
+            label={t('settings.basic.apiConfig.fields.name')}
+            placeholder={t('settings.basic.apiConfig.fields.namePlaceholder')}
             initValue={currentConfig?.name}
             onChange={(value) => handleConfigChange('name', value)}
             showClear
@@ -1446,30 +1405,32 @@ const Settings: React.FC = () => {
           />
           <Form.Input
             field="apiKey"
-            label="API Key"
-            placeholder="请输入API Key"
+            label={t('settings.basic.apiConfig.fields.apiKey')}
+            placeholder={t('settings.basic.apiConfig.fields.apiKeyPlaceholder')}
             initValue={currentConfig?.apiKey}
             onChange={(value) => handleConfigChange('apiKey', value)}
             showClear
           />
           <Form.Input
             field="apiUrl"
-            label="API URL"
-            placeholder="请输入API URL，如https://api.openai.com"
+            label={t('settings.basic.apiConfig.fields.apiUrl')}
+            placeholder={t('settings.basic.apiConfig.fields.apiUrlPlaceholder')}
             initValue={currentConfig?.apiUrl}
             onChange={(value) => handleConfigChange('apiUrl', value)}
             showClear
           />
           <Form.Input
             field="modelName"
-            label="模型名称"
-            placeholder="请输入模型名称，如gpt-3.5-turbo"
+            label={t('settings.basic.apiConfig.fields.modelName')}
+            placeholder={t('settings.basic.apiConfig.fields.modelNamePlaceholder')}
             initValue={currentConfig?.modelName}
             onChange={(value) => handleConfigChange('modelName', value)}
             showClear
           />
+          {currentConfig?.type === 'llm' && (
+          <>
           <div style={{ marginBottom: 20 }}>
-            <Form.Label>温度 (Temperature)</Form.Label>
+            <Form.Label>{t('settings.basic.apiConfig.fields.temperature')}</Form.Label>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
                 <div
@@ -1496,11 +1457,11 @@ const Settings: React.FC = () => {
               </Text>
             </div>
             <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
-              较低的值使输出更确定，较高的值使输出更随机、创造性
+              {t('settings.basic.apiConfig.fields.temperatureDesc')}
             </Paragraph>
           </div>
           <div style={{ marginBottom: 10 }}>
-            <Form.Label>最大Token数 (Max Tokens)</Form.Label>
+            <Form.Label>{t('settings.basic.apiConfig.fields.maxTokens')}</Form.Label>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
                 <div
@@ -1527,9 +1488,11 @@ const Settings: React.FC = () => {
               </Text>
             </div>
             <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
-              限制模型生成的最大token数量
+              {t('settings.basic.apiConfig.fields.maxTokensDesc')}
             </Paragraph>
           </div>
+          </>
+          )}
         </Form>
       </Modal>
     </div>

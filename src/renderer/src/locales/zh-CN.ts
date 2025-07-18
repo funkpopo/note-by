@@ -47,6 +47,211 @@ export interface ExtendedDictionary extends Dictionary {
       retrying: string
     }
   }
+  settings?: {
+    title: string
+    tabs: {
+      basic: string
+      history: string
+      memory: string
+      webdav: string
+      performance: string
+    }
+    basic: {
+      autoUpdate: {
+        title: string
+        description: string
+      }
+      manualUpdate: {
+        title: string
+        description: string
+        button: string
+      }
+      updateResult: {
+        checking: string
+        hasUpdate: string
+        noUpdate: string
+        error: string
+        goToDownload: string
+        currentVersion: string
+        latestVersion: string
+        checkFailed: string
+        networkTip: string
+        checkFailedWithError: string
+        hasUpdatePrefix: string
+        noUpdatePrefix: string
+        networkCheckFailed: string
+        errorInfo: string
+        canDownload: string
+      }
+      apiConfig: {
+        title: string
+        addButton: string
+        noConfigs: string
+        noConfigsDesc: string
+        testConnection: string
+        edit: string
+        delete: string
+        types: {
+          llm: string
+          embedding: string
+        }
+        fields: {
+          name: string
+          namePlaceholder: string
+          apiKey: string
+          apiKeyPlaceholder: string
+          apiUrl: string
+          apiUrlPlaceholder: string
+          modelName: string
+          modelNamePlaceholder: string
+          temperature: string
+          temperatureDesc: string
+          maxTokens: string
+          maxTokensDesc: string
+        }
+        modal: {
+          addTitle: string
+          editTitle: string
+          cancel: string
+          save: string
+        }
+        toast: {
+          saved: string
+          updated: string
+          deleted: string
+          saveFailed: string
+          deleteFailed: string
+          testSuccess: string
+          testFailed: string
+          testError: string
+          nameRequired: string
+        }
+        testResult: {
+          success: string
+          failed: string
+        }
+      }
+    }
+    history: {
+      title: string
+      saveButton: string
+      type: {
+        label: string
+        byCount: string
+        byTime: string
+      }
+      maxCount: {
+        label: string
+      }
+      maxDays: {
+        label: string
+        unit: string
+      }
+      description: {
+        byCount: string
+        byTime: string
+      }
+    }
+    memory: {
+      title: string
+      enable: {
+        label: string
+        description: string
+      }
+      llmConfig: {
+        label: string
+        placeholder: string
+        tip: string
+      }
+      embeddingConfig: {
+        label: string
+        placeholder: string
+        tip: string
+      }
+      description: {
+        title: string
+        line1: string
+        line2: string
+        line3: string
+        line4: string
+      }
+    }
+    performance: {
+      title: string
+      refresh: string
+      export: string
+      reset: string
+      loading: string
+      memory: {
+        title: string
+        used: string
+        total: string
+        usage: string
+      }
+      editor: {
+        title: string
+        loadTime: string
+        saveTime: string
+        renderTime: string
+      }
+      userActions: {
+        title: string
+        editorChanges: string
+        saves: string
+        loads: string
+        searches: string
+      }
+      network: {
+        title: string
+        uploadSpeed: string
+        downloadSpeed: string
+        latency: string
+        notRecorded: string
+      }
+      report: {
+        title: string
+        summary: {
+          title: string
+          averageMemory: string
+          averageLoadTime: string
+          averageSaveTime: string
+          totalActions: string
+        }
+        trends: {
+          title: string
+          memory: {
+            increasing: string
+            decreasing: string
+            stable: string
+          }
+          performance: {
+            improving: string
+            declining: string
+            stable: string
+          }
+        }
+        recommendations: {
+          title: string
+        }
+      }
+      exportSuccess: string
+      exportFailed: string
+      resetSuccess: string
+      tip: string
+    }
+  }
+  common?: {
+    loading: string
+    save: string
+    cancel: string
+    error: string
+    success: string
+    failed: string
+    loadingFailed: string
+    saveFailed: string
+    memoryTrend: string
+    performanceTrend: string
+  }
 }
 
 export const zhCN: ExtendedDictionary = {
@@ -512,6 +717,211 @@ export const zhCN: ExtendedDictionary = {
       failed: '分析失败',
       retrying: '正在重试...'
     }
+  },
+  settings: {
+    title: '设置',
+    tabs: {
+      basic: '基本设置',
+      history: '历史记录管理',
+      memory: '记忆功能',
+      webdav: 'WebDAV同步',
+      performance: '性能监控'
+    },
+    basic: {
+      autoUpdate: {
+        title: '自动检查更新',
+        description: '应用启动时自动检查是否有新版本'
+      },
+      manualUpdate: {
+        title: '手动检查更新',
+        description: '检查GitHub上是否有新版本发布',
+        button: '检查更新'
+      },
+      updateResult: {
+        checking: '正在检查更新...',
+        hasUpdate: '发现新版本',
+        noUpdate: '当前已是最新版本',
+        error: '检查更新失败',
+        goToDownload: '前往下载',
+        currentVersion: '当前版本',
+        latestVersion: '最新版本',
+        checkFailed: '检查更新失败',
+        networkTip: '更新检查会连接GitHub查询最新版本信息，确保你可以访问GitHub',
+        checkFailedWithError: '检查更新失败',
+        hasUpdatePrefix: '发现新版本',
+        noUpdatePrefix: '当前已是最新版本',
+        networkCheckFailed: '检查更新失败，请检查网络连接',
+        errorInfo: '错误信息',
+        canDownload: '您当前的版本为 {currentVersion}，可以前往 GitHub 下载最新版本'
+      },
+      apiConfig: {
+        title: 'AI API配置',
+        addButton: '添加API配置',
+        noConfigs: '暂无API配置',
+        noConfigsDesc: '点击上方\'添加API配置\'按钮创建新的API配置',
+        testConnection: '测试连接',
+        edit: '编辑',
+        delete: '删除',
+        types: {
+          llm: 'LLM',
+          embedding: 'Text Embedding'
+        },
+        fields: {
+          name: '配置名称',
+          namePlaceholder: '请输入配置名称，如OpenAI、Claude等',
+          apiKey: 'API Key',
+          apiKeyPlaceholder: '请输入API Key',
+          apiUrl: 'API URL',
+          apiUrlPlaceholder: '请输入API URL，如https://api.openai.com',
+          modelName: '模型名称',
+          modelNamePlaceholder: '请输入模型名称，如gpt-3.5-turbo',
+          temperature: '温度 (Temperature)',
+          temperatureDesc: '较低的值使输出更确定，较高的值使输出更随机、创造性',
+          maxTokens: '最大Token数 (Max Tokens)',
+          maxTokensDesc: '限制模型生成的最大token数量'
+        },
+        modal: {
+          addTitle: '添加API配置',
+          editTitle: '编辑API配置',
+          cancel: '取消',
+          save: '保存'
+        },
+        toast: {
+          saved: '配置已添加',
+          updated: '配置已更新',
+          deleted: '配置已删除',
+          saveFailed: '保存配置失败',
+          deleteFailed: '删除配置失败',
+          testSuccess: '连接测试成功',
+          testFailed: '连接测试失败',
+          testError: '连接测试出错',
+          nameRequired: '请输入配置名称'
+        },
+        testResult: {
+          success: '连接成功',
+          failed: '连接失败'
+        }
+      }
+    },
+    history: {
+      title: '历史记录管理',
+      saveButton: '保存',
+      type: {
+        label: '历史记录保留方式',
+        byCount: '按数量保留',
+        byTime: '按时间保留'
+      },
+      maxCount: {
+        label: '保留最近的记录数量'
+      },
+      maxDays: {
+        label: '保留天数',
+        unit: '天'
+      },
+      description: {
+        byCount: '系统将为每个文件保留最近的 {count} 条历史记录。超出的记录将被自动清理。',
+        byTime: '系统将自动清理 {days} 天前的历史记录。'
+      }
+    },
+    memory: {
+      title: '记忆功能设置',
+      enable: {
+        label: '启用记忆功能',
+        description: '开启后，AI将能够记住对话内容和笔记信息'
+      },
+      llmConfig: {
+        label: '选择 LLM 配置',
+        placeholder: '请选择已配置的 AI API',
+        tip: '请在 "AI API设置" 页面先配置 LLM，然后在此选择'
+      },
+      embeddingConfig: {
+        label: '选择嵌入模型 API',
+        placeholder: '请选择已配置的嵌入模型 API',
+        tip: '请在 "AI API设置" 页面先配置嵌入模型 API，然后在此选择'
+      },
+      description: {
+        title: '记忆功能说明：',
+        line1: '• 启用后，AI能够记住您的对话内容和偏好',
+        line2: '• 记忆数据将保存在本地 /markdown/.assets/memories/ 目录',
+        line3: '• 支持笔记内容自动记忆和智能关联',
+        line4: '• 可通过搜索功能快速找到相关记忆'
+      }
+    },
+    performance: {
+      title: '性能统计',
+      refresh: '刷新',
+      export: '导出数据',
+      reset: '重置统计',
+      loading: '加载性能数据中...',
+      memory: {
+        title: '内存使用',
+        used: '已使用',
+        total: '总量',
+        usage: '使用率'
+      },
+      editor: {
+        title: '编辑器性能',
+        loadTime: '加载时间',
+        saveTime: '保存时间',
+        renderTime: '渲染时间'
+      },
+      userActions: {
+        title: '操作统计',
+        editorChanges: '编辑次数',
+        saves: '保存次数',
+        loads: '加载次数',
+        searches: '搜索次数'
+      },
+      network: {
+        title: '网络性能',
+        uploadSpeed: '上传速度',
+        downloadSpeed: '下载速度',
+        latency: '延迟',
+        notRecorded: '未记录'
+      },
+      report: {
+        title: '性能分析报告',
+        summary: {
+          title: '性能摘要',
+          averageMemory: '平均内存使用',
+          averageLoadTime: '平均加载时间',
+          averageSaveTime: '平均保存时间',
+          totalActions: '总操作次数'
+        },
+        trends: {
+          title: '性能趋势',
+          memory: {
+            increasing: '上升',
+            decreasing: '下降',
+            stable: '稳定'
+          },
+          performance: {
+            improving: '提升',
+            declining: '下降',
+            stable: '稳定'
+          }
+        },
+        recommendations: {
+          title: '优化建议'
+        }
+      },
+      exportSuccess: '性能数据导出成功',
+      exportFailed: '导出性能数据失败',
+      resetSuccess: '性能统计已重置',
+      tip: '性能数据每1分钟自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。'
+    }
+  },
+  common: {
+    loading: '加载中...',
+    save: '保存',
+    cancel: '取消',
+    error: '错误',
+    success: '成功',
+    failed: '失败',
+    loadingFailed: '加载失败',
+    saveFailed: '保存失败',
+    memoryTrend: '内存趋势',
+    performanceTrend: '性能趋势'
   }
 }
 
