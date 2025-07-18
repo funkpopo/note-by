@@ -2,25 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Typography, Button, Toast, TextArea, Select, Chat, Space } from '@douyinfe/semi-ui'
 import { IconSend } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
+import throttle from 'lodash.throttle'
+import { filterThinkingContent } from '../utils/filterThinking'
 
 const { Title, Text } = Typography
 
 // Semi Design Chat组件的角色配置
 const roleConfig = {
   user: {
-    name: '用户',
-    avatar:
-      'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/docs-icon.png'
+    name: '用户'
   },
   assistant: {
-    name: 'AI助手',
-    avatar:
-      'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/other/logo.png'
+    name: 'AI助手'
   },
   system: {
-    name: '系统',
-    avatar:
-      'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/other/logo.png'
+    name: '系统'
   }
 }
 
@@ -53,7 +49,27 @@ const ChatInterface: React.FC = () => {
   // 保存最后一条用户消息，用于重发
   const [lastUserMessage, setLastUserMessage] = useState<ChatMessage | null>(null)
 
-  // 移除不再需要的refs和滚动函数，Chat组件会自动处理
+  // 节流更新
+  const throttledUpdateRef = React.useRef<{
+    (updater: React.SetStateAction<ChatMessage[]>): void
+    cancel: () => void
+  } | null>(null)
+
+  useEffect(() => {
+    // 初始化节流函数
+    throttledUpdateRef.current = throttle(
+      (updater) => {
+        setMessages(updater)
+      },
+      150, // 每150ms最多执行一次
+      { leading: true, trailing: true }
+    )
+
+    // 组件卸载时清理
+    return () => {
+      throttledUpdateRef.current?.cancel()
+    }
+  }, [])
 
   // 加载AI API配置
   const loadAiApiConfigs = useCallback(async () => {
@@ -162,7 +178,7 @@ ${relevantMemories}
           {
             // 实时更新消息内容
             onData: (chunk: string) => {
-              setMessages((prev) => {
+              const updater = (prev: ChatMessage[]): ChatMessage[] => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
@@ -173,18 +189,22 @@ ${relevantMemories}
                   }
                 }
                 return newMessages
-              })
+              }
+              throttledUpdateRef.current?.(updater)
             },
 
             // 流式完成处理
             onDone: (fullContent: string) => {
+              // 取消任何待处理的节流更新
+              throttledUpdateRef.current?.cancel()
+
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
                   newMessages[messageIndex] = {
                     ...newMessages[messageIndex],
-                    content: fullContent,
+                    content: filterThinkingContent(fullContent),
                     status: 'complete'
                   }
                 }
@@ -199,7 +219,7 @@ ${relevantMemories}
                     // 构建对话消息数组
                     const conversationMessages = [
                       { role: 'user' as const, content: userContent },
-                      { role: 'assistant' as const, content: fullContent }
+                      { role: 'assistant' as const, content: filterThinkingContent(fullContent) }
                     ]
 
                     // 构建元数据
@@ -231,6 +251,9 @@ ${relevantMemories}
 
             // 错误处理
             onError: (error: string) => {
+              // 取消任何待处理的节流更新
+              throttledUpdateRef.current?.cancel()
+
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
@@ -249,15 +272,17 @@ ${relevantMemories}
                   if (hasContent && error.includes('请求超时')) {
                     newMessages[messageIndex] = {
                       ...newMessages[messageIndex],
+                      content: filterThinkingContent(currentContent), // 在此过滤
                       status: 'complete'
                     }
                   } else {
+                    // 其他错误情况
                     newMessages[messageIndex] = {
                       ...newMessages[messageIndex],
+                      status: 'error',
                       content:
-                        currentContent ||
-                        '抱歉，我遇到了一些问题，无法回复您的消息。请检查AI API配置或稍后重试。',
-                      status: 'error'
+                        filterThinkingContent(newMessages[messageIndex].content || '') + // 在此过滤
+                        `\n\n[错误: ${error}]`
                     }
                   }
                 }
