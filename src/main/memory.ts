@@ -1,6 +1,5 @@
 import { app } from 'electron'
 import path from 'path'
-import fs from 'fs'
 import { Memory } from 'mem0ai/oss'
 import { is } from '@electron-toolkit/utils'
 
@@ -93,15 +92,6 @@ class MemoryService {
         return { success: false, error: 'Embedder API key is required' }
       }
 
-      // Ensure storage directory exists
-      const storagePath = config.vectorStore?.path || this.getStoragePath()
-      const chromaPath = path.join(storagePath, 'chroma')
-      console.log('Creating ChromaDB storage path:', chromaPath)
-
-      if (!fs.existsSync(chromaPath)) {
-        fs.mkdirSync(chromaPath, { recursive: true })
-      }
-
       // Initialize Memory with local configuration
       const memoryConfig = {
         llm: {
@@ -132,7 +122,7 @@ class MemoryService {
           provider: 'chroma',
           config: {
             collectionName: 'memories',
-            path: chromaPath,
+            path: this.getStoragePath(), // 使用 getStoragePath 获取路径
             allowReset: false
           }
         },

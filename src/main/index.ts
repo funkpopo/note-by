@@ -2415,9 +2415,6 @@ ${htmlContent}
                 selectedEmbeddingConfig.apiUrl !== 'https://api.openai.com/v1' && {
                   apiUrl: selectedEmbeddingConfig.apiUrl
                 })
-            },
-            vectorStore: {
-              provider: 'chroma' as const
             }
           }
 
