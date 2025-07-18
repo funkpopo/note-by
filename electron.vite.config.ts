@@ -20,7 +20,7 @@ export default defineConfig({
       strictPort: true,
       headers: {
         'Content-Security-Policy':
-          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' https://* http://* ws: wss:;"
+          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src * 'unsafe-inline';"
       }
     },
     build: {

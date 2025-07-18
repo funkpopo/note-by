@@ -3,7 +3,6 @@ import path from 'path'
 import fs from 'fs'
 import { Memory } from 'mem0ai/oss'
 import { is } from '@electron-toolkit/utils'
-import { readSettings } from './settings'
 
 // Memory service configuration interface
 export interface MemoryConfig {
@@ -14,6 +13,8 @@ export interface MemoryConfig {
     apiKey: string
     model: string
     temperature?: number
+    maxTokens?: number
+    baseURL?: string
   }
   embedder: {
     provider: 'openai'
@@ -65,38 +66,38 @@ class MemoryService {
     }
   }
 
-    // Initialize memory service with configuration
+  // Initialize memory service with configuration
   async initialize(config: MemoryConfig): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log('Initializing memory service with config:', {
+        enabled: config.enabled,
+        hasLlm: !!config.llm,
+        hasEmbedder: !!config.embedder
+      })
+
       this.config = { ...config }
-      
+
       if (!config.enabled) {
+        console.log('Memory service disabled, cleaning up')
         this.memoryClient = null
         this.initialized = false
         return { success: true }
       }
 
-      // 验证选中的LLM配置ID
-      if (!config.selectedLlmId) {
-        return { success: false, error: 'Please select an LLM configuration' }
+      // 验证LLM配置
+      if (!config.llm?.apiKey) {
+        return { success: false, error: 'LLM API key is required' }
       }
 
       if (!config.embedder?.apiKey) {
         return { success: false, error: 'Embedder API key is required' }
       }
 
-      // 从设置中获取选中的LLM配置详情
-      const settings = readSettings()
-      const aiApiConfigs = (settings.AiApiConfigs as any[]) || []
-      const selectedLlmConfig = aiApiConfigs.find(cfg => cfg.id === config.selectedLlmId)
-      
-      if (!selectedLlmConfig) {
-        return { success: false, error: 'Selected LLM configuration not found. Please configure it in AI API Settings first.' }
-      }
-
       // Ensure storage directory exists
       const storagePath = config.vectorStore?.path || this.getStoragePath()
       const chromaPath = path.join(storagePath, 'chroma')
+      console.log('Creating ChromaDB storage path:', chromaPath)
+
       if (!fs.existsSync(chromaPath)) {
         fs.mkdirSync(chromaPath, { recursive: true })
       }
@@ -106,13 +107,14 @@ class MemoryService {
         llm: {
           provider: 'openai', // 目前只支持OpenAI
           config: {
-            apiKey: selectedLlmConfig.apiKey,
-            model: selectedLlmConfig.modelName,
-            temperature: parseFloat(selectedLlmConfig.temperature) || 0.1,
-            maxTokens: parseInt(selectedLlmConfig.maxTokens) || 2000,
-            ...(selectedLlmConfig.apiUrl && selectedLlmConfig.apiUrl !== 'https://api.openai.com/v1' && {
-              baseURL: selectedLlmConfig.apiUrl
-            })
+            apiKey: config.llm.apiKey,
+            model: config.llm.model,
+            temperature: config.llm.temperature || 0.1,
+            maxTokens: config.llm.maxTokens || 2000,
+            ...(config.llm.baseURL &&
+              config.llm.baseURL !== 'https://api.openai.com/v1' && {
+                baseURL: config.llm.baseURL
+              })
           }
         },
         embedder: {
@@ -120,9 +122,10 @@ class MemoryService {
           config: {
             apiKey: config.embedder.apiKey,
             model: config.embedder.model,
-            ...(config.embedder.apiUrl && config.embedder.apiUrl !== 'https://api.openai.com/v1' && {
-              baseURL: config.embedder.apiUrl
-            })
+            ...(config.embedder.apiUrl &&
+              config.embedder.apiUrl !== 'https://api.openai.com/v1' && {
+                baseURL: config.embedder.apiUrl
+              })
           }
         },
         vectorStore: {
@@ -136,9 +139,12 @@ class MemoryService {
         version: 'v1.1'
       }
 
+      console.log('Creating Memory client with config:', JSON.stringify(memoryConfig, null, 2))
+
       this.memoryClient = new Memory(memoryConfig)
       this.initialized = true
 
+      console.log('Memory service initialized successfully')
       return { success: true }
     } catch (error) {
       console.error('Failed to initialize memory service:', error)
@@ -355,7 +361,31 @@ class MemoryService {
 
   // Update configuration
   async updateConfig(newConfig: MemoryConfig): Promise<{ success: boolean; error?: string }> {
-    return await this.initialize(newConfig)
+    try {
+      console.log('Updating memory config:', {
+        enabled: newConfig.enabled,
+        hasLlmKey: !!newConfig.llm?.apiKey,
+        hasEmbedderKey: !!newConfig.embedder?.apiKey
+      })
+
+      // 如果记忆功能被禁用，清理资源
+      if (!newConfig.enabled) {
+        console.log('Memory disabled, cleaning up resources')
+        this.cleanup()
+        return { success: true }
+      }
+
+      // 重新初始化服务
+      const result = await this.initialize(newConfig)
+      console.log('Memory config update result:', result)
+      return result
+    } catch (error) {
+      console.error('Failed to update memory config:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
   }
 
   // Clean up resources

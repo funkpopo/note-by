@@ -168,6 +168,11 @@ export interface ExtendedDictionary extends Dictionary {
         placeholder: string
         tip: string
       }
+      error: {
+        llmNotFound: string
+        embeddingNotFound: string
+        initFailed: string
+      }
       description: {
         title: string
         line1: string
@@ -758,7 +763,7 @@ export const zhCN: ExtendedDictionary = {
         title: 'AI API配置',
         addButton: '添加API配置',
         noConfigs: '暂无API配置',
-        noConfigsDesc: '点击上方\'添加API配置\'按钮创建新的API配置',
+        noConfigsDesc: "点击上方'添加API配置'按钮创建新的API配置",
         testConnection: '测试连接',
         edit: '编辑',
         delete: '删除',
@@ -838,6 +843,11 @@ export const zhCN: ExtendedDictionary = {
         label: '选择嵌入模型 API',
         placeholder: '请选择已配置的嵌入模型 API',
         tip: '请在 "AI API设置" 页面先配置嵌入模型 API，然后在此选择'
+      },
+      error: {
+        llmNotFound: '未找到选中的 LLM 配置，请先在 AI API 设置中配置',
+        embeddingNotFound: '未找到选中的嵌入模型配置，请先在 AI API 设置中配置',
+        initFailed: '记忆服务初始化失败'
       },
       description: {
         title: '记忆功能说明：',

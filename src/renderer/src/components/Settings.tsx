@@ -63,7 +63,7 @@ interface HistoryManagementSettings {
 const Settings: React.FC = () => {
   // 多语言支持
   const { t, formatMessage } = useTranslation()
-  
+
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
@@ -190,7 +190,11 @@ const Settings: React.FC = () => {
       const result = await window.api.api.saveConfig(currentConfig)
 
       if (result.success) {
-        Toast.success(isEditMode ? t('settings.basic.apiConfig.toast.updated') : t('settings.basic.apiConfig.toast.saved'))
+        Toast.success(
+          isEditMode
+            ? t('settings.basic.apiConfig.toast.updated')
+            : t('settings.basic.apiConfig.toast.saved')
+        )
         setIsModalOpen(false)
         // 重新加载配置
         await loadSettings()
@@ -204,7 +208,9 @@ const Settings: React.FC = () => {
           })
         }
       } else {
-        Toast.error(`${t('settings.basic.apiConfig.toast.saveFailed')}: ${result.error || '未知错误'}`)
+        Toast.error(
+          `${t('settings.basic.apiConfig.toast.saveFailed')}: ${result.error || '未知错误'}`
+        )
       }
     } catch (error) {
       Toast.error(t('settings.basic.apiConfig.toast.saveFailed'))
@@ -230,7 +236,9 @@ const Settings: React.FC = () => {
           })
         }
       } else {
-        Toast.error(`${t('settings.basic.apiConfig.toast.deleteFailed')}: ${result.error || '未知错误'}`)
+        Toast.error(
+          `${t('settings.basic.apiConfig.toast.deleteFailed')}: ${result.error || '未知错误'}`
+        )
       }
     } catch (error) {
       Toast.error(t('settings.basic.apiConfig.toast.deleteFailed'))
@@ -342,136 +350,138 @@ const Settings: React.FC = () => {
             border: `2px solid ${isLLM ? 'rgba(0, 100, 250, 0.3)' : 'rgba(0, 180, 42, 0.3)'}`,
             backgroundColor: isLLM ? 'rgba(0, 100, 250, 0.05)' : 'rgba(0, 180, 42, 0.05)'
           }
-          
-          return (
-          <Card
-            key={config.id}
-            headerLine={true}
-            style={cardStyle}
-            title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ 
-                  padding: '2px 8px', 
-                  borderRadius: '12px', 
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  backgroundColor: isLLM ? '#0064fa' : '#00b42a',
-                  marginRight: '8px'
-                }}>
-                  {isLLM ? 'LLM' : 'Embedding'}
-                </span>
-              </div>
-            }
-            headerExtraContent={
-              <ButtonGroup>
-                <Button
-                  icon={<IconPulse />}
-                  onClick={() => handleTestConnection(config)}
-                  loading={testingId === config.id}
-                  theme="borderless"
-                  type="primary"
-                  size="small"
-                >
-                  {t('settings.basic.apiConfig.testConnection')}
-                </Button>
-                <Button
-                  icon={<IconEdit />}
-                  onClick={() => handleEditConfig(config)}
-                  theme="borderless"
-                  type="tertiary"
-                  size="small"
-                >
-                  {t('settings.basic.apiConfig.edit')}
-                </Button>
-                <Button
-                  icon={<IconDelete />}
-                  theme="borderless"
-                  type="danger"
-                  size="small"
-                  onClick={() => handleDeleteConfig(config.id)}
-                >
-                  {t('settings.basic.apiConfig.delete')}
-                </Button>
-              </ButtonGroup>
-            }
-          >
-            <div style={{ padding: '0 4px' }}>
-              {/* 将名称添加到卡片内容区域 */}
-              <div style={{ marginBottom: 12 }}>
-                <Text strong style={{ fontSize: '16px' }}>
-                  {config.name}
-                </Text>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="tertiary" style={{ marginRight: 6 }}>
-                  API URL:
-                </Text>
-                <Text>{config.apiUrl || '未设置'}</Text>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="tertiary" style={{ marginRight: 6 }}>
-                  API Key:
-                </Text>
-                <Text>{config.apiKey ? '******' : '未设置'}</Text>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="tertiary" style={{ marginRight: 6 }}>
-                  模型:
-                </Text>
-                <Text>{config.modelName || '未设置'}</Text>
-              </div>
-              {config.type === 'llm' && (
-                <>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text type="tertiary" style={{ marginRight: 6 }}>
-                      温度:
-                    </Text>
-                    <Text>{config.temperature || '0.7'}</Text>
-                  </div>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text type="tertiary" style={{ marginRight: 6 }}>
-                      最大Token:
-                    </Text>
-                    <Text>{config.maxTokens || '2000'}</Text>
-                  </div>
-                </>
-              )}
 
-              {/* 测试结果显示区域 */}
-              {testResults[config.id] && (
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 12,
-                    borderRadius: 6,
-                    backgroundColor: testResults[config.id].success
-                      ? 'rgba(0, 180, 42, 0.1)'
-                      : 'rgba(253, 77, 77, 0.1)',
-                    border: `1px solid ${
-                      testResults[config.id].success
-                        ? 'rgba(0, 180, 42, 0.2)'
-                        : 'rgba(253, 77, 77, 0.2)'
-                    }`
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <Text
-                      strong
-                      style={{ color: testResults[config.id].success ? '#00b42a' : '#fd4d4d' }}
-                    >
-                      {testResults[config.id].success 
-                        ? `✓ ${t('settings.basic.apiConfig.testResult.success')}` 
-                        : `✗ ${t('settings.basic.apiConfig.testResult.failed')}`}
-                    </Text>
-                  </div>
-                  <Text style={{ marginTop: 4, fontSize: '13px' }}>
-                    {testResults[config.id].message}
+          return (
+            <Card
+              key={config.id}
+              headerLine={true}
+              style={cardStyle}
+              title={
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: 'white',
+                      backgroundColor: isLLM ? '#0064fa' : '#00b42a',
+                      marginRight: '8px'
+                    }}
+                  >
+                    {isLLM ? 'LLM' : 'Embedding'}
+                  </span>
+                </div>
+              }
+              headerExtraContent={
+                <ButtonGroup>
+                  <Button
+                    icon={<IconPulse />}
+                    onClick={() => handleTestConnection(config)}
+                    loading={testingId === config.id}
+                    theme="borderless"
+                    type="primary"
+                    size="small"
+                  >
+                    {t('settings.basic.apiConfig.testConnection')}
+                  </Button>
+                  <Button
+                    icon={<IconEdit />}
+                    onClick={() => handleEditConfig(config)}
+                    theme="borderless"
+                    type="tertiary"
+                    size="small"
+                  >
+                    {t('settings.basic.apiConfig.edit')}
+                  </Button>
+                  <Button
+                    icon={<IconDelete />}
+                    theme="borderless"
+                    type="danger"
+                    size="small"
+                    onClick={() => handleDeleteConfig(config.id)}
+                  >
+                    {t('settings.basic.apiConfig.delete')}
+                  </Button>
+                </ButtonGroup>
+              }
+            >
+              <div style={{ padding: '0 4px' }}>
+                {/* 将名称添加到卡片内容区域 */}
+                <div style={{ marginBottom: 12 }}>
+                  <Text strong style={{ fontSize: '16px' }}>
+                    {config.name}
                   </Text>
                 </div>
-              )}
-            </div>
-          </Card>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="tertiary" style={{ marginRight: 6 }}>
+                    API URL:
+                  </Text>
+                  <Text>{config.apiUrl || '未设置'}</Text>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="tertiary" style={{ marginRight: 6 }}>
+                    API Key:
+                  </Text>
+                  <Text>{config.apiKey ? '******' : '未设置'}</Text>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="tertiary" style={{ marginRight: 6 }}>
+                    模型:
+                  </Text>
+                  <Text>{config.modelName || '未设置'}</Text>
+                </div>
+                {config.type === 'llm' && (
+                  <>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="tertiary" style={{ marginRight: 6 }}>
+                        温度:
+                      </Text>
+                      <Text>{config.temperature || '0.7'}</Text>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="tertiary" style={{ marginRight: 6 }}>
+                        最大Token:
+                      </Text>
+                      <Text>{config.maxTokens || '2000'}</Text>
+                    </div>
+                  </>
+                )}
+
+                {/* 测试结果显示区域 */}
+                {testResults[config.id] && (
+                  <div
+                    style={{
+                      marginTop: 16,
+                      padding: 12,
+                      borderRadius: 6,
+                      backgroundColor: testResults[config.id].success
+                        ? 'rgba(0, 180, 42, 0.1)'
+                        : 'rgba(253, 77, 77, 0.1)',
+                      border: `1px solid ${
+                        testResults[config.id].success
+                          ? 'rgba(0, 180, 42, 0.2)'
+                          : 'rgba(253, 77, 77, 0.2)'
+                      }`
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Text
+                        strong
+                        style={{ color: testResults[config.id].success ? '#00b42a' : '#fd4d4d' }}
+                      >
+                        {testResults[config.id].success
+                          ? `✓ ${t('settings.basic.apiConfig.testResult.success')}`
+                          : `✗ ${t('settings.basic.apiConfig.testResult.failed')}`}
+                      </Text>
+                    </div>
+                    <Text style={{ marginTop: 4, fontSize: '13px' }}>
+                      {testResults[config.id].message}
+                    </Text>
+                  </div>
+                )}
+              </div>
+            </Card>
           )
         })}
       </div>
@@ -646,14 +656,73 @@ const Settings: React.FC = () => {
       // 保存到设置
       await window.api.settings.set('memory', newConfig)
 
-      // 如果启用状态改变或API密钥改变，需要初始化或关闭服务
-      if (field === 'enabled') {
-        await (window as any).api.memory.updateConfig(newConfig)
+      // 构建完整的记忆配置并更新服务
+      // 只有启用状态时才需要初始化服务
+      if (newConfig.enabled) {
+        // 获取选中的LLM配置
+        const selectedLlmConfig = AiApiConfigs.find((cfg) => cfg.id === newConfig.selectedLlmId)
+        const selectedEmbeddingConfig = AiApiConfigs.find(
+          (cfg) => cfg.id === newConfig.selectedEmbeddingId
+        )
+
+        if (!selectedLlmConfig) {
+          Toast.error(t('settings.memory.error.llmNotFound'))
+          return
+        }
+
+        if (!selectedEmbeddingConfig) {
+          Toast.error(t('settings.memory.error.embeddingNotFound'))
+          return
+        }
+
+        // 构建完整的记忆配置
+        const fullMemoryConfig = {
+          enabled: newConfig.enabled,
+          selectedLlmId: newConfig.selectedLlmId,
+          llm: {
+            provider: 'openai' as const,
+            apiKey: selectedLlmConfig.apiKey,
+            model: selectedLlmConfig.modelName,
+            temperature: parseFloat(selectedLlmConfig.temperature || '0.1'),
+            maxTokens: parseInt(selectedLlmConfig.maxTokens || '2000'),
+            ...(selectedLlmConfig.apiUrl &&
+              selectedLlmConfig.apiUrl !== 'https://api.openai.com/v1' && {
+                baseURL: selectedLlmConfig.apiUrl
+              })
+          },
+          embedder: {
+            provider: 'openai' as const,
+            apiKey: selectedEmbeddingConfig.apiKey,
+            model: selectedEmbeddingConfig.modelName,
+            ...(selectedEmbeddingConfig.apiUrl &&
+              selectedEmbeddingConfig.apiUrl !== 'https://api.openai.com/v1' && {
+                apiUrl: selectedEmbeddingConfig.apiUrl
+              })
+          },
+          vectorStore: {
+            provider: 'chroma' as const
+          }
+        }
+
+        // 更新记忆服务配置
+        const result = await (window as any).api.memory.updateConfig(fullMemoryConfig)
+        if (!result.success) {
+          Toast.error(`${t('settings.memory.error.initFailed')}: ${result.error}`)
+          return
+        }
+      } else {
+        // 如果禁用记忆功能，则关闭服务
+        const disabledConfig = {
+          enabled: false,
+          llm: { provider: 'openai' as const, apiKey: '', model: 'gpt-4' },
+          embedder: { provider: 'openai' as const, apiKey: '', model: 'text-embedding-3-small' }
+        }
+        await (window as any).api.memory.updateConfig(disabledConfig)
       }
 
-              Toast.success(t('common.success'))
-      } catch (error) {
-        Toast.error(t('common.saveFailed'))
+      Toast.success(t('common.success'))
+    } catch (error) {
+      Toast.error(t('common.saveFailed'))
       console.error('Memory config save error:', error)
     }
   }
@@ -824,7 +893,9 @@ const Settings: React.FC = () => {
                     {updateResult.error
                       ? `${t('settings.basic.updateResult.errorInfo')}: ${updateResult.error}`
                       : updateResult.hasUpdate
-                        ? formatMessage(t('settings.basic.updateResult.canDownload'), { currentVersion: updateResult.currentVersion })
+                        ? formatMessage(t('settings.basic.updateResult.canDownload'), {
+                            currentVersion: updateResult.currentVersion
+                          })
                         : `${t('settings.basic.updateResult.currentVersion')}: ${updateResult.currentVersion}`}
                   </Text>
                   {updateResult.hasUpdate && !updateResult.error && (
@@ -934,8 +1005,12 @@ const Settings: React.FC = () => {
 
                 <Paragraph style={{ marginTop: '16px', color: 'var(--semi-color-text-2)' }}>
                   {historyManagement.type === 'count'
-                    ? formatMessage(t('settings.history.description.byCount'), { count: historyManagement.maxCount })
-                    : formatMessage(t('settings.history.description.byTime'), { days: historyManagement.maxDays })}
+                    ? formatMessage(t('settings.history.description.byCount'), {
+                        count: historyManagement.maxCount
+                      })
+                    : formatMessage(t('settings.history.description.byTime'), {
+                        days: historyManagement.maxDays
+                      })}
                 </Paragraph>
               </Form>
             </Card>
@@ -978,13 +1053,19 @@ const Settings: React.FC = () => {
                       style={{ width: '100%' }}
                       placeholder={t('settings.memory.llmConfig.placeholder')}
                     >
-                      {AiApiConfigs.filter(config => config.type === 'llm').map((config) => (
+                      {AiApiConfigs.filter((config) => config.type === 'llm').map((config) => (
                         <Form.Select.Option key={config.id} value={config.id}>
                           {config.name} ({config.modelName})
                         </Form.Select.Option>
                       ))}
                     </Form.Select>
-                    <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                    <div
+                      style={{
+                        color: 'var(--semi-color-text-2)',
+                        fontSize: '12px',
+                        marginTop: '4px'
+                      }}
+                    >
                       {t('settings.memory.llmConfig.tip')}
                     </div>
                   </div>
@@ -1001,13 +1082,21 @@ const Settings: React.FC = () => {
                       style={{ width: '100%' }}
                       placeholder={t('settings.memory.embeddingConfig.placeholder')}
                     >
-                      {AiApiConfigs.filter(config => config.type === 'embedding').map((config) => (
-                        <Form.Select.Option key={config.id} value={config.id}>
-                          {config.name} ({config.modelName})
-                        </Form.Select.Option>
-                      ))}
+                      {AiApiConfigs.filter((config) => config.type === 'embedding').map(
+                        (config) => (
+                          <Form.Select.Option key={config.id} value={config.id}>
+                            {config.name} ({config.modelName})
+                          </Form.Select.Option>
+                        )
+                      )}
                     </Form.Select>
-                    <div style={{ color: 'var(--semi-color-text-2)', fontSize: '12px', marginTop: '4px' }}>
+                    <div
+                      style={{
+                        color: 'var(--semi-color-text-2)',
+                        fontSize: '12px',
+                        marginTop: '4px'
+                      }}
+                    >
                       {t('settings.memory.embeddingConfig.tip')}
                     </div>
                   </div>
@@ -1030,7 +1119,8 @@ const Settings: React.FC = () => {
                   {t('settings.memory.description.line2')}
                   <br />
                   {t('settings.memory.description.line3')}
-                  <br />{t('settings.memory.description.line4')}
+                  <br />
+                  {t('settings.memory.description.line4')}
                 </Paragraph>
               </Form>
             </Card>
@@ -1161,7 +1251,9 @@ const Settings: React.FC = () => {
                       {t('settings.performance.userActions.title')}
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">{t('settings.performance.userActions.editorChanges')}: </Text>
+                      <Text type="tertiary">
+                        {t('settings.performance.userActions.editorChanges')}:{' '}
+                      </Text>
                       <Text>{performanceMetrics.userActions.editorChanges}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
@@ -1173,7 +1265,9 @@ const Settings: React.FC = () => {
                       <Text>{performanceMetrics.userActions.loads}</Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">{t('settings.performance.userActions.searches')}: </Text>
+                      <Text type="tertiary">
+                        {t('settings.performance.userActions.searches')}:{' '}
+                      </Text>
                       <Text>{performanceMetrics.userActions.searches}</Text>
                     </div>
                   </div>
@@ -1198,7 +1292,9 @@ const Settings: React.FC = () => {
                       </Text>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      <Text type="tertiary">{t('settings.performance.network.downloadSpeed')}: </Text>
+                      <Text type="tertiary">
+                        {t('settings.performance.network.downloadSpeed')}:{' '}
+                      </Text>
                       <Text>
                         {performanceMetrics.networkPerformance.downloadSpeed > 0
                           ? formatSpeed(performanceMetrics.networkPerformance.downloadSpeed)
@@ -1218,7 +1314,9 @@ const Settings: React.FC = () => {
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 0' }}>
                   <Spin size="large" />
-                  <Paragraph style={{ marginTop: '16px' }}>{t('settings.performance.loading')}</Paragraph>
+                  <Paragraph style={{ marginTop: '16px' }}>
+                    {t('settings.performance.loading')}
+                  </Paragraph>
                 </div>
               )}
 
@@ -1249,19 +1347,27 @@ const Settings: React.FC = () => {
                             }}
                           >
                             <div>
-                              <Text type="tertiary">{t('settings.performance.report.summary.averageMemory')}: </Text>
+                              <Text type="tertiary">
+                                {t('settings.performance.report.summary.averageMemory')}:{' '}
+                              </Text>
                               <Text>{report.summary.averageMemoryUsage}%</Text>
                             </div>
                             <div>
-                              <Text type="tertiary">{t('settings.performance.report.summary.averageLoadTime')}: </Text>
+                              <Text type="tertiary">
+                                {t('settings.performance.report.summary.averageLoadTime')}:{' '}
+                              </Text>
                               <Text>{formatTime(report.summary.averageLoadTime)}</Text>
                             </div>
                             <div>
-                              <Text type="tertiary">{t('settings.performance.report.summary.averageSaveTime')}: </Text>
+                              <Text type="tertiary">
+                                {t('settings.performance.report.summary.averageSaveTime')}:{' '}
+                              </Text>
                               <Text>{formatTime(report.summary.averageSaveTime)}</Text>
                             </div>
                             <div>
-                              <Text type="tertiary">{t('settings.performance.report.summary.totalActions')}: </Text>
+                              <Text type="tertiary">
+                                {t('settings.performance.report.summary.totalActions')}:{' '}
+                              </Text>
                               <Text>{report.summary.totalUserActions}</Text>
                             </div>
                           </div>
@@ -1312,7 +1418,9 @@ const Settings: React.FC = () => {
                         </div>
 
                         <div>
-                          <Text strong>{t('settings.performance.report.recommendations.title')}</Text>
+                          <Text strong>
+                            {t('settings.performance.report.recommendations.title')}
+                          </Text>
                           <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
                             {report.recommendations.map((rec, index) => (
                               <li key={index} style={{ marginBottom: '4px' }}>
@@ -1339,7 +1447,11 @@ const Settings: React.FC = () => {
 
       {/* 添加/编辑配置模态框 */}
       <Modal
-        title={isEditMode ? t('settings.basic.apiConfig.modal.editTitle') : t('settings.basic.apiConfig.modal.addTitle')}
+        title={
+          isEditMode
+            ? t('settings.basic.apiConfig.modal.editTitle')
+            : t('settings.basic.apiConfig.modal.addTitle')
+        }
         visible={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         centered
@@ -1367,15 +1479,17 @@ const Settings: React.FC = () => {
           >
             <Form.Select.Option value="llm">
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ 
-                  padding: '2px 6px', 
-                  borderRadius: '8px', 
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  backgroundColor: '#0064fa',
-                  marginRight: '8px'
-                }}>
+                <span
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    backgroundColor: '#0064fa',
+                    marginRight: '8px'
+                  }}
+                >
                   {t('settings.basic.apiConfig.types.llm')}
                 </span>
                 {t('settings.basic.apiConfig.types.llm')}
@@ -1383,15 +1497,17 @@ const Settings: React.FC = () => {
             </Form.Select.Option>
             <Form.Select.Option value="embedding">
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ 
-                  padding: '2px 6px', 
-                  borderRadius: '8px', 
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  backgroundColor: '#00b42a',
-                  marginRight: '8px'
-                }}>
+                <span
+                  style={{
+                    padding: '2px 6px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    backgroundColor: '#00b42a',
+                    marginRight: '8px'
+                  }}
+                >
                   Embedding
                 </span>
                 {t('settings.basic.apiConfig.types.embedding')}
@@ -1432,70 +1548,74 @@ const Settings: React.FC = () => {
             showClear
           />
           {currentConfig?.type === 'llm' && (
-          <>
-          <div style={{ marginBottom: 20 }}>
-            <Form.Label>{t('settings.basic.apiConfig.fields.temperature')}</Form.Label>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
-                <div
-                  style={{ paddingTop: '8px' }}
-                  onMouseDown={handleSliderDragStart}
-                  onMouseUp={handleSliderDragEnd}
-                  onMouseLeave={handleSliderDragEnd}
-                >
-                  <Form.Slider
-                    field="temperature"
-                    initValue={parseFloat(currentConfig?.temperature || '0.7')}
-                    onChange={(value) => handleConfigChange('temperature', (value || 0).toString())}
-                    max={2}
-                    min={0}
-                    step={0.1}
-                    marks={{ 0: '0', 1: '1', 2: '2' }}
-                    tipFormatter={() => null}
-                    tooltipVisible={false}
-                  />
+            <>
+              <div style={{ marginBottom: 20 }}>
+                <Form.Label>{t('settings.basic.apiConfig.fields.temperature')}</Form.Label>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
+                    <div
+                      style={{ paddingTop: '8px' }}
+                      onMouseDown={handleSliderDragStart}
+                      onMouseUp={handleSliderDragEnd}
+                      onMouseLeave={handleSliderDragEnd}
+                    >
+                      <Form.Slider
+                        field="temperature"
+                        initValue={parseFloat(currentConfig?.temperature || '0.7')}
+                        onChange={(value) =>
+                          handleConfigChange('temperature', (value || 0).toString())
+                        }
+                        max={2}
+                        min={0}
+                        step={0.1}
+                        marks={{ 0: '0', 1: '1', 2: '2' }}
+                        tipFormatter={() => null}
+                        tooltipVisible={false}
+                      />
+                    </div>
+                  </div>
+                  <Text style={{ width: '50px', textAlign: 'right', marginLeft: '10px' }}>
+                    {currentConfig?.temperature}
+                  </Text>
                 </div>
+                <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
+                  {t('settings.basic.apiConfig.fields.temperatureDesc')}
+                </Paragraph>
               </div>
-              <Text style={{ width: '50px', textAlign: 'right', marginLeft: '10px' }}>
-                {currentConfig?.temperature}
-              </Text>
-            </div>
-            <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
-              {t('settings.basic.apiConfig.fields.temperatureDesc')}
-            </Paragraph>
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <Form.Label>{t('settings.basic.apiConfig.fields.maxTokens')}</Form.Label>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
-                <div
-                  style={{ paddingTop: '8px' }}
-                  onMouseDown={handleSliderDragStart}
-                  onMouseUp={handleSliderDragEnd}
-                  onMouseLeave={handleSliderDragEnd}
-                >
-                  <Form.Slider
-                    field="maxTokens"
-                    initValue={parseInt(currentConfig?.maxTokens || '2000')}
-                    onChange={(value) => handleConfigChange('maxTokens', (value || 100).toString())}
-                    max={65535}
-                    min={100}
-                    step={100}
-                    marks={{ 100: '100', 8000: '8k', 16000: '16k', 32000: '32k', 65535: '65k' }}
-                    tipFormatter={() => null}
-                    tooltipVisible={false}
-                  />
+              <div style={{ marginBottom: 10 }}>
+                <Form.Label>{t('settings.basic.apiConfig.fields.maxTokens')}</Form.Label>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ flexGrow: 1, marginRight: 10, position: 'relative' }}>
+                    <div
+                      style={{ paddingTop: '8px' }}
+                      onMouseDown={handleSliderDragStart}
+                      onMouseUp={handleSliderDragEnd}
+                      onMouseLeave={handleSliderDragEnd}
+                    >
+                      <Form.Slider
+                        field="maxTokens"
+                        initValue={parseInt(currentConfig?.maxTokens || '2000')}
+                        onChange={(value) =>
+                          handleConfigChange('maxTokens', (value || 100).toString())
+                        }
+                        max={65535}
+                        min={100}
+                        step={100}
+                        marks={{ 100: '100', 8000: '8k', 16000: '16k', 32000: '32k', 65535: '65k' }}
+                        tipFormatter={() => null}
+                        tooltipVisible={false}
+                      />
+                    </div>
+                  </div>
+                  <Text style={{ width: '50px', textAlign: 'right', marginLeft: '10px' }}>
+                    {currentConfig?.maxTokens}
+                  </Text>
                 </div>
+                <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
+                  {t('settings.basic.apiConfig.fields.maxTokensDesc')}
+                </Paragraph>
               </div>
-              <Text style={{ width: '50px', textAlign: 'right', marginLeft: '10px' }}>
-                {currentConfig?.maxTokens}
-              </Text>
-            </div>
-            <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
-              {t('settings.basic.apiConfig.fields.maxTokensDesc')}
-            </Paragraph>
-          </div>
-          </>
+            </>
           )}
         </Form>
       </Modal>

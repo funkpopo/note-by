@@ -13,7 +13,7 @@ export function useTranslation() {
   const t = (key: string) => {
     const keys = key.split('.')
     let value: any = zhCN
-    
+
     for (const k of keys) {
       value = value?.[k]
       if (value === undefined) {
@@ -21,7 +21,7 @@ export function useTranslation() {
         return key
       }
     }
-    
+
     return value
   }
 

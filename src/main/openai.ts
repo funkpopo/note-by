@@ -57,9 +57,9 @@ export async function testOpenAIConnection(
 
       // 检查embedding响应格式
       if (response?.data?.[0]?.embedding && Array.isArray(response.data[0].embedding)) {
-        return { 
-          success: true, 
-          message: `连接成功！模型 ${modelName} 可正常使用，返回了 ${response.data[0].embedding.length} 维向量` 
+        return {
+          success: true,
+          message: `连接成功！模型 ${modelName} 可正常使用，返回了 ${response.data[0].embedding.length} 维向量`
         }
       } else {
         return { success: false, message: '响应格式不正确，无法解析嵌入向量' }

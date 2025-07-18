@@ -368,7 +368,7 @@ function createWindow(): void {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' https://* http://*"
+          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src * 'unsafe-inline';"
         ]
       }
     })
@@ -2371,6 +2371,75 @@ ${htmlContent}
     }
   }
   ensureMemoriesDir()
+
+  // 自动初始化记忆服务
+  const initializeMemoryService = async () => {
+    try {
+      console.log('Attempting to auto-initialize memory service...')
+      const settings = readSettings()
+      const memorySettings = settings.memory as any
+
+      if (memorySettings?.enabled) {
+        console.log('Memory service is enabled in settings, initializing...')
+
+        // 获取AI API配置
+        const aiApiConfigs = (settings.AiApiConfigs as any[]) || []
+        const selectedLlmConfig = aiApiConfigs.find(
+          (cfg) => cfg.id === memorySettings.selectedLlmId
+        )
+        const selectedEmbeddingConfig = aiApiConfigs.find(
+          (cfg) => cfg.id === memorySettings.selectedEmbeddingId
+        )
+
+        if (selectedLlmConfig && selectedEmbeddingConfig) {
+          // 构建完整的记忆配置
+          const fullMemoryConfig = {
+            enabled: true,
+            selectedLlmId: memorySettings.selectedLlmId,
+            llm: {
+              provider: 'openai' as const,
+              apiKey: selectedLlmConfig.apiKey,
+              model: selectedLlmConfig.modelName,
+              temperature: parseFloat(selectedLlmConfig.temperature || '0.1'),
+              maxTokens: parseInt(selectedLlmConfig.maxTokens || '2000'),
+              ...(selectedLlmConfig.apiUrl &&
+                selectedLlmConfig.apiUrl !== 'https://api.openai.com/v1' && {
+                  baseURL: selectedLlmConfig.apiUrl
+                })
+            },
+            embedder: {
+              provider: 'openai' as const,
+              apiKey: selectedEmbeddingConfig.apiKey,
+              model: selectedEmbeddingConfig.modelName,
+              ...(selectedEmbeddingConfig.apiUrl &&
+                selectedEmbeddingConfig.apiUrl !== 'https://api.openai.com/v1' && {
+                  apiUrl: selectedEmbeddingConfig.apiUrl
+                })
+            },
+            vectorStore: {
+              provider: 'chroma' as const
+            }
+          }
+
+          const result = await memoryService.initialize(fullMemoryConfig)
+          if (result.success) {
+            console.log('Memory service auto-initialized successfully')
+          } else {
+            console.warn('Failed to auto-initialize memory service:', result.error)
+          }
+        } else {
+          console.warn('Memory service enabled but required configurations not found')
+        }
+      } else {
+        console.log('Memory service disabled in settings, skipping initialization')
+      }
+    } catch (error) {
+      console.error('Error during memory service auto-initialization:', error)
+    }
+  }
+
+  // 延迟初始化记忆服务，确保其他组件先加载完成
+  setTimeout(initializeMemoryService, 2000)
 
   // 启动内存监控
   memoryMonitor.start()
