@@ -25,7 +25,7 @@ function getSettingsPath(): string {
 }
 
 // 需要加密的设置项键名列表
-const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword', 'memoryLlmApiKey', 'memoryEmbedderApiKey']
+const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword', 'memoryLlmApiKey']
 
 // API配置接口
 export interface AiApiConfig {
@@ -77,13 +77,7 @@ const defaultSettings = {
   memory: {
     enabled: false,
     selectedLlmId: '',
-    embedder: {
-      provider: 'openai',
-      name: 'OpenAI Embeddings',
-      apiKey: '',
-      apiUrl: 'https://api.openai.com/v1',
-      model: 'text-embedding-3-small'
-    }
+    selectedEmbeddingId: ''
   } as MemoryConfig,
   // 默认更新设置
   checkUpdatesOnStartup: true,
@@ -134,13 +128,6 @@ export function readSettings(): Record<string, unknown> {
             // 保留原始加密值
           }
         }
-        if (memoryConfig.embedder?.apiKey) {
-          try {
-            memoryConfig.embedder.apiKey = decrypt(memoryConfig.embedder.apiKey)
-          } catch (decryptError) {
-            // 保留原始加密值
-          }
-        }
       }
 
       return settings
@@ -186,9 +173,6 @@ export function writeSettings(settings: Record<string, unknown>): void {
       const memoryConfig = JSON.parse(JSON.stringify(settingsToSave.memory))
       if (memoryConfig.llm?.apiKey && memoryConfig.llm.apiKey !== '') {
         memoryConfig.llm.apiKey = encrypt(memoryConfig.llm.apiKey)
-      }
-      if (memoryConfig.embedder?.apiKey && memoryConfig.embedder.apiKey !== '') {
-        memoryConfig.embedder.apiKey = encrypt(memoryConfig.embedder.apiKey)
       }
       settingsToSave.memory = memoryConfig
     }

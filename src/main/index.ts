@@ -812,6 +812,7 @@ app.whenReady().then(() => {
   // 保存API配置
   ipcMain.handle(IPC_CHANNELS.SAVE_API_CONFIG, (_, AiApiConfig) => {
     try {
+      console.log('[IPC] SAVE_API_CONFIG called with:', AiApiConfig)
       const settings = readSettings()
       const AiApiConfigs = (settings.AiApiConfigs as AiApiConfig[]) || []
 
@@ -829,9 +830,10 @@ app.whenReady().then(() => {
       // 保存到设置
       settings.AiApiConfigs = AiApiConfigs
       writeSettings(settings)
-
+      console.log('[IPC] SAVE_API_CONFIG writeSettings success:', settings.AiApiConfigs)
       return { success: true }
     } catch (error) {
+      console.error('[IPC] SAVE_API_CONFIG error:', error)
       return { success: false, error: String(error) }
     }
   })
@@ -2396,6 +2398,7 @@ ${htmlContent}
           const fullMemoryConfig = {
             enabled: true,
             selectedLlmId: memorySettings.selectedLlmId,
+            selectedEmbeddingId: memorySettings.selectedEmbeddingId,
             llm: {
               provider: 'openai' as const,
               apiKey: selectedLlmConfig.apiKey,

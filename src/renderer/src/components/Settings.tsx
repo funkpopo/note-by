@@ -13,7 +13,8 @@ import {
   ButtonGroup,
   Tabs,
   TabPane,
-  Radio
+  Radio,
+  Select
 } from '@douyinfe/semi-ui'
 import {
   IconPulse,
@@ -188,6 +189,7 @@ const Settings: React.FC = () => {
 
       // 保存配置
       const result = await window.api.api.saveConfig(currentConfig)
+      console.log('[Settings] saveConfig result:', result, currentConfig)
 
       if (result.success) {
         Toast.success(
@@ -211,9 +213,11 @@ const Settings: React.FC = () => {
         Toast.error(
           `${t('settings.basic.apiConfig.toast.saveFailed')}: ${result.error || '未知错误'}`
         )
+        console.error('[Settings] saveConfig failed:', result.error, currentConfig)
       }
     } catch (error) {
       Toast.error(t('settings.basic.apiConfig.toast.saveFailed'))
+      console.error('[Settings] saveConfig exception:', error, currentConfig)
     }
   }
 
@@ -638,86 +642,27 @@ const Settings: React.FC = () => {
   }, [loadPerformanceMetrics])
 
   // 记忆功能相关处理函数
-  const handleMemoryConfigChange = async (field: string, value: any): Promise<void> => {
+  const handleMemoryConfigFieldChange = (field: string, value: any): void => {
+    let newConfig = { ...memoryConfig }
+
+    // 处理嵌套配置
+    if (field === 'selectedLlmId') {
+      newConfig.selectedLlmId = value
+    } else if (field === 'selectedEmbeddingId') {
+      newConfig.selectedEmbeddingId = value
+    } else {
+      newConfig = { ...newConfig, [field]: value }
+    }
+
+    setMemoryConfig(newConfig)
+  }
+
+  const handleSaveMemoryConfig = async (): Promise<void> => {
     try {
-      let newConfig = { ...memoryConfig }
-
-      // 处理嵌套配置
-      if (field === 'selectedLlmId') {
-        newConfig.selectedLlmId = value
-      } else if (field === 'selectedEmbeddingId') {
-        newConfig.selectedEmbeddingId = value
-      } else {
-        newConfig = { ...newConfig, [field]: value }
-      }
-
-      setMemoryConfig(newConfig)
-
-      // 保存到设置
-      await window.api.settings.set('memory', newConfig)
-
-      // 构建完整的记忆配置并更新服务
-      // 只有启用状态时才需要初始化服务
-      if (newConfig.enabled) {
-        // 获取选中的LLM配置
-        const selectedLlmConfig = AiApiConfigs.find((cfg) => cfg.id === newConfig.selectedLlmId)
-        const selectedEmbeddingConfig = AiApiConfigs.find(
-          (cfg) => cfg.id === newConfig.selectedEmbeddingId
-        )
-
-        if (!selectedLlmConfig) {
-          Toast.error(t('settings.memory.error.llmNotFound'))
-          return
-        }
-
-        if (!selectedEmbeddingConfig) {
-          Toast.error(t('settings.memory.error.embeddingNotFound'))
-          return
-        }
-
-        // 构建完整的记忆配置
-        const fullMemoryConfig = {
-          enabled: newConfig.enabled,
-          selectedLlmId: newConfig.selectedLlmId,
-          llm: {
-            provider: 'openai' as const,
-            apiKey: selectedLlmConfig.apiKey,
-            model: selectedLlmConfig.modelName,
-            temperature: parseFloat(selectedLlmConfig.temperature || '0.1'),
-            maxTokens: parseInt(selectedLlmConfig.maxTokens || '2000'),
-            ...(selectedLlmConfig.apiUrl &&
-              selectedLlmConfig.apiUrl !== 'https://api.openai.com/v1' && {
-                baseURL: selectedLlmConfig.apiUrl
-              })
-          },
-          embedder: {
-            provider: 'openai' as const,
-            apiKey: selectedEmbeddingConfig.apiKey,
-            model: selectedEmbeddingConfig.modelName,
-            ...(selectedEmbeddingConfig.apiUrl &&
-              selectedEmbeddingConfig.apiUrl !== 'https://api.openai.com/v1' && {
-                apiUrl: selectedEmbeddingConfig.apiUrl
-              })
-          }
-        }
-
-        // 更新记忆服务配置
-        const result = await (window as any).api.memory.updateConfig(fullMemoryConfig)
-        if (!result.success) {
-          Toast.error(`${t('settings.memory.error.initFailed')}: ${result.error}`)
-          return
-        }
-      } else {
-        // 如果禁用记忆功能，则关闭服务
-        const disabledConfig = {
-          enabled: false,
-          llm: { provider: 'openai' as const, apiKey: '', model: 'gpt-4' },
-          embedder: { provider: 'openai' as const, apiKey: '', model: 'text-embedding-3-small' }
-        }
-        await (window as any).api.memory.updateConfig(disabledConfig)
-      }
-
+      await window.api.settings.set('memory', memoryConfig)
       Toast.success(t('common.success'))
+      // 可选：保存后刷新设置
+      await loadSettings()
     } catch (error) {
       Toast.error(t('common.saveFailed'))
       console.error('Memory config save error:', error)
@@ -1016,110 +961,115 @@ const Settings: React.FC = () => {
 
         <TabPane tab={t('settings.tabs.memory')} itemKey="memory">
           <div className="settings-scroll-container">
-            <Card title={t('settings.memory.title')} style={{ marginBottom: 20 }}>
-              <Form onValueChange={(values) => console.log('Memory form values:', values)}>
-                <div style={{ maxWidth: 600 }}>
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <Text strong>{t('settings.memory.enable.label')}</Text>
-                    </div>
-                    <Switch
-                      checked={memoryConfig.enabled}
-                      onChange={(checked) => handleMemoryConfigChange('enabled', checked)}
-                    />
-                    <div
-                      style={{
-                        color: 'var(--semi-color-text-2)',
-                        fontSize: '12px',
-                        marginTop: '4px'
-                      }}
-                    >
-                      {t('settings.memory.enable.description')}
-                    </div>
+            {/* 记忆功能设置区域 */}
+            <Card style={{ marginBottom: 20 }}>
+              <div>
+                {/* 启用记忆功能 */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>{t('settings.memory.enable.label')}</Text>
                   </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <Text strong>{t('settings.memory.llmConfig.label')}</Text>
-                    </div>
-                    <Form.Select
-                      field="LLM 选择"
-                      initValue={memoryConfig.selectedLlmId || ''}
-                      onChange={(value) => handleMemoryConfigChange('selectedLlmId', value)}
-                      disabled={!memoryConfig.enabled}
-                      style={{ width: '100%' }}
-                      placeholder={t('settings.memory.llmConfig.placeholder')}
-                    >
-                      {AiApiConfigs.filter((config) => config.type === 'llm').map((config) => (
-                        <Form.Select.Option key={config.id} value={config.id}>
-                          {config.name} ({config.modelName})
-                        </Form.Select.Option>
-                      ))}
-                    </Form.Select>
-                    <div
-                      style={{
-                        color: 'var(--semi-color-text-2)',
-                        fontSize: '12px',
-                        marginTop: '4px'
-                      }}
-                    >
-                      {t('settings.memory.llmConfig.tip')}
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <Text strong>{t('settings.memory.embeddingConfig.label')}</Text>
-                    </div>
-                    <Form.Select
-                      field="Text Embedding 选择"
-                      initValue={memoryConfig.selectedEmbeddingId || ''}
-                      onChange={(value) => handleMemoryConfigChange('selectedEmbeddingId', value)}
-                      disabled={!memoryConfig.enabled}
-                      style={{ width: '100%' }}
-                      placeholder={t('settings.memory.embeddingConfig.placeholder')}
-                    >
-                      {AiApiConfigs.filter((config) => config.type === 'embedding').map(
-                        (config) => (
-                          <Form.Select.Option key={config.id} value={config.id}>
-                            {config.name} ({config.modelName})
-                          </Form.Select.Option>
-                        )
-                      )}
-                    </Form.Select>
-                    <div
-                      style={{
-                        color: 'var(--semi-color-text-2)',
-                        fontSize: '12px',
-                        marginTop: '4px'
-                      }}
-                    >
-                      {t('settings.memory.embeddingConfig.tip')}
-                    </div>
+                  <Switch
+                    checked={memoryConfig.enabled}
+                    onChange={(checked) => handleMemoryConfigFieldChange('enabled', checked)}
+                  />
+                  <div
+                    style={{
+                      color: 'var(--semi-color-text-2)',
+                      fontSize: '12px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    {t('settings.memory.enable.description')}
                   </div>
                 </div>
 
-                <Paragraph
-                  style={{
-                    fontSize: '14px',
-                    color: 'var(--semi-color-text-2)',
-                    marginTop: '16px',
-                    padding: '12px',
-                    backgroundColor: 'var(--semi-color-fill-0)',
-                    borderRadius: '6px'
-                  }}
-                >
-                  <strong>{t('settings.memory.description.title')}</strong>
-                  <br />
-                  {t('settings.memory.description.line1')}
-                  <br />
-                  {t('settings.memory.description.line2')}
-                  <br />
-                  {t('settings.memory.description.line3')}
-                  <br />
-                  {t('settings.memory.description.line4')}
-                </Paragraph>
-              </Form>
+                {/* LLM选择 */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>{t('settings.memory.llmConfig.label')}</Text>
+                  </div>
+                  <Select
+                    value={memoryConfig.selectedLlmId}
+                    onChange={val => handleMemoryConfigFieldChange('selectedLlmId', val)}
+                    disabled={!memoryConfig.enabled}
+                    style={{ width: '100%' }}
+                    placeholder={t('settings.memory.llmConfig.placeholder')}
+                  >
+                    {AiApiConfigs.filter(cfg => cfg.type === 'llm').map(cfg => (
+                      <Select.Option key={cfg.id} value={cfg.id}>
+                        {cfg.name} ({cfg.modelName})
+                      </Select.Option>
+                    ))}
+                  </Select>
+                  <div
+                    style={{
+                      color: 'var(--semi-color-text-2)',
+                      fontSize: '12px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    {t('settings.memory.llmConfig.tip')}
+                  </div>
+                </div>
+
+                {/* Embedding选择 */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <Text strong>{t('settings.memory.embeddingConfig.label')}</Text>
+                  </div>
+                  <Select
+                    value={memoryConfig.selectedEmbeddingId}
+                    onChange={val => handleMemoryConfigFieldChange('selectedEmbeddingId', val)}
+                    disabled={!memoryConfig.enabled}
+                    style={{ width: '100%' }}
+                    placeholder={t('settings.memory.embeddingConfig.placeholder')}
+                  >
+                    {AiApiConfigs.filter(cfg => cfg.type === 'embedding').map(
+                      cfg => (
+                        <Select.Option key={cfg.id} value={cfg.id}>
+                          {cfg.name} ({cfg.modelName})
+                        </Select.Option>
+                      )
+                    )}
+                  </Select>
+                  <div
+                    style={{
+                      color: 'var(--semi-color-text-2)',
+                      fontSize: '12px',
+                      marginTop: '4px'
+                    }}
+                  >
+                    {t('settings.memory.embeddingConfig.tip')}
+                  </div>
+                </div>
+
+                {/* 保存按钮 */}
+                <Button type="primary" onClick={handleSaveMemoryConfig} style={{ marginTop: 16 }}>
+                  {t('common.save')}
+                </Button>
+              </div>
+
+              <Paragraph
+                style={{
+                  fontSize: '14px',
+                  color: 'var(--semi-color-text-2)',
+                  marginTop: '16px',
+                  padding: '12px',
+                  backgroundColor: 'var(--semi-color-fill-0)',
+                  borderRadius: '6px'
+                }}
+              >
+                <strong>{t('settings.memory.description.title')}</strong>
+                <br />
+                {t('settings.memory.description.line1')}
+                <br />
+                {t('settings.memory.description.line2')}
+                <br />
+                {t('settings.memory.description.line3')}
+                <br />
+                {t('settings.memory.description.line4')}
+              </Paragraph>
             </Card>
           </div>
         </TabPane>
