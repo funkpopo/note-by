@@ -718,7 +718,7 @@ ${relevantMemories}
                 style={{ width: 150 }}
                 placeholder="选择AI模型"
               >
-                {aiApiConfigs.map((config) => (
+                {aiApiConfigs.filter((config: any) => (config.type?.toLowerCase?.() === 'llm')).map((config) => (
                   <Select.Option key={config.id} value={config.id}>
                     {config.name}
                   </Select.Option>
