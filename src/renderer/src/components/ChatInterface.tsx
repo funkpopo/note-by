@@ -1,33 +1,221 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Typography, Button, Toast, TextArea, Select, Chat, Space } from '@douyinfe/semi-ui'
-import { IconSend } from '@douyinfe/semi-icons'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Typography, Button, Toast, TextArea, Select, Space, Spin, Dropdown, Card } from '@douyinfe/semi-ui'
+import { IconSend, IconStop, IconClear, IconRefresh, IconMore, IconCopy, IconDelete } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
 import { filterThinkingContent } from '../utils/filterThinking'
+import MessageRenderer from './MessageRenderer'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
-// Semi Design Chat组件的角色配置
-const roleConfig = {
-  user: {
-    name: '用户'
-  },
-  assistant: {
-    name: 'AI助手'
-  },
-  system: {
-    name: '系统'
+// 自定义消息气泡组件
+const MessageBubbleCustom: React.FC<{
+  message: ChatMessage
+  onRetry?: (message: ChatMessage) => void
+  onDelete?: (message: ChatMessage) => void
+  isLast?: boolean
+}> = ({ message, onRetry, onDelete, isLast }) => {
+  const isUser = message.role === 'user'
+  const isAssistant = message.role === 'assistant'
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content)
+    Toast.success('已复制到剪贴板')
   }
+
+  const dropdownItems = [
+    {
+      node: 'item' as const,
+      key: 'copy',
+      name: '复制',
+      icon: <IconCopy />,
+      onClick: handleCopy
+    },
+    ...(isAssistant && onRetry ? [{
+      node: 'item' as const,
+      key: 'retry',
+      name: '重新生成',
+      icon: <IconRefresh />,
+      onClick: () => onRetry(message)
+    }] : []),
+    ...(onDelete ? [{
+      node: 'item' as const,
+      key: 'delete',
+      name: '删除',
+      icon: <IconDelete />,
+      onClick: () => onDelete(message),
+      type: 'danger' as const
+    }] : [])
+  ]
+
+  const getStatusIndicator = () => {
+    switch (message.status) {
+      case 'loading':
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+            <Spin size="small" />
+            <Text size="small" type="tertiary">正在思考中...</Text>
+          </div>
+        )
+      case 'streaming':
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              background: 'var(--semi-color-primary)',
+              borderRadius: '50%',
+              animation: 'pulse 1.5s ease-in-out infinite'
+            }} />
+            <Text size="small" type="tertiary">AI正在思考...</Text>
+          </div>
+        )
+      case 'incomplete':
+        return (
+          <div style={{ marginTop: '12px' }}>
+            <Text size="small" type="warning">⚠️ 生成被中断</Text>
+          </div>
+        )
+      case 'error':
+        return (
+          <div style={{ marginTop: '12px' }}>
+            <Text size="small" type="danger">❌ 生成出错</Text>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div style={{ 
+      marginBottom: isLast ? '8px' : '32px',
+      display: 'flex',
+      flexDirection: isUser ? 'row-reverse' : 'row',
+      gap: '16px',
+      alignItems: 'flex-start'
+    }}>
+      {/* 头像 */}
+      <div style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        background: isUser 
+          ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+          : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontSize: '16px',
+        fontWeight: '600',
+        flexShrink: 0,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+      }}>
+        {isUser ? '👤' : '🤖'}
+      </div>
+
+      {/* 消息内容 */}
+      <div style={{ 
+        flex: 1, 
+        maxWidth: 'calc(100% - 80px)',
+        minWidth: 0
+      }}>
+        {/* 消息卡片 */}
+        <Card
+          style={{
+            background: isUser 
+              ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+              : 'var(--semi-color-bg-2)',
+            border: isUser ? 'none' : '1px solid var(--semi-color-border)',
+            borderRadius: '16px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            padding: '0'
+          }}
+          bodyStyle={{ 
+            padding: '16px 20px',
+            color: isUser ? 'white' : 'var(--semi-color-text-0)'
+          }}
+        >
+          {isUser ? (
+            <div style={{ 
+              fontSize: '15px', 
+              lineHeight: '1.6',
+              wordBreak: 'break-word'
+            }}>
+              {message.content}
+            </div>
+          ) : (
+            <MessageRenderer
+              content={message.content || ''}
+              style={{
+                color: 'inherit',
+                fontSize: '15px',
+                lineHeight: '1.7'
+              }}
+            />
+          )}
+          
+          {getStatusIndicator()}
+        </Card>
+
+        {/* 时间和操作 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isUser ? 'flex-end' : 'flex-start',
+          marginTop: '8px',
+          gap: '12px'
+        }}>
+          <Text size="small" type="tertiary">
+            {new Date(message.createAt).toLocaleTimeString()}
+          </Text>
+          
+          <Dropdown
+            trigger="click"
+            menu={dropdownItems}
+            position="bottomLeft"
+          >
+            <Button
+              icon={<IconMore />}
+              type="tertiary"
+              theme="borderless"
+              size="small"
+              style={{
+                opacity: 0.5,
+                transition: 'all 0.2s',
+                borderRadius: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '1'
+                e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.5'
+                e.currentTarget.style.background = 'transparent'
+              }}
+            />
+          </Dropdown>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  )
 }
 
-// 消息类型定义 - 兼容Semi Design Chat组件
+// 消息类型定义
 interface ChatMessage {
-  id?: string | number
+  id: string | number
   role: 'user' | 'assistant' | 'system'
   content: string
   createAt: number
   status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
-  name?: string
   parentId?: string
 }
 
@@ -43,11 +231,11 @@ const ChatInterface: React.FC = () => {
   const [currentStreamCleanup, setCurrentStreamCleanup] = useState<(() => void) | null>(null)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
 
-  // Chat组件强制刷新key
-  const [chatKey, setChatKey] = useState<number>(0)
-
   // 保存最后一条用户消息，用于重发
   const [lastUserMessage, setLastUserMessage] = useState<ChatMessage | null>(null)
+
+  // 消息容器引用，用于自动滚动
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   // 节流更新
   const throttledUpdateRef = React.useRef<{
@@ -56,12 +244,12 @@ const ChatInterface: React.FC = () => {
   } | null>(null)
 
   useEffect(() => {
-    // 初始化节流函数
+    // 初始化节流函数 - 减少节流间隔，提高流式显示流畅度
     throttledUpdateRef.current = throttle(
       (updater) => {
         setMessages(updater)
       },
-      150, // 每150ms最多执行一次
+      50, // 减少到50ms，提高响应性
       { leading: true, trailing: true }
     )
 
@@ -70,6 +258,18 @@ const ChatInterface: React.FC = () => {
       throttledUpdateRef.current?.cancel()
     }
   }, [])
+
+  // 自动滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    }
+  }, [])
+
+  // 监听消息变化，自动滚动
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, scrollToBottom])
 
   // 加载AI API配置
   const loadAiApiConfigs = useCallback(async () => {
@@ -92,28 +292,6 @@ const ChatInterface: React.FC = () => {
     }
   }, [])
 
-  // Chat组件的清理上下文回调
-  const handleClearContext = useCallback(() => {
-    console.log('handleClearContext called') // 调试信息
-    setMessages([])
-    setLastUserMessage(null) // 清空最后一条用户消息
-    // 如果正在生成，也要停止
-    if (currentStreamCleanup) {
-      currentStreamCleanup()
-    }
-    setIsGenerating(false)
-    setIsLoading(false)
-    setStreamingMessageId(null)
-    setCurrentStreamCleanup(null)
-
-    // 强制刷新Chat组件，确保状态完全清理
-    setChatKey((prev) => prev + 1)
-
-    Toast.success('会话已清空') // 添加成功提示
-  }, [currentStreamCleanup])
-
-  // 移除handleCopyMessage，Chat组件内置复制功能
-
   // 执行AI回复 - 流式响应版本
   const performAIResponse = useCallback(
     async (userContent: string, userMessageId?: string) => {
@@ -122,35 +300,6 @@ const ChatInterface: React.FC = () => {
         const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
         if (!aiConfig) {
           throw new Error('请先配置AI API')
-        }
-
-        // 记忆检索：尝试从记忆中获取相关信息来增强提示
-        let enhancedPrompt = userContent
-        try {
-          const memoryConfigResult = await (window as any).api.memory.getConfig()
-          if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
-            // 搜索相关记忆
-            const memorySearchResult = await (window as any).api.memory.searchMemories(
-              userContent,
-              'user',
-              5
-            )
-            if (memorySearchResult.success && memorySearchResult.memories?.length > 0) {
-              const relevantMemories = memorySearchResult.memories
-                .map((memory) => `记忆：${memory.content}`)
-                .join('\n')
-
-              enhancedPrompt = `基于以下记忆内容回答用户问题：
-${relevantMemories}
-
-用户问题：${userContent}
-
-请根据记忆内容提供个性化的回答，如果记忆内容与问题相关，请充分利用这些信息。`
-            }
-          }
-        } catch (memoryError) {
-          console.warn('Memory retrieval failed:', memoryError)
-          // 记忆检索失败不影响正常对话
         }
 
         // 创建初始的流式消息
@@ -166,38 +315,43 @@ ${relevantMemories}
         setMessages((prev) => [...prev, streamMessage])
         setStreamingMessageId(streamMessage.id?.toString() || null)
 
-        // 调用流式AI API，使用增强的提示
+        // 调用流式AI API
         const streamResult = await window.api.openai.streamGenerateContent(
           {
             apiKey: aiConfig.apiKey,
             apiUrl: aiConfig.apiUrl,
             modelName: aiConfig.modelName,
-            prompt: enhancedPrompt,
+            prompt: userContent,
             maxTokens: parseInt(aiConfig.maxTokens || '2000')
           },
           {
-            // 实时更新消息内容
+            // 实时更新消息内容 - 优化流式显示
             onData: (chunk: string) => {
               const updater = (prev: ChatMessage[]): ChatMessage[] => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
+                  const currentMessage = newMessages[messageIndex]
+                  // 确保内容连续性，避免丢失
+                  const newContent = currentMessage.content + chunk
                   newMessages[messageIndex] = {
-                    ...newMessages[messageIndex],
-                    content: newMessages[messageIndex].content + chunk,
+                    ...currentMessage,
+                    content: newContent,
                     status: 'streaming'
                   }
                 }
                 return newMessages
               }
+              // 使用节流更新，但确保最后的内容不会丢失
               throttledUpdateRef.current?.(updater)
             },
 
-            // 流式完成处理
+            // 流式完成处理 - 确保最终内容完整
             onDone: (fullContent: string) => {
-              // 取消任何待处理的节流更新
+              // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
 
+              // 立即更新最终内容，不使用节流
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
@@ -211,37 +365,6 @@ ${relevantMemories}
                 return newMessages
               })
 
-              // 保存对话记忆（异步执行，不阻塞UI）
-              setTimeout(async () => {
-                try {
-                  const memoryConfigResult = await (window as any).api.memory.getConfig()
-                  if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
-                    // 构建对话消息数组
-                    const conversationMessages = [
-                      { role: 'user' as const, content: userContent },
-                      { role: 'assistant' as const, content: filterThinkingContent(fullContent) }
-                    ]
-
-                    // 构建元数据
-                    const metadata = {
-                      source: 'chat_conversation',
-                      timestamp: new Date().toISOString(),
-                      ai_config: aiConfig.name,
-                      model: aiConfig.modelName
-                    }
-
-                    // 保存对话到记忆
-                    await (window as any).api.memory.addConversation(
-                      conversationMessages,
-                      'user',
-                      metadata
-                    )
-                  }
-                } catch (memoryError) {
-                  console.warn('Failed to save conversation to memory:', memoryError)
-                }
-              }, 100)
-
               // 清理状态
               setIsGenerating(false)
               setIsLoading(false)
@@ -249,21 +372,23 @@ ${relevantMemories}
               setCurrentStreamCleanup(null)
             },
 
-            // 错误处理
+            // 错误处理 - 优化超时和内容保留
             onError: (error: string) => {
-              // 取消任何待处理的节流更新
+              // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
 
+              // 立即更新错误状态，不使用节流
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
-                  const currentContent = newMessages[messageIndex].content
+                  const currentMessage = newMessages[messageIndex]
+                  const currentContent = currentMessage.content
 
-                  // 使用实时的消息内容进行超时判断，而不是从旧的messages状态查找
+                  // 使用实时的消息内容进行超时判断
                   const hasContent = currentContent && currentContent.trim().length > 0
 
-                  // 只有在真正的错误时才显示错误提示，超时且有内容时不显示
+                  // 只有在真正的错误时才显示错误提示
                   if (!error.includes('请求超时') || !hasContent) {
                     Toast.error(`发送消息失败: ${error}`)
                   }
@@ -271,17 +396,17 @@ ${relevantMemories}
                   // 如果有内容且是超时错误，标记为完成而不是错误
                   if (hasContent && error.includes('请求超时')) {
                     newMessages[messageIndex] = {
-                      ...newMessages[messageIndex],
-                      content: filterThinkingContent(currentContent), // 在此过滤
+                      ...currentMessage,
+                      content: filterThinkingContent(currentContent),
                       status: 'complete'
                     }
                   } else {
                     // 其他错误情况
                     newMessages[messageIndex] = {
-                      ...newMessages[messageIndex],
+                      ...currentMessage,
                       status: 'error',
                       content:
-                        filterThinkingContent(newMessages[messageIndex].content || '') + // 在此过滤
+                        filterThinkingContent(currentContent || '') +
                         `\n\n[错误: ${error}]`
                     }
                   }
@@ -303,9 +428,8 @@ ${relevantMemories}
           // 流式请求成功启动，设置生成状态
           setIsGenerating(true)
           setIsLoading(false) // 流式开始后不再是loading状态
-          console.log('流式请求启动成功，设置isGenerating为true，streamId:', streamResult.streamId) // 调试信息
 
-          // 创建真正的清理函数，包含停止流式请求的API调用
+          // 创建真正的清理函数
           const cleanup = () => {
             // 调用停止流式请求的API
             if (streamResult.streamId) {
@@ -318,11 +442,8 @@ ${relevantMemories}
             setIsLoading(false)
             setStreamingMessageId(null)
             setCurrentStreamCleanup(null)
-            console.log('流式请求清理完成，设置isGenerating为false') // 调试信息
           }
           setCurrentStreamCleanup(() => cleanup)
-        } else {
-          console.log('流式请求启动失败') // 调试信息
         }
       } catch (error) {
         Toast.error(`发送消息失败: ${error instanceof Error ? error.message : String(error)}`)
@@ -337,11 +458,34 @@ ${relevantMemories}
     [aiApiConfigs, selectedAiConfig]
   )
 
-  // 停止生成处理 - 真正的流式中断
-  const handleStopGenerate = useCallback(() => {
-    console.log('停止生成被调用，streamingMessageId:', streamingMessageId) // 调试信息
+  // 发送消息
+  const handleSendMessage = useCallback(() => {
+    if (!inputValue.trim() || isLoading || !selectedAiConfig) return
 
-    // 调用流式请求的清理函数
+    // 检查是否有选中的AI配置
+    if (!selectedAiConfig) {
+      Toast.error('请先选择AI配置')
+      return
+    }
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputValue.trim(),
+      createAt: Date.now()
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setLastUserMessage(userMessage) // 保存最后一条用户消息
+    setInputValue('') // 清空输入框
+    setIsLoading(true)
+
+    // 执行AI回复
+    performAIResponse(userMessage.content, userMessage.id?.toString())
+  }, [inputValue, isLoading, selectedAiConfig, performAIResponse])
+
+  // 停止生成
+  const handleStopGenerate = useCallback(() => {
     if (currentStreamCleanup) {
       currentStreamCleanup()
     }
@@ -367,20 +511,29 @@ ${relevantMemories}
       })
     }
 
-    // 清理所有状态
+    Toast.info('已停止生成')
+  }, [currentStreamCleanup, streamingMessageId])
+
+  // 清空对话
+  const handleClearChat = useCallback(() => {
+    setMessages([])
+    setLastUserMessage(null)
+    
+    // 如果正在生成，也要停止
+    if (currentStreamCleanup) {
+      currentStreamCleanup()
+    }
     setIsGenerating(false)
     setIsLoading(false)
     setStreamingMessageId(null)
     setCurrentStreamCleanup(null)
 
-    Toast.info('已停止生成') // 添加用户提示
-  }, [currentStreamCleanup, streamingMessageId])
+    Toast.success('会话已清空')
+  }, [currentStreamCleanup])
 
-  // 消息重置处理 - 重新发送上一条请求
-  const handleMessageReset = useCallback(
-    (message: any) => {
-      console.log('消息重置被调用，消息:', message) // 调试信息
-
+  // 重新生成消息
+  const handleRetryMessage = useCallback(
+    (message: ChatMessage) => {
       // 检查是否有选中的AI配置
       if (!selectedAiConfig) {
         Toast.error('请先选择AI配置')
@@ -393,7 +546,7 @@ ${relevantMemories}
       }
 
       try {
-        // 方法1：通过parentId找到对应的用户消息
+        // 通过parentId找到对应的用户消息
         if (message.parentId) {
           const parentMessage = messages.find((msg) => msg.id?.toString() === message.parentId)
           if (parentMessage && parentMessage.role === 'user') {
@@ -409,7 +562,7 @@ ${relevantMemories}
           }
         }
 
-        // 方法2：如果没有parentId或找不到父消息，使用最后一条用户消息
+        // 如果没有parentId或找不到父消息，使用最后一条用户消息
         if (lastUserMessage) {
           // 移除当前AI消息
           setMessages((prev) => prev.filter((msg) => msg.id !== message.id))
@@ -422,311 +575,107 @@ ${relevantMemories}
           return
         }
 
-        // 如果都找不到，提示错误
         Toast.error('无法找到对应的用户消息，无法重新生成')
       } catch (error) {
         console.error('消息重置失败:', error)
         Toast.error('重新生成失败，请稍后重试')
       }
     },
-    [
-      selectedAiConfig,
-      isGenerating,
-      currentStreamCleanup,
-      messages,
-      lastUserMessage,
-      performAIResponse
-    ]
+    [selectedAiConfig, isGenerating, currentStreamCleanup, messages, lastUserMessage, performAIResponse]
   )
 
-  // 消息删除处理 - 删除指定消息
-  const handleMessageDelete = useCallback(
-    (message: any) => {
-      console.log('消息删除被调用，消息:', message) // 调试信息
+  // 删除消息
+  const handleDeleteMessage = useCallback((message: ChatMessage) => {
+    try {
+      // 如果正在生成且删除的是正在生成的消息，先停止生成
+      if (isGenerating && streamingMessageId === message.id?.toString() && currentStreamCleanup) {
+        currentStreamCleanup()
+      }
 
-      try {
-        // 如果正在生成且删除的是正在生成的消息，先停止生成
-        if (isGenerating && streamingMessageId === message.id?.toString() && currentStreamCleanup) {
-          currentStreamCleanup()
-        }
+      setMessages((prev) => {
+        let newMessages = [...prev]
 
-        setMessages((prev) => {
-          let newMessages = [...prev]
+        // 如果删除的是用户消息，同时删除对应的AI回复
+        if (message.role === 'user') {
+          // 找到所有以此用户消息为父消息的AI回复
+          const relatedAIMessages = newMessages.filter(
+            (msg) => msg.parentId === message.id?.toString()
+          )
 
-          // 如果删除的是用户消息，同时删除对应的AI回复
-          if (message.role === 'user') {
-            // 找到所有以此用户消息为父消息的AI回复
-            const relatedAIMessages = newMessages.filter(
-              (msg) => msg.parentId === message.id?.toString()
+          // 删除用户消息和相关的AI回复
+          newMessages = newMessages.filter(
+            (msg) =>
+              msg.id !== message.id && !relatedAIMessages.some((aiMsg) => aiMsg.id === msg.id)
+          )
+
+          // 如果删除的是最后一条用户消息，更新lastUserMessage
+          if (lastUserMessage && lastUserMessage.id === message.id) {
+            // 找到剩余消息中最后一条用户消息
+            const remainingUserMessages = newMessages.filter((msg) => msg.role === 'user')
+            setLastUserMessage(
+              remainingUserMessages.length > 0
+                ? remainingUserMessages[remainingUserMessages.length - 1]
+                : null
             )
-
-            // 删除用户消息和相关的AI回复
-            newMessages = newMessages.filter(
-              (msg) =>
-                msg.id !== message.id && !relatedAIMessages.some((aiMsg) => aiMsg.id === msg.id)
-            )
-
-            // 如果删除的是最后一条用户消息，更新lastUserMessage
-            if (lastUserMessage && lastUserMessage.id === message.id) {
-              // 找到剩余消息中最后一条用户消息
-              const remainingUserMessages = newMessages.filter((msg) => msg.role === 'user')
-              setLastUserMessage(
-                remainingUserMessages.length > 0
-                  ? remainingUserMessages[remainingUserMessages.length - 1]
-                  : null
-              )
-            }
-          } else {
-            // 如果删除的是AI消息，只删除该消息
-            newMessages = newMessages.filter((msg) => msg.id !== message.id)
           }
-
-          return newMessages
-        })
-
-        Toast.success('消息已删除')
-      } catch (error) {
-        console.error('消息删除失败:', error)
-        Toast.error('删除消息失败，请稍后重试')
-      }
-    },
-    [isGenerating, streamingMessageId, currentStreamCleanup, lastUserMessage]
-  )
-
-  // Semi Chat组件的消息发送处理
-  const handleChatMessageSend = useCallback(
-    (content: string, _attachment?: any[]) => {
-      if (!content.trim() || isLoading) return
-
-      // 检查是否有选中的AI配置
-      if (!selectedAiConfig) {
-        Toast.error('请先选择AI配置')
-        return
-      }
-
-      const userMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: content.trim(),
-        createAt: Date.now()
-      }
-
-      setMessages((prev) => [...prev, userMessage])
-      setLastUserMessage(userMessage) // 保存最后一条用户消息
-
-      setIsLoading(true)
-
-      // 执行AI回复的逻辑，传递用户消息ID
-      performAIResponse(userMessage.content, userMessage.id?.toString())
-    },
-    [isLoading, selectedAiConfig, performAIResponse]
-  )
-
-  // Chat组件的消息变化处理 - 禁用自动同步，避免重复消息
-  const handleChatsChange = useCallback((_chats?: any[]) => {
-    // 不处理Chat组件的消息变化，完全由我们手动控制消息状态
-    // 这样可以避免Chat组件和手动状态更新的冲突
-  }, [])
-
-  // 自定义消息内容渲染
-  const renderChatBoxContent = useCallback((props: any) => {
-    const { defaultContent, className } = props
-
-    return (
-      <div
-        className={className}
-        style={{
-          wordBreak: 'break-word',
-          overflow: 'hidden',
-          maxWidth: '100%'
-        }}
-      >
-        {defaultContent}
-      </div>
-    )
-  }, [])
-
-  // 自定义输入区域渲染 - 集成配置选择
-  const renderInputArea = useCallback(
-    (props: any) => {
-      const { onSend } = props
-
-      // 处理发送消息，防止重复发送
-      const handleSendMessage = () => {
-        if (!inputValue.trim() || isLoading || !selectedAiConfig) return
-
-        const content = inputValue.trim()
-        setInputValue('') // 立即清空输入框，防止重复发送
-        onSend(content)
-      }
-
-      // 处理键盘事件
-      const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault()
-          handleSendMessage()
+        } else {
+          // 如果删除的是AI消息，只删除该消息
+          newMessages = newMessages.filter((msg) => msg.id !== message.id)
         }
-      }
 
-      return (
-        <div
-          style={{
-            margin: '8px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            overflow: 'hidden', // 防止输入区域溢出
-            maxWidth: '100%'
-          }}
-        >
-          {/* 输入框区域 */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '8px',
-              padding: '12px',
-              border: '1px solid var(--semi-color-border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--semi-color-bg-2)',
-              overflow: 'hidden', // 防止输入框溢出
-              maxWidth: '100%'
-            }}
-          >
-            <TextArea
-              value={inputValue}
-              onChange={(value: string) => setInputValue(value)}
-              onKeyDown={handleKeyDown}
-              placeholder="输入消息... (Shift+Enter换行，Enter发送)"
-              autosize={{ minRows: 1, maxRows: 4 }}
-              style={{
-                flex: 1,
-                minWidth: 0, // 防止flex项目溢出
-                maxWidth: '100%'
-              }}
-              disabled={isLoading}
-            />
-            <Button
-              type="primary"
-              icon={<IconSend />}
-              onClick={handleSendMessage}
-              loading={isLoading}
-              disabled={!inputValue.trim() || !selectedAiConfig}
-              style={{ flexShrink: 0 }} // 防止按钮被压缩
-            >
-              发送
-            </Button>
-          </div>
-        </div>
-      )
-    },
-    [inputValue, selectedAiConfig, isLoading]
-  )
+        return newMessages
+      })
+
+      Toast.success('消息已删除')
+    } catch (error) {
+      console.error('消息删除失败:', error)
+      Toast.error('删除消息失败，请稍后重试')
+    }
+  }, [isGenerating, streamingMessageId, currentStreamCleanup, lastUserMessage])
+
+  // 处理键盘事件
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
 
   useEffect(() => {
     loadAiApiConfigs()
   }, [loadAiApiConfigs])
 
-  // 调试：监控isGenerating状态变化
-  useEffect(() => {
-    console.log('isGenerating状态变化:', isGenerating, '当前时间:', new Date().toLocaleTimeString())
-  }, [isGenerating])
-
-  // 弹出层边缘检测和位置调整
-  useEffect(() => {
-    const adjustPopoverPosition = () => {
-      const portals = document.querySelectorAll('.semi-portal-inner')
-
-      portals.forEach((portal) => {
-        const rect = portal.getBoundingClientRect()
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
-
-        // 检查是否超出右边界
-        if (rect.right > viewportWidth - 16) {
-          ;(portal as HTMLElement).style.left = `${viewportWidth - rect.width - 16}px`
-        }
-
-        // 检查是否超出左边界
-        if (rect.left < 16) {
-          ;(portal as HTMLElement).style.left = '16px'
-        }
-
-        // 检查是否超出底部边界
-        if (rect.bottom > viewportHeight - 16) {
-          ;(portal as HTMLElement).style.top = `${viewportHeight - rect.height - 16}px`
-        }
-
-        // 检查是否超出顶部边界
-        if (rect.top < 16) {
-          ;(portal as HTMLElement).style.top = '16px'
-        }
-      })
-    }
-
-    // 监听弹出层的出现
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as Element
-              if (
-                element.classList.contains('semi-portal-inner') ||
-                element.querySelector('.semi-portal-inner')
-              ) {
-                // 延迟调整位置，确保元素已完全渲染
-                setTimeout(adjustPopoverPosition, 10)
-              }
-            }
-          })
-        }
-      })
-    })
-
-    // 开始观察document.body的变化
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    })
-
-    // 也监听窗口大小变化
-    window.addEventListener('resize', adjustPopoverPosition)
-
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', adjustPopoverPosition)
-    }
-  }, [])
-
-  // 移除scrollToBottom useEffect，Chat组件会自动处理滚动
-
   return (
     <div
-      className="chat-interface-container"
       style={{
-        height: '100%', // 使用全部可用高度
+        height: '100%',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden', // 防止整体溢出
-        minHeight: 0 // 确保flex收缩正常工作
+        overflow: 'hidden'
       }}
     >
-      {/* 标题和设置区域 */}
+      {/* 头部 */}
       <div
-        className="chat-header"
-        style={{ marginBottom: '8px', flexShrink: 0, padding: '8px 16px 0' }}
+        style={{
+          padding: '20px',
+          background: 'linear-gradient(135deg, var(--semi-color-bg-2) 0%, var(--semi-color-bg-1) 100%)',
+          borderBottom: '1px solid var(--semi-color-border)',
+          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        }}
       >
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            maxWidth: '900px',
+            margin: '0 auto'
           }}
         >
-          <Title heading={2} style={{ margin: 0 }}>
-            AI 对话
-          </Title>
           <Space>
+            {/* AI模型选择 */}
             {aiApiConfigs.length > 0 ? (
               <Select
                 value={selectedAiConfig}
@@ -740,75 +689,190 @@ ${relevantMemories}
                     Toast.error('保存模型选择失败')
                   }
                 }}
-                style={{ width: 150 }}
+                style={{ 
+                  width: 220,
+                  borderRadius: '10px'
+                }}
                 placeholder="选择AI模型"
               >
-                {aiApiConfigs.filter((config: any) => (config.type?.toLowerCase?.() === 'llm')).map((config) => (
+                {aiApiConfigs.map((config) => (
                   <Select.Option key={config.id} value={config.id}>
-                    {config.name}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {config.isThinkingModel && (
+                        <span
+                          style={{
+                            backgroundColor: 'rgba(0, 180, 42, 0.15)',
+                            color: '#00b42a',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          思维
+                        </span>
+                      )}
+                      <span style={{ fontWeight: '500' }}>{config.name}</span>
+                    </div>
                   </Select.Option>
                 ))}
               </Select>
             ) : (
-              <Text type="warning" size="small">
-                暂无AI配置
-              </Text>
+              <div style={{ 
+                padding: '8px 12px',
+                background: 'var(--semi-color-warning-light-default)',
+                borderRadius: '8px',
+                border: '1px solid var(--semi-color-warning-light-active)'
+              }}>
+                <Text type="warning" size="small">
+                  ⚠️ 暂无AI配置
+                </Text>
+              </div>
             )}
+
+            {/* 清空对话按钮 */}
+            <Button
+              icon={<IconClear />}
+              onClick={handleClearChat}
+              type="tertiary"
+              theme="light"
+              style={{ borderRadius: '10px' }}
+            >
+              清空对话
+            </Button>
           </Space>
         </div>
       </div>
 
-      {/* 对话区域 - 使用Semi Design Chat组件 */}
+      {/* 消息列表 */}
       <div
+        ref={messagesContainerRef}
         style={{
           flex: 1,
-          display: 'flex',
-          minHeight: 0, // 确保flex收缩正常工作
-          overflow: 'hidden', // 防止子元素溢出
-          padding: '0 8px' // 保留左右边距和少量底部边距
+          overflowY: 'auto',
+          padding: '20px',
+          background: 'linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-bg-1) 100%)'
         }}
       >
-        {/* 主对话区域 */}
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0, // 防止flex项目溢出
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          <Chat
-            key={chatKey} // 添加key支持强制刷新
-            chats={messages as any}
-            roleConfig={roleConfig}
-            onChatsChange={handleChatsChange}
-            onMessageSend={handleChatMessageSend}
-            onMessageReset={handleMessageReset} // 添加消息重置回调
-            onMessageDelete={handleMessageDelete} // 添加消息删除回调
-            onStopGenerator={handleStopGenerate}
-            showStopGenerate={isGenerating}
-            showClearContext={false}
-            onClear={handleClearContext} // 添加清理上下文回调
-            mode="noBubble" // 使用非气泡模式
-            align="leftAlign" // 左对齐布局
-            chatBoxRenderConfig={{
-              renderChatBoxContent: renderChatBoxContent,
-              renderChatBoxAvatar: () => null // 不显示头像
-            }}
-            renderInputArea={renderInputArea}
+        {messages.length === 0 ? (
+          <div
             style={{
-              height: '100%',
-              width: '100%',
-              maxWidth: 'none',
-              border: '1px solid var(--semi-color-border)',
-              borderRadius: '8px',
-              overflow: 'hidden', // 防止Chat组件内容溢出
               display: 'flex',
               flexDirection: 'column',
-              margin: 0, // 移除任何默认margin以最大化空间利用
-              padding: 0 // 移除任何默认padding
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: 'var(--semi-color-text-2)',
+              textAlign: 'center'
             }}
-          />
+          >
+            <div style={{ 
+              marginTop: '32px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              {[
+                '📝 帮我写一篇文章',
+                '🧮 解决数学问题', 
+                '💡 给我一些建议',
+                '🔍 解释一个概念'
+              ].map((suggestion) => (
+                <Button
+                  key={suggestion}
+                  type="tertiary"
+                  theme="light"
+                  onClick={() => setInputValue(suggestion.split(' ')[1])}
+                  style={{
+                    borderRadius: '20px',
+                    padding: '8px 16px',
+                    fontSize: '14px'
+                  }}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            {messages.map((message, index) => (
+              <MessageBubbleCustom
+                key={message.id}
+                message={message}
+                onRetry={handleRetryMessage}
+                onDelete={handleDeleteMessage}
+                isLast={index === messages.length - 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 输入区域 */}
+      <div
+        style={{
+          padding: '20px 20px 30px 20px', // 增加底部内边距
+          background: 'var(--semi-color-bg-1)',
+          borderTop: '1px solid var(--semi-color-border)',
+          flexShrink: 0
+        }}
+      >
+        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-end',
+              background: 'var(--semi-color-bg-2)',
+              padding: '12px',
+              borderRadius: '16px',
+              border: '1px solid var(--semi-color-border)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+            }}
+          >
+            <TextArea
+              value={inputValue}
+              onChange={(value: string) => setInputValue(value)}
+              onKeyDown={handleKeyDown}
+              placeholder="输入你的问题... (Shift+Enter换行，Enter发送)"
+              autosize={{ minRows: 1, maxRows: 4 }}
+              style={{ 
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                fontSize: '14px',
+                lineHeight: '1.5'
+              }}
+              disabled={isLoading || !selectedAiConfig}
+            />
+            <Button
+              type="primary"
+              icon={isGenerating ? <IconStop /> : <IconSend />}
+              onClick={isGenerating ? handleStopGenerate : handleSendMessage}
+              loading={isLoading && !isGenerating}
+              disabled={!isGenerating && (!inputValue.trim() || !selectedAiConfig)}
+              style={{ 
+                height: '36px',
+                width: '36px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+              theme="solid"
+            />
+          </div>
+          
+          {!selectedAiConfig && (
+            <div style={{ marginTop: '12px', textAlign: 'center' }}>
+              <Text type="warning" size="small">
+                💡 请先在右上角选择AI模型再开始对话
+              </Text>
+            </div>
+          )}
         </div>
       </div>
     </div>
