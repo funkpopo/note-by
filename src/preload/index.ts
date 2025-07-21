@@ -22,6 +22,7 @@ interface AiApiConfig {
   modelName: string
   temperature?: string
   maxTokens?: string
+  isThinkingModel?: boolean // 是否为思维模型
 }
 
 // 设置的IPC通信频道

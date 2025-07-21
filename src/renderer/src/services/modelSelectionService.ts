@@ -12,6 +12,7 @@ interface AiApiConfig {
   modelName: string
   temperature?: string
   maxTokens?: string
+  isThinkingModel?: boolean // 是否为思维模型
 }
 
 // 模型选择服务类

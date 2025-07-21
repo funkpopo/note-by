@@ -35,6 +35,7 @@ export interface AiApiConfig {
   modelName: string
   temperature?: string
   maxTokens?: string
+  isThinkingModel?: boolean // 是否为思维模型
 }
 
 // WebDAV配置接口

@@ -64,7 +64,7 @@ if (!gotTheLock) {
   app.quit()
 } else {
   // 监听第二个实例的启动
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
     // 如果用户尝试打开第二个实例，我们应该聚焦到主窗口
     if (mainWindow) {
       if (mainWindow.isMinimized()) {

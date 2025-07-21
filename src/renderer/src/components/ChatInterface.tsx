@@ -2,25 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Typography, Button, Toast, TextArea, Select, Chat, Space } from '@douyinfe/semi-ui'
 import { IconSend } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
+import throttle from 'lodash.throttle'
+import { filterThinkingContent } from '../utils/filterThinking'
 
 const { Title, Text } = Typography
 
 // Semi Design Chat组件的角色配置
 const roleConfig = {
   user: {
-    name: '用户',
-    avatar:
-      'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/docs-icon.png'
+    name: '用户'
   },
   assistant: {
-    name: 'AI助手',
-    avatar:
-      'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/other/logo.png'
+    name: 'AI助手'
   },
   system: {
-    name: '系统',
-    avatar:
-      'https://lf3-static.bytednsdoc.com/obj/eden-cn/ptlz_zlp/ljhwZthlaukjlkulzlp/other/logo.png'
+    name: '系统'
   }
 }
 
@@ -53,7 +49,27 @@ const ChatInterface: React.FC = () => {
   // 保存最后一条用户消息，用于重发
   const [lastUserMessage, setLastUserMessage] = useState<ChatMessage | null>(null)
 
-  // 移除不再需要的refs和滚动函数，Chat组件会自动处理
+  // 节流更新
+  const throttledUpdateRef = React.useRef<{
+    (updater: React.SetStateAction<ChatMessage[]>): void
+    cancel: () => void
+  } | null>(null)
+
+  useEffect(() => {
+    // 初始化节流函数
+    throttledUpdateRef.current = throttle(
+      (updater) => {
+        setMessages(updater)
+      },
+      150, // 每150ms最多执行一次
+      { leading: true, trailing: true }
+    )
+
+    // 组件卸载时清理
+    return () => {
+      throttledUpdateRef.current?.cancel()
+    }
+  }, [])
 
   // 加载AI API配置
   const loadAiApiConfigs = useCallback(async () => {
@@ -108,6 +124,35 @@ const ChatInterface: React.FC = () => {
           throw new Error('请先配置AI API')
         }
 
+        // 记忆检索：尝试从记忆中获取相关信息来增强提示
+        let enhancedPrompt = userContent
+        try {
+          const memoryConfigResult = await (window as any).api.memory.getConfig()
+          if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
+            // 搜索相关记忆
+            const memorySearchResult = await (window as any).api.memory.searchMemories(
+              userContent,
+              'user',
+              5
+            )
+            if (memorySearchResult.success && memorySearchResult.memories?.length > 0) {
+              const relevantMemories = memorySearchResult.memories
+                .map((memory) => `记忆：${memory.content}`)
+                .join('\n')
+
+              enhancedPrompt = `基于以下记忆内容回答用户问题：
+${relevantMemories}
+
+用户问题：${userContent}
+
+请根据记忆内容提供个性化的回答，如果记忆内容与问题相关，请充分利用这些信息。`
+            }
+          }
+        } catch (memoryError) {
+          console.warn('Memory retrieval failed:', memoryError)
+          // 记忆检索失败不影响正常对话
+        }
+
         // 创建初始的流式消息
         const streamMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -121,19 +166,19 @@ const ChatInterface: React.FC = () => {
         setMessages((prev) => [...prev, streamMessage])
         setStreamingMessageId(streamMessage.id?.toString() || null)
 
-        // 调用流式AI API
+        // 调用流式AI API，使用增强的提示
         const streamResult = await window.api.openai.streamGenerateContent(
           {
             apiKey: aiConfig.apiKey,
             apiUrl: aiConfig.apiUrl,
             modelName: aiConfig.modelName,
-            prompt: userContent,
+            prompt: enhancedPrompt,
             maxTokens: parseInt(aiConfig.maxTokens || '2000')
           },
           {
             // 实时更新消息内容
             onData: (chunk: string) => {
-              setMessages((prev) => {
+              const updater = (prev: ChatMessage[]): ChatMessage[] => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
@@ -144,23 +189,58 @@ const ChatInterface: React.FC = () => {
                   }
                 }
                 return newMessages
-              })
+              }
+              throttledUpdateRef.current?.(updater)
             },
 
             // 流式完成处理
             onDone: (fullContent: string) => {
+              // 取消任何待处理的节流更新
+              throttledUpdateRef.current?.cancel()
+
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
                   newMessages[messageIndex] = {
                     ...newMessages[messageIndex],
-                    content: fullContent,
+                    content: filterThinkingContent(fullContent),
                     status: 'complete'
                   }
                 }
                 return newMessages
               })
+
+              // 保存对话记忆（异步执行，不阻塞UI）
+              setTimeout(async () => {
+                try {
+                  const memoryConfigResult = await (window as any).api.memory.getConfig()
+                  if (memoryConfigResult.success && memoryConfigResult.config?.enabled) {
+                    // 构建对话消息数组
+                    const conversationMessages = [
+                      { role: 'user' as const, content: userContent },
+                      { role: 'assistant' as const, content: filterThinkingContent(fullContent) }
+                    ]
+
+                    // 构建元数据
+                    const metadata = {
+                      source: 'chat_conversation',
+                      timestamp: new Date().toISOString(),
+                      ai_config: aiConfig.name,
+                      model: aiConfig.modelName
+                    }
+
+                    // 保存对话到记忆
+                    await (window as any).api.memory.addConversation(
+                      conversationMessages,
+                      'user',
+                      metadata
+                    )
+                  }
+                } catch (memoryError) {
+                  console.warn('Failed to save conversation to memory:', memoryError)
+                }
+              }, 100)
 
               // 清理状态
               setIsGenerating(false)
@@ -171,6 +251,9 @@ const ChatInterface: React.FC = () => {
 
             // 错误处理
             onError: (error: string) => {
+              // 取消任何待处理的节流更新
+              throttledUpdateRef.current?.cancel()
+
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
@@ -189,15 +272,17 @@ const ChatInterface: React.FC = () => {
                   if (hasContent && error.includes('请求超时')) {
                     newMessages[messageIndex] = {
                       ...newMessages[messageIndex],
+                      content: filterThinkingContent(currentContent), // 在此过滤
                       status: 'complete'
                     }
                   } else {
+                    // 其他错误情况
                     newMessages[messageIndex] = {
                       ...newMessages[messageIndex],
+                      status: 'error',
                       content:
-                        currentContent ||
-                        '抱歉，我遇到了一些问题，无法回复您的消息。请检查AI API配置或稍后重试。',
-                      status: 'error'
+                        filterThinkingContent(newMessages[messageIndex].content || '') + // 在此过滤
+                        `\n\n[错误: ${error}]`
                     }
                   }
                 }
@@ -658,7 +743,7 @@ const ChatInterface: React.FC = () => {
                 style={{ width: 150 }}
                 placeholder="选择AI模型"
               >
-                {aiApiConfigs.map((config) => (
+                {aiApiConfigs.filter((config: any) => (config.type?.toLowerCase?.() === 'llm')).map((config) => (
                   <Select.Option key={config.id} value={config.id}>
                     {config.name}
                   </Select.Option>

@@ -41,6 +41,7 @@ interface AiApiConfig {
   modelName: string
   temperature?: string
   maxTokens?: string
+  isThinkingModel?: boolean // 是否为思维模型
 }
 
 interface UpdateResult {
@@ -133,7 +134,8 @@ const Settings: React.FC = () => {
       apiUrl: '',
       modelName: '',
       temperature: '0.7',
-      maxTokens: '2000'
+      maxTokens: '2000',
+      isThinkingModel: false
     })
     setIsEditMode(false)
     setIsModalOpen(true)
@@ -207,7 +209,7 @@ const Settings: React.FC = () => {
   }
 
   // 更新当前编辑的配置
-  const handleConfigChange = (key: keyof AiApiConfig, value: string): void => {
+  const handleConfigChange = (key: keyof AiApiConfig, value: string | boolean): void => {
     setCurrentConfig((prev) => {
       if (!prev) return null
       return {
@@ -344,13 +346,31 @@ const Settings: React.FC = () => {
                 </Button>
               </ButtonGroup>
             }
+            style={{
+              backgroundColor: config.isThinkingModel ? 'rgba(0, 180, 42, 0.08)' : undefined,
+              border: config.isThinkingModel ? '1px solid rgba(0, 180, 42, 0.2)' : undefined
+            }}
           >
             <div style={{ padding: '0 4px' }}>
               {/* 将名称添加到卡片内容区域 */}
-              <div style={{ marginBottom: 12 }}>
+              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Text strong style={{ fontSize: '16px' }}>
                   {config.name}
                 </Text>
+                {config.isThinkingModel && (
+                  <span
+                    style={{
+                      backgroundColor: 'rgba(0, 180, 42, 0.15)',
+                      color: '#00b42a',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    思维模型
+                  </span>
+                )}
               </div>
               <div style={{ marginBottom: 8 }}>
                 <Text type="tertiary" style={{ marginRight: 6 }}>
@@ -1268,6 +1288,15 @@ const Settings: React.FC = () => {
               限制模型生成的最大token数量
             </Paragraph>
           </div>
+          <Form.Switch
+            field="isThinkingModel"
+            label="思维模型"
+            initValue={currentConfig?.isThinkingModel || false}
+            onChange={(checked) => handleConfigChange('isThinkingModel', checked)}
+          />
+          <Paragraph size="small" type="tertiary" style={{ marginTop: 4 }}>
+            启用此选项表示该模型为思维模型
+          </Paragraph>
         </Form>
       </Modal>
     </div>
