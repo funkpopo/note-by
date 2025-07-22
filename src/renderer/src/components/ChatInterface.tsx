@@ -1,12 +1,26 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Typography, Button, Toast, TextArea, Select, Space, Spin, Dropdown, Card } from '@douyinfe/semi-ui'
-import { IconSend, IconStop, IconClear, IconRefresh, IconMore, IconCopy, IconDelete } from '@douyinfe/semi-icons'
+import { IconSend, IconStop, IconClear, IconRefresh, IconMore, IconCopy, IconDelete, IconHistory } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
-import { filterThinkingContent } from '../utils/filterThinking'
+import { processThinkingContent } from '../utils/filterThinking'
 import MessageRenderer from './MessageRenderer'
+import ChatHistorySidebar from './ChatHistorySidebar'
+import { zhCN } from '../locales/zh-CN'
+import { enUS } from '../locales/en-US'
 
 const { Text } = Typography
+
+// 获取当前语言设置
+const getCurrentLanguage = () => {
+  return (localStorage.getItem('app-language') as 'zh-CN' | 'en-US') || 'zh-CN'
+}
+
+// 获取翻译文本
+const getTranslations = () => {
+  const lang = getCurrentLanguage()
+  return lang === 'zh-CN' ? zhCN : enUS
+}
 
 // 自定义消息气泡组件
 const MessageBubbleCustom: React.FC<{
@@ -14,34 +28,45 @@ const MessageBubbleCustom: React.FC<{
   onRetry?: (message: ChatMessage) => void
   onDelete?: (message: ChatMessage) => void
   isLast?: boolean
-}> = ({ message, onRetry, onDelete, isLast }) => {
+  selectedAiConfig: string
+  aiApiConfigs: AiApiConfig[]
+}> = ({ message, onRetry, onDelete, isLast, selectedAiConfig, aiApiConfigs }) => {
+  const t = getTranslations()
   const isUser = message.role === 'user'
   const isAssistant = message.role === 'assistant'
 
+  // 获取AI模型名称首字母
+  const getAiModelInitial = () => {
+    if (!isAssistant) return ''
+    const aiConfig = aiApiConfigs.find(config => config.id === selectedAiConfig)
+    return aiConfig?.name?.charAt(0)?.toUpperCase() || 'AI'
+  }
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.content)
-    Toast.success('已复制到剪贴板')
+    const { displayText } = processThinkingContent(message.content)
+    navigator.clipboard.writeText(displayText || message.content)
+    Toast.success(t.chat?.notifications.copied || '已复制到剪贴板')
   }
 
   const dropdownItems = [
     {
       node: 'item' as const,
       key: 'copy',
-      name: '复制',
+      name: t.chat?.actions.copy || '复制',
       icon: <IconCopy />,
       onClick: handleCopy
     },
     ...(isAssistant && onRetry ? [{
       node: 'item' as const,
       key: 'retry',
-      name: '重新生成',
+      name: t.chat?.actions.retry || '重新生成',
       icon: <IconRefresh />,
       onClick: () => onRetry(message)
     }] : []),
     ...(onDelete ? [{
       node: 'item' as const,
       key: 'delete',
-      name: '删除',
+      name: t.chat?.actions.delete || '删除',
       icon: <IconDelete />,
       onClick: () => onDelete(message),
       type: 'danger' as const
@@ -54,7 +79,7 @@ const MessageBubbleCustom: React.FC<{
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
             <Spin size="small" />
-            <Text size="small" type="tertiary">正在思考中...</Text>
+            <Text size="small" type="tertiary">{t.chat?.messages.statusIndicator.loading || '正在思考中...'}</Text>
           </div>
         )
       case 'streaming':
@@ -67,19 +92,19 @@ const MessageBubbleCustom: React.FC<{
               borderRadius: '50%',
               animation: 'pulse 1.5s ease-in-out infinite'
             }} />
-            <Text size="small" type="tertiary">AI正在思考...</Text>
+            <Text size="small" type="tertiary">{t.chat?.messages.statusIndicator.streaming || 'AI正在思考...'}</Text>
           </div>
         )
       case 'incomplete':
         return (
           <div style={{ marginTop: '12px' }}>
-            <Text size="small" type="warning">⚠️ 生成被中断</Text>
+            <Text size="small" type="warning">{t.chat?.messages.statusIndicator.incomplete || '⚠️ 生成被中断'}</Text>
           </div>
         )
       case 'error':
         return (
           <div style={{ marginTop: '12px' }}>
-            <Text size="small" type="danger">❌ 生成出错</Text>
+            <Text size="small" type="danger">{t.chat?.messages.statusIndicator.error || '❌ 生成出错'}</Text>
           </div>
         )
       default:
@@ -95,7 +120,7 @@ const MessageBubbleCustom: React.FC<{
       gap: '16px',
       alignItems: 'flex-start'
     }}>
-      {/* 头像 */}
+      {/* 头像 - 改为文字显示 */}
       <div style={{
         width: '40px',
         height: '40px',
@@ -107,21 +132,37 @@ const MessageBubbleCustom: React.FC<{
         alignItems: 'center',
         justifyContent: 'center',
         color: 'white',
-        fontSize: '16px',
+        fontSize: '14px',
         fontWeight: '600',
         flexShrink: 0,
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
       }}>
-        {isUser ? '👤' : '🤖'}
+        {isUser ? '我' : getAiModelInitial()}
       </div>
 
       {/* 消息内容 */}
       <div style={{ 
         flex: 1, 
         maxWidth: 'calc(100% - 80px)',
-        minWidth: 0
-      }}>
-        {/* 消息卡片 */}
+        minWidth: 0,
+        position: 'relative'
+      }}
+      onMouseEnter={(e) => {
+        // 显示快速操作按钮组
+        const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
+        if (quickActions) {
+          quickActions.style.opacity = '1'
+        }
+      }}
+      onMouseLeave={(e) => {
+        // 隐藏快速操作按钮组
+        const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
+        if (quickActions) {
+          quickActions.style.opacity = '0'
+        }
+      }}
+      >
+        {/* 消息内容 */}
         <Card
           style={{
             background: isUser 
@@ -130,13 +171,91 @@ const MessageBubbleCustom: React.FC<{
             border: isUser ? 'none' : '1px solid var(--semi-color-border)',
             borderRadius: '16px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            padding: '0'
+            padding: '0',
+            position: 'relative'
           }}
           bodyStyle={{ 
             padding: '16px 20px',
             color: isUser ? 'white' : 'var(--semi-color-text-0)'
           }}
         >
+          {/* 快速操作按钮组 - 仅对AI消息显示 */}
+          {isAssistant && (
+            <div 
+              className="quick-actions"
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                display: 'flex',
+                gap: '4px',
+                opacity: 0,
+                transition: 'opacity 0.2s ease',
+                zIndex: 10
+              }}
+            >
+              {/* 刷新重发按钮 */}
+              {onRetry && (
+                <Button
+                  icon={<IconRefresh />}
+                  type="tertiary"
+                  theme="borderless"
+                  size="small"
+                  onClick={() => onRetry(message)}
+                  style={{
+                    borderRadius: '6px',
+                    padding: '4px',
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'var(--semi-color-bg-0)',
+                    color: 'var(--semi-color-text-1)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-default)'
+                    e.currentTarget.style.color = 'var(--semi-color-success)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--semi-color-bg-0)'
+                    e.currentTarget.style.color = 'var(--semi-color-text-1)'
+                  }}
+                />
+              )}
+
+              {/* 快速复制按钮 */}
+              <Button
+                icon={<IconCopy />}
+                type="tertiary"
+                theme="borderless"
+                size="small"
+                onClick={handleCopy}
+                style={{
+                  borderRadius: '6px',
+                  padding: '4px',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'var(--semi-color-bg-0)',
+                  color: 'var(--semi-color-text-1)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--semi-color-primary-light-default)'
+                  e.currentTarget.style.color = 'var(--semi-color-primary)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--semi-color-bg-0)'
+                  e.currentTarget.style.color = 'var(--semi-color-text-1)'
+                }}
+              />
+            </div>
+          )}
+
           {isUser ? (
             <div style={{ 
               fontSize: '15px', 
@@ -220,12 +339,18 @@ interface ChatMessage {
 }
 
 const ChatInterface: React.FC = () => {
+  const t = getTranslations()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [aiApiConfigs, setAiApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedAiConfig, setSelectedAiConfig] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // 对话历史相关状态
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false)
+  const [unsavedMessages, setUnsavedMessages] = useState<Set<string>>(new Set())
 
   // 流式响应状态管理
   const [currentStreamCleanup, setCurrentStreamCleanup] = useState<(() => void) | null>(null)
@@ -257,6 +382,84 @@ const ChatInterface: React.FC = () => {
     return () => {
       throttledUpdateRef.current?.cancel()
     }
+  }, [])
+
+  // 创建新会话
+  const createNewSession = useCallback(async () => {
+    try {
+      const sessionId = await window.api.chat.createSession()
+      setCurrentSessionId(sessionId)
+      setMessages([])
+      setUnsavedMessages(new Set())
+      return sessionId
+    } catch (error) {
+      console.error('创建新会话失败:', error)
+      Toast.error(t.chat?.history.saveFailed || '创建会话失败')
+      return null
+    }
+  }, [t])
+
+  // 加载指定会话的消息
+  const loadSessionMessages = useCallback(async (sessionId: string) => {
+    try {
+      const sessionMessages = await window.api.chat.getSessionMessages(sessionId)
+      setMessages(sessionMessages)
+      setCurrentSessionId(sessionId)
+      setUnsavedMessages(new Set())
+    } catch (error) {
+      console.error('加载会话消息失败:', error)
+      Toast.error(t.chat?.history.loadFailed || '加载对话失败')
+    }
+  }, [t])
+
+  // 保存消息到数据库
+  const saveMessageToDatabase = useCallback(async (message: ChatMessage) => {
+    if (!currentSessionId) return
+
+    try {
+      await window.api.chat.saveMessage({
+        ...message,
+        sessionId: currentSessionId
+      })
+      
+      // 从未保存集合中移除
+      setUnsavedMessages(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(message.id.toString())
+        return newSet
+      })
+    } catch (error) {
+      console.error('保存消息失败:', error)
+      // 将消息ID添加到未保存集合
+      setUnsavedMessages(prev => new Set(prev).add(message.id.toString()))
+    }
+  }, [currentSessionId])
+
+  // 自动保存未保存的消息
+  useEffect(() => {
+    if (unsavedMessages.size === 0) return
+
+    const saveUnsavedMessages = async () => {
+      const messagesToSave = messages.filter(msg => unsavedMessages.has(msg.id.toString()))
+      
+      for (const message of messagesToSave) {
+        await saveMessageToDatabase(message)
+      }
+    }
+
+    const timeoutId = setTimeout(saveUnsavedMessages, 1000)
+    return () => clearTimeout(timeoutId)
+  }, [unsavedMessages, messages, saveMessageToDatabase])
+
+  // 组件加载时创建或加载会话
+  useEffect(() => {
+    const initializeSession = async () => {
+      if (!currentSessionId) {
+        await createNewSession()
+      }
+    }
+    
+    initializeSession()
   }, [])
 
   // 自动滚动到底部
@@ -299,7 +502,7 @@ const ChatInterface: React.FC = () => {
         // 获取选中的AI配置
         const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
         if (!aiConfig) {
-          throw new Error('请先配置AI API')
+          throw new Error(t.chat?.notifications.selectModel || '请先配置AI API')
         }
 
         // 创建初始的流式消息
@@ -314,6 +517,9 @@ const ChatInterface: React.FC = () => {
 
         setMessages((prev) => [...prev, streamMessage])
         setStreamingMessageId(streamMessage.id?.toString() || null)
+
+        // 标记AI消息为待保存
+        setUnsavedMessages(prev => new Set(prev).add(streamMessage.id.toString()))
 
         // 调用流式AI API
         const streamResult = await window.api.openai.streamGenerateContent(
@@ -346,19 +552,19 @@ const ChatInterface: React.FC = () => {
               throttledUpdateRef.current?.(updater)
             },
 
-            // 流式完成处理 - 确保最终内容完整
+            // 流式完成处理 - 保留完整内容，让MessageRenderer处理思维内容
             onDone: (fullContent: string) => {
               // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
 
-              // 立即更新最终内容，不使用节流
+              // 立即更新最终内容，不使用节流，保留完整内容
               setMessages((prev) => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
                 if (messageIndex !== -1) {
                   newMessages[messageIndex] = {
                     ...newMessages[messageIndex],
-                    content: filterThinkingContent(fullContent),
+                    content: fullContent, // 保留完整内容，包括思维部分
                     status: 'complete'
                   }
                 }
@@ -372,7 +578,7 @@ const ChatInterface: React.FC = () => {
               setCurrentStreamCleanup(null)
             },
 
-            // 错误处理 - 优化超时和内容保留
+            // 错误处理 - 优化超时和内容保留，保留完整内容
             onError: (error: string) => {
               // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
@@ -397,7 +603,7 @@ const ChatInterface: React.FC = () => {
                   if (hasContent && error.includes('请求超时')) {
                     newMessages[messageIndex] = {
                       ...currentMessage,
-                      content: filterThinkingContent(currentContent),
+                      content: currentContent, // 保留完整内容，包括思维部分
                       status: 'complete'
                     }
                   } else {
@@ -405,9 +611,7 @@ const ChatInterface: React.FC = () => {
                     newMessages[messageIndex] = {
                       ...currentMessage,
                       status: 'error',
-                      content:
-                        filterThinkingContent(currentContent || '') +
-                        `\n\n[错误: ${error}]`
+                      content: (currentContent || '') + `\n\n[错误: ${error}]` // 保留原始内容
                     }
                   }
                 }
@@ -464,7 +668,7 @@ const ChatInterface: React.FC = () => {
 
     // 检查是否有选中的AI配置
     if (!selectedAiConfig) {
-      Toast.error('请先选择AI配置')
+      Toast.error(t.chat?.notifications.selectModel || '请先选择AI配置')
       return
     }
 
@@ -479,6 +683,9 @@ const ChatInterface: React.FC = () => {
     setLastUserMessage(userMessage) // 保存最后一条用户消息
     setInputValue('') // 清空输入框
     setIsLoading(true)
+
+    // 标记消息为待保存
+    setUnsavedMessages(prev => new Set(prev).add(userMessage.id.toString()))
 
     // 执行AI回复
     performAIResponse(userMessage.content, userMessage.id?.toString())
@@ -511,15 +718,12 @@ const ChatInterface: React.FC = () => {
       })
     }
 
-    Toast.info('已停止生成')
+    Toast.info(t.chat?.notifications.stopped || '已停止生成')
   }, [currentStreamCleanup, streamingMessageId])
 
   // 清空对话
-  const handleClearChat = useCallback(() => {
-    setMessages([])
-    setLastUserMessage(null)
-    
-    // 如果正在生成，也要停止
+  const handleClearChat = useCallback(async () => {
+    // 如果正在生成，先停止
     if (currentStreamCleanup) {
       currentStreamCleanup()
     }
@@ -528,15 +732,32 @@ const ChatInterface: React.FC = () => {
     setStreamingMessageId(null)
     setCurrentStreamCleanup(null)
 
-    Toast.success('会话已清空')
-  }, [currentStreamCleanup])
+    if (currentSessionId) {
+      try {
+        const success = await window.api.chat.deleteSession(currentSessionId)
+        if (!success) {
+          Toast.error(t?.chat?.notifications?.deleteFailed || '清空对话失败')
+          return
+        }
+      } catch (e) {
+        Toast.error(t?.chat?.notifications?.deleteFailed || '清空对话失败')
+        return
+      }
+    }
+
+    // 创建新的会话
+    await createNewSession()
+    setLastUserMessage(null)
+
+    Toast.success(t?.chat?.notifications?.cleared || '会话已清空')
+  }, [currentStreamCleanup, createNewSession, t, currentSessionId])
 
   // 重新生成消息
   const handleRetryMessage = useCallback(
     (message: ChatMessage) => {
       // 检查是否有选中的AI配置
       if (!selectedAiConfig) {
-        Toast.error('请先选择AI配置')
+        Toast.error(t.chat?.notifications.selectModel || '请先选择AI配置')
         return
       }
 
@@ -557,7 +778,7 @@ const ChatInterface: React.FC = () => {
             setIsLoading(true)
             performAIResponse(parentMessage.content, parentMessage.id?.toString())
 
-            Toast.info('正在重新生成回复...')
+            Toast.info(t.chat?.notifications.retrying || '正在重新生成回复...')
             return
           }
         }
@@ -571,14 +792,14 @@ const ChatInterface: React.FC = () => {
           setIsLoading(true)
           performAIResponse(lastUserMessage.content, lastUserMessage.id?.toString())
 
-          Toast.info('正在重新生成回复...')
+          Toast.info(t.chat?.notifications.retrying || '正在重新生成回复...')
           return
         }
 
-        Toast.error('无法找到对应的用户消息，无法重新生成')
+        Toast.error(t.chat?.notifications.noMessage || '无法找到对应的用户消息，无法重新生成')
       } catch (error) {
         console.error('消息重置失败:', error)
-        Toast.error('重新生成失败，请稍后重试')
+        Toast.error(t.chat?.notifications.retryFailed || '重新生成失败，请稍后重试')
       }
     },
     [selectedAiConfig, isGenerating, currentStreamCleanup, messages, lastUserMessage, performAIResponse]
@@ -626,10 +847,10 @@ const ChatInterface: React.FC = () => {
         return newMessages
       })
 
-      Toast.success('消息已删除')
+      Toast.success(t.chat?.notifications.deleted || '消息已删除')
     } catch (error) {
       console.error('消息删除失败:', error)
-      Toast.error('删除消息失败，请稍后重试')
+      Toast.error(t.chat?.notifications.deleteFailed || '删除消息失败，请稍后重试')
     }
   }, [isGenerating, streamingMessageId, currentStreamCleanup, lastUserMessage])
 
@@ -675,11 +896,23 @@ const ChatInterface: React.FC = () => {
           className="chat-header-container-right"
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             alignItems: 'center',
             width: '100%'
           }}
         >
+          {/* 左侧历史记录按钮 */}
+          <Button
+            icon={<IconHistory />}
+            onClick={() => setIsHistorySidebarOpen(true)}
+            type="tertiary"
+            theme="light"
+            style={{ borderRadius: '10px' }}
+          >
+            {t.chat?.actions.history || '对话历史'}
+          </Button>
+
+          {/* 右侧控件 */}
           <Space>
             {/* AI模型选择 */}
             {aiApiConfigs.length > 0 ? (
@@ -699,7 +932,7 @@ const ChatInterface: React.FC = () => {
                   width: 220,
                   borderRadius: '10px'
                 }}
-                placeholder="选择AI模型"
+                placeholder={t.chat?.modelSelector.placeholder || '选择AI模型'}
               >
                 {aiApiConfigs.map((config) => (
                   <Select.Option key={config.id} value={config.id}>
@@ -715,7 +948,7 @@ const ChatInterface: React.FC = () => {
                             fontWeight: '500'
                           }}
                         >
-                          思维
+                          {t.chat?.modelSelector.thinkingBadge || '思维'}
                         </span>
                       )}
                       <span style={{ fontWeight: '500' }}>{config.name}</span>
@@ -733,7 +966,7 @@ const ChatInterface: React.FC = () => {
                 border: '1px solid var(--semi-color-warning-light-active)'
               }}>
                 <Text type="warning" size="small">
-                  ⚠️ 暂无AI配置
+                  {t.chat?.modelSelector.noModels || '⚠️ 暂无AI配置'}
                 </Text>
               </div>
             )}
@@ -746,7 +979,7 @@ const ChatInterface: React.FC = () => {
               theme="light"
               style={{ borderRadius: '10px' }}
             >
-              清空对话
+              {t.chat?.actions.clear || '清空对话'}
             </Button>
           </Space>
         </div>
@@ -785,12 +1018,12 @@ const ChatInterface: React.FC = () => {
               gap: '12px',
               justifyContent: 'center'
             }}>
-              {[
+              {(t.chat?.suggestions || [
                 '📝 帮我写一篇文章，题材是: ',
                 '🧮 需要解决下述的数学问题: ', 
                 '💡 给我一些建议，关于',
                 '🔍 解释这个概念: '
-              ].map((suggestion) => (
+              ]).slice(0, 4).map((suggestion) => (
                 <Button
                   key={suggestion}
                   type="tertiary"
@@ -818,6 +1051,8 @@ const ChatInterface: React.FC = () => {
                 onRetry={handleRetryMessage}
                 onDelete={handleDeleteMessage}
                 isLast={index === messages.length - 1}
+                selectedAiConfig={selectedAiConfig}
+                aiApiConfigs={aiApiConfigs}
               />
             ))}
           </div>
@@ -853,7 +1088,7 @@ const ChatInterface: React.FC = () => {
               value={inputValue}
               onChange={(value: string) => setInputValue(value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入你的问题... (Shift+Enter换行，Enter发送)"
+              placeholder={t.chat?.inputPlaceholder || '输入你的问题... (Shift+Enter换行，Enter发送)'}
               autosize={{ minRows: 1, maxRows: 4 }}
               style={{ 
                 flex: 1,
@@ -886,12 +1121,21 @@ const ChatInterface: React.FC = () => {
           {!selectedAiConfig && (
             <div style={{ marginTop: '12px', textAlign: 'center' }}>
               <Text type="warning" size="small">
-                💡 请先在右上角选择AI模型再开始对话
+                {t.chat?.notifications.noUserMessage || '💡 请先在右上角选择AI模型再开始对话'}
               </Text>
             </div>
           )}
         </div>
       </div>
+
+      {/* 聊天历史侧边栏 */}
+      <ChatHistorySidebar
+        isOpen={isHistorySidebarOpen}
+        onClose={() => setIsHistorySidebarOpen(false)}
+        onSelectSession={loadSessionMessages}
+        onNewChat={createNewSession}
+        currentSessionId={currentSessionId || undefined}
+      />
     </div>
   )
 }

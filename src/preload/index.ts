@@ -88,7 +88,16 @@ const IPC_CHANNELS = {
   // 添加主题相关IPC通道
   SET_WINDOW_BACKGROUND: 'window:set-background',
   // 添加应用导航IPC通道
-  NAVIGATE_TO_VIEW: 'app:navigate-to-view'
+  NAVIGATE_TO_VIEW: 'app:navigate-to-view',
+  // 添加聊天历史相关IPC通道
+  CHAT_CREATE_SESSION: 'chat:create-session',
+  CHAT_SAVE_MESSAGE: 'chat:save-message',
+  CHAT_GET_SESSIONS: 'chat:get-sessions',
+  CHAT_GET_SESSION_MESSAGES: 'chat:get-session-messages',
+  CHAT_UPDATE_SESSION_TITLE: 'chat:update-session-title',
+  CHAT_DELETE_SESSION: 'chat:delete-session',
+  CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
+  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
 }
 
 // 内容生成请求接口
@@ -859,6 +868,68 @@ const api = {
         ipcRenderer.removeListener('updater:status-changed', listener)
       }
     }
+  },
+  // 聊天历史相关API
+  chat: {
+    // 创建新的聊天会话
+    createSession: (title?: string): Promise<string | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_CREATE_SESSION, title),
+
+    // 保存聊天消息
+    saveMessage: (message: {
+      id: string
+      sessionId: string
+      role: 'user' | 'assistant' | 'system'
+      content: string
+      status?: string
+      parentId?: string
+      modelId?: string
+    }): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_SAVE_MESSAGE, message),
+
+    // 获取所有聊天会话
+    getSessions: (): Promise<Array<{
+      id: string
+      title?: string
+      createdAt: number
+      updatedAt: number
+      messageCount: number
+      isArchived: boolean
+    }>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSIONS),
+
+    // 获取指定会话的消息
+    getSessionMessages: (sessionId: string): Promise<Array<{
+      id: string
+      sessionId: string
+      role: 'user' | 'assistant' | 'system'
+      content: string
+      status?: string
+      parentId?: string
+      createdAt: number
+      modelId?: string
+    }>> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSION_MESSAGES, sessionId),
+
+    // 更新会话标题
+    updateSessionTitle: (sessionId: string, title: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE, sessionId, title),
+
+    // 删除聊天会话
+    deleteSession: (sessionId: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_DELETE_SESSION, sessionId),
+
+    // 获取会话统计信息
+    getSessionStats: (): Promise<{
+      totalSessions: number
+      totalMessages: number
+      activeSessions: number
+    }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSION_STATS),
+
+    // 清理旧的会话
+    cleanupOldSessions: (keepCount?: number): Promise<number> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_CLEANUP_OLD_SESSIONS, keepCount)
   }
 }
 

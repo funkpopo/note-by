@@ -6,8 +6,18 @@ interface HistoryItem {
   timestamp: number
 }
 
+interface ChatAPI {
+  createSession: (title?: string) => Promise<string | null>;
+  saveMessage: (message: any) => Promise<boolean>;
+  getSessions: () => Promise<any[]>;
+  getSessionMessages: (sessionId: string) => Promise<any[]>;
+  updateSessionTitle: (sessionId: string, title: string) => Promise<boolean>;
+  deleteSession: (sessionId: string) => Promise<boolean>;
+}
+
 interface Window {
   api: {
+    chat: ChatAPI;
     // 设置相关API
     settings: {
       // 获取所有设置

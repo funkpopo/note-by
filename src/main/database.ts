@@ -274,6 +274,43 @@ class EnhancedDatabasePool {
         INSERT OR IGNORE INTO system_metadata (key, value, type) 
         VALUES ('last_maintenance', '0', 'timestamp');
       `)
+
+      // 创建聊天会话表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+          id TEXT PRIMARY KEY,
+          title TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          message_count INTEGER DEFAULT 0,
+          is_archived INTEGER DEFAULT 0
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_created_at ON chat_sessions(created_at);
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated_at ON chat_sessions(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_archived ON chat_sessions(is_archived);
+      `)
+
+      // 创建聊天消息表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS chat_messages (
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+          content TEXT NOT NULL,
+          status TEXT DEFAULT 'complete',
+          parent_id TEXT,
+          created_at INTEGER NOT NULL,
+          model_id TEXT,
+          FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE,
+          FOREIGN KEY (parent_id) REFERENCES chat_messages (id) ON DELETE SET NULL
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_role ON chat_messages(role);
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_parent_id ON chat_messages(parent_id);
+      `)
     } catch (error) {
       console.error('Failed to initialize database tables:', error)
       throw error
@@ -1824,4 +1861,222 @@ export async function checkDatabaseStatus(): Promise<{
     result.details.recommendations.push('请查看控制台日志获取详细错误信息')
     return result
   }
+}
+
+// ============================================
+// 聊天历史相关接口和函数
+// ============================================
+
+// 聊天会话接口
+export interface ChatSession {
+  id: string
+  title?: string
+  createdAt: number
+  updatedAt: number
+  messageCount: number
+  isArchived: boolean
+}
+
+// 聊天消息接口  
+export interface ChatMessage {
+  id: string
+  sessionId: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
+  parentId?: string
+  createdAt: number
+  modelId?: string
+}
+
+// 创建新的聊天会话
+export async function createChatSession(title?: string): Promise<string | null> {
+  const result = await withDatabase(async (database) => {
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const now = Date.now()
+    
+    const stmt = database.prepare(`
+      INSERT INTO chat_sessions (id, title, created_at, updated_at, message_count)
+      VALUES (?, ?, ?, ?, 0)
+    `)
+    
+    stmt.run(sessionId, title || null, now, now)
+    return sessionId
+  })
+  
+  return result
+}
+
+// 保存聊天消息
+export async function saveChatMessage(message: Omit<ChatMessage, 'createdAt'>): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    const now = Date.now()
+    
+    // 插入消息
+    const insertMessageStmt = database.prepare(`
+      INSERT INTO chat_messages (id, session_id, role, content, status, parent_id, created_at, model_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    
+    insertMessageStmt.run(
+      message.id,
+      message.sessionId,
+      message.role,
+      message.content,
+      message.status || 'complete',
+      message.parentId || null,
+      now,
+      message.modelId || null
+    )
+    
+    // 更新会话的消息数量和最后更新时间
+    const updateSessionStmt = database.prepare(`
+      UPDATE chat_sessions 
+      SET message_count = message_count + 1, updated_at = ?
+      WHERE id = ?
+    `)
+    
+    updateSessionStmt.run(now, message.sessionId)
+    
+    return true
+  })
+  
+  return result !== null
+}
+
+// 获取所有聊天会话（按最近更新时间排序）
+export async function getChatSessions(): Promise<ChatSession[]> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT 
+        id,
+        title,
+        created_at as createdAt,
+        updated_at as updatedAt,
+        message_count as messageCount,
+        is_archived as isArchived
+      FROM chat_sessions
+      WHERE is_archived = 0
+      ORDER BY updated_at DESC
+      LIMIT 50
+    `)
+    
+    return stmt.all() as ChatSession[]
+  })
+  
+  return result || []
+}
+
+// 获取指定会话的所有消息
+export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT 
+        id,
+        session_id as sessionId,
+        role,
+        content,
+        status,
+        parent_id as parentId,
+        created_at as createdAt,
+        model_id as modelId
+      FROM chat_messages
+      WHERE session_id = ?
+      ORDER BY created_at ASC
+    `)
+    
+    return stmt.all(sessionId) as ChatMessage[]
+  })
+  
+  return result || []
+}
+
+// 更新会话标题
+export async function updateChatSessionTitle(sessionId: string, title: string): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      UPDATE chat_sessions 
+      SET title = ?, updated_at = ?
+      WHERE id = ?
+    `)
+    
+    stmt.run(title, Date.now(), sessionId)
+    return true
+  })
+  
+  return result !== null
+}
+
+// 删除聊天会话（及其所有消息）
+export async function deleteChatSession(sessionId: string): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    // 由于设置了外键约束CASCADE，删除会话会自动删除相关消息
+    const stmt = database.prepare('DELETE FROM chat_sessions WHERE id = ?')
+    stmt.run(sessionId)
+    return true
+  })
+  
+  return result !== null
+}
+
+// 获取会话统计信息
+export async function getChatSessionStats(): Promise<{
+  totalSessions: number
+  totalMessages: number
+  activeSessions: number
+}> {
+  const result = await withDatabase(async (database) => {
+    const sessionStmt = database.prepare('SELECT COUNT(*) as count FROM chat_sessions WHERE is_archived = 0')
+    const messageStmt = database.prepare('SELECT COUNT(*) as count FROM chat_messages')
+    const activeStmt = database.prepare(`
+      SELECT COUNT(*) as count FROM chat_sessions 
+      WHERE is_archived = 0 AND updated_at > ?
+    `)
+    
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    
+    const sessionCount = (sessionStmt.get() as { count: number }).count
+    const messageCount = (messageStmt.get() as { count: number }).count
+    const activeCount = (activeStmt.get(weekAgo) as { count: number }).count
+    
+    return {
+      totalSessions: sessionCount,
+      totalMessages: messageCount,
+      activeSessions: activeCount
+    }
+  })
+  
+  return result || { totalSessions: 0, totalMessages: 0, activeSessions: 0 }
+}
+
+// 清理旧的聊天历史（保留最近的N个会话）
+export async function cleanupOldChatSessions(keepCount: number = 100): Promise<number> {
+  const result = await withDatabase(async (database) => {
+    // 获取需要删除的会话ID
+    const stmt = database.prepare(`
+      SELECT id FROM chat_sessions
+      WHERE is_archived = 0
+      ORDER BY updated_at DESC
+      LIMIT -1 OFFSET ?
+    `)
+    
+    const sessionsToDelete = stmt.all(keepCount) as Array<{ id: string }>
+    
+    if (sessionsToDelete.length === 0) {
+      return 0
+    }
+    
+    // 删除这些会话
+    const deleteStmt = database.prepare('DELETE FROM chat_sessions WHERE id = ?')
+    
+    let deletedCount = 0
+    for (const session of sessionsToDelete) {
+      deleteStmt.run(session.id)
+      deletedCount++
+    }
+    
+    return deletedCount
+  })
+  
+  return result || 0
 }
