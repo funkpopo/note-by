@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Button, Input, List, Toast, Space, Popconfirm } from '@douyinfe/semi-ui'
-import { IconSearch, IconDelete, IconEdit, IconPlus, IconClose } from '@douyinfe/semi-icons'
+import { Typography, Button, Input, List, Toast} from '@douyinfe/semi-ui'
+import { IconSearch, IconDelete, IconClose } from '@douyinfe/semi-icons'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
 
@@ -30,7 +30,6 @@ interface ChatHistorySidebarProps {
   isOpen: boolean
   onClose: () => void
   onSelectSession: (sessionId: string) => void
-  onNewChat: () => void
   currentSessionId?: string
 }
 
@@ -38,16 +37,14 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   isOpen, 
   onClose, 
   onSelectSession, 
-  onNewChat,
   currentSessionId 
 }) => {
   const t = getTranslations()
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [filteredSessions, setFilteredSessions] = useState<ChatSession[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
-  const [editingTitle, setEditingTitle] = useState('')
   const [loading, setLoading] = useState(false)
+  const [lastUserMessages, setLastUserMessages] = useState<Record<string, string>>({});
 
   // 加载聊天会话列表
   const loadSessions = async () => {
@@ -56,6 +53,14 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       const sessionList = await window.api.chat.getSessions()
       setSessions(sessionList)
       setFilteredSessions(sessionList)
+      // 获取所有会话的最后一条用户消息
+      const lastUserMsgMap: Record<string, string> = {}
+      await Promise.all(sessionList.map(async (session) => {
+        const messages = await window.api.chat.getSessionMessages(session.id)
+        const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+        lastUserMsgMap[session.id] = lastUserMsg ? lastUserMsg.content : (session.title || t.chat?.history.newChat || '新对话')
+      }))
+      setLastUserMessages(lastUserMsgMap)
     } catch (error) {
       console.error('加载聊天会话失败:', error)
       Toast.error(t.chat?.history.loadFailed || '加载对话历史失败')
@@ -69,13 +74,16 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     if (!searchTerm.trim()) {
       setFilteredSessions(sessions)
     } else {
-      const filtered = sessions.filter(session => 
-        session.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.id.includes(searchTerm)
-      )
+      const filtered = sessions.filter(session => {
+        const titleMatch = session.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        const idMatch = session.id.includes(searchTerm)
+        const lastMsg = lastUserMessages[session.id] || ''
+        const lastMsgMatch = lastMsg.toLowerCase().includes(searchTerm.toLowerCase())
+        return titleMatch || idMatch || lastMsgMatch
+      })
       setFilteredSessions(filtered)
     }
-  }, [searchTerm, sessions])
+  }, [searchTerm, sessions, lastUserMessages])
 
   // 组件加载时获取会话列表
   useEffect(() => {
@@ -103,39 +111,15 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     }
   }
 
-  // 开始编辑会话标题
-  const startEditingTitle = (session: ChatSession) => {
-    setEditingSessionId(session.id)
-    setEditingTitle(session.title || t.chat?.history.newChat || '新对话')
-  }
-
-  // 保存编辑的标题
-  const saveTitle = async () => {
-    if (!editingSessionId || !editingTitle.trim()) return
-    
-    try {
-      await window.api.chat.updateSessionTitle(editingSessionId, editingTitle.trim())
-      await loadSessions()
-      Toast.success('标题已更新')
-    } catch (error) {
-      console.error('更新标题失败:', error)
-      Toast.error('更新标题失败')
-    } finally {
-      setEditingSessionId(null)
-      setEditingTitle('')
-    }
-  }
-
   // 删除会话
   const deleteSession = async (sessionId: string) => {
     try {
       await window.api.chat.deleteSession(sessionId)
       await loadSessions()
       Toast.success(t.chat?.notifications.deleted || '对话已删除')
-      
-      // 如果删除的是当前会话，创建新会话
       if (currentSessionId === sessionId) {
-        onNewChat()
+        // No new chat logic, just close sidebar
+        onClose()
       }
     } catch (error) {
       console.error('删除会话失败:', error)
@@ -143,10 +127,9 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     }
   }
 
-  // 生成会话显示标题
+  // 生成会话显示标题（用户最后一条消息）
   const getSessionDisplayTitle = (session: ChatSession) => {
-    if (session.title) return session.title
-    return `${t.chat?.history.newChat || '新对话'} ${session.messageCount}`
+    return lastUserMessages[session.id] || session.title || `${t.chat?.history.newChat || '新对话'} ${session.messageCount}`
   }
 
   if (!isOpen) return null
@@ -156,7 +139,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       position: 'absolute',
       top: 0,
       left: 0,
-      width: '320px',
+      width: '200px',
       height: '100%',
       background: 'var(--semi-color-bg-1)',
       borderRight: '1px solid var(--semi-color-border)',
@@ -182,20 +165,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
           />
         </div>
         
-        {/* 新建对话按钮 */}
-        <Button 
-          icon={<IconPlus />}
-          type="primary"
-          block
-          onClick={() => {
-            onNewChat()
-            onClose()
-          }}
-          style={{ marginBottom: '12px' }}
-        >
-          {t.chat?.history.newChat || '新对话'}
-        </Button>
-
+        
         {/* 搜索框 */}
         <Input
           prefix={<IconSearch />}
@@ -245,28 +215,13 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                   }
                 }}
                 onClick={() => {
-                  if (editingSessionId !== session.id) {
-                    onSelectSession(session.id)
-                    onClose()
-                  }
+                  onSelectSession(session.id)
+                  onClose()
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
                   {/* 会话标题 */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    {editingSessionId === session.id ? (
-                      <Input
-                        value={editingTitle}
-                        onChange={setEditingTitle}
-                        onEnterPress={saveTitle}
-                        onBlur={saveTitle}
-                        size="small"
-                        style={{ fontSize: '14px' }}
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <>
                         <Text 
                           strong 
                           style={{ 
@@ -280,33 +235,17 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                         >
                           {getSessionDisplayTitle(session)}
                         </Text>
-                        <Space>
-                          <Button
-                            icon={<IconEdit />}
-                            type="tertiary"
-                            theme="borderless"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              startEditingTitle(session)
-                            }}
-                          />
-                          <Popconfirm
-                            title={t.chat?.history.deleteConfirm || '确定删除这个对话吗？'}
-                            onConfirm={() => deleteSession(session.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button
-                              icon={<IconDelete />}
-                              type="tertiary"
-                              theme="borderless"
-                              size="small"
-                            />
-                          </Popconfirm>
-                        </Space>
-                      </>
-                    )}
-                  </div>
+                        <Button
+                          icon={<IconDelete />}
+                          type="tertiary"
+                          theme="borderless"
+                          size="small"
+                          onClick={e => {
+                            e.stopPropagation();
+                            deleteSession(session.id);
+                          }}
+                        />
+                    </div>
 
                   {/* 会话信息 */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

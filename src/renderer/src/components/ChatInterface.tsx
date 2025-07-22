@@ -384,21 +384,6 @@ const ChatInterface: React.FC = () => {
     }
   }, [])
 
-  // 创建新会话
-  const createNewSession = useCallback(async () => {
-    try {
-      const sessionId = await window.api.chat.createSession()
-      setCurrentSessionId(sessionId)
-      setMessages([])
-      setUnsavedMessages(new Set())
-      return sessionId
-    } catch (error) {
-      console.error('创建新会话失败:', error)
-      Toast.error(t.chat?.history.saveFailed || '创建会话失败')
-      return null
-    }
-  }, [t])
-
   // 加载指定会话的消息
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     try {
@@ -451,16 +436,38 @@ const ChatInterface: React.FC = () => {
     return () => clearTimeout(timeoutId)
   }, [unsavedMessages, messages, saveMessageToDatabase])
 
-  // 组件加载时创建或加载会话
+  // 组件加载时自动加载数据库最后一条对话
   useEffect(() => {
     const initializeSession = async () => {
-      if (!currentSessionId) {
-        await createNewSession()
+      try {
+        const sessions = await window.api.chat.getSessions()
+        if (sessions && sessions.length > 0) {
+          const lastSession = sessions[0] // 已按updated_at DESC排序
+          const msgs = await window.api.chat.getSessionMessages(lastSession.id)
+          setCurrentSessionId(lastSession.id)
+          setMessages(msgs)
+          setUnsavedMessages(new Set())
+          localStorage.setItem('lastSessionId', lastSession.id)
+        } else {
+          setCurrentSessionId(null)
+          setMessages([])
+          setUnsavedMessages(new Set())
+        }
+      } catch (e) {
+        setCurrentSessionId(null)
+        setMessages([])
+        setUnsavedMessages(new Set())
       }
     }
-    
     initializeSession()
   }, [])
+
+  // 切换会话时持久化 sessionId
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem('lastSessionId', currentSessionId)
+    }
+  }, [currentSessionId])
 
   // 自动滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -746,11 +753,11 @@ const ChatInterface: React.FC = () => {
     }
 
     // 创建新的会话
-    await createNewSession()
+    // await createNewSession() // 移除新建会话逻辑
     setLastUserMessage(null)
 
     Toast.success(t?.chat?.notifications?.cleared || '会话已清空')
-  }, [currentStreamCleanup, createNewSession, t, currentSessionId])
+  }, [currentStreamCleanup, t, currentSessionId])
 
   // 重新生成消息
   const handleRetryMessage = useCallback(
@@ -1133,7 +1140,6 @@ const ChatInterface: React.FC = () => {
         isOpen={isHistorySidebarOpen}
         onClose={() => setIsHistorySidebarOpen(false)}
         onSelectSession={loadSessionMessages}
-        onNewChat={createNewSession}
         currentSessionId={currentSessionId || undefined}
       />
     </div>
