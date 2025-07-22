@@ -647,9 +647,13 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div
+      className="chat-container"
       style={{
-        height: '100%',
-        width: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden'
@@ -657,6 +661,7 @@ const ChatInterface: React.FC = () => {
     >
       {/* 头部 */}
       <div
+        className="chat-header-container"
         style={{
           padding: '20px',
           background: 'linear-gradient(135deg, var(--semi-color-bg-2) 0%, var(--semi-color-bg-1) 100%)',
@@ -665,13 +670,14 @@ const ChatInterface: React.FC = () => {
           boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
         }}
       >
+        
         <div
+          className="chat-header-container-right"
           style={{
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            maxWidth: '900px',
-            margin: '0 auto'
+            width: '100%'
           }}
         >
           <Space>
@@ -718,7 +724,9 @@ const ChatInterface: React.FC = () => {
                 ))}
               </Select>
             ) : (
-              <div style={{ 
+              <div 
+              className="chat-model-llm-container"
+              style={{ 
                 padding: '8px 12px',
                 background: 'var(--semi-color-warning-light-default)',
                 borderRadius: '8px',
@@ -746,6 +754,7 @@ const ChatInterface: React.FC = () => {
 
       {/* 消息列表 */}
       <div
+        className="chat-messages-container"
         ref={messagesContainerRef}
         style={{
           flex: 1,
@@ -756,6 +765,7 @@ const ChatInterface: React.FC = () => {
       >
         {messages.length === 0 ? (
           <div
+            className="chat-suggestions-container"
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -766,7 +776,9 @@ const ChatInterface: React.FC = () => {
               textAlign: 'center'
             }}
           >
-            <div style={{ 
+            <div 
+            className="chat-suggestions-container-content"
+            style={{ 
               marginTop: '32px',
               display: 'flex',
               flexWrap: 'wrap',
@@ -774,10 +786,10 @@ const ChatInterface: React.FC = () => {
               justifyContent: 'center'
             }}>
               {[
-                '📝 帮我写一篇文章',
-                '🧮 解决数学问题', 
-                '💡 给我一些建议',
-                '🔍 解释一个概念'
+                '📝 帮我写一篇文章，题材是: ',
+                '🧮 需要解决下述的数学问题: ', 
+                '💡 给我一些建议，关于',
+                '🔍 解释这个概念: '
               ].map((suggestion) => (
                 <Button
                   key={suggestion}
@@ -796,7 +808,9 @@ const ChatInterface: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div 
+          className="chat-messages-container"
+          style={{ maxWidth: '900px', margin: '0 auto' }}>
             {messages.map((message, index) => (
               <MessageBubbleCustom
                 key={message.id}
@@ -811,22 +825,25 @@ const ChatInterface: React.FC = () => {
       </div>
 
       {/* 输入区域 */}
-      <div
+      <div className="chat-input-container"
         style={{
-          padding: '20px 20px 30px 20px', // 增加底部内边距
+          padding: '5px 10px 10px 10px', // 减少一半高度的内边距
           background: 'var(--semi-color-bg-1)',
           borderTop: '1px solid var(--semi-color-border)',
           flexShrink: 0
         }}
       >
-        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+        <div 
+        className="chat-input-container-content"
+        style={{ maxWidth: '700px', margin: '0 auto' }}>
           <div
+            className="chat-input-container-content"
             style={{
               display: 'flex',
               gap: '12px',
-              alignItems: 'flex-end',
+              alignItems: 'center',
               background: 'var(--semi-color-bg-2)',
-              padding: '12px',
+              padding: '8px',
               borderRadius: '16px',
               border: '1px solid var(--semi-color-border)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.08)'

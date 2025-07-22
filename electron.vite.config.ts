@@ -4,10 +4,16 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      watch: {}
+    }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      watch: {}
+    }
   },
   renderer: {
     resolve: {
@@ -17,7 +23,12 @@ export default defineConfig({
     },
     server: {
       cors: true,
-      strictPort: true,
+      strictPort: false,
+      port: 5173,
+      hmr: {
+        overlay: true,
+        port: 5174
+      },
       headers: {
         'Content-Security-Policy':
           "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' https://* http://* ws: wss:;"
@@ -32,6 +43,8 @@ export default defineConfig({
       // 增加chunk大小警告阈值
       chunkSizeWarningLimit: 2000
     },
-    plugins: [react()]
+    plugins: [
+      react()
+    ]
   }
 })
