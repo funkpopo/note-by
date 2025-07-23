@@ -90,7 +90,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     if (isOpen) {
       loadSessions()
     }
-  }, [isOpen])
+  }, [isOpen, currentSessionId]) // Add currentSessionId as dependency to refresh when it changes
 
   // 格式化时间显示
   const formatDate = (timestamp: number) => {

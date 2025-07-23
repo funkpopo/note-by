@@ -728,6 +728,42 @@ const ChatInterface: React.FC = () => {
     Toast.info(t.chat?.notifications.stopped || '已停止生成')
   }, [currentStreamCleanup, streamingMessageId])
 
+  // 创建新的聊天会话
+  const createNewSession = useCallback(async (saveCurrentSession = true) => {
+    try {
+      // 如果需要保存当前会话，确保所有消息都已保存
+      if (saveCurrentSession && currentSessionId && messages.length > 0) {
+        // 等待所有未保存的消息完成保存
+        if (unsavedMessages.size > 0) {
+          // 创建一个Promise来等待所有未保存的消息完成
+          await new Promise<void>((resolve) => {
+            const checkUnsaved = () => {
+              if (unsavedMessages.size === 0) {
+                resolve();
+              } else {
+                setTimeout(checkUnsaved, 100);
+              }
+            };
+            checkUnsaved();
+          });
+        }
+      }
+      
+      const newSessionId = await window.api.chat.createSession()
+      if (newSessionId) {
+        setCurrentSessionId(newSessionId)
+        setMessages([])
+        setLastUserMessage(null)
+        setUnsavedMessages(new Set())
+        return newSessionId
+      }
+    } catch (error) {
+      console.error('创建新会话失败:', error)
+      Toast.error('创建新会话失败')
+    }
+    return null
+  }, [currentSessionId, messages, unsavedMessages])
+
   // 清空对话
   const handleClearChat = useCallback(async () => {
     // 如果正在生成，先停止
@@ -739,25 +775,11 @@ const ChatInterface: React.FC = () => {
     setStreamingMessageId(null)
     setCurrentStreamCleanup(null)
 
-    if (currentSessionId) {
-      try {
-        const success = await window.api.chat.deleteSession(currentSessionId)
-        if (!success) {
-          Toast.error(t?.chat?.notifications?.deleteFailed || '清空对话失败')
-          return
-        }
-      } catch (e) {
-        Toast.error(t?.chat?.notifications?.deleteFailed || '清空对话失败')
-        return
-      }
-    }
-
-    // 创建新的会话
-    // await createNewSession() // 移除新建会话逻辑
-    setLastUserMessage(null)
+    // 保存当前会话（如果有的话）并创建新的会话
+    await createNewSession(true) // true indicates we want to save the current session
 
     Toast.success(t?.chat?.notifications?.cleared || '会话已清空')
-  }, [currentStreamCleanup, t, currentSessionId])
+  }, [currentStreamCleanup, t, currentSessionId, createNewSession])
 
   // 重新生成消息
   const handleRetryMessage = useCallback(
