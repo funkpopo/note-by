@@ -56,6 +56,7 @@ export interface ExtendedDictionary extends Dictionary {
       copy: string
       retry: string
       delete: string
+      newSession: string
     }
     notifications: {
       copied: string
@@ -590,7 +591,8 @@ export const zhCN: ExtendedDictionary = {
       copy: '复制',
       retry: '重新生成',
       delete: '删除',
-      history: '对话历史'
+      history: '对话历史',
+      newSession: '新建会话'
     },
     suggestions: [
       '📝 帮我写一篇文章，题材是: ',

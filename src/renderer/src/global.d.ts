@@ -13,6 +13,7 @@ interface ChatAPI {
   getSessionMessages: (sessionId: string) => Promise<any[]>;
   updateSessionTitle: (sessionId: string, title: string) => Promise<boolean>;
   deleteSession: (sessionId: string) => Promise<boolean>;
+  deleteMessage: (messageId: string) => Promise<boolean>;
 }
 
 interface Window {

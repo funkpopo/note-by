@@ -72,6 +72,7 @@ export interface ExtendedDictionary extends Dictionary {
       retry: string
       delete: string
       history: string
+      newSession: string
     }
     suggestions: string[]
     notifications: {
@@ -542,7 +543,8 @@ export const enUS: ExtendedDictionary = {
       copy: 'Copy',
       retry: 'Regenerate',
       delete: 'Delete',
-      history: 'Chat History'
+      history: 'Chat History',
+      newSession: 'New Session'
     },
     suggestions: [
       '📝 Help me write an article about: ',

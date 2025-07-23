@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Typography, Button, Toast, TextArea, Select, Space, Spin, Dropdown, Card } from '@douyinfe/semi-ui'
-import { IconSend, IconStop, IconClear, IconRefresh, IconMore, IconCopy, IconDelete, IconHistory } from '@douyinfe/semi-icons'
+import { IconSend, IconStop, IconRefresh, IconMore, IconCopy, IconDelete, IconHistory } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
 import { processThinkingContent } from '../utils/filterThinking'
