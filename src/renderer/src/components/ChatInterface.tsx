@@ -287,7 +287,7 @@ const MessageBubbleCustom: React.FC<{
           gap: '12px'
         }}>
           <Text size="small" type="tertiary">
-            {new Date(message.createAt).toLocaleTimeString()}
+            {new Date(message.createdAt).toLocaleTimeString()}
           </Text>
           
           <Dropdown
@@ -333,7 +333,7 @@ interface ChatMessage {
   id: string | number
   role: 'user' | 'assistant' | 'system'
   content: string
-  createAt: number
+  createdAt: number
   status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
   parentId?: string
 }
@@ -388,6 +388,7 @@ const ChatInterface: React.FC = () => {
   const loadSessionMessages = useCallback(async (sessionId: string) => {
     try {
       const sessionMessages = await window.api.chat.getSessionMessages(sessionId)
+      console.log('加载会话消息:', sessionId, sessionMessages) // 添加调试日志
       setMessages(sessionMessages)
       setCurrentSessionId(sessionId)
       setUnsavedMessages(new Set())
@@ -399,20 +400,30 @@ const ChatInterface: React.FC = () => {
 
   // 保存消息到数据库
   const saveMessageToDatabase = useCallback(async (message: ChatMessage) => {
-    if (!currentSessionId) return
+    if (!currentSessionId) {
+      console.warn('无法保存消息：当前会话ID为空')
+      return
+    }
 
     try {
-      await window.api.chat.saveMessage({
+      const saveResult = await window.api.chat.saveMessage({
         ...message,
-        sessionId: currentSessionId
+        sessionId: currentSessionId,
+        createdAt: message.createdAt // Ensure correct property name
       })
       
-      // 从未保存集合中移除
-      setUnsavedMessages(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(message.id.toString())
-        return newSet
-      })
+      if (saveResult) {
+        // 从未保存集合中移除
+        setUnsavedMessages(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(message.id.toString())
+          return newSet
+        })
+      } else {
+        console.error('保存消息失败: API返回false')
+        // 将消息ID添加到未保存集合
+        setUnsavedMessages(prev => new Set(prev).add(message.id.toString()))
+      }
     } catch (error) {
       console.error('保存消息失败:', error)
       // 将消息ID添加到未保存集合
@@ -517,7 +528,7 @@ const ChatInterface: React.FC = () => {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: '',
-          createAt: Date.now(),
+          createdAt: Date.now(),
           status: 'loading',
           parentId: userMessageId // 设置父消息ID
         }
@@ -683,7 +694,7 @@ const ChatInterface: React.FC = () => {
       id: Date.now().toString(),
       role: 'user',
       content: inputValue.trim(),
-      createAt: Date.now()
+      createdAt: Date.now()
     }
 
     setMessages((prev) => [...prev, userMessage])
