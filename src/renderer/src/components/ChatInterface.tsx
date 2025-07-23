@@ -513,7 +513,25 @@ const ChatInterface: React.FC = () => {
     }
   }, [])
 
-  // 执行AI回复 - 流式响应版本
+  // 构建对话历史上下文
+  const buildConversationContext = useCallback((userContent: string): string => {
+    // 获取最近的几条消息作为上下文（通常是最后5-10条）
+    const contextMessages = messages.slice(-5); // 使用最后5条消息作为上下文
+    
+    // 构建上下文字符串
+    let context = '';
+    contextMessages.forEach(msg => {
+      const role = msg.role === 'user' ? '用户' : '助手';
+      context += `${role}: ${msg.content}\n\n`;
+    });
+    
+    // 添加当前用户消息
+    context += `用户: ${userContent}\n\n助手:`;
+    
+    return context;
+  }, [messages]);
+
+  // 执行AI回复 - 流式响应版本（带上下文）
   const performAIResponse = useCallback(
     async (userContent: string, userMessageId?: string) => {
       try {
@@ -522,6 +540,9 @@ const ChatInterface: React.FC = () => {
         if (!aiConfig) {
           throw new Error(t.chat?.notifications.selectModel || '请先配置AI API')
         }
+
+        // 构建带有上下文的提示
+        const contextualPrompt = buildConversationContext(userContent);
 
         // 创建初始的流式消息
         const streamMessage: ChatMessage = {
@@ -539,13 +560,13 @@ const ChatInterface: React.FC = () => {
         // 标记AI消息为待保存
         setUnsavedMessages(prev => new Set(prev).add(streamMessage.id.toString()))
 
-        // 调用流式AI API
+        // 调用流式AI API，使用带上下文的提示
         const streamResult = await window.api.openai.streamGenerateContent(
           {
             apiKey: aiConfig.apiKey,
             apiUrl: aiConfig.apiUrl,
             modelName: aiConfig.modelName,
-            prompt: userContent,
+            prompt: contextualPrompt, // 使用带上下文的提示
             maxTokens: parseInt(aiConfig.maxTokens || '2000')
           },
           {
@@ -677,7 +698,7 @@ const ChatInterface: React.FC = () => {
         setCurrentStreamCleanup(null)
       }
     },
-    [aiApiConfigs, selectedAiConfig]
+    [aiApiConfigs, selectedAiConfig, buildConversationContext]
   )
 
   // 发送消息
@@ -853,6 +874,14 @@ const ChatInterface: React.FC = () => {
         currentStreamCleanup()
       }
 
+      // 从数据库中删除消息
+      if (message.id) {
+        window.api.chat.deleteMessage(message.id.toString()).catch((error) => {
+          console.error('从数据库删除消息失败:', error)
+          Toast.error('从数据库删除消息失败')
+        })
+      }
+
       setMessages((prev) => {
         let newMessages = [...prev]
 
@@ -1011,15 +1040,28 @@ const ChatInterface: React.FC = () => {
               </div>
             )}
 
-            {/* 清空对话按钮 */}
+            {/* 新建会话按钮 */}
             <Button
-              icon={<IconClear />}
               onClick={handleClearChat}
-              type="tertiary"
+              type="primary"
               theme="light"
-              style={{ borderRadius: '10px' }}
+              style={{ 
+                borderRadius: '10px',
+                backgroundColor: 'var(--semi-color-success-light-default)',
+                borderColor: 'var(--semi-color-success-light-default)',
+                color: 'var(--semi-color-success)'
+              }}
+              disabled={isGenerating}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-hover)';
+                e.currentTarget.style.borderColor = 'var(--semi-color-success-light-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-default)';
+                e.currentTarget.style.borderColor = 'var(--semi-color-success-light-default)';
+              }}
             >
-              {t.chat?.actions.clear || '清空对话'}
+              {t.chat?.actions.newSession || '新建会话'}
             </Button>
           </Space>
         </div>
@@ -1028,75 +1070,89 @@ const ChatInterface: React.FC = () => {
       {/* 消息列表 */}
       <div
         className="chat-messages-container"
-        ref={messagesContainerRef}
         style={{
           flex: 1,
-          overflowY: 'auto',
-          padding: '20px',
-          background: 'linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-bg-1) 100%)'
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-bg-1) 100%)',
+          display: 'flex',
+          flexDirection: 'row'
         }}
       >
-        {messages.length === 0 ? (
-          <div
-            className="chat-suggestions-container"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: 'var(--semi-color-text-2)',
-              textAlign: 'center'
-            }}
-          >
+        {/* 聊天历史侧边栏 */}
+        <ChatHistorySidebar
+          isOpen={isHistorySidebarOpen}
+          onClose={() => setIsHistorySidebarOpen(false)}
+          onSelectSession={loadSessionMessages}
+          currentSessionId={currentSessionId || undefined}
+        />
+        
+        {/* 消息内容区域 */}
+        <div 
+          ref={messagesContainerRef}
+          style={{ flex: 1, overflowY: 'auto', padding: '20px' }}
+        >
+          {messages.length === 0 ? (
+            <div
+              className="chat-suggestions-container"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'var(--semi-color-text-2)',
+                textAlign: 'center'
+              }}
+            >
+              <div 
+              className="chat-suggestions-container-content"
+              style={{ 
+                marginTop: '32px',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '12px',
+                justifyContent: 'center'
+              }}>
+                {(t.chat?.suggestions || [
+                  '📝 帮我写一篇文章，题材是: ',
+                  '🧮 需要解决下述的数学问题: ', 
+                  '💡 给我一些建议，关于',
+                  '🔍 解释这个概念: '
+                ]).slice(0, 4).map((suggestion) => (
+                  <Button
+                    key={suggestion}
+                    type="tertiary"
+                    theme="light"
+                    onClick={() => setInputValue(suggestion.split(' ')[1])}
+                    style={{
+                      borderRadius: '20px',
+                      padding: '8px 16px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
             <div 
-            className="chat-suggestions-container-content"
-            style={{ 
-              marginTop: '32px',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '12px',
-              justifyContent: 'center'
-            }}>
-              {(t.chat?.suggestions || [
-                '📝 帮我写一篇文章，题材是: ',
-                '🧮 需要解决下述的数学问题: ', 
-                '💡 给我一些建议，关于',
-                '🔍 解释这个概念: '
-              ]).slice(0, 4).map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  type="tertiary"
-                  theme="light"
-                  onClick={() => setInputValue(suggestion.split(' ')[1])}
-                  style={{
-                    borderRadius: '20px',
-                    padding: '8px 16px',
-                    fontSize: '14px'
-                  }}
-                >
-                  {suggestion}
-                </Button>
+            className="chat-messages-container"
+            style={{ maxWidth: '900px', margin: '0 auto' }}>
+              {messages.map((message, index) => (
+                <MessageBubbleCustom
+                  key={message.id}
+                  message={message}
+                  onRetry={handleRetryMessage}
+                  onDelete={handleDeleteMessage}
+                  isLast={index === messages.length - 1}
+                  selectedAiConfig={selectedAiConfig}
+                  aiApiConfigs={aiApiConfigs}
+                />
               ))}
             </div>
-          </div>
-        ) : (
-          <div 
-          className="chat-messages-container"
-          style={{ maxWidth: '900px', margin: '0 auto' }}>
-            {messages.map((message, index) => (
-              <MessageBubbleCustom
-                key={message.id}
-                message={message}
-                onRetry={handleRetryMessage}
-                onDelete={handleDeleteMessage}
-                isLast={index === messages.length - 1}
-                selectedAiConfig={selectedAiConfig}
-                aiApiConfigs={aiApiConfigs}
-              />
-            ))}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* 输入区域 */}
@@ -1168,13 +1224,7 @@ const ChatInterface: React.FC = () => {
         </div>
       </div>
 
-      {/* 聊天历史侧边栏 */}
-      <ChatHistorySidebar
-        isOpen={isHistorySidebarOpen}
-        onClose={() => setIsHistorySidebarOpen(false)}
-        onSelectSession={loadSessionMessages}
-        currentSessionId={currentSessionId || undefined}
-      />
+      
     </div>
   )
 }

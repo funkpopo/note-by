@@ -48,6 +48,7 @@ import {
   getChatMessages,
   updateChatSessionTitle,
   deleteChatSession,
+  deleteChatMessage,
   getChatSessionStats,
   cleanupOldChatSessions
 } from './database'
@@ -167,6 +168,7 @@ const IPC_CHANNELS = {
   CHAT_GET_SESSION_MESSAGES: 'chat:get-session-messages',
   CHAT_UPDATE_SESSION_TITLE: 'chat:update-session-title',
   CHAT_DELETE_SESSION: 'chat:delete-session',
+  CHAT_DELETE_MESSAGE: 'chat:delete-message',
   CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
   CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
 }
@@ -2312,6 +2314,17 @@ ${htmlContent}
       return success
     } catch (error) {
       console.error('删除聊天会话失败:', error)
+      return false
+    }
+  })
+
+  // 删除单条聊天消息
+  ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_MESSAGE, async (_, messageId: string) => {
+    try {
+      const success = await deleteChatMessage(messageId)
+      return success
+    } catch (error) {
+      console.error('删除聊天消息失败:', error)
       return false
     }
   })

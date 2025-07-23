@@ -96,6 +96,7 @@ const IPC_CHANNELS = {
   CHAT_GET_SESSION_MESSAGES: 'chat:get-session-messages',
   CHAT_UPDATE_SESSION_TITLE: 'chat:update-session-title',
   CHAT_DELETE_SESSION: 'chat:delete-session',
+  CHAT_DELETE_MESSAGE: 'chat:delete-message',
   CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
   CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
 }
@@ -918,6 +919,10 @@ const api = {
     // 删除聊天会话
     deleteSession: (sessionId: string): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.CHAT_DELETE_SESSION, sessionId),
+
+    // 删除单条聊天消息
+    deleteMessage: (messageId: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHAT_DELETE_MESSAGE, messageId),
 
     // 获取会话统计信息
     getSessionStats: (): Promise<{

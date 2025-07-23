@@ -2019,6 +2019,37 @@ export async function deleteChatSession(sessionId: string): Promise<boolean> {
   return result !== null
 }
 
+// 删除单条聊天消息
+export async function deleteChatMessage(messageId: string): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    // 首先获取消息信息，以便更新会话统计
+    const getMessageStmt = database.prepare('SELECT session_id FROM chat_messages WHERE id = ?')
+    const message = getMessageStmt.get(messageId) as { session_id: string } | undefined
+    
+    if (!message) {
+      return false // 消息不存在
+    }
+    
+    // 删除消息
+    const deleteStmt = database.prepare('DELETE FROM chat_messages WHERE id = ?')
+    const info = deleteStmt.run(messageId)
+    
+    // 如果成功删除了消息，更新会话统计
+    if (info.changes > 0) {
+      const updateSessionStmt = database.prepare(`
+        UPDATE chat_sessions 
+        SET message_count = message_count - 1, updated_at = ?
+        WHERE id = ?
+      `)
+      updateSessionStmt.run(Date.now(), message.session_id)
+    }
+    
+    return info.changes > 0 // 返回是否成功删除了记录
+  })
+  
+  return result !== null && result
+}
+
 // 获取会话统计信息
 export async function getChatSessionStats(): Promise<{
   totalSessions: number

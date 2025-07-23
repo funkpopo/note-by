@@ -262,6 +262,64 @@ interface NavigationAPI {
   onNavigate: (callback: (viewKey: string) => void) => () => void
 }
 
+// 聊天历史API接口定义
+interface ChatAPI {
+  // 创建新的聊天会话
+  createSession: (title?: string) => Promise<string | null>
+
+  // 保存聊天消息
+  saveMessage: (message: {
+    id: string
+    sessionId: string
+    role: 'user' | 'assistant' | 'system'
+    content: string
+    status?: string
+    parentId?: string
+    modelId?: string
+  }) => Promise<boolean>
+
+  // 获取所有聊天会话
+  getSessions: () => Promise<Array<{
+    id: string
+    title?: string
+    createdAt: number
+    updatedAt: number
+    messageCount: number
+    isArchived: boolean
+  }>>
+
+  // 获取指定会话的消息
+  getSessionMessages: (sessionId: string) => Promise<Array<{
+    id: string
+    sessionId: string
+    role: 'user' | 'assistant' | 'system'
+    content: string
+    status?: string
+    parentId?: string
+    createdAt: number
+    modelId?: string
+  }>>
+
+  // 更新会话标题
+  updateSessionTitle: (sessionId: string, title: string) => Promise<boolean>
+
+  // 删除聊天会话
+  deleteSession: (sessionId: string) => Promise<boolean>
+
+  // 删除单条聊天消息
+  deleteMessage: (messageId: string) => Promise<boolean>
+
+  // 获取会话统计信息
+  getSessionStats: () => Promise<{
+    totalSessions: number
+    totalMessages: number
+    activeSessions: number
+  }>
+
+  // 清理旧的会话
+  cleanupOldSessions: (keepCount?: number) => Promise<number>
+}
+
 // 全局API接口定义
 interface API {
   settings: SettingsAPI
@@ -346,6 +404,7 @@ interface API {
   analytics: AnalyticsAPI
   tags: TagsAPI
   navigation: NavigationAPI
+  chat: ChatAPI
 }
 
 declare global {

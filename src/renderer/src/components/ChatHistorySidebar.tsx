@@ -136,9 +136,6 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
 
   return (
     <div style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
       width: '200px',
       height: '100%',
       background: 'var(--semi-color-bg-1)',
