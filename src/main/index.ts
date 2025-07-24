@@ -372,14 +372,12 @@ function createWindow(): void {
 
   // 设置内容安全策略，允许加载本地协议图片和外部网络图片
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' https://* http://*"
-        ]
-      }
-    })
+    const responseHeaders = { ...details.responseHeaders }
+    // 完全禁用CSP以避免限制
+    delete responseHeaders['Content-Security-Policy']
+    delete responseHeaders['content-security-policy']
+    
+    callback({ responseHeaders })
   })
 
   mainWindow.on('ready-to-show', () => {

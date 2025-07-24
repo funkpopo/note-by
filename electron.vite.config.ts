@@ -28,10 +28,6 @@ export default defineConfig({
       hmr: {
         overlay: true,
         port: 5174
-      },
-      headers: {
-        'Content-Security-Policy':
-          "default-src 'self'; img-src 'self' data: file: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' https://* http://* ws: wss:;"
       }
     },
     build: {
