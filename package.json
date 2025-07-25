@@ -31,6 +31,7 @@
     "@douyinfe/semi-ui": "^2.82.1",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@klarr-agency/circum-icons-react": "^2.0.2",
     "@lancedb/lancedb": "^0.21.1",
     "@tiptap/core": "^2.11.5",
     "@tiptap/extension-character-count": "^2.11.5",

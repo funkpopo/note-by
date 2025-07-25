@@ -1,6 +1,20 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Typography, Button, Space, Toast, Dropdown, Divider } from '@douyinfe/semi-ui'
-import { IconSave, IconFile, IconChevronDown, IconBold, IconItalic, IconUnderline, IconStrikeThrough, IconLink, IconCode } from '@douyinfe/semi-icons'
+import { 
+  IconSave, 
+  IconFile, 
+  IconChevronDown,
+  IconBold,
+  IconItalic,
+  IconUnderline,
+  IconStrikeThrough,
+  IconCode,
+  IconLink,
+  IconAlignLeft,
+  IconAlignCenter,
+  IconAlignRight,
+  IconAlignJustify
+} from '@douyinfe/semi-icons'
 import { Content, Editor, EditorContent, useEditor, BubbleMenu } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import { defaultExtensions } from './default-extensions'
@@ -159,9 +173,10 @@ const BlockEditor = ({
             <Divider 
               layout="vertical" 
               style={{ 
-                height: '24px', 
-                margin: '0 4px',
-                borderColor: 'var(--semi-color-border)' 
+                height: '20px', 
+                margin: '0 2px',
+                borderColor: 'var(--semi-color-border)',
+                opacity: 0.6
               }} 
             />
             <Button
@@ -215,6 +230,43 @@ const BlockEditor = ({
                   editor.chain().focus().setLink({ href: url }).run()
                 }
               }}
+            />
+            <Divider 
+              layout="vertical" 
+              style={{ 
+                height: '20px', 
+                margin: '0 2px',
+                borderColor: 'var(--semi-color-border)',
+                opacity: 0.6
+              }} 
+            />
+            <Button
+              size="small"
+              type={editor.isActive({ textAlign: 'left' }) ? 'primary' : 'tertiary'}
+              theme="solid"
+              icon={<IconAlignLeft />}
+              onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            />
+            <Button
+              size="small"
+              type={editor.isActive({ textAlign: 'center' }) ? 'primary' : 'tertiary'}
+              theme="solid"
+              icon={<IconAlignCenter />}
+              onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            />
+            <Button
+              size="small"
+              type={editor.isActive({ textAlign: 'right' }) ? 'primary' : 'tertiary'}
+              theme="solid"
+              icon={<IconAlignRight />}
+              onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            />
+            <Button
+              size="small"
+              type={editor.isActive({ textAlign: 'justify' }) ? 'primary' : 'tertiary'}
+              theme="solid"
+              icon={<IconAlignJustify />}
+              onClick={() => editor.chain().focus().setTextAlign('justify').run()}
             />
           </div>
         </BubbleMenu>

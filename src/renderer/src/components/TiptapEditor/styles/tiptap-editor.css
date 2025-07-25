@@ -273,11 +273,24 @@
 .bubble-menu {
   background: var(--semi-color-bg-2);
   border: 1px solid var(--semi-color-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   padding: 4px;
   z-index: 1000;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: bubbleMenuSlideIn 0.2s ease-out;
+}
+
+@keyframes bubbleMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* 动画定义 */
@@ -322,7 +335,7 @@
 
 .bubble-menu-container {
   display: flex;
-  gap: 2px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -330,42 +343,70 @@
   min-width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--semi-color-bg-0);
 }
 
 .bubble-menu .semi-button:hover {
   background: var(--semi-color-fill-1);
   transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .bubble-menu .semi-button.semi-button-primary {
   background: var(--semi-color-primary);
   color: white;
+  box-shadow: 0 2px 6px rgba(var(--semi-color-primary-rgb), 0.25);
 }
 
 .bubble-menu .semi-button.semi-button-primary:hover {
   background: var(--semi-color-primary-hover);
+  box-shadow: 0 3px 8px rgba(var(--semi-color-primary-rgb), 0.35);
+  transform: translateY(-1px);
 }
 
 /* AI 按钮特殊样式 */
-.bubble-menu .semi-button:first-child {
-  background: linear-gradient(135deg, var(--semi-color-primary), var(--semi-color-secondary));
-  color: white;
+.bubble-menu .ai-button {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: white !important;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  min-width: 40px !important;
 }
 
-.bubble-menu .semi-button:first-child:hover {
-  background: linear-gradient(135deg, var(--semi-color-primary-hover), var(--semi-color-secondary-hover));
+.bubble-menu .ai-button:hover {
+  background: linear-gradient(135deg, #5b56f1, #7c3aed) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Semi Icons 样式优化 */
+.bubble-menu .semi-button svg {
+  width: 16px;
+  height: 16px;
+  transition: all 0.2s ease;
+}
+
+.bubble-menu .semi-button:hover svg {
+  transform: scale(1.05);
+}
+
+/* AI 按钮图标特殊样式 */
+.bubble-menu .ai-button svg {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* 暗色主题下的 BubbleMenu */
 .semi-theme-mode-dark .bubble-menu {
   background: rgba(40, 44, 52, 0.95);
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
 }
