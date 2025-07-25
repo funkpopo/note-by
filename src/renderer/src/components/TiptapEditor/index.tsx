@@ -4,7 +4,6 @@ import { FiSave, FiFile, FiChevronDown } from 'react-icons/fi'
 import { Content, Editor, EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import { DndContext, closestCenter } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { defaultExtensions } from './default-extensions'
 import { cn } from './utils'
 import './styles/tiptap-editor.css'
@@ -112,7 +111,8 @@ interface BlockEditorProps {
     editorProps: {
       attributes: {
         spellcheck: 'false',
-        class: 'prose dark:prose-invert focus:outline-none max-w-full z-0'
+        class: 'prose dark:prose-invert focus:outline-none max-w-full z-0',
+        style: 'outline: none !important; border: none !important; box-shadow: none !important;'
       },
     },
     onCreate: ({ editor }) => {
@@ -366,7 +366,8 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
     if (!currentFile || !currentFolder || !editorRef.current) return
 
     try {
-      const markdown = editorRef.current.storage.markdown?.getMarkdown() || editorRef.current.getHTML()
+      // Type assertion to access markdown storage
+      const markdown = (editorRef.current.storage as any).markdown?.getMarkdown() || editorRef.current.getHTML()
       const filePath = `${currentFolder}/${currentFile}`
 
       const conflictResult = await conflictDetectorRef.current.checkConflict(filePath, markdown)
@@ -402,7 +403,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
       }
 
       try {
-        const markdown = editorRef.current.storage.markdown?.getMarkdown() || editorRef.current.getHTML()
+        const markdown = (editorRef.current.storage as any).markdown?.getMarkdown() || editorRef.current.getHTML()
         const filePath = `${currentFolder}/${currentFile}`
 
         const result = await window.api.markdown.save(filePath, markdown)
@@ -462,7 +463,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
     if (!editorRef.current) return
 
     try {
-      const currentMarkdown = editorRef.current.storage.markdown?.getMarkdown() || editorRef.current.getHTML()
+      const currentMarkdown = (editorRef.current.storage as any).markdown?.getMarkdown() || editorRef.current.getHTML()
       const normalizedCurrent = currentMarkdown.trim()
       const normalizedSaved = lastSavedContentRef.current.trim()
 
@@ -548,7 +549,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
 
     setIsExporting(true)
     try {
-      const markdown = editorRef.current.storage.markdown?.getMarkdown() || editorRef.current.getHTML()
+      const markdown = (editorRef.current.storage as any).markdown?.getMarkdown() || editorRef.current.getHTML()
       const filePath = `${currentFolder}/${currentFile}`
 
       const result = await (window.api.markdown as MarkdownAPI).exportToPdf(filePath, markdown)
@@ -573,7 +574,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
 
     setIsExporting(true)
     try {
-      const markdown = editorRef.current.storage.markdown?.getMarkdown() || editorRef.current.getHTML()
+      const markdown = (editorRef.current.storage as any).markdown?.getMarkdown() || editorRef.current.getHTML()
       const filePath = `${currentFolder}/${currentFile}`
 
       const result = await (window.api.markdown as MarkdownAPI).exportToDocx(filePath, markdown)
@@ -598,7 +599,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
 
     setIsExporting(true)
     try {
-      const markdown = editorRef.current.storage.markdown?.getMarkdown() || editorRef.current.getHTML()
+      const markdown = (editorRef.current.storage as any).markdown?.getMarkdown() || editorRef.current.getHTML()
       const filePath = `${currentFolder}/${currentFile}`
 
       const result = await (window.api.markdown as MarkdownAPI).exportToHtml(filePath, markdown)

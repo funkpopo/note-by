@@ -5,6 +5,24 @@
   width: 100%;
 }
 
+/* 全局移除所有编辑器相关的边框和outline */
+.ProseMirror,
+.ProseMirror * {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-focus-ring-color: transparent !important;
+}
+
+/* 移除选中元素的边框 */
+.ProseMirror-selectednode,
+.ProseMirror-focused {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* Slash Menu Styles */
 .slash-menu {
   position: absolute;
@@ -320,12 +338,31 @@
   /* 选中样式 */
   ::selection {
     background: var(--semi-color-primary-light-default);
-    color: var(--semi-color-primary);
+    color: var(--semi-color-text-0);
   }
   
   /* 焦点样式 */
   &:focus {
     outline: none;
+  }
+  
+  /* 移除所有可能的边框高亮 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-focus-ring-color: transparent;
+  }
+  
+  /* 确保编辑器内容没有边框 */
+  .ProseMirror {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* 移除文本选择时的边框 */
+  .ProseMirror-selectednode {
+    outline: none !important;
+    border: none !important;
   }
 }
 
