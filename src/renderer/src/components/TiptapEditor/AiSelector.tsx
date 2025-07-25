@@ -4,6 +4,7 @@ import { Button, Dropdown, Toast } from '@douyinfe/semi-ui'
 import { IconChevronDown } from '@douyinfe/semi-icons'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
+import BounceSpinner from './BounceSpinner'
 
 // 自定义AI图标
 const AiIcon = () => (
@@ -163,11 +164,11 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
         type="tertiary"
         theme="solid"
         icon={<AiIcon />}
-        suffix={<IconChevronDown />}
-        loading={isLoading}
+        suffix={isLoading ? <BounceSpinner className="ms-2" /> : <IconChevronDown />}
+        loading={true}
         disabled={isLoading}
       >
-        AI
+        {isLoading ? '处理中' : 'AI'}
       </Button>
     </Dropdown>
   )

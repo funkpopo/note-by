@@ -26,6 +26,7 @@ import xml from 'highlight.js/lib/languages/xml'
 import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
+import AiPlaceholder from './AiPlaceholder'
 
 // 创建lowlight实例
 const lowlight = createLowlight()
@@ -119,4 +120,6 @@ export const defaultExtensions = [
     transformPastedText: true,
     transformCopiedText: true,
   }),
+  
+  AiPlaceholder,
 ]
