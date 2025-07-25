@@ -173,7 +173,9 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
             borderRadius: '8px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             zIndex: 1001,
-            minWidth: '180px',
+            minWidth: '140px',
+            maxWidth: '180px',
+            width: 'max-content',
             padding: '4px 0',
             backdropFilter: 'blur(12px)',
             animation: 'aiDropdownSlideIn 0.15s ease-out'
@@ -211,7 +213,10 @@ const AiDropdownItem: React.FC<AiDropdownItemProps> = ({ onClick, children, disa
         gap: '8px',
         fontSize: '14px',
         color: disabled ? 'var(--semi-color-text-2)' : 'var(--semi-color-text-0)',
-        opacity: disabled ? 0.5 : 1
+        opacity: disabled ? 0.5 : 1,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
       }}
       onMouseEnter={(e) => {
         if (!disabled) {

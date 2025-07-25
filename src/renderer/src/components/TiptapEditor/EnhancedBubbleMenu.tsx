@@ -144,7 +144,9 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             borderRadius: '8px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             zIndex: 1001,
-            minWidth: '160px',
+            minWidth: '120px',
+            maxWidth: '200px',
+            width: 'max-content',
             padding: '4px 0'
           }}
         >
@@ -178,7 +180,10 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
         alignItems: 'center',
         gap: '8px',
         fontSize: '14px',
-        color: 'var(--semi-color-text-0)'
+        color: 'var(--semi-color-text-0)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = 'var(--semi-color-fill-0)'
