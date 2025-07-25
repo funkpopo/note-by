@@ -683,6 +683,96 @@
   opacity: 0.6;
 }
 
+/* 自定义下拉菜单样式 */
+.custom-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-dropdown-menu {
+  backdrop-filter: blur(12px);
+  animation: dropdownSlideIn 0.15s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes aiDropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.custom-dropdown-item {
+  font-family: inherit;
+}
+
+.custom-dropdown-item:hover {
+  background: var(--semi-color-fill-0) !important;
+}
+
+.custom-dropdown-item:active {
+  background: var(--semi-color-fill-1) !important;
+}
+
+/* 暗色主题下的自定义下拉菜单 */
+.semi-theme-mode-dark .custom-dropdown-menu {
+  background: rgba(40, 44, 52, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.semi-theme-mode-dark .custom-dropdown-item {
+  color: var(--semi-color-text-0) !important;
+}
+
+/* AI下拉菜单特殊样式 */
+.ai-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.ai-dropdown-menu {
+  backdrop-filter: blur(12px);
+  animation: aiDropdownSlideIn 0.15s ease-out;
+}
+
+.ai-dropdown-item {
+  font-family: inherit;
+}
+
+.ai-dropdown-item:hover:not(:disabled) {
+  background: var(--semi-color-fill-0) !important;
+}
+
+.ai-dropdown-item:active:not(:disabled) {
+  background: var(--semi-color-fill-1) !important;
+}
+
+/* 暗色主题下的AI下拉菜单 */
+.semi-theme-mode-dark .ai-dropdown-menu {
+  background: rgba(40, 44, 52, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.semi-theme-mode-dark .ai-dropdown-item {
+  color: var(--semi-color-text-0) !important;
+}
+
 /* 块拖拽相关样式 */
 .draggable-block {
   position: relative;

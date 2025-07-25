@@ -1,14 +1,169 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Editor } from '@tiptap/react'
-import { Button, Dropdown, Toast } from '@douyinfe/semi-ui'
-import { IconChevronDown } from '@douyinfe/semi-icons'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
+import { FiChevronDown } from 'react-icons/fi'
 import BounceSpinner from './BounceSpinner'
 
 interface AiSelectorProps {
   editor: Editor
   modelId?: string
+}
+
+// Simple toast notification system
+const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  const toast = document.createElement('div')
+  toast.className = `ai-toast ai-toast-${type}`
+  toast.textContent = message
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    max-width: 300px;
+    word-wrap: break-word;
+    ${type === 'success' ? 'background: #10b981;' : ''}
+    ${type === 'error' ? 'background: #ef4444;' : ''}
+    ${type === 'warning' ? 'background: #f59e0b;' : ''}
+  `
+  
+  document.body.appendChild(toast)
+  
+  setTimeout(() => {
+    toast.style.opacity = '1'
+    toast.style.transform = 'translateX(0)'
+  }, 10)
+  
+  setTimeout(() => {
+    toast.style.opacity = '0'
+    toast.style.transform = 'translateX(100%)'
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast)
+      }
+    }, 300)
+  }, 3000)
+}
+
+interface CustomAiDropdownProps {
+  visible: boolean
+  onVisibleChange: (visible: boolean) => void
+  trigger: React.ReactNode
+  children: React.ReactNode
+}
+
+const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({ 
+  visible, 
+  onVisibleChange, 
+  trigger, 
+  children 
+}) => {
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        onVisibleChange(false)
+      }
+    }
+
+    if (visible) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [visible, onVisibleChange])
+
+  return (
+    <div className="ai-dropdown" style={{ position: 'relative' }}>
+      <div
+        ref={triggerRef}
+        onClick={() => onVisibleChange(!visible)}
+      >
+        {trigger}
+      </div>
+      {visible && (
+        <div
+          ref={dropdownRef}
+          className="ai-dropdown-menu"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: '4px',
+            background: 'var(--semi-color-bg-2)',
+            border: '1px solid var(--semi-color-border)',
+            borderRadius: '8px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+            zIndex: 1001,
+            minWidth: '180px',
+            padding: '4px 0',
+            backdropFilter: 'blur(12px)',
+            animation: 'aiDropdownSlideIn 0.15s ease-out'
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface AiDropdownItemProps {
+  onClick: () => void
+  children: React.ReactNode
+  disabled?: boolean
+}
+
+const AiDropdownItem: React.FC<AiDropdownItemProps> = ({ onClick, children, disabled = false }) => {
+  return (
+    <button
+      className="ai-dropdown-item"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: '100%',
+        padding: '10px 14px',
+        border: 'none',
+        background: 'transparent',
+        textAlign: 'left',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'background-color 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '14px',
+        color: disabled ? 'var(--semi-color-text-2)' : 'var(--semi-color-text-0)',
+        opacity: disabled ? 0.5 : 1
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {children}
+    </button>
+  )
 }
 
 const AI_COMMANDS = [
@@ -56,6 +211,7 @@ const AI_COMMANDS = [
 
 const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [dropdownVisible, setDropdownVisible] = useState(false)
 
   const handleAiCommand = async (command: typeof AI_COMMANDS[0]) => {
     if (!editor || isLoading) return
@@ -64,16 +220,18 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
     const selectedText = editor.state.doc.textBetween(from, to)
 
     if (!selectedText.trim()) {
-      Toast.warning('请先选择要处理的文本')
+      showToast('请先选择要处理的文本', 'warning')
+      setDropdownVisible(false)
       return
     }
 
     setIsLoading(true)
+    setDropdownVisible(false)
     try {
       // 获取用户配置的API信息
       const aiConfigs = await window.api.settings.get('AiApiConfigs')
       if (!aiConfigs || !Array.isArray(aiConfigs) || aiConfigs.length === 0) {
-        Toast.error('请先在设置中配置AI API')
+        showToast('请先在设置中配置AI API', 'error')
         setIsLoading(false)
         return
       }
@@ -84,14 +242,14 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
         : aiConfigs[0]
       
       if (!config) {
-        Toast.error('未找到指定的AI模型配置')
+        showToast('未找到指定的AI模型配置', 'error')
         setIsLoading(false)
         return
       }
       
       // 验证配置
       if (!config.apiKey || !config.apiUrl || !config.modelName) {
-        Toast.error('AI API配置不完整，请检查设置')
+        showToast('AI API配置不完整，请检查设置', 'error')
         setIsLoading(false)
         return
       }
@@ -122,44 +280,73 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
       // 替换选中的文本
       editor.chain().focus().deleteSelection().insertContent(response).run()
       
-      Toast.success(`${command.label}完成`)
+      showToast(`${command.label}完成`, 'success')
     } catch (error) {
       console.error('AI处理失败:', error)
-      Toast.error(`AI处理失败: ${(error as Error).message || '未知错误'}`)
+      showToast(`AI处理失败: ${(error as Error).message || '未知错误'}`, 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Dropdown
-      render={
-        <Dropdown.Menu>
-          {AI_COMMANDS.map((command) => (
-            <Dropdown.Item
-              key={command.value}
-              onClick={() => handleAiCommand(command)}
-              disabled={isLoading}
-            >
-              {command.label}
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
+    <CustomAiDropdown
+      visible={dropdownVisible}
+      onVisibleChange={setDropdownVisible}
+      trigger={
+        <button
+          className="ai-button bubble-menu-button"
+          disabled={isLoading}
+          style={{
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            color: 'white',
+            fontWeight: '600',
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+            minWidth: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '0 10px',
+            borderRadius: '6px',
+            border: 'none',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.7 : 1,
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #5b56f1, #7c3aed)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.3)'
+            }
+          }}
+        >
+          {isLoading ? '处理中' : 'AI'}
+          {isLoading ? (
+            <BounceSpinner className="ms-2" />
+          ) : (
+            <FiChevronDown size={14} />
+          )}
+        </button>
       }
-      position="bottomLeft"
-      trigger="click"
     >
-      <Button
-        size="small"
-        type="tertiary"
-        theme="solid"
-        className="ai-button"
-        suffix={isLoading ? <BounceSpinner className="ms-2" /> : <IconChevronDown />}
-        disabled={isLoading}
-      >
-        {isLoading ? '处理中' : 'AI'}
-      </Button>
-    </Dropdown>
+      {AI_COMMANDS.map((command) => (
+        <AiDropdownItem
+          key={command.value}
+          onClick={() => handleAiCommand(command)}
+          disabled={isLoading}
+        >
+          {command.label}
+        </AiDropdownItem>
+      ))}
+    </CustomAiDropdown>
   )
 }
 

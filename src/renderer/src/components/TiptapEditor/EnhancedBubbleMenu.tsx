@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import AiSelector from './AiSelector'
@@ -13,12 +13,123 @@ import {
   FiAlignCenter, 
   FiAlignRight, 
   FiAlignJustify, 
-  FiMoreVertical 
+  FiMoreVertical,
+  FiList,
+  FiImage,
+  FiMinus,
+  FiMessageSquare
 } from 'react-icons/fi'
-import { Dropdown } from '@douyinfe/semi-ui'
 
 interface EnhancedBubbleMenuProps {
   editor: Editor
+}
+
+interface CustomDropdownProps {
+  visible: boolean
+  onVisibleChange: (visible: boolean) => void
+  trigger: React.ReactNode
+  children: React.ReactNode
+}
+
+const CustomDropdown: React.FC<CustomDropdownProps> = ({ 
+  visible, 
+  onVisibleChange, 
+  trigger, 
+  children 
+}) => {
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        onVisibleChange(false)
+      }
+    }
+
+    if (visible) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [visible, onVisibleChange])
+
+  return (
+    <div className="custom-dropdown" style={{ position: 'relative' }}>
+      <div
+        ref={triggerRef}
+        onClick={() => onVisibleChange(!visible)}
+      >
+        {trigger}
+      </div>
+      {visible && (
+        <div
+          ref={dropdownRef}
+          className="custom-dropdown-menu"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: '4px',
+            background: 'var(--semi-color-bg-2)',
+            border: '1px solid var(--semi-color-border)',
+            borderRadius: '8px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+            zIndex: 1001,
+            minWidth: '160px',
+            padding: '4px 0'
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface DropdownItemProps {
+  onClick: () => void
+  children: React.ReactNode
+  icon?: React.ReactNode
+}
+
+const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) => {
+  return (
+    <button
+      className="custom-dropdown-item"
+      onClick={onClick}
+      style={{
+        width: '100%',
+        padding: '8px 12px',
+        border: 'none',
+        background: 'transparent',
+        textAlign: 'left',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '14px',
+        color: 'var(--semi-color-text-0)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {icon && <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>}
+      {children}
+    </button>
+  )
 }
 
 const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
@@ -126,50 +237,64 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
             <FiAlignJustify size={16} />
           </button>
           <div className="divider" />
-          <Dropdown
+          <CustomDropdown
             visible={showMoreOptions}
             onVisibleChange={setShowMoreOptions}
-            render={
-              <Dropdown.Menu>
-                <Dropdown.Item 
-                  onClick={() => editor.chain().focus().toggleList('bulletList', 'listItem').run()}
-                >
-                  无序列表
-                </Dropdown.Item>
-                <Dropdown.Item 
-                  onClick={() => editor.chain().focus().toggleList('orderedList', 'listItem').run()}
-                >
-                  有序列表
-                </Dropdown.Item>
-                <Dropdown.Item 
-                  onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                >
-                  引用
-                </Dropdown.Item>
-                <Dropdown.Item 
-                  onClick={() => editor.chain().focus().setHorizontalRule().run()}
-                >
-                  分割线
-                </Dropdown.Item>
-                <Dropdown.Item 
-                  onClick={() => {
-                    const url = window.prompt('图片地址:')
-                    if (url) {
-                      editor.chain().focus().setImage({ src: url }).run()
-                    }
-                  }}
-                >
-                  插入图片
-                </Dropdown.Item>
-              </Dropdown.Menu>
+            trigger={
+              <button className="bubble-menu-button">
+                <FiMoreVertical size={16} />
+              </button>
             }
-            trigger="click"
-            position="bottomLeft"
           >
-            <button className="bubble-menu-button">
-              <FiMoreVertical size={16} />
-            </button>
-          </Dropdown>
+            <DropdownItem 
+              onClick={() => {
+                editor.chain().focus().toggleList('bulletList', 'listItem').run()
+                setShowMoreOptions(false)
+              }}
+              icon={<FiList size={14} />}
+            >
+              无序列表
+            </DropdownItem>
+            <DropdownItem 
+              onClick={() => {
+                editor.chain().focus().toggleList('orderedList', 'listItem').run()
+                setShowMoreOptions(false)
+              }}
+              icon={<FiList size={14} />}
+            >
+              有序列表
+            </DropdownItem>
+            <DropdownItem 
+              onClick={() => {
+                editor.chain().focus().toggleBlockquote().run()
+                setShowMoreOptions(false)
+              }}
+              icon={<FiMessageSquare size={14} />}
+            >
+              引用
+            </DropdownItem>
+            <DropdownItem 
+              onClick={() => {
+                editor.chain().focus().setHorizontalRule().run()
+                setShowMoreOptions(false)
+              }}
+              icon={<FiMinus size={14} />}
+            >
+              分割线
+            </DropdownItem>
+            <DropdownItem 
+              onClick={() => {
+                const url = window.prompt('图片地址:')
+                if (url) {
+                  editor.chain().focus().setImage({ src: url }).run()
+                }
+                setShowMoreOptions(false)
+              }}
+              icon={<FiImage size={14} />}
+            >
+              插入图片
+            </DropdownItem>
+          </CustomDropdown>
         </div>
       </div>
     </BubbleMenu>
