@@ -6,26 +6,6 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
 import BounceSpinner from './BounceSpinner'
 
-// 现代化AI图标
-const AiIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path 
-      d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 01-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 013.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 013.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 01-3.09 3.09z" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-    <path 
-      d="M18 3l-.5 1.5L16 5l1.5.5L18 7l.5-1.5L20 5l-1.5-.5L18 3zM19 14l-.5 1.5L17 16l1.5.5L19 18l.5-1.5L21 16l-1.5-.5L19 14z" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
 interface AiSelectorProps {
   editor: Editor
   modelId?: string
@@ -174,7 +154,6 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
         type="tertiary"
         theme="solid"
         className="ai-button"
-        icon={<AiIcon />}
         suffix={isLoading ? <BounceSpinner className="ms-2" /> : <IconChevronDown />}
         disabled={isLoading}
       >

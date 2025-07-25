@@ -5,6 +5,98 @@
   width: 100%;
 }
 
+/* Slash Menu Styles */
+.slash-menu {
+  position: absolute;
+  z-index: 1000;
+  background: var(--semi-color-bg-2);
+  border: 1px solid var(--semi-color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  width: 280px;
+  max-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.slash-menu-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+.slash-menu-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--semi-color-border);
+  border-radius: 6px;
+  background: var(--semi-color-bg-1);
+  color: var(--semi-color-text-0);
+  font-size: 14px;
+}
+
+.slash-menu-search input:focus {
+  outline: none;
+  border-color: var(--semi-color-primary);
+}
+
+.slash-menu-items {
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.slash-menu-item:hover {
+  background: var(--semi-color-fill-0);
+}
+
+.slash-menu-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  color: var(--semi-color-text-1);
+}
+
+.slash-menu-item-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.slash-menu-item-name {
+  font-weight: 500;
+  color: var(--semi-color-text-0);
+  font-size: 14px;
+}
+
+.slash-menu-item-description {
+  font-size: 12px;
+  color: var(--semi-color-text-2);
+  margin-top: 2px;
+}
+
+.slash-menu-no-results {
+  padding: 16px;
+  text-align: center;
+  color: var(--semi-color-text-2);
+  font-size: 14px;
+}
+
 .tiptap-editor-content {
   @apply prose dark:prose-invert focus:outline-none max-w-full;
   
@@ -55,13 +147,13 @@
   }
   
   /* 代码块样式 */
-  .code-block {
+  .code-block, .code-block-component {
     background: var(--semi-color-fill-1);
     border: 1px solid var(--semi-color-border);
     border-radius: 0.5rem;
-    padding: 1rem;
+    padding: 0;
     margin: 1rem 0;
-    overflow-x: auto;
+    overflow: hidden;
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
     line-height: 1.5;
@@ -87,6 +179,50 @@
     .hljs-comment { color: var(--semi-color-text-2); font-style: italic; }
     .hljs-function { color: var(--semi-color-info); }
     .hljs-variable { color: var(--semi-color-text-0); }
+  }
+  
+  /* 代码块头部 */
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: var(--semi-color-fill-2);
+    border-bottom: 1px solid var(--semi-color-border);
+  }
+  
+  .language-info {
+    font-size: 0.8rem;
+    color: var(--semi-color-text-1);
+    font-weight: 500;
+  }
+  
+  .code-block-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .code-block-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    font-size: 0.8rem;
+    background: var(--semi-color-bg-1);
+    color: var(--semi-color-text-0);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .code-block-button:hover {
+    background: var(--semi-color-fill-1);
+  }
+  
+  .language-button, .copy-button {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
   }
   
   /* 引用样式 */
@@ -198,6 +334,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background: var(--semi-color-bg-0);
 }
 
@@ -218,6 +355,86 @@
 .editor-right {
   display: flex;
   align-items: center;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--semi-color-bg-1);
+  color: var(--semi-color-text-0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.editor-button:hover:not(:disabled) {
+  background: var(--semi-color-fill-1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.editor-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.editor-button.primary {
+  background: var(--semi-color-primary);
+  color: white;
+  box-shadow: 0 2px 6px rgba(var(--semi-color-primary-rgb), 0.25);
+}
+
+.editor-button.primary:hover:not(:disabled) {
+  background: var(--semi-color-primary-hover);
+  box-shadow: 0 3px 8px rgba(var(--semi-color-primary-rgb), 0.35);
+}
+
+.editor-button.tertiary {
+  background: var(--semi-color-tertiary);
+  color: var(--semi-color-text-0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.editor-button.tertiary:hover:not(:disabled) {
+  background: var(--semi-color-fill-1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.auto-save-status {
+  font-size: 14px;
+  color: var(--semi-color-text-2);
+}
+
+.memory-warning {
+  font-size: 12px;
+  color: var(--semi-color-warning);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 响应式设计 */
@@ -270,7 +487,7 @@
 }
 
 /* BubbleMenu 样式 */
-.bubble-menu {
+.bubble-menu, .enhanced-bubble-menu {
   background: var(--semi-color-bg-2);
   border: 1px solid var(--semi-color-border);
   border-radius: 10px;
@@ -333,13 +550,21 @@
   }
 }
 
+/* Slash command trigger */
+.slash-command-trigger {
+  background-color: var(--semi-color-primary-light-default);
+  color: var(--semi-color-primary);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
 .bubble-menu-container {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.bubble-menu .semi-button {
+.bubble-menu-button {
   min-width: 32px;
   height: 32px;
   padding: 0;
@@ -351,28 +576,29 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   background: var(--semi-color-bg-0);
+  cursor: pointer;
 }
 
-.bubble-menu .semi-button:hover {
+.bubble-menu-button:hover {
   background: var(--semi-color-fill-1);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-.bubble-menu .semi-button.semi-button-primary {
+.bubble-menu-button.active {
   background: var(--semi-color-primary);
   color: white;
   box-shadow: 0 2px 6px rgba(var(--semi-color-primary-rgb), 0.25);
 }
 
-.bubble-menu .semi-button.semi-button-primary:hover {
+.bubble-menu-button.active:hover {
   background: var(--semi-color-primary-hover);
   box-shadow: 0 3px 8px rgba(var(--semi-color-primary-rgb), 0.35);
   transform: translateY(-1px);
 }
 
 /* AI 按钮特殊样式 */
-.bubble-menu .ai-button {
+.bubble-menu .ai-button, .enhanced-bubble-menu .ai-button {
   background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
   color: white !important;
   font-weight: 600;
@@ -380,33 +606,109 @@
   min-width: 40px !important;
 }
 
-.bubble-menu .ai-button:hover {
+.bubble-menu .ai-button:hover, .enhanced-bubble-menu .ai-button:hover {
   background: linear-gradient(135deg, #5b56f1, #7c3aed) !important;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   transform: translateY(-2px);
 }
 
 /* Semi Icons 样式优化 */
-.bubble-menu .semi-button svg {
+.bubble-menu .semi-button svg, .enhanced-bubble-menu .semi-button svg {
   width: 16px;
   height: 16px;
   transition: all 0.2s ease;
 }
 
-.bubble-menu .semi-button:hover svg {
+.bubble-menu .semi-button:hover svg, .enhanced-bubble-menu .semi-button:hover svg {
   transform: scale(1.05);
 }
 
 /* AI 按钮图标特殊样式 */
-.bubble-menu .ai-button svg {
+.bubble-menu .ai-button svg, .enhanced-bubble-menu .ai-button svg {
   width: 16px;
   height: 16px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* 暗色主题下的 BubbleMenu */
-.semi-theme-mode-dark .bubble-menu {
+.semi-theme-mode-dark .bubble-menu, .semi-theme-mode-dark .enhanced-bubble-menu {
   background: rgba(40, 44, 52, 0.95);
   border-color: rgba(255, 255, 255, 0.1);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* 分隔线样式 */
+.divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--semi-color-border);
+  margin: 0 2px;
+  opacity: 0.6;
+}
+
+/* 块拖拽相关样式 */
+.draggable-block {
+  position: relative;
+  padding-left: 24px;
+}
+
+.block-actions {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.draggable-block:hover .block-actions {
+  opacity: 1;
+}
+
+.drag-handle {
+  cursor: grab;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: var(--semi-color-bg-1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--semi-color-text-2);
+  transition: all 0.2s ease;
+}
+
+.drag-handle:hover {
+  background: var(--semi-color-fill-1);
+  color: var(--semi-color-text-0);
+}
+
+.add-block-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.add-block-buttons button {
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: var(--semi-color-bg-1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--semi-color-text-2);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.add-block-buttons button:hover {
+  background: var(--semi-color-fill-1);
+  color: var(--semi-color-text-0);
 }

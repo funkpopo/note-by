@@ -1,9 +1,8 @@
 import React from 'react'
-import { NodeViewProps } from '@tiptap/core'
 import { NodeViewWrapper } from '@tiptap/react'
 import BounceSpinner from './BounceSpinner'
 
-const AiPlaceholderView: React.FC<NodeViewProps> = ({ editor }) => {
+const AiPlaceholderView: React.FC = () => {
   return (
     <NodeViewWrapper>
       <div className="flex items-baseline">

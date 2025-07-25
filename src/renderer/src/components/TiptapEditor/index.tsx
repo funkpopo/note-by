@@ -1,27 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Typography, Button, Space, Toast, Dropdown, Divider } from '@douyinfe/semi-ui'
-import { 
-  IconSave, 
-  IconFile, 
-  IconChevronDown,
-  IconBold,
-  IconItalic,
-  IconUnderline,
-  IconStrikeThrough,
-  IconCode,
-  IconLink,
-  IconAlignLeft,
-  IconAlignCenter,
-  IconAlignRight,
-  IconAlignJustify
-} from '@douyinfe/semi-icons'
-import { Content, Editor, EditorContent, useEditor, BubbleMenu } from '@tiptap/react'
+import { Toast, Dropdown } from '@douyinfe/semi-ui'
+import { FiSave, FiFile, FiChevronDown } from 'react-icons/fi'
+import { Content, Editor, EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
+import { DndContext, closestCenter } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { defaultExtensions } from './default-extensions'
 import { cn } from './utils'
 import './styles/tiptap-editor.css'
-import AiSelector from './AiSelector'
+import EnhancedBubbleMenu from './EnhancedBubbleMenu'
 import ModelSelector from './ModelSelector'
+import SlashMenu from './SlashMenu'
 import { SmartDebouncer } from '../../utils/SmartDebouncer'
 import { ConflictDetector } from '../../utils/ConflictDetector'
 import { editorMemoryManager } from '../../utils/EditorMemoryManager'
@@ -101,13 +90,14 @@ interface BlockEditorProps {
   onUpdate?: (editor: Editor) => void
 }
 
-const BlockEditor = ({
-  content,
-  placeholder,
-  onCreate,
-  onUpdate,
-}: BlockEditorProps) => {
-  const editor = useEditor({
+  const BlockEditor = ({
+    content,
+    placeholder,
+    onCreate,
+    onUpdate,
+  }: BlockEditorProps) => {
+    const [showSlashMenu, setShowSlashMenu] = useState(false)
+    const editor = useEditor({
     extensions: [
       ...defaultExtensions,
       Placeholder.configure({
@@ -130,13 +120,24 @@ const BlockEditor = ({
     },
     onUpdate: ({ editor }) => {
       onUpdate?.(editor)
+      
+      // Check if we should show the slash menu
+      const { selection } = editor.state
+      const { $from } = selection
+      const textBefore = $from.parent.textBetween(Math.max(0, $from.parentOffset - 1), $from.parentOffset, null, '\uFFFC')
+      
+      if (textBefore === '/') {
+        setShowSlashMenu(true)
+      } else if (showSlashMenu && textBefore !== '/') {
+        setShowSlashMenu(false)
+      }
     },
     onContentError: ({ error }) => {
       console.error(error)
     },
   })
 
-  // 清理 effect，确保编辑器正确销毁
+  // Clean up effect to ensure editor is properly destroyed
   useEffect(() => {
     return () => {
       if (editor) {
@@ -145,133 +146,39 @@ const BlockEditor = ({
     }
   }, [editor])
 
+  // Handle drag events
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event
+
+    if (active.id !== over.id) {
+      // Implement block reordering logic
+      // Specific sorting implementation can be added here
+    }
+  }
+
   return (
-    <div className="block-editor-wrapper">
-      <EditorContent
-        editor={editor}
-        className="tiptap-editor-content"
-      />
-      {editor && (
-        <BubbleMenu
+    <DndContext
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="block-editor-wrapper">
+        {editor && (
+          <>
+            <EnhancedBubbleMenu editor={editor} />
+            <SlashMenu 
+              editor={editor} 
+              isOpen={showSlashMenu}
+              onClose={() => setShowSlashMenu(false)}
+              onOpen={() => setShowSlashMenu(true)}
+            />
+          </>
+        )}
+        <EditorContent
           editor={editor}
-          shouldShow={({ from, to }) => {
-            // 只在有文本选择时显示
-            return from !== to
-          }}
-          tippyOptions={{ 
-            duration: 100,
-            placement: 'top',
-            animation: 'fade',
-            onHidden: () => {
-              // 确保在隐藏时清理事件
-            }
-          }}
-          className="bubble-menu"
-        >
-          <div className="bubble-menu-container">
-            <AiSelector editor={editor} />
-            <Divider 
-              layout="vertical" 
-              style={{ 
-                height: '20px', 
-                margin: '0 2px',
-                borderColor: 'var(--semi-color-border)',
-                opacity: 0.6
-              }} 
-            />
-            <Button
-              size="small"
-              type={editor.isActive('bold') ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconBold />}
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              disabled={!editor.can().chain().focus().toggleBold().run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive('italic') ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconItalic />}
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              disabled={!editor.can().chain().focus().toggleItalic().run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive('underline') ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconUnderline />}
-              onClick={() => editor.chain().focus().toggleUnderline().run()}
-              disabled={!editor.can().chain().focus().toggleUnderline().run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive('strike') ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconStrikeThrough />}
-              onClick={() => editor.chain().focus().toggleStrike().run()}
-              disabled={!editor.can().chain().focus().toggleStrike().run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive('code') ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconCode />}
-              onClick={() => editor.chain().focus().toggleCode().run()}
-              disabled={!editor.can().chain().focus().toggleCode().run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive('link') ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconLink />}
-              onClick={() => {
-                const url = window.prompt('输入链接地址:');
-                if (url) {
-                  editor.chain().focus().setLink({ href: url }).run()
-                }
-              }}
-            />
-            <Divider 
-              layout="vertical" 
-              style={{ 
-                height: '20px', 
-                margin: '0 2px',
-                borderColor: 'var(--semi-color-border)',
-                opacity: 0.6
-              }} 
-            />
-            <Button
-              size="small"
-              type={editor.isActive({ textAlign: 'left' }) ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconAlignLeft />}
-              onClick={() => editor.chain().focus().setTextAlign('left').run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive({ textAlign: 'center' }) ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconAlignCenter />}
-              onClick={() => editor.chain().focus().setTextAlign('center').run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive({ textAlign: 'right' }) ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconAlignRight />}
-              onClick={() => editor.chain().focus().setTextAlign('right').run()}
-            />
-            <Button
-              size="small"
-              type={editor.isActive({ textAlign: 'justify' }) ? 'primary' : 'tertiary'}
-              theme="solid"
-              icon={<IconAlignJustify />}
-              onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-            />
-          </div>
-        </BubbleMenu>
-      )}
-    </div>
+          className="tiptap-editor-content"
+        />
+      </div>
+    </DndContext>
   )
 }
 
@@ -427,7 +334,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
             try {
               await new Promise(resolve => setTimeout(resolve, 100))
               if (editorRef.current) {
-                const markdown = editorRef.current.storage.markdown?.getMarkdown() || processedData.contentWithoutTags
+                const markdown = editorRef.current.getText() || processedData.contentWithoutTags
                 lastSavedContentRef.current = markdown
                 await conflictDetectorRef.current.createSnapshot(filePath, markdown)
               }
@@ -713,19 +620,25 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
       className="editor-container"
       tabIndex={0}
       ref={editorContainerRef}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+      }}
     >
       {currentFile && (
         <div className="editor-header">
           <div className="editor-title-container">
-            <Typography.Title heading={4} style={{ margin: 0 }}>
+            <h4 style={{ margin: 0 }}>
               {title || ''}
-            </Typography.Title>
+            </h4>
             {isEditing && (
               <span style={{ marginLeft: 10, color: 'var(--semi-color-warning)' }}>*</span>
             )}
           </div>
           <div className="editor-right">
-            <Space>
+            <div className="editor-actions">
               {currentFile && (
                 <>
                   <ModelSelector 
@@ -740,16 +653,18 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
                     disabled={!currentFile}
                     containerRef={editorContainerRef}
                   />
-                  <Button
-                    theme="solid"
-                    type="primary"
-                    icon={<IconSave />}
+                  <button
+                    className="editor-button primary"
                     onClick={saveFileContent}
-                    loading={isSaving}
-                    disabled={!currentFile}
+                    disabled={isSaving || !currentFile}
                   >
-                    保存
-                  </Button>
+                    {isSaving ? (
+                      <div className="spinner"></div>
+                    ) : (
+                      <FiSave size={16} />
+                    )}
+                    <span>保存</span>
+                  </button>
                   <Dropdown
                     render={
                       <Dropdown.Menu>
@@ -763,28 +678,30 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
                     trigger="click"
                     getPopupContainer={() => editorContainerRef.current || document.body}
                   >
-                    <Button
-                      theme="solid"
-                      type="tertiary"
-                      icon={<IconFile />}
-                      suffix={<IconChevronDown />}
-                      loading={isExporting}
-                      disabled={!currentFile}
+                    <button
+                      className="editor-button tertiary"
+                      disabled={isExporting || !currentFile}
                     >
-                      导出
-                    </Button>
+                      {isExporting ? (
+                        <div className="spinner"></div>
+                      ) : (
+                        <>
+                          <FiFile size={16} />
+                          <span>导出</span>
+                          <FiChevronDown size={16} />
+                        </>
+                      )}
+                    </button>
                   </Dropdown>
                   {autoSaveStatus === 'saving' && (
-                    <Typography.Text type="tertiary">自动保存...</Typography.Text>
+                    <span className="auto-save-status">自动保存...</span>
                   )}
                   {memoryWarning && (
-                    <Typography.Text type="warning" style={{ fontSize: '12px' }}>
-                      {memoryWarning}
-                    </Typography.Text>
+                    <span className="memory-warning">{memoryWarning}</span>
                   )}
                 </>
               )}
-            </Space>
+            </div>
           </div>
         </div>
       )}
@@ -854,11 +771,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
                 />
               </svg>
             </div>
-            <Typography.Paragraph
-              style={{ fontSize: '16px', maxWidth: '500px', marginBottom: '1.5rem' }}
-            >
+            <p style={{ fontSize: '16px', maxWidth: '500px', marginBottom: '1.5rem' }}>
               请从左侧边栏选择一个文件开始编辑，或者创建一个新的Markdown文件
-            </Typography.Paragraph>
+            </p>
             <div
               style={{
                 display: 'flex',
@@ -867,29 +782,27 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
                 justifyContent: 'center'
               }}
             >
-              <Button
-                theme="solid"
+              <button
+                className="editor-button primary"
                 onClick={handleOpenCreateFile}
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 5V19M5 12H19"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                }
               >
-                创建文件
-              </Button>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 5V19M5 12H19"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span>创建文件</span>
+              </button>
             </div>
             <div
               style={{
@@ -900,12 +813,12 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
                 maxWidth: '500px'
               }}
             >
-              <Typography.Text strong style={{ marginBottom: '0.5rem', display: 'block' }}>
+              <strong style={{ marginBottom: '0.5rem', display: 'block' }}>
                 提示与快捷键:
-              </Typography.Text>
+              </strong>
               <ul style={{ textAlign: 'left', margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
                 <li>
-                  使用 <Typography.Text code>Ctrl+S</Typography.Text> 保存文件
+                  使用 <code>Ctrl+S</code> 保存文件
                 </li>
                 <li>支持代码块高亮和Markdown格式化</li>
                 <li>基于Tiptap的现代化编辑器</li>
