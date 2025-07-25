@@ -6,7 +6,7 @@ import { scheduleRenderTask } from '../utils/RenderOptimizer'
 // 懒加载组件定义
 export const LazyDataAnalysis = lazy(() => import('./DataAnalysis'))
 export const LazyMindMapPage = lazy(() => import('./MindMapPage'))
-export const LazyEditor = lazy(() => import('./Editor'))
+export const LazyEditor = lazy(() => import('./TiptapEditor'))
 export const LazyChatInterface = lazy(() => import('./ChatInterface'))
 export const LazySettings = lazy(() => import('./Settings'))
 

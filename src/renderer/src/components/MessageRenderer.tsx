@@ -4,7 +4,7 @@ import remarkMath from 'remark-math'
 import remarkGfm from 'remark-gfm'
 import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
-import { Collapsible, Button, Typography } from '@douyinfe/semi-ui'
+import { Typography } from '@douyinfe/semi-ui'
 import { IconChevronDown, IconChevronRight } from '@douyinfe/semi-icons'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github.css'
@@ -28,9 +28,10 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
       rehypePlugins={[rehypeKatex, rehypeHighlight]}
       components={{
         // 自定义代码块样式 - 支持主题适配
-        code({ node, inline, className, children, ...props }) {
+        code({ node, className, children, ...props }: any) {
           const match = /language-(\w+)/.exec(className || '')
-          return !inline && match ? (
+          const isInline = !node?.position?.start || node.position.start.line === node.position.end?.line
+          return !isInline && match ? (
             <pre
               style={{
                 backgroundColor: 'var(--semi-color-fill-0)',
@@ -285,10 +286,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
               backgroundColor: 'var(--semi-color-fill-0)',
               border: '1px solid var(--semi-color-border)',
               borderRadius: '8px',
-              transition: 'all 0.2s',
-              ':hover': {
-                backgroundColor: 'var(--semi-color-fill-1)'
-              }
+              transition: 'all 0.2s'
             }}
             onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
           >

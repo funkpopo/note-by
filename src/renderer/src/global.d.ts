@@ -6,6 +6,18 @@ interface HistoryItem {
   timestamp: number
 }
 
+// AI API配置接口
+interface AiApiConfig {
+  id: string
+  name: string
+  apiKey: string
+  apiUrl: string
+  modelName: string
+  temperature?: string
+  maxTokens?: string
+  isThinkingModel?: boolean
+}
+
 interface ChatAPI {
   createSession: (title?: string) => Promise<string | null>;
   saveMessage: (message: any) => Promise<boolean>;
