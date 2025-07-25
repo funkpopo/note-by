@@ -1,20 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Typography, Button, Space, Toast, Select, Dropdown } from '@douyinfe/semi-ui'
+import { Typography, Button, Space, Toast, Dropdown } from '@douyinfe/semi-ui'
 import { IconSave, IconFile, IconChevronDown } from '@douyinfe/semi-icons'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView, Theme, darkDefaultTheme, lightDefaultTheme } from '@blocknote/mantine'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import { codeBlock } from '@blocknote/code-block'
-// 导入 AI 相关组件
-import {
-  AIMenuController,
-  AIToolbarButton,
-  createAIExtension,
-  getAISlashMenuItems
-} from '@blocknote/xl-ai'
-import '@blocknote/xl-ai/style.css'
-import { createOpenAI } from '@ai-sdk/openai'
 import './Editor.css'
 import { zhCN } from '../locales'
 // 导入智能保存相关工具
@@ -44,11 +35,7 @@ import {
   refreshGlobalTagCache
 } from './TagUtils'
 import globalTagManager from '../utils/GlobalTagManager'
-import { LanguageModelV1 } from '@ai-sdk/provider'
-import { zh as aiLocales } from '@blocknote/xl-ai/locales'
-import { CustomAIMenu } from './AICustomCommands'
 import { EditorSkeleton } from './Skeleton'
-import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import {
   BasicTextStyleButton,
   BlockTypeSelect,
@@ -61,12 +48,8 @@ import {
   TextAlignButton
 } from '@blocknote/react'
 
-// 创建包含AI按钮的格式工具栏组件
-const FormattingToolbarWithAI = ({
-  currentAiModel
-}: {
-  currentAiModel: LanguageModelV1 | null
-}): JSX.Element => {
+// 创建标准格式工具栏组件  
+const StandardFormattingToolbar = (): JSX.Element => {
   return (
     <FormattingToolbarController
       formattingToolbar={() => (
@@ -84,20 +67,17 @@ const FormattingToolbarWithAI = ({
           <TextAlignButton textAlignment="right" key="textAlignRightButton" />
           <ColorStyleButton key="colorStyleButton" />
           <CreateLinkButton key="createLinkButton" />
-          {currentAiModel && <AIToolbarButton key="aiToolbarButton" />}
         </FormattingToolbar>
       )}
     />
   )
 }
 
-// 创建包含AI选项的斜杠菜单组件
-const SuggestionMenuWithAI = ({
-  editor,
-  currentAiModel
+// 创建标准斜杠菜单组件
+const StandardSuggestionMenu = ({
+  editor
 }: {
   editor: any
-  currentAiModel: LanguageModelV1 | null
 }): JSX.Element => {
   return (
     <SuggestionMenuController
@@ -119,13 +99,8 @@ const SuggestionMenuWithAI = ({
           )
         })
 
-        // 添加AI菜单项（如果有可用的OpenAI模型）
-        const menuItems = currentAiModel
-          ? [...filteredItems, ...getAISlashMenuItems(editor)]
-          : filteredItems
-
         // 根据用户输入的查询过滤菜单项
-        return menuItems.filter((item) => {
+        return filteredItems.filter((item) => {
           const itemTitle = item.title.toLowerCase()
           const itemSubtext = (item.subtext || '').toLowerCase()
           const itemAliases = item.aliases || []
@@ -239,11 +214,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
   const conflictDetectorRef = useRef<ConflictDetector>(new ConflictDetector())
   // 添加编辑器容器引用，用于定位下拉菜单
   const editorContainerRef = useRef<HTMLDivElement>(null)
-
-  // 添加API配置和选中模型状态
-  const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
-  const [selectedModelId, setSelectedModelId] = useState<string>('')
-  const [currentAiModel, setCurrentAiModel] = useState<LanguageModelV1 | null>(null)
 
   // 存储标签列表的状态
   const [tagList, setTagList] = useState<string[]>([])
@@ -415,31 +385,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     dark: customDarkTheme
   }
 
-  // 加载API配置
-  useEffect(() => {
-    const loadApiConfigs = async (): Promise<void> => {
-      try {
-        const configs = await modelSelectionService.getAvailableModels()
-        setApiConfigs(configs)
-
-        // 获取当前选中的模型ID
-        const currentSelectedId = await modelSelectionService.getSelectedModelId()
-        if (currentSelectedId && configs.some((config) => config.id === currentSelectedId)) {
-          setSelectedModelId(currentSelectedId)
-        } else if (configs.length > 0) {
-          // 如果没有选中模型或选中的模型不存在，初始化默认模型
-          await modelSelectionService.initializeDefaultModel()
-          const newSelectedId = await modelSelectionService.getSelectedModelId()
-          setSelectedModelId(newSelectedId)
-        }
-      } catch (error) {
-        console.error('加载API配置失败:', error)
-      }
-    }
-
-    loadApiConfigs()
-  }, [])
-
   // 预加载全局标签数据
   useEffect(() => {
     const preloadGlobalTags = async (): Promise<void> => {
@@ -457,18 +402,8 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     {
       schema,
       dictionary: {
-        ...zhCN,
-        ai: aiLocales
+        ...zhCN
       },
-      extensions: [
-        ...(currentAiModel
-          ? [
-              createAIExtension({
-                model: currentAiModel
-              })
-            ]
-          : [])
-      ],
       // Enable code block syntax highlighting with configuration
       codeBlock: {
         ...codeBlock,
@@ -796,7 +731,7 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
         return url
       }
     },
-    [currentAiModel, schema]
+    [schema]
   )
 
   // 清空编辑器内容的辅助函数
@@ -1348,63 +1283,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
     }
   }, [currentFolder, currentFile, editor])
 
-  // 添加AI状态相关状态
-  const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
-
-  // 创建OpenAI模型实例
-  const createOpenAIModel = useCallback((): LanguageModelV1 | null => {
-    // 如果没有选中的模型或API配置为空，则返回null
-    if (!selectedModelId || AiApiConfigs.length === 0) {
-      return null
-    }
-
-    // 根据选中的ID查找配置
-    const selectedConfig = AiApiConfigs.find((config) => config.id === selectedModelId)
-    if (!selectedConfig) {
-      setAiStatus('error')
-      return null
-    }
-
-    try {
-      setAiStatus('loading')
-
-      // 创建OpenAI实例
-      const provider = createOpenAI({
-        apiKey: selectedConfig.apiKey,
-        baseURL: selectedConfig.apiUrl
-      })
-
-      const model = provider(selectedConfig.modelName as string)
-
-      setAiStatus('ready')
-
-      return model
-    } catch (error) {
-      setAiStatus('error')
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      Toast.error(`创建AI模型实例失败: ${errorMessage}`)
-      return null
-    }
-  }, [selectedModelId, AiApiConfigs])
-
-  // 当选中的模型ID或API配置变更时，更新OpenAI模型实例
-  useEffect(() => {
-    // 如果没有选择模型，不进行任何操作
-    if (!selectedModelId) {
-      setCurrentAiModel(null)
-      setAiStatus('idle')
-      return
-    }
-
-    const model = createOpenAIModel()
-    setCurrentAiModel(model)
-
-    // 如果实例创建失败但状态未更新（可能是由于异步原因），进行检查
-    if (!model && aiStatus !== 'error') {
-      setAiStatus('error')
-    }
-  }, [selectedModelId, AiApiConfigs, createOpenAIModel, aiStatus])
-
   return (
     <div
       className="editor-container"
@@ -1423,32 +1301,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
           </div>
           <div className="editor-right">
             <Space>
-              {currentFile && AiApiConfigs.length > 0 && (
-                <>
-                  <Select
-                    value={selectedModelId}
-                    onChange={async (value) => {
-                      const modelId = value as string
-                      setSelectedModelId(modelId)
-                      try {
-                        await modelSelectionService.setSelectedModelId(modelId)
-                      } catch (error) {
-                        console.error('保存选中模型失败:', error)
-                        Toast.error('保存模型选择失败')
-                      }
-                    }}
-                    style={{ width: 150 }}
-                    placeholder="选择AI模型"
-                    disabled={AiApiConfigs.length === 0 || aiStatus === 'loading'}
-                  >
-                    {AiApiConfigs.map((config) => (
-                      <Select.Option key={config.id} value={config.id}>
-                        {config.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </>
-              )}
               {currentFile && (
                 <>
                   <HistoryDropdown
@@ -1627,16 +1479,6 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
                   使用 <Typography.Text code>Ctrl+S</Typography.Text> 保存文件
                 </li>
                 <li>支持代码块高亮和Markdown格式化</li>
-                <li>
-                  {AiApiConfigs.length > 0 ? (
-                    <>
-                      可以使用AI功能辅助内容创作，选中文本后点击AI按钮或输入{' '}
-                      <Typography.Text code>/ai</Typography.Text> 使用AI
-                    </>
-                  ) : (
-                    <>在设置中配置OpenAI API后可以使用AI功能辅助内容创作</>
-                  )}
-                </li>
                 <li>使用@符号可以添加标签</li>
               </ul>
             </div>
@@ -1653,12 +1495,10 @@ const Editor: React.FC<EditorProps> = ({ currentFolder, currentFile, onFileChang
             onChange={handleEditorChange}
             style={{ height: '100%' }}
           >
-            {/* 添加AI菜单控制器 */}
-            {currentAiModel && <AIMenuController aiMenu={CustomAIMenu} />}
-            {/* 使用包含AI按钮的自定义格式工具栏 */}
-            <FormattingToolbarWithAI currentAiModel={currentAiModel} />
-            {/* 使用包含AI选项的自定义斜杠菜单 */}
-            <SuggestionMenuWithAI editor={editor} currentAiModel={currentAiModel} />
+            {/* 使用标准格式工具栏 */}
+            <StandardFormattingToolbar />
+            {/* 使用标准斜杠菜单 */}
+            <StandardSuggestionMenu editor={editor} />
             {/* 恢复标签功能的@菜单 - 支持全局标签 */}
             <SuggestionMenuController
               triggerCharacter="@"
