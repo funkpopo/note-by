@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Editor } from '@tiptap/react'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
@@ -69,6 +69,60 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
 
+  // 边缘检测和位置调整
+  const adjustPosition = useCallback(() => {
+    if (!dropdownRef.current || !visible) return
+
+    const dropdown = dropdownRef.current
+    const editorWrapper = dropdown.closest('.block-editor-wrapper')
+    
+    if (!editorWrapper) return
+
+    const wrapperRect = editorWrapper.getBoundingClientRect()
+    const dropdownRect = dropdown.getBoundingClientRect()
+
+    let adjustedStyle = ''
+
+    // 检查右边界
+    if (dropdownRect.right > wrapperRect.right) {
+      const overflow = dropdownRect.right - wrapperRect.right
+      adjustedStyle += `transform: translateX(-${overflow}px); `
+    }
+
+    // 检查左边界
+    if (dropdownRect.left < wrapperRect.left) {
+      const overflow = wrapperRect.left - dropdownRect.left
+      adjustedStyle += `transform: translateX(${overflow}px); `
+    }
+
+    // 检查底部边界
+    if (dropdownRect.bottom > wrapperRect.bottom) {
+      // 如果下方空间不足，显示在上方
+      adjustedStyle += `top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; `
+    }
+
+    // 检查顶部边界（当显示在上方时）
+    if (dropdownRect.top < wrapperRect.top && adjustedStyle.includes('bottom: 100%')) {
+      // 如果上方也不足，恢复显示在下方但调整高度
+      adjustedStyle = adjustedStyle.replace('top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; ', '')
+      const maxHeight = wrapperRect.bottom - dropdownRect.top - 8
+      adjustedStyle += `max-height: ${maxHeight}px; overflow-y: auto; `
+    }
+
+    if (adjustedStyle) {
+      dropdown.style.cssText += adjustedStyle
+    }
+  }, [visible])
+
+  useEffect(() => {
+    if (visible) {
+      // 延迟调整位置，确保DOM已更新
+      const timer = setTimeout(adjustPosition, 0)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [visible, adjustPosition])
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -83,12 +137,19 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
 
     if (visible) {
       document.addEventListener('mousedown', handleClickOutside)
-    }
+      // 监听滚动和窗口大小变化
+      const handleResize = () => adjustPosition()
+      window.addEventListener('resize', handleResize)
+      window.addEventListener('scroll', handleResize, true)
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        window.removeEventListener('resize', handleResize)
+        window.removeEventListener('scroll', handleResize, true)
+      }
     }
-  }, [visible, onVisibleChange])
+    return undefined
+  }, [visible, onVisibleChange, adjustPosition])
 
   return (
     <div className="ai-dropdown" style={{ position: 'relative' }}>

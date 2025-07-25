@@ -635,7 +635,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
               {title || ''}
             </h4>
             {isEditing && (
-              <span style={{ marginLeft: 10, color: 'var(--semi-color-warning)' }}>*</span>
+              <span className="editing-indicator">*</span>
             )}
           </div>
           <div className="editor-right">

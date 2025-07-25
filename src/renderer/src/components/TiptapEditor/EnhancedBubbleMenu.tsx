@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import AiSelector from './AiSelector'
@@ -40,6 +40,60 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
 
+  // 边缘检测和位置调整
+  const adjustPosition = useCallback(() => {
+    if (!dropdownRef.current || !visible) return
+
+    const dropdown = dropdownRef.current
+    const editorWrapper = dropdown.closest('.block-editor-wrapper')
+    
+    if (!editorWrapper) return
+
+    const wrapperRect = editorWrapper.getBoundingClientRect()
+    const dropdownRect = dropdown.getBoundingClientRect()
+
+    let adjustedStyle = ''
+
+    // 检查右边界
+    if (dropdownRect.right > wrapperRect.right) {
+      const overflow = dropdownRect.right - wrapperRect.right
+      adjustedStyle += `transform: translateX(-${overflow}px); `
+    }
+
+    // 检查左边界
+    if (dropdownRect.left < wrapperRect.left) {
+      const overflow = wrapperRect.left - dropdownRect.left
+      adjustedStyle += `transform: translateX(${overflow}px); `
+    }
+
+    // 检查底部边界
+    if (dropdownRect.bottom > wrapperRect.bottom) {
+      // 如果下方空间不足，显示在上方
+      adjustedStyle += `top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; `
+    }
+
+    // 检查顶部边界（当显示在上方时）
+    if (dropdownRect.top < wrapperRect.top && adjustedStyle.includes('bottom: 100%')) {
+      // 如果上方也不足，恢复显示在下方但调整高度
+      adjustedStyle = adjustedStyle.replace('top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; ', '')
+      const maxHeight = wrapperRect.bottom - dropdownRect.top - 8
+      adjustedStyle += `max-height: ${maxHeight}px; overflow-y: auto; `
+    }
+
+    if (adjustedStyle) {
+      dropdown.style.cssText += adjustedStyle
+    }
+  }, [visible])
+
+  useEffect(() => {
+    if (visible) {
+      // 延迟调整位置，确保DOM已更新
+      const timer = setTimeout(adjustPosition, 0)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [visible, adjustPosition])
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -54,12 +108,19 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
     if (visible) {
       document.addEventListener('mousedown', handleClickOutside)
-    }
+      // 监听滚动和窗口大小变化
+      const handleResize = () => adjustPosition()
+      window.addEventListener('resize', handleResize)
+      window.addEventListener('scroll', handleResize, true)
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        window.removeEventListener('resize', handleResize)
+        window.removeEventListener('scroll', handleResize, true)
+      }
     }
-  }, [visible, onVisibleChange])
+    return undefined
+  }, [visible, onVisibleChange, adjustPosition])
 
   return (
     <div className="custom-dropdown" style={{ position: 'relative' }}>
@@ -134,6 +195,51 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
 
 const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false)
+  const bubbleMenuRef = useRef<HTMLDivElement>(null)
+  
+  // 边缘检测和动态定位
+  const adjustBubbleMenuPosition = useCallback(() => {
+    if (!bubbleMenuRef.current) return
+
+    const bubbleMenu = bubbleMenuRef.current
+    const editorWrapper = bubbleMenu.closest('.block-editor-wrapper')
+    
+    if (!editorWrapper) return
+
+    const wrapperRect = editorWrapper.getBoundingClientRect()
+    const menuRect = bubbleMenu.getBoundingClientRect()
+
+    // 检查是否超出右边界
+    if (menuRect.right > wrapperRect.right) {
+      const overflow = menuRect.right - wrapperRect.right
+      bubbleMenu.style.transform = `translateX(-${overflow + 8}px)`
+    }
+
+    // 检查是否超出左边界
+    if (menuRect.left < wrapperRect.left) {
+      const overflow = wrapperRect.left - menuRect.left
+      bubbleMenu.style.transform = `translateX(${overflow + 8}px)`
+    }
+  }, [])
+
+  useEffect(() => {
+    // 监听bubble menu的显示
+    const observer = new MutationObserver(() => {
+      if (bubbleMenuRef.current && bubbleMenuRef.current.offsetParent) {
+        // bubble menu变为可见时调整位置
+        setTimeout(adjustBubbleMenuPosition, 0)
+      }
+    })
+
+    if (bubbleMenuRef.current) {
+      observer.observe(bubbleMenuRef.current, {
+        attributes: true,
+        attributeFilter: ['style']
+      })
+    }
+
+    return () => observer.disconnect()
+  }, [adjustBubbleMenuPosition])
   
   const toggleLink = () => {
     const previousUrl = editor.getAttributes('link').href
@@ -166,7 +272,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
         return from !== to
       }}
     >
-      <div className="enhanced-bubble-menu">
+      <div className="enhanced-bubble-menu" ref={bubbleMenuRef}>
         <div className="bubble-menu-container">
           <AiSelector editor={editor} />
           <div className="divider" />
