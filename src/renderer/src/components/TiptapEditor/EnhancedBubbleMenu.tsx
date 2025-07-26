@@ -221,19 +221,37 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     
     if (from === to) return null
     
-    // 使用 Tiptap 的 posToDOMRect 获取准确的选中区域
-    const minPos = Math.min(from, to)
-    const maxPos = Math.max(from, to)
-    const startRect = posToDOMRect(editor.view, minPos, minPos)
-    const endRect = posToDOMRect(editor.view, maxPos, maxPos)
-    
-    // 计算选中区域的完整边界
-    const left = Math.min(startRect.left, endRect.left)
-    const right = Math.max(startRect.right, endRect.right)
-    const top = Math.min(startRect.top, endRect.top)
-    const bottom = Math.max(startRect.bottom, endRect.bottom)
-    
-    return new DOMRect(left, top, right - left, bottom - top)
+    try {
+      // 优先使用原生 Selection API 获取选区，这在双击选择整行时更准确
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+        const range = selection.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        
+        // 确保返回的矩形有效
+        if (rect.width > 0 && rect.height > 0) {
+          return rect
+        }
+      }
+      
+      // 回退到使用 Tiptap 的 posToDOMRect
+      const minPos = Math.min(from, to)
+      const maxPos = Math.max(from, to)
+      const startRect = posToDOMRect(editor.view, minPos, minPos)
+      const endRect = posToDOMRect(editor.view, maxPos, maxPos)
+      
+      // 计算选中区域的完整边界
+      const left = Math.min(startRect.left, endRect.left)
+      const right = Math.max(startRect.right, endRect.right)
+      const top = Math.min(startRect.top, endRect.top)
+      const bottom = Math.max(startRect.bottom, endRect.bottom)
+      
+      return new DOMRect(left, top, right - left, bottom - top)
+    } catch (error) {
+      // 如果出错，返回null避免崩溃
+      console.warn('Failed to get selection rect:', error)
+      return null
+    }
   }, [editor])
 
   // 计算 BubbleMenu 应该显示的位置
@@ -305,9 +323,13 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     const observer = new MutationObserver(() => {
       if (bubbleMenuRef.current && bubbleMenuRef.current.offsetParent) {
         // bubble menu变为可见时调整位置
-        setTimeout(() => {
-          adjustBubbleMenuPosition()
-        }, 0)
+        // 增加额外的延迟以确保双击选择后选区已稳定
+        const timeouts = [10]
+        timeouts.forEach(delay => {
+          setTimeout(() => {
+            adjustBubbleMenuPosition()
+          }, delay)
+        })
       }
     })
 
@@ -398,9 +420,30 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     <BubbleMenu 
       editor={editor} 
       options={bubbleMenuOptions}
-      shouldShow={({ from, to }) => {
-        // Only show when there is a text selection
-        return from !== to
+      shouldShow={({ editor, from, to }) => {
+        // 只在有文本选择时显示
+        if (from === to) return false
+        
+        // 检查选择是否有效
+        const selection = window.getSelection()
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+          return false
+        }
+        
+        // 检查选中内容是否在编辑器内
+        const range = selection.getRangeAt(0)
+        const editorElement = editor.view.dom
+        if (!editorElement.contains(range.commonAncestorContainer)) {
+          return false
+        }
+        
+        // 获取选中的文本内容，过滤空白内容
+        const selectedText = selection.toString().trim()
+        if (!selectedText) {
+          return false
+        }
+        
+        return true
       }}
     >
       <div className="enhanced-bubble-menu" ref={bubbleMenuRef}>
