@@ -7,6 +7,38 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-focus-ring-color: transparent !important;
+}
+
+.block-editor-wrapper:focus,
+.block-editor-wrapper:focus-visible,
+.block-editor-wrapper:focus-within,
+.block-editor-wrapper:active,
+.block-editor-wrapper:hover,
+.block-editor-wrapper[tabindex]:focus,
+.block-editor-wrapper[tabindex]:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 防止ESC键触发的焦点高亮 */
+.block-editor-wrapper *:focus,
+.block-editor-wrapper *:focus-visible,
+.block-editor-wrapper *:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 防止键盘导航时的边框高亮 */
+.block-editor-wrapper::-moz-focus-inner {
+  border: 0 !important;
+  outline: none !important;
 }
 
 /* 全局移除所有编辑器相关的边框和outline */
@@ -17,6 +49,32 @@
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
   -webkit-focus-ring-color: transparent !important;
+}
+
+/* 全局防止编辑器区域的焦点高亮 */
+.block-editor-wrapper *,
+.editor-container *,
+.tiptap-editor-content * {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-focus-ring-color: transparent !important;
+}
+
+/* 防止任何编辑器元素在获得焦点时显示边框 */
+.block-editor-wrapper *:focus,
+.block-editor-wrapper *:focus-visible,
+.block-editor-wrapper *:focus-within,
+.editor-container *:focus,
+.editor-container *:focus-visible,
+.editor-container *:focus-within,
+.tiptap-editor-content *:focus,
+.tiptap-editor-content *:focus-visible,
+.tiptap-editor-content *:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* 移除选中元素的边框 */
@@ -380,6 +438,31 @@
   /* 确保在Semi Layout Content中填满全部空间 */
   min-height: 0;
   flex: 1;
+  /* 防止焦点高亮 */
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-focus-ring-color: transparent !important;
+}
+
+/* 防止editor-container的所有焦点状态显示边框 */
+.editor-container:focus,
+.editor-container:focus-visible,
+.editor-container:focus-within,
+.editor-container:active,
+.editor-container:hover,
+.editor-container[tabindex]:focus,
+.editor-container[tabindex]:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 防止Firefox中的内部边框 */
+.editor-container::-moz-focus-inner {
+  border: 0 !important;
+  outline: none !important;
 }
 
 .editor-header {

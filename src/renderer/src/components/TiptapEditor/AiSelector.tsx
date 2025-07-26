@@ -135,8 +135,17 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
       }
     }
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && visible) {
+        event.preventDefault()
+        event.stopPropagation()
+        onVisibleChange(false)
+      }
+    }
+
     if (visible) {
       document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
       // 监听滚动和窗口大小变化
       const handleResize = () => adjustPosition()
       window.addEventListener('resize', handleResize)
@@ -144,6 +153,7 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
 
       return () => {
         document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleKeyDown)
         window.removeEventListener('resize', handleResize)
         window.removeEventListener('scroll', handleResize, true)
       }

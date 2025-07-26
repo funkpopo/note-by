@@ -106,8 +106,17 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       }
     }
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && visible) {
+        event.preventDefault()
+        event.stopPropagation()
+        onVisibleChange(false)
+      }
+    }
+
     if (visible) {
       document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
       // 监听滚动和窗口大小变化
       const handleResize = () => adjustPosition()
       window.addEventListener('resize', handleResize)
@@ -115,6 +124,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
       return () => {
         document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleKeyDown)
         window.removeEventListener('resize', handleResize)
         window.removeEventListener('scroll', handleResize, true)
       }
@@ -245,6 +255,35 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
 
     return () => observer.disconnect()
   }, [adjustBubbleMenuPosition])
+
+  // 添加ESC键处理来关闭BubbleMenu
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        // 检查BubbleMenu是否可见
+        const selection = editor.state.selection
+        const { from, to } = selection
+        
+        if (from !== to) { // BubbleMenu可见时（有文本选择）
+          event.preventDefault()
+          event.stopPropagation()
+          // 清除选择，这会隐藏BubbleMenu
+          editor.commands.focus()
+          editor.commands.setTextSelection(to)
+          
+          // 如果有下拉菜单打开，也要关闭
+          if (showMoreOptions) {
+            setShowMoreOptions(false)
+          }
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [editor, showMoreOptions])
   
   const toggleLink = () => {
     const previousUrl = editor.getAttributes('link').href

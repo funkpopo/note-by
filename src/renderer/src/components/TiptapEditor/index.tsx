@@ -493,6 +493,26 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
           saveFileContent()
         }
       }
+      
+      // 防止ESC键触发焦点高亮，但优先让BubbleMenu处理ESC
+      if (e.key === 'Escape') {
+        // 检查是否有文本选择（BubbleMenu可见）
+        if (editorRef.current) {
+          const selection = editorRef.current.state.selection
+          const { from, to } = selection
+          
+          if (from !== to) {
+            // 有文本选择时，让BubbleMenu处理ESC键
+            return
+          }
+        }
+        
+        // 没有文本选择时，才处理焦点高亮
+        e.preventDefault()
+        if (document.activeElement) {
+          (document.activeElement as HTMLElement).blur()
+        }
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
