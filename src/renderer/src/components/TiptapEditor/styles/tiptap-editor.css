@@ -3,6 +3,10 @@
   position: relative;
   height: 100%;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* 全局移除所有编辑器相关的边框和outline */
@@ -373,6 +377,9 @@
   height: 100%;
   width: 100%;
   background: var(--semi-color-bg-0);
+  /* 确保在Semi Layout Content中填满全部空间 */
+  min-height: 0;
+  flex: 1;
 }
 
 .editor-header {

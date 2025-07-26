@@ -197,10 +197,12 @@ const App: React.FC = () => {
             style={{
               height: '100vh',
               width: '100%',
-              padding: 24,
+              padding: 0,
               background: 'var(--semi-color-bg-0)',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
             {renderContent()}

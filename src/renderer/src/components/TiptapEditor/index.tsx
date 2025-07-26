@@ -707,11 +707,11 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
         </div>
       )}
 
-      <div
+      <div className="editor-content"
         style={{
           flex: 1,
           overflow: currentFile ? 'auto' : 'hidden',
-          height: 'calc(100% - 60px)'
+          minHeight: 0
         }}
       >
         {isLoading ? (

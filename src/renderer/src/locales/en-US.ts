@@ -105,6 +105,108 @@ export interface ExtendedDictionary {
       titleUpdateFailed: string
     }
   }
+  editor?: {
+    actions: {
+      save: string
+      export: string
+      exportPdf: string
+      exportDocx: string
+      exportHtml: string
+      createFile: string
+      createFolder: string
+    }
+    status: {
+      saving: string
+      autoSaving: string
+      saved: string
+      editing: string
+      loaded: string
+    }
+    placeholder: {
+      content: string
+      title: string
+    }
+    notifications: {
+      saveSuccess: string
+      saveFailed: string
+      exportSuccess: string
+      exportFailed: string
+      loadFailed: string
+      noFileSelected: string
+      createSuccess: string
+      createFailed: string
+      restoreSuccess: string
+      restoreFailed: string
+      conflictDetected: string
+      memoryWarning: string
+      memoryCritical: string
+    }
+    shortcuts: {
+      save: string
+      title: string
+    }
+    prompts: {
+      noFile: string
+      welcomeMessage: string
+      imageUrl: string
+      linkUrl: string
+    }
+    menu: {
+      aiCommands: {
+        improve: string
+        simplify: string
+        expand: string
+        fixGrammar: string
+        translateToEn: string
+        translateToCn: string
+        summarize: string
+        continue: string
+        processing: string
+      }
+      slashCommands: {
+        heading1: string
+        heading2: string
+        heading3: string
+        bold: string
+        italic: string
+        underline: string
+        bulletList: string
+        orderedList: string
+        quote: string
+        codeBlock: string
+        image: string
+        link: string
+        noCommands: string
+        placeholder: string
+      }
+      bubbleMenu: {
+        unorderedList: string
+        orderedList: string
+        quote: string
+        divider: string
+        insertImage: string
+        ai: string
+      }
+    }
+    codeBlock: {
+      copied: string
+      copy: string
+    }
+    model: {
+      loading: string
+      select: string
+      noModels: string
+      manage: string
+      thinking: string
+    }
+    errors: {
+      apiNotConfigured: string
+      modelNotFound: string
+      incompleteConfig: string
+      processingFailed: string
+      noTextSelected: string
+    }
+  }
 }
 
 export const enUS: ExtendedDictionary = {
@@ -216,6 +318,109 @@ export const enUS: ExtendedDictionary = {
       notFound: 'No chat history found',
       titleUpdated: 'Chat title updated',
       titleUpdateFailed: 'Failed to update chat title'
+    }
+  },
+  // Editor Interface Internationalization
+  editor: {
+    actions: {
+      save: 'Save',
+      export: 'Export',
+      exportPdf: 'Export PDF',
+      exportDocx: 'Export DOCX',
+      exportHtml: 'Export HTML',
+      createFile: 'Create File',
+      createFolder: 'Create Folder'
+    },
+    status: {
+      saving: 'Saving...',
+      autoSaving: 'Auto saving...',
+      saved: 'Saved',
+      editing: 'Editing',
+      loaded: 'Loaded'
+    },
+    placeholder: {
+      content: 'Start typing content...',
+      title: 'File title'
+    },
+    notifications: {
+      saveSuccess: 'File saved successfully',
+      saveFailed: 'Save failed',
+      exportSuccess: 'Export successful',
+      exportFailed: 'Export failed',
+      loadFailed: 'Failed to load file content',
+      noFileSelected: 'No file selected',
+      createSuccess: 'File created successfully',
+      createFailed: 'Failed to create file',
+      restoreSuccess: 'History version restored',
+      restoreFailed: 'Failed to restore history version',
+      conflictDetected: 'File conflict detected',
+      memoryWarning: 'Memory usage warning',
+      memoryCritical: 'Critical memory usage! Cleaning up...'
+    },
+    shortcuts: {
+      save: 'Use Ctrl+S to save file',
+      title: 'Tips & Shortcuts:'
+    },
+    prompts: {
+      noFile: 'Please select a file from the left sidebar to start editing, or create a new Markdown file',
+      welcomeMessage: 'Supports code block highlighting and Markdown formatting',
+      imageUrl: 'Enter image URL:',
+      linkUrl: 'Enter link URL:'
+    },
+    menu: {
+      aiCommands: {
+        improve: 'Improve Writing',
+        simplify: 'Simplify Content',
+        expand: 'Expand Content',
+        fixGrammar: 'Fix Grammar',
+        translateToEn: 'Translate to English',
+        translateToCn: 'Translate to Chinese',
+        summarize: 'Summarize',
+        continue: 'Continue Writing',
+        processing: 'Processing'
+      },
+      slashCommands: {
+        heading1: 'Large Heading',
+        heading2: 'Medium Heading',
+        heading3: 'Small Heading',
+        bold: 'Bold',
+        italic: 'Italic',
+        underline: 'Underline',
+        bulletList: 'Bullet List',
+        orderedList: 'Ordered List',
+        quote: 'Quote',
+        codeBlock: 'Code Block',
+        image: 'Insert Image',
+        link: 'Insert Link',
+        noCommands: 'No matching commands found',
+        placeholder: 'Type command...'
+      },
+      bubbleMenu: {
+        unorderedList: 'Bullet List',
+        orderedList: 'Ordered List',
+        quote: 'Quote',
+        divider: 'Divider',
+        insertImage: 'Insert Image',
+        ai: 'AI'
+      }
+    },
+    codeBlock: {
+      copied: 'Copied',
+      copy: 'Copy'
+    },
+    model: {
+      loading: 'Loading...',
+      select: 'Select Model',
+      noModels: 'No models available',
+      manage: 'Manage Models...',
+      thinking: 'Thinking Model'
+    },
+    errors: {
+      apiNotConfigured: 'Please configure AI API in settings first',
+      modelNotFound: 'Specified AI model configuration not found',
+      incompleteConfig: 'AI API configuration incomplete, please check settings',
+      processingFailed: 'AI processing failed',
+      noTextSelected: 'Please select text to process first'
     }
   }
 }
