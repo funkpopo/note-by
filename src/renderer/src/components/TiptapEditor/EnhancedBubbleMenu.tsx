@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
+import { posToDOMRect } from '@tiptap/core'
 import AiSelector from './AiSelector'
 import { 
   FiBold, 
@@ -210,8 +211,55 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
 
 const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false)
+  const [placement, setPlacement] = useState<'top-start' | 'bottom-start'>('bottom-start')
   const bubbleMenuRef = useRef<HTMLDivElement>(null)
   
+  // 获取选中区域的边界矩形
+  const getSelectionRect = useCallback(() => {
+    const { state } = editor
+    const { from, to } = state.selection
+    
+    if (from === to) return null
+    
+    // 使用 Tiptap 的 posToDOMRect 获取准确的选中区域
+    const minPos = Math.min(from, to)
+    const maxPos = Math.max(from, to)
+    const startRect = posToDOMRect(editor.view, minPos, minPos)
+    const endRect = posToDOMRect(editor.view, maxPos, maxPos)
+    
+    // 计算选中区域的完整边界
+    const left = Math.min(startRect.left, endRect.left)
+    const right = Math.max(startRect.right, endRect.right)
+    const top = Math.min(startRect.top, endRect.top)
+    const bottom = Math.max(startRect.bottom, endRect.bottom)
+    
+    return new DOMRect(left, top, right - left, bottom - top)
+  }, [editor])
+
+  // 计算 BubbleMenu 应该显示的位置
+  const calculatePlacement = useCallback(() => {
+    const selectionRect = getSelectionRect()
+    if (!selectionRect) return 'bottom-start'
+    
+    const editorWrapper = document.querySelector('.block-editor-wrapper')
+    if (!editorWrapper) return 'bottom-start'
+    
+    const wrapperRect = editorWrapper.getBoundingClientRect()
+    const menuHeight = 48 // BubbleMenu 的估计高度
+    const offset = 8 // 与选中内容的间距
+    
+    // 计算可用空间
+    const spaceBelow = wrapperRect.bottom - selectionRect.bottom
+    const spaceAbove = selectionRect.top - wrapperRect.top
+    
+    // 如果下方空间不足且上方有足够空间，则显示在上方
+    if (spaceBelow < menuHeight + offset && spaceAbove > menuHeight + offset) {
+      return 'top-start'
+    }
+    
+    return 'bottom-start'
+  }, [getSelectionRect])
+
   // 边缘检测和动态定位
   const adjustBubbleMenuPosition = useCallback(() => {
     if (!bubbleMenuRef.current) return
@@ -224,25 +272,42 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     const wrapperRect = editorWrapper.getBoundingClientRect()
     const menuRect = bubbleMenu.getBoundingClientRect()
 
+    let transformX = 0
+
     // 检查是否超出右边界
     if (menuRect.right > wrapperRect.right) {
       const overflow = menuRect.right - wrapperRect.right
-      bubbleMenu.style.transform = `translateX(-${overflow + 8}px)`
+      transformX = -(overflow + 8)
     }
 
     // 检查是否超出左边界
     if (menuRect.left < wrapperRect.left) {
       const overflow = wrapperRect.left - menuRect.left
-      bubbleMenu.style.transform = `translateX(${overflow + 8}px)`
+      transformX = overflow + 8
     }
-  }, [])
+
+    // 应用水平变换
+    if (transformX !== 0) {
+      bubbleMenu.style.transform = `translateX(${transformX}px)`
+    } else {
+      bubbleMenu.style.transform = ''
+    }
+
+    // 更新 placement
+    const newPlacement = calculatePlacement()
+    if (newPlacement !== placement) {
+      setPlacement(newPlacement)
+    }
+  }, [calculatePlacement, placement])
 
   useEffect(() => {
     // 监听bubble menu的显示
     const observer = new MutationObserver(() => {
       if (bubbleMenuRef.current && bubbleMenuRef.current.offsetParent) {
         // bubble menu变为可见时调整位置
-        setTimeout(adjustBubbleMenuPosition, 0)
+        setTimeout(() => {
+          adjustBubbleMenuPosition()
+        }, 0)
       }
     })
 
@@ -255,6 +320,25 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
 
     return () => observer.disconnect()
   }, [adjustBubbleMenuPosition])
+
+  // 监听选择变化来更新 placement
+  useEffect(() => {
+    const updatePlacement = () => {
+      const newPlacement = calculatePlacement()
+      if (newPlacement !== placement) {
+        setPlacement(newPlacement)
+      }
+    }
+
+    // 监听编辑器的选择变化
+    editor.on('selectionUpdate', updatePlacement)
+    editor.on('update', updatePlacement)
+
+    return () => {
+      editor.off('selectionUpdate', updatePlacement)
+      editor.off('update', updatePlacement)
+    }
+  }, [editor, calculatePlacement, placement])
 
   // 添加ESC键处理来关闭BubbleMenu
   useEffect(() => {
@@ -304,13 +388,16 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }
 
+  // 使用 useMemo 优化 BubbleMenu 的 options
+  const bubbleMenuOptions = useMemo(() => ({
+    offset: 8,
+    placement: placement
+  }), [placement])
+
   return (
     <BubbleMenu 
       editor={editor} 
-      options={{ 
-        offset: 6,
-        placement: 'top',
-      }}
+      options={bubbleMenuOptions}
       shouldShow={({ from, to }) => {
         // Only show when there is a text selection
         return from !== to

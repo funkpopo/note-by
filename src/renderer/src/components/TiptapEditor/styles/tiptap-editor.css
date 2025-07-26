@@ -185,6 +185,9 @@
   font-family: inherit;
   color: var(--semi-color-text-0);
   background: var(--semi-color-bg-0);
+  /* 添加左侧内边距以解决内容距离容器边缘过近的问题 */
+  padding-left: 24px;
+  padding-right: 24px;
   
   /* 段落间距 */
   p {
