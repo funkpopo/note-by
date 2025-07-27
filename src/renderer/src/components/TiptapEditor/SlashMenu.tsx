@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
+import ReactDOM from 'react-dom'
 import { 
   FiBold, 
   FiItalic, 
@@ -17,10 +18,14 @@ interface SlashMenuProps {
   isOpen: boolean
   onClose: () => void
   onOpen: () => void
+  position?: { top: number; left: number }
 }
 
-const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose }) => {
+const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position }) => {
   const [commandFilter, setCommandFilter] = useState('')
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const menuRef = useRef<HTMLDivElement>(null)
   
   const commands = [
     {
@@ -113,10 +118,22 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose }) => {
   )
 
   const handleCommand = useCallback((command: () => void) => {
+    // 先删除 "/" 字符
+    const { selection } = editor.state
+    const { $from } = selection
+    const tr = editor.state.tr
+    
+    // 删除 "/" 字符
+    if ($from.pos > 0) {
+      tr.delete($from.pos - 1, $from.pos)
+      editor.view.dispatch(tr)
+    }
+    
+    // 执行命令
     command()
     onClose()
     setCommandFilter('')
-  }, [onClose])
+  }, [editor, onClose])
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -126,17 +143,110 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose }) => {
       if (e.key === 'Escape') {
         onClose()
         setCommandFilter('')
+        setSelectedIndex(0)
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedIndex((prevIndex) => 
+          (prevIndex + 1) % filteredCommands.length
+        )
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedIndex((prevIndex) => 
+          prevIndex === 0 ? filteredCommands.length - 1 : prevIndex - 1
+        )
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        if (filteredCommands[selectedIndex]) {
+          handleCommand(filteredCommands[selectedIndex].command)
+        }
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose, selectedIndex, filteredCommands, handleCommand])
+
+  // 重置选中索引当过滤器改变时
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [commandFilter])
+
+  // Handle click outside
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose()
+        setCommandFilter('')
+        setSelectedIndex(0)
+      }
+    }
+
+    // 延迟添加事件监听器，避免立即触发
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('click', handleClickOutside)
+    }
   }, [isOpen, onClose])
+
+  // 计算菜单位置
+  useEffect(() => {
+    if (!isOpen || !menuRef.current || !position) return
+
+    const menu = menuRef.current
+    const menuRect = menu.getBoundingClientRect()
+    const editorElement = editor.view.dom
+    const editorRect = editorElement.getBoundingClientRect()
+    
+    // 获取编辑器的滚动容器
+    const scrollContainer = editorElement.closest('.editor-content') || editorElement.parentElement
+    const scrollTop = scrollContainer?.scrollTop || 0
+    
+    // 基础位置（光标下方）
+    let top = position.top + 30 - scrollTop // 向下偏移30px避免遮挡当前行
+    let left = position.left
+    
+    // 边缘检测
+    // 右边界检测
+    if (left + menuRect.width > editorRect.right) {
+      left = editorRect.right - menuRect.width - 10
+    }
+    
+    // 左边界检测
+    if (left < editorRect.left) {
+      left = editorRect.left + 10
+    }
+    
+    // 下边界检测 - 如果菜单超出编辑器底部，显示在光标上方
+    if (top + menuRect.height > editorRect.bottom) {
+      top = position.top - menuRect.height - 10 - scrollTop
+    }
+    
+    // 上边界检测
+    if (top < editorRect.top) {
+      top = editorRect.top + 10
+    }
+    
+    setMenuPosition({ top, left })
+  }, [isOpen, position, editor])
 
   if (!isOpen) return null
 
-  return (
-    <div className="slash-menu">
+  const menuContent = (
+    <div 
+      ref={menuRef}
+      className="slash-menu" 
+      style={{
+        position: 'fixed',
+        top: `${menuPosition.top}px`,
+        left: `${menuPosition.left}px`,
+        zIndex: 1000
+      }}>
       <div className="slash-menu-search">
         <input
           type="text"
@@ -150,8 +260,9 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose }) => {
         {filteredCommands.map((item, index) => (
           <button
             key={index}
-            className="slash-menu-item"
+            className={`slash-menu-item ${index === selectedIndex ? 'selected' : ''}`}
             onClick={() => handleCommand(item.command)}
+            onMouseEnter={() => setSelectedIndex(index)}
           >
             <div className="slash-menu-item-icon">
               {item.icon}
@@ -170,6 +281,9 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose }) => {
       </div>
     </div>
   )
+
+  // 使用 Portal 渲染到 body
+  return ReactDOM.createPortal(menuContent, document.body)
 }
 
 export default SlashMenu

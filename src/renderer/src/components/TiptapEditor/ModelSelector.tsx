@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Dropdown, Button, Toast } from '@douyinfe/semi-ui'
-import { IconBolt, IconChevronDown } from '@douyinfe/semi-icons'
+import { IconChevronDown } from '@douyinfe/semi-icons'
 
 interface AiApiConfig {
   id: string
@@ -106,7 +106,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onModelChange, currentMod
       }
     >
       <Button
-        icon={<IconBolt />}
         suffix={<IconChevronDown />}
         loading={loading}
         disabled={loading}

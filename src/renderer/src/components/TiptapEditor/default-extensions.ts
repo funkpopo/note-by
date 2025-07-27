@@ -31,9 +31,13 @@ import xml from 'highlight.js/lib/languages/xml'
 import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
+import markdown from 'highlight.js/lib/languages/markdown'
+import yaml from 'highlight.js/lib/languages/yaml'
+import dockerfile from 'highlight.js/lib/languages/dockerfile'
+import plaintext from 'highlight.js/lib/languages/plaintext'
 import AiPlaceholder from './AiPlaceholder'
 import CodeBlockComponent from './CodeBlockComponent'
-import { Node, ReactNodeViewRenderer } from '@tiptap/react'
+import { ReactNodeViewRenderer } from '@tiptap/react'
 import SlashCommand from './SlashCommand'
 
 // 创建lowlight实例
@@ -42,8 +46,10 @@ const lowlight = createLowlight()
 // 注册语言
 lowlight.register('javascript', javascript)
 lowlight.register('js', javascript)
+lowlight.register('jsx', javascript)
 lowlight.register('typescript', typescript)
 lowlight.register('ts', typescript)
+lowlight.register('tsx', typescript)
 lowlight.register('python', python)
 lowlight.register('py', python)
 lowlight.register('java', java)
@@ -63,43 +69,21 @@ lowlight.register('sql', sql)
 lowlight.register('bash', bash)
 lowlight.register('sh', bash)
 lowlight.register('shell', bash)
+lowlight.register('markdown', markdown)
+lowlight.register('md', markdown)
+lowlight.register('yaml', yaml)
+lowlight.register('yml', yaml)
+lowlight.register('dockerfile', dockerfile)
+lowlight.register('docker', dockerfile)
+lowlight.register('plaintext', plaintext)
+lowlight.register('text', plaintext)
+lowlight.register('txt', plaintext)
 
 // 自定义代码块节点
-const CustomCodeBlock = Node.create({
+const CustomCodeBlock = CodeBlockLowlight.extend({
   name: 'codeBlockComponent',
-  group: 'block',
-  content: 'text*',
-  marks: '',
-  code: true,
-  defining: true,
-  isolating: true,
-  addAttributes() {
-    return {
-      language: {
-        default: 'javascript',
-        parseHTML: element => {
-          const { language } = element.dataset
-          return language
-        },
-        rendered: false,
-      },
-    }
-  },
-  parseHTML() {
-    return [
-      {
-        tag: 'pre',
-        preserveWhitespace: 'full',
-      },
-    ]
-  },
-  renderHTML({ HTMLAttributes }) {
-    return ['pre', HTMLAttributes, ['code', { class: `language-${HTMLAttributes.language}` }, 0]]
-  },
   addNodeView() {
-    return () => {
-      return ReactNodeViewRenderer(CodeBlockComponent)
-    }
+    return ReactNodeViewRenderer(CodeBlockComponent)
   },
 })
 
@@ -139,11 +123,11 @@ export const defaultExtensions = [
 
   TextStyle,
 
-  CodeBlockLowlight.configure({
+  CustomCodeBlock.configure({
     lowlight,
     defaultLanguage: 'javascript',
     HTMLAttributes: {
-      class: 'code-block',
+      class: 'code-block-component',
     },
   }),
 
@@ -180,8 +164,6 @@ export const defaultExtensions = [
   }),
   
   AiPlaceholder,
-  
-  CustomCodeBlock,
   
   SlashCommand,
 ]

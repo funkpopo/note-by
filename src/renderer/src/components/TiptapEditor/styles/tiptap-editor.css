@@ -87,7 +87,6 @@
 
 /* Slash Menu Styles */
 .slash-menu {
-  position: absolute;
   z-index: 1000;
   background: var(--semi-color-bg-2);
   border: 1px solid var(--semi-color-border);
@@ -98,6 +97,18 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  animation: slashMenuSlideIn 0.15s ease-out;
+}
+
+@keyframes slashMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .slash-menu-search {
@@ -141,6 +152,10 @@
 
 .slash-menu-item:hover {
   background: var(--semi-color-fill-0);
+}
+
+.slash-menu-item.selected {
+  background: var(--semi-color-fill-1);
 }
 
 .slash-menu-item-icon {
@@ -239,29 +254,46 @@
     overflow: hidden;
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 0.875rem;
-    line-height: 1.5;
+    line-height: 1.75;
     
     pre {
       margin: 0;
-      padding: 0;
+      padding: 1rem;
       background: transparent;
       color: var(--semi-color-text-0);
+      overflow-x: auto;
       
       code {
         background: transparent;
         padding: 0;
         color: inherit;
         font-size: inherit;
+        line-height: 1.75;
+        display: block;
       }
     }
     
     /* 语法高亮 */
-    .hljs-keyword { color: var(--semi-color-primary); }
+    .hljs-keyword { color: var(--semi-color-primary); font-weight: 500; }
     .hljs-string { color: var(--semi-color-success); }
     .hljs-number { color: var(--semi-color-warning); }
     .hljs-comment { color: var(--semi-color-text-2); font-style: italic; }
     .hljs-function { color: var(--semi-color-info); }
     .hljs-variable { color: var(--semi-color-text-0); }
+    .hljs-class { color: var(--semi-color-primary); font-weight: 500; }
+    .hljs-title { color: var(--semi-color-info); font-weight: 500; }
+    .hljs-params { color: var(--semi-color-text-1); }
+    .hljs-built_in { color: var(--semi-color-tertiary); }
+    .hljs-literal { color: var(--semi-color-warning); }
+    .hljs-type { color: var(--semi-color-primary); }
+    .hljs-selector-class { color: var(--semi-color-primary); }
+    .hljs-selector-id { color: var(--semi-color-info); }
+    .hljs-selector-tag { color: var(--semi-color-success); }
+    .hljs-attribute { color: var(--semi-color-warning); }
+    .hljs-symbol { color: var(--semi-color-tertiary); }
+    .hljs-meta { color: var(--semi-color-text-2); }
+    .hljs-name { color: var(--semi-color-primary); }
+    .hljs-tag { color: var(--semi-color-success); }
   }
   
   /* 代码块头部 */
@@ -283,6 +315,30 @@
   .code-block-actions {
     display: flex;
     gap: 0.5rem;
+  }
+  
+  .language-selector-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.875rem;
+    background: var(--semi-color-bg-1);
+    color: var(--semi-color-text-0);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    
+    &:hover {
+      background: var(--semi-color-fill-1);
+      transform: translateY(-1px);
+    }
+    
+    .language-label {
+      font-family: inherit;
+    }
   }
   
   .code-block-button {
@@ -634,9 +690,13 @@
 /* 暗色主题适配 */
 .semi-theme-mode-dark .tiptap-editor-content {
   /* 代码块在暗色主题下的特殊样式 */
-  .code-block {
-    background: rgba(255, 255, 255, 0.05);
+  .code-block, .code-block-component {
+    background: rgba(30, 33, 41, 0.6);
     border-color: rgba(255, 255, 255, 0.1);
+    
+    pre {
+      background: rgba(0, 0, 0, 0.2);
+    }
   }
   
   /* 表格在暗色主题下的样式 */

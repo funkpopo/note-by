@@ -96,6 +96,7 @@ interface BlockEditorProps {
     onUpdate,
   }: BlockEditorProps) => {
     const [showSlashMenu, setShowSlashMenu] = useState(false)
+    const [slashMenuPosition, setSlashMenuPosition] = useState<{ top: number; left: number } | undefined>()
     const editor = useEditor({
     extensions: [
       ...defaultExtensions,
@@ -127,9 +128,13 @@ interface BlockEditorProps {
       const textBefore = $from.parent.textBetween(Math.max(0, $from.parentOffset - 1), $from.parentOffset, null, '\uFFFC')
       
       if (textBefore === '/') {
+        // 获取光标位置
+        const coords = editor.view.coordsAtPos($from.pos)
+        setSlashMenuPosition({ top: coords.top, left: coords.left })
         setShowSlashMenu(true)
       } else if (showSlashMenu && textBefore !== '/') {
         setShowSlashMenu(false)
+        setSlashMenuPosition(undefined)
       }
     },
     onContentError: ({ error }) => {
@@ -168,8 +173,12 @@ interface BlockEditorProps {
             <SlashMenu 
               editor={editor} 
               isOpen={showSlashMenu}
-              onClose={() => setShowSlashMenu(false)}
+              onClose={() => {
+                setShowSlashMenu(false)
+                setSlashMenuPosition(undefined)
+              }}
               onOpen={() => setShowSlashMenu(true)}
+              position={slashMenuPosition}
             />
           </>
         )}
@@ -200,9 +209,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
   // 智能保存相关实例
   const smartDebouncerRef = useRef<SmartDebouncer>(
     new SmartDebouncer({
-      fastTypingDelay: 1500,
-      normalDelay: 2500,
-      pauseDelay: 800,
+      fastTypingDelay: 3000,
+      normalDelay: 3000,
+      pauseDelay: 3000,
       minContentChange: 5
     })
   )
