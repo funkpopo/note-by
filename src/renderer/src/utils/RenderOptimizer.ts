@@ -36,9 +36,9 @@ class RenderOptimizer {
   
   // 配置
   private priorityConfig: RenderPriorityConfig = {
-    high: { timeout: 16, maxConcurrent: 3 }, // 1帧内完成
-    medium: { timeout: 33, maxConcurrent: 2 }, // 2帧内完成
-    low: { timeout: 100, maxConcurrent: 1 } // 空闲时完成
+    high: { timeout: 5000, maxConcurrent: 3 }, // 5秒超时
+    medium: { timeout: 10000, maxConcurrent: 2 }, // 10秒超时
+    low: { timeout: 30000, maxConcurrent: 1 } // 30秒超时
   }
 
   private batchConfig: BatchConfig = {
