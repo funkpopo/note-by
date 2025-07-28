@@ -142,7 +142,7 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
                 )
                 
                 // 删除加载文本
-                const { from, to } = editor.state.selection
+                const { from } = editor.state.selection
                 const contentBefore = editor.state.doc.textBetween(Math.max(0, from - loadingText.length), from)
                 if (contentBefore === loadingText) {
                   editor.chain().focus()
@@ -166,7 +166,7 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
                 alert('图片上传失败，请重试')
                 
                 // 删除加载文本
-                const { from, to } = editor.state.selection
+                const { from } = editor.state.selection
                 const contentBefore = editor.state.doc.textBetween(Math.max(0, from - loadingText.length), from)
                 if (contentBefore === loadingText) {
                   editor.chain().focus()
@@ -179,7 +179,7 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
             reader.onerror = () => {
               alert('读取文件失败')
               // 删除加载文本
-              const { from, to } = editor.state.selection
+              const { from } = editor.state.selection
               const contentBefore = editor.state.doc.textBetween(Math.max(0, from - loadingText.length), from)
               if (contentBefore === loadingText) {
                 editor.chain().focus()

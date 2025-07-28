@@ -8,6 +8,7 @@ import { defaultExtensions } from './default-extensions'
 import { cn } from './utils'
 import './styles/tiptap-editor.css'
 import EnhancedBubbleMenu from './EnhancedBubbleMenu'
+import TableBubbleMenu from './TableBubbleMenu'
 import ModelSelector from './ModelSelector'
 import SlashMenu from './SlashMenu'
 import { SmartDebouncer } from '../../utils/SmartDebouncer'
@@ -26,7 +27,7 @@ const preprocessMarkdownContent = (content: string): string => {
   // 处理图片语法: ![alt](src "title") 或 ![alt](src)
   processedContent = processedContent.replace(
     /!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)/g,
-    (match, alt, src, title) => {
+    (_, alt, src, title) => {
       // 清理alt text中的特殊字符
       const cleanAlt = alt.replace(/"/g, '&quot;')
       const cleanTitle = title ? title.replace(/"/g, '&quot;') : cleanAlt
@@ -203,6 +204,7 @@ interface BlockEditorProps {
         {editor && (
           <>
             <EnhancedBubbleMenu editor={editor} />
+            <TableBubbleMenu editor={editor} />
             <SlashMenu 
               editor={editor} 
               isOpen={showSlashMenu}

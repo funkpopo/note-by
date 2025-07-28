@@ -897,10 +897,209 @@ div[data-tippy-root] > div {
   align-items: center !important;
   gap: 3px !important;
   white-space: nowrap !important;
-  padding: 0 !important;
-  width: fit-content !important;
-  min-width: fit-content !important;
-  max-width: 100% !important;
+}
+
+/* Table Bubble Menu Styles */
+.table-bubble-menu {
+  font-family: var(--semi-font-family-regular);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* 自定义滚动条样式 */
+.table-bubble-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.table-bubble-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-bubble-menu::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-border);
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.table-bubble-menu::-webkit-scrollbar-thumb:hover {
+  background-color: var(--semi-color-text-3);
+}
+
+/* Firefox滚动条样式 */
+.table-bubble-menu {
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-border) transparent;
+}
+
+.table-bubble-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--semi-color-text-0);
+  text-align: left;
+  min-height: 24px;
+  border-radius: 4px;
+  font-family: var(--semi-font-family-regular);
+}
+
+.table-bubble-menu-item:hover:not(:disabled) {
+  background: var(--semi-color-fill-1);
+}
+
+.table-bubble-menu-item:active:not(:disabled) {
+  background: var(--semi-color-fill-2);
+}
+
+.table-bubble-menu-item:disabled {
+  color: var(--semi-color-text-3);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@keyframes tableMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Table styles and multi-selection support */
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  overflow: hidden;
+  margin: 16px 0;
+  border-radius: 8px;
+  border: 2px solid var(--semi-color-border);
+  position: relative;
+}
+
+.ProseMirror table td,
+.ProseMirror table th {
+  min-width: 1em;
+  border: 1px solid var(--semi-color-border);
+  padding: 8px 12px;
+  vertical-align: top;
+  position: relative;
+  background: var(--semi-color-bg-0);
+  box-sizing: border-box;
+}
+
+.ProseMirror table th {
+  font-weight: bold;
+  text-align: left;
+  background: var(--semi-color-fill-0);
+  color: var(--semi-color-text-0);
+}
+
+/* Table resize handles */
+.ProseMirror .resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
+}
+
+/* Column resize handle */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: var(--semi-color-primary);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ProseMirror table:hover .column-resize-handle {
+  opacity: 0.6;
+}
+
+.ProseMirror .column-resize-handle:hover {
+  opacity: 1;
+}
+
+/* Selected cells styling */
+.ProseMirror .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--semi-color-primary-light-default);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Table node selection */
+.ProseMirror table.ProseMirror-selectednode {
+  outline: 2px solid var(--semi-color-primary);
+  outline-offset: 1px;
+}
+
+/* Improved cell hover effect */
+.ProseMirror table td:hover,
+.ProseMirror table th:hover {
+  background: var(--semi-color-fill-0);
+}
+
+/* Table focus styling */
+.ProseMirror table:focus-within {
+  box-shadow: 0 0 0 2px var(--semi-color-primary-light-default);
+}
+
+/* Multi-selection indicators */
+.ProseMirror .table-cell-selected {
+  background: var(--semi-color-primary-light-default) !important;
+  opacity: 0.8;
+}
+
+/* Table controls positioning */
+.table-controls {
+  position: absolute;
+  top: -32px;
+  left: 0;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+
+.ProseMirror table:hover + .table-controls,
+.table-controls:hover {
+  opacity: 1;
+}
+
+/* Table node view styles */
+.table-node-wrapper {
+  position: relative;
+}
+
+.table-container.hovered .table-controls {
+  opacity: 1;
+}
+
+.table-container.dragging {
+  opacity: 0.8;
+}
+
+.table-control-button:hover {
+  background: var(--semi-color-fill-0) !important;
 }
 
 /* 为了flex布局的兼容性，移除多余的内部样式 */

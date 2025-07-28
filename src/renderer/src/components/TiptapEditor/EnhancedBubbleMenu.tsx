@@ -355,9 +355,23 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
         setPlacement(newPlacement)
       }
       
-      // 检查是否在表格中
-      const tableActive = editor.isActive('table')
-      setIsInTable(tableActive)
+      // 检查是否在表格中 - 更严格的检查
+      const selection = editor.state.selection
+      const { $from } = selection
+      
+      // 检查当前节点或父节点是否是表格相关节点
+      let isInTableCell = false
+      
+      // 向上遍历节点树检查是否在表格中
+      for (let depth = $from.depth; depth >= 0; depth--) {
+        const nodeAtDepth = $from.node(depth)
+        if (nodeAtDepth.type.name === 'tableCell' || nodeAtDepth.type.name === 'tableHeader') {
+          isInTableCell = true
+          break
+        }
+      }
+      
+      setIsInTable(isInTableCell)
     }
 
     // 监听编辑器的选择变化
