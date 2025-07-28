@@ -211,6 +211,10 @@ interface BlockEditorProps {
               onClose={() => {
                 setShowSlashMenu(false)
                 setSlashMenuPosition(undefined)
+                // 确保编辑器重新获得焦点
+                setTimeout(() => {
+                  editor.commands.focus()
+                }, 100)
               }}
               onOpen={() => setShowSlashMenu(true)}
               position={slashMenuPosition}

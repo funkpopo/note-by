@@ -124,6 +124,8 @@
   background: var(--semi-color-bg-1);
   color: var(--semi-color-text-0);
   font-size: 14px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .slash-menu-search input:focus {

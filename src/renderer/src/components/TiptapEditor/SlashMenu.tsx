@@ -240,6 +240,11 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
     command()
     onClose()
     setCommandFilter('')
+    
+    // 确保编辑器重新获得焦点
+    setTimeout(() => {
+      editor.commands.focus()
+    }, 100)
   }, [editor, onClose])
 
   // Handle keyboard navigation
@@ -251,6 +256,10 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
         onClose()
         setCommandFilter('')
         setSelectedIndex(0)
+        // 确保编辑器重新获得焦点
+        setTimeout(() => {
+          editor.commands.focus()
+        }, 100)
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
         setSelectedIndex((prevIndex) => 
@@ -287,6 +296,10 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
         onClose()
         setCommandFilter('')
         setSelectedIndex(0)
+        // 确保编辑器重新获得焦点
+        setTimeout(() => {
+          editor.commands.focus()
+        }, 100)
       }
     }
 
