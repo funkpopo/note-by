@@ -374,17 +374,30 @@
   
   /* 表格样式 - 确保所有表格都有边框 */
   table, .table {
-    border-collapse: collapse !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
     margin: 1rem 0;
     width: 100%;
     border: 1px solid var(--semi-color-border) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
     
     th, td {
-      border: 1px solid var(--semi-color-border) !important;
+      border: none !important;
+      border-right: 1px solid var(--semi-color-border) !important;
+      border-bottom: 1px solid var(--semi-color-border) !important;
       padding: 0.5rem 0.75rem;
       text-align: left;
       vertical-align: top;
       min-width: 50px;
+    }
+    
+    th:last-child, td:last-child {
+      border-right: none !important;
+    }
+    
+    tr:last-child th, tr:last-child td {
+      border-bottom: none !important;
     }
     
     th {
@@ -400,19 +413,34 @@
   
   /* 确保ProseMirror中的表格也有边框 */
   .ProseMirror table {
-    border-collapse: collapse !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
     margin: 1rem 0;
     width: 100%;
     border: 1px solid var(--semi-color-border) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
   }
   
   .ProseMirror table th,
   .ProseMirror table td {
-    border: 1px solid var(--semi-color-border) !important;
+    border: none !important;
+    border-right: 1px solid var(--semi-color-border) !important;
+    border-bottom: 1px solid var(--semi-color-border) !important;
     padding: 0.5rem 0.75rem;
     text-align: left;
     vertical-align: top;
     min-width: 50px;
+  }
+  
+  .ProseMirror table th:last-child,
+  .ProseMirror table td:last-child {
+    border-right: none !important;
+  }
+  
+  .ProseMirror table tr:last-child th,
+  .ProseMirror table tr:last-child td {
+    border-bottom: none !important;
   }
   
   .ProseMirror table th {
@@ -976,25 +1004,41 @@ div[data-tippy-root] > div {
 
 /* Table styles and multi-selection support */
 .ProseMirror table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   width: 100%;
   overflow: hidden;
-  margin: 16px 0;
+  margin: 20px 0;
+  border: 2px solid var(--semi-color-text-0);
   border-radius: 8px;
-  border: 2px solid var(--semi-color-border);
   position: relative;
+  background: var(--semi-color-bg-0);
 }
+
+/* 移除表格外围虚线框 */
 
 .ProseMirror table td,
 .ProseMirror table th {
   min-width: 1em;
-  border: 1px solid var(--semi-color-border);
+  border: none;
+  border-right: 1px solid var(--semi-color-border);
+  border-bottom: 1px solid var(--semi-color-border);
   padding: 8px 12px;
   vertical-align: top;
   position: relative;
   background: var(--semi-color-bg-0);
   box-sizing: border-box;
+}
+
+.ProseMirror table th:last-child,
+.ProseMirror table td:last-child {
+  border-right: none;
+}
+
+.ProseMirror table tr:last-child th,
+.ProseMirror table tr:last-child td {
+  border-bottom: none;
 }
 
 .ProseMirror table th {
@@ -1047,8 +1091,14 @@ div[data-tippy-root] > div {
 
 /* Table node selection */
 .ProseMirror table.ProseMirror-selectednode {
-  outline: 2px solid var(--semi-color-primary);
-  outline-offset: 1px;
+  border-width: 18px;
+  border-color: var(--semi-color-primary);
+}
+
+/* Table hover effect */
+.ProseMirror table:hover {
+  border-width: 17px;
+  border-color: var(--semi-color-text-0);
 }
 
 /* Improved cell hover effect */
@@ -1059,7 +1109,8 @@ div[data-tippy-root] > div {
 
 /* Table focus styling */
 .ProseMirror table:focus-within {
-  box-shadow: 0 0 0 2px var(--semi-color-primary-light-default);
+  border-width: 17px;
+  border-color: var(--semi-color-primary);
 }
 
 /* Multi-selection indicators */
