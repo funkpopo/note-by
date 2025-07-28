@@ -9,7 +9,8 @@ import {
   FiMessageSquare, 
   FiImage, 
   FiCode, 
-  FiLink 
+  FiLink,
+  FiGrid
 } from 'react-icons/fi'
 import { Editor } from '@tiptap/react'
 
@@ -19,9 +20,11 @@ interface SlashMenuProps {
   onClose: () => void
   onOpen: () => void
   position?: { top: number; left: number }
+  currentFolder?: string
+  currentFile?: string
 }
 
-const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position }) => {
+const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position, currentFolder, currentFile }) => {
   const [commandFilter, setCommandFilter] = useState('')
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -91,11 +94,109 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
     {
       name: 'Image',
       icon: <FiImage />,
-      command: () => {
-        const url = prompt('请输入图片链接')
-        if (url) {
-          editor.chain().focus().setImage({ src: url }).run()
+      command: async () => {
+        // 创建文件输入元素
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/*'
+        input.multiple = false
+        
+        input.onchange = async (event) => {
+          const file = (event.target as HTMLInputElement).files?.[0]
+          if (!file) return
+          
+          // 检查文件大小 (限制为10MB)
+          const maxSize = 10 * 1024 * 1024 // 10MB
+          if (file.size > maxSize) {
+            alert('图片文件大小不能超过10MB')
+            return
+          }
+          
+          // 检查文件类型
+          if (!file.type.startsWith('image/')) {
+            alert('请选择有效的图片文件')
+            return
+          }
+          
+          try {
+            // 显示上传中状态
+            const loadingText = '正在上传图片...'
+            editor.chain().focus().insertContent(loadingText).run()
+            
+            // 读取文件为base64
+            const reader = new FileReader()
+            reader.onload = async (e) => {
+              const base64Data = e.target?.result as string
+              
+              // 获取当前编辑器内容的文件路径
+              const currentFilePath = currentFolder && currentFile 
+                ? `${currentFolder}/${currentFile}` 
+                : 'default/untitled.md'
+              
+              try {
+                // 调用API保存图片
+                const result = await window.api.markdown.uploadFile(
+                  currentFilePath,
+                  base64Data,
+                  file.name
+                )
+                
+                // 删除加载文本
+                const { from } = editor.state.selection
+                const contentBefore = editor.state.doc.textBetween(Math.max(0, from - loadingText.length), from)
+                if (contentBefore === loadingText) {
+                  editor.chain().focus()
+                    .deleteRange({ from: from - loadingText.length, to: from })
+                    .run()
+                }
+                
+                if (result.success && result.url) {
+                  // 插入图片到编辑器
+                  editor.chain().focus().setImage({ 
+                    src: result.url,
+                    alt: file.name,
+                    title: file.name
+                  }).run()
+                } else {
+                  console.error('图片上传失败:', result.error)
+                  alert('图片上传失败: ' + (result.error || '未知错误'))
+                }
+              } catch (uploadError) {
+                console.error('图片上传异常:', uploadError)
+                alert('图片上传失败，请重试')
+                
+                // 删除加载文本
+                const { from } = editor.state.selection
+                const contentBefore = editor.state.doc.textBetween(Math.max(0, from - loadingText.length), from)
+                if (contentBefore === loadingText) {
+                  editor.chain().focus()
+                    .deleteRange({ from: from - loadingText.length, to: from })
+                    .run()
+                }
+              }
+            }
+            
+            reader.onerror = () => {
+              alert('读取文件失败')
+              // 删除加载文本
+              const { from } = editor.state.selection
+              const contentBefore = editor.state.doc.textBetween(Math.max(0, from - loadingText.length), from)
+              if (contentBefore === loadingText) {
+                editor.chain().focus()
+                  .deleteRange({ from: from - loadingText.length, to: from })
+                  .run()
+              }
+            }
+            
+            reader.readAsDataURL(file)
+          } catch (error) {
+            console.error('处理文件失败:', error)
+            alert('处理文件失败')
+          }
         }
+        
+        // 触发文件选择对话框
+        input.click()
       },
       description: '插入图片'
     },
@@ -109,6 +210,12 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
         }
       },
       description: '插入链接'
+    },
+    {
+      name: 'Table',
+      icon: <FiGrid />,
+      command: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      description: '插入表格'
     }
   ]
 
@@ -133,6 +240,11 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
     command()
     onClose()
     setCommandFilter('')
+    
+    // 确保编辑器重新获得焦点
+    setTimeout(() => {
+      editor.commands.focus()
+    }, 100)
   }, [editor, onClose])
 
   // Handle keyboard navigation
@@ -144,6 +256,10 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
         onClose()
         setCommandFilter('')
         setSelectedIndex(0)
+        // 确保编辑器重新获得焦点
+        setTimeout(() => {
+          editor.commands.focus()
+        }, 100)
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
         setSelectedIndex((prevIndex) => 
@@ -180,6 +296,10 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
         onClose()
         setCommandFilter('')
         setSelectedIndex(0)
+        // 确保编辑器重新获得焦点
+        setTimeout(() => {
+          editor.commands.focus()
+        }, 100)
       }
     }
 

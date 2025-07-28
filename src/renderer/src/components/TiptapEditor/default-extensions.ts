@@ -38,6 +38,7 @@ import plaintext from 'highlight.js/lib/languages/plaintext'
 import AiPlaceholder from './AiPlaceholder'
 import CodeBlockComponent from './CodeBlockComponent'
 import { ReactNodeViewRenderer } from '@tiptap/react'
+import TableColumnResize from './TableColumnResize'
 import SlashCommand from './SlashCommand'
 
 // 创建lowlight实例
@@ -133,6 +134,7 @@ export const defaultExtensions = [
 
   Table.configure({
     resizable: true,
+    allowTableNodeSelection: true,
     HTMLAttributes: {
       class: 'table',
     },
@@ -164,6 +166,8 @@ export const defaultExtensions = [
   }),
   
   AiPlaceholder,
+  
+  TableColumnResize,
   
   SlashCommand,
 ]

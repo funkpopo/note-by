@@ -18,7 +18,10 @@ import {
   FiList,
   FiImage,
   FiMinus,
-  FiMessageSquare
+  FiMessageSquare,
+  FiGrid,
+  FiPlus,
+  FiX
 } from 'react-icons/fi'
 
 interface EnhancedBubbleMenuProps {
@@ -212,6 +215,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
 const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [placement, setPlacement] = useState<'top-start' | 'bottom-start'>('bottom-start')
+  const [isInTable, setIsInTable] = useState(false)
   const bubbleMenuRef = useRef<HTMLDivElement>(null)
   
   // 获取选中区域的边界矩形
@@ -343,13 +347,31 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     return () => observer.disconnect()
   }, [adjustBubbleMenuPosition])
 
-  // 监听选择变化来更新 placement
+  // 监听选择变化来更新 placement 和表格状态
   useEffect(() => {
     const updatePlacement = () => {
       const newPlacement = calculatePlacement()
       if (newPlacement !== placement) {
         setPlacement(newPlacement)
       }
+      
+      // 检查是否在表格中 - 更严格的检查
+      const selection = editor.state.selection
+      const { $from } = selection
+      
+      // 检查当前节点或父节点是否是表格相关节点
+      let isInTableCell = false
+      
+      // 向上遍历节点树检查是否在表格中
+      for (let depth = $from.depth; depth >= 0; depth--) {
+        const nodeAtDepth = $from.node(depth)
+        if (nodeAtDepth.type.name === 'tableCell' || nodeAtDepth.type.name === 'tableHeader') {
+          isInTableCell = true
+          break
+        }
+      }
+      
+      setIsInTable(isInTableCell)
     }
 
     // 监听编辑器的选择变化
@@ -448,133 +470,202 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     >
       <div className="enhanced-bubble-menu" ref={bubbleMenuRef}>
         <div className="bubble-menu-container">
-          <AiSelector editor={editor} />
-          <div className="divider" />
-          <button
-            className={`bubble-menu-button ${editor.isActive('bold') ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().toggleMark('bold').run()}
-            disabled={!editor.can().chain().focus().toggleMark('bold').run()}
-          >
-            <FiBold size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive('italic') ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().toggleMark('italic').run()}
-            disabled={!editor.can().chain().focus().toggleMark('italic').run()}
-          >
-            <FiItalic size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive('underline') ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().toggleMark('underline').run()}
-            disabled={!editor.can().chain().focus().toggleMark('underline').run()}
-          >
-            <FiUnderline size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive('strike') ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().toggleMark('strike').run()}
-            disabled={!editor.can().chain().focus().toggleMark('strike').run()}
-          >
-            <FiSlash size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive('code') ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().toggleMark('code').run()}
-            disabled={!editor.can().chain().focus().toggleMark('code').run()}
-          >
-            <FiCode size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive('link') ? 'active' : ''}`}
-            onClick={toggleLink}
-          >
-            <FiLink size={16} />
-          </button>
-          <div className="divider" />
-          <button
-            className={`bubble-menu-button ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          >
-            <FiAlignLeft size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          >
-            <FiAlignCenter size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          >
-            <FiAlignRight size={16} />
-          </button>
-          <button
-            className={`bubble-menu-button ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`}
-            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-          >
-            <FiAlignJustify size={16} />
-          </button>
-          <div className="divider" />
-          <CustomDropdown
-            visible={showMoreOptions}
-            onVisibleChange={setShowMoreOptions}
-            trigger={
-              <button className="bubble-menu-button">
-                <FiMoreVertical size={16} />
+          {isInTable ? (
+            // 表格模式：显示表格操作按钮
+            <>
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().addColumnBefore().run()}
+                title="在前方插入列"
+              >
+                <FiPlus size={16} />
               </button>
-            }
-          >
-            <DropdownItem 
-              onClick={() => {
-                editor.chain().focus().toggleList('bulletList', 'listItem').run()
-                setShowMoreOptions(false)
-              }}
-              icon={<FiList size={14} />}
-            >
-              无序列表
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => {
-                editor.chain().focus().toggleList('orderedList', 'listItem').run()
-                setShowMoreOptions(false)
-              }}
-              icon={<FiList size={14} />}
-            >
-              有序列表
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => {
-                editor.chain().focus().toggleBlockquote().run()
-                setShowMoreOptions(false)
-              }}
-              icon={<FiMessageSquare size={14} />}
-            >
-              引用
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => {
-                editor.chain().focus().setHorizontalRule().run()
-                setShowMoreOptions(false)
-              }}
-              icon={<FiMinus size={14} />}
-            >
-              分割线
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => {
-                const url = window.prompt('图片地址:')
-                if (url) {
-                  editor.chain().focus().setImage({ src: url }).run()
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().addColumnAfter().run()}
+                title="在后方插入列"
+              >
+                <FiPlus size={16} />
+              </button>
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().deleteColumn().run()}
+                title="删除列"
+              >
+                <FiX size={16} />
+              </button>
+              <div className="divider" />
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().addRowBefore().run()}
+                title="在上方插入行"
+              >
+                <FiPlus size={16} />
+              </button>
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().addRowAfter().run()}
+                title="在下方插入行"
+              >
+                <FiPlus size={16} />
+              </button>
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().deleteRow().run()}
+                title="删除行"
+              >
+                <FiX size={16} />
+              </button>
+              <div className="divider" />
+              <button
+                className="bubble-menu-button"
+                onClick={() => editor.chain().focus().deleteTable().run()}
+                title="删除表格"
+              >
+                <FiGrid size={16} />
+              </button>
+            </>
+          ) : (
+            // 普通模式：显示常规格式化按钮
+            <>
+              <AiSelector editor={editor} />
+              <div className="divider" />
+              <button
+                className={`bubble-menu-button ${editor.isActive('bold') ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().toggleMark('bold').run()}
+                disabled={!editor.can().chain().focus().toggleMark('bold').run()}
+              >
+                <FiBold size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive('italic') ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().toggleMark('italic').run()}
+                disabled={!editor.can().chain().focus().toggleMark('italic').run()}
+              >
+                <FiItalic size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive('underline') ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().toggleMark('underline').run()}
+                disabled={!editor.can().chain().focus().toggleMark('underline').run()}
+              >
+                <FiUnderline size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive('strike') ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().toggleMark('strike').run()}
+                disabled={!editor.can().chain().focus().toggleMark('strike').run()}
+              >
+                <FiSlash size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive('code') ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().toggleMark('code').run()}
+                disabled={!editor.can().chain().focus().toggleMark('code').run()}
+              >
+                <FiCode size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive('link') ? 'active' : ''}`}
+                onClick={toggleLink}
+              >
+                <FiLink size={16} />
+              </button>
+              <div className="divider" />
+              <button
+                className={`bubble-menu-button ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().setTextAlign('left').run()}
+              >
+                <FiAlignLeft size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().setTextAlign('center').run()}
+              >
+                <FiAlignCenter size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().setTextAlign('right').run()}
+              >
+                <FiAlignRight size={16} />
+              </button>
+              <button
+                className={`bubble-menu-button ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`}
+                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+              >
+                <FiAlignJustify size={16} />
+              </button>
+              <div className="divider" />
+              <CustomDropdown
+                visible={showMoreOptions}
+                onVisibleChange={setShowMoreOptions}
+                trigger={
+                  <button className="bubble-menu-button">
+                    <FiMoreVertical size={16} />
+                  </button>
                 }
-                setShowMoreOptions(false)
-              }}
-              icon={<FiImage size={14} />}
-            >
-              插入图片
-            </DropdownItem>
-          </CustomDropdown>
+              >
+                <DropdownItem 
+                  onClick={() => {
+                    editor.chain().focus().toggleList('bulletList', 'listItem').run()
+                    setShowMoreOptions(false)
+                  }}
+                  icon={<FiList size={14} />}
+                >
+                  无序列表
+                </DropdownItem>
+                <DropdownItem 
+                  onClick={() => {
+                    editor.chain().focus().toggleList('orderedList', 'listItem').run()
+                    setShowMoreOptions(false)
+                  }}
+                  icon={<FiList size={14} />}
+                >
+                  有序列表
+                </DropdownItem>
+                <DropdownItem 
+                  onClick={() => {
+                    editor.chain().focus().toggleBlockquote().run()
+                    setShowMoreOptions(false)
+                  }}
+                  icon={<FiMessageSquare size={14} />}
+                >
+                  引用
+                </DropdownItem>
+                <DropdownItem 
+                  onClick={() => {
+                    editor.chain().focus().setHorizontalRule().run()
+                    setShowMoreOptions(false)
+                  }}
+                  icon={<FiMinus size={14} />}
+                >
+                  分割线
+                </DropdownItem>
+                <DropdownItem 
+                  onClick={() => {
+                    const url = window.prompt('图片地址:')
+                    if (url) {
+                      editor.chain().focus().setImage({ src: url }).run()
+                    }
+                    setShowMoreOptions(false)
+                  }}
+                  icon={<FiImage size={14} />}
+                >
+                  插入图片
+                </DropdownItem>
+                <DropdownItem 
+                  onClick={() => {
+                    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+                    setShowMoreOptions(false)
+                  }}
+                  icon={<FiGrid size={14} />}
+                >
+                  插入表格
+                </DropdownItem>
+              </CustomDropdown>
+            </>
+          )}
         </div>
       </div>
     </BubbleMenu>

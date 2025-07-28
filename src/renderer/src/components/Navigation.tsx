@@ -14,7 +14,8 @@ import {
   IconMoreStroked,
   IconMoon,
   IconSun,
-  IconComment
+  IconComment,
+  IconCopy
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
 import type { SearchRenderProps } from '@douyinfe/semi-ui/lib/es/tree'
@@ -105,6 +106,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const [searchText, setSearchText] = useState<string>('')
   const [showFilteredOnly] = useState<boolean>(true)
   const [filteredExpandedKeys, setFilteredExpandedKeys] = useState<string[]>([])
+  const [doubleClickTimer, setDoubleClickTimer] = useState<NodeJS.Timeout | null>(null)
 
   const navWidth = '160px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
@@ -335,9 +337,13 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       fetchFileList()
     }
 
-    // 组件卸载时清理状态
+    // 组件卸载时清理状态和计时器
     return (): void => {
       setExpandedKeys([])
+      if (doubleClickTimer) {
+        clearTimeout(doubleClickTimer)
+        setDoubleClickTimer(null)
+      }
     }
   }, [showSecondaryNav, fetchFileList])
 
@@ -587,6 +593,44 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     hideContextMenu()
   }
 
+  // 复制文本到剪贴板
+  const copyToClipboard = async (text: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(text)
+      Toast.success('已复制到剪贴板')
+    } catch (error) {
+      // 如果navigator.clipboard不可用，使用fallback方法
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        Toast.success('已复制到剪贴板')
+      } catch (fallbackError) {
+        Toast.error('复制失败')
+      }
+      document.body.removeChild(textArea)
+    }
+  }
+
+  // 复制文档名称
+  const handleCopyFileName = (): void => {
+    const { itemKey } = contextMenu
+    
+    // 从itemKey中提取文件信息
+    if (itemKey.startsWith('file:')) {
+      const parts = itemKey.split(':')
+      if (parts.length === 3) {
+        const fileName = parts[2].replace('.md', '')
+        copyToClipboard(fileName)
+      }
+    }
+    
+    hideContextMenu()
+  }
+
   // 重命名文件
   const handleRenameFile = (): void => {
     const { itemKey } = contextMenu
@@ -740,25 +784,109 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
   // 处理树节点点击事件
   const handleTreeSelect = (selectedKey: string): void => {
-    setSelectedKeys([selectedKey])
-    // 检查selectedKey是否以 "file:" 开头，以确定是文件还是文件夹
+    // 如果有双击计时器正在运行，说明这是双击的一部分，忽略选择事件
+    if (doubleClickTimer) {
+      return
+    }
+    
+    // 只对文件夹使用延迟机制，文件直接选择
     if (selectedKey.startsWith('file:')) {
+      setSelectedKeys([selectedKey])
       const parts = selectedKey.split(':')
       if (parts.length === 3) {
         const folder = parts[1]
         const file = parts[2]
-
+        
         // 通知父组件选中了文件
         if (onFileSelect) {
           onFileSelect(folder, file)
         }
       }
+    } else if (selectedKey.startsWith('folder:')) {
+      // 对文件夹使用延迟机制防止双击冲突
+      const timer = setTimeout(() => {
+        setSelectedKeys([selectedKey])
+        setDoubleClickTimer(null)
+      }, 150)
+      
+      setDoubleClickTimer(timer)
+    } else {
+      // 其他情况直接选择
+      setSelectedKeys([selectedKey])
     }
   }
 
   // 处理树节点展开/折叠事件
   const handleTreeExpand = (expandedKeys: string[]): void => {
     setExpandedKeys(expandedKeys)
+  }
+
+  // 处理双击事件，用于展开/收起文件夹
+  const handleTreeDoubleClick = (e: React.MouseEvent, nodeKey: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // 只对文件夹处理双击事件
+    if (nodeKey.startsWith('folder:')) {
+      // 清除单击的计时器，阻止单击的选择行为
+      if (doubleClickTimer) {
+        clearTimeout(doubleClickTimer)
+        setDoubleClickTimer(null)
+      }
+      
+      // 根据当前是否在搜索状态选择正确的展开状态
+      const currentExpandedKeys = searchText ? filteredExpandedKeys : expandedKeys
+      const setCurrentExpandedKeys = searchText ? setFilteredExpandedKeys : setExpandedKeys
+      
+      if (currentExpandedKeys.includes(nodeKey)) {
+        // 收起文件夹
+        setCurrentExpandedKeys(currentExpandedKeys.filter(key => key !== nodeKey))
+      } else {
+        // 展开文件夹
+        setCurrentExpandedKeys([...currentExpandedKeys, nodeKey])
+      }
+    }
+  }
+
+  // 自定义渲染Tree节点标签
+  const renderTreeLabel = (
+    label?: React.ReactNode, 
+    data?: TreeNodeData, 
+    _searchWord?: string
+  ): React.ReactNode => {
+    // 处理可能为undefined的情况
+    if (!data || !data.key) {
+      return label
+    }
+    
+    const nodeKey = data.key.toString()
+    const isFolder = nodeKey.startsWith('folder:')
+    
+    return (
+      <span
+        style={{
+          userSelect: 'none', // 禁止选中文本
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          cursor: 'pointer',
+          display: 'inline-block',
+          width: '100%'
+        }}
+        onDoubleClick={(e) => {
+          if (isFolder) {
+            handleTreeDoubleClick(e, nodeKey)
+          }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          handleContextMenu(e, nodeKey, isFolder)
+        }}
+      >
+        {label}
+      </span>
+    )
   }
 
   // 打开确认对话框
@@ -881,7 +1009,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                   padding: '8px 8px 8px 4px',
                   overflow: 'auto',
                   width: '100%',
-                  height: '100%'
+                  height: '100%',
+                  userSelect: 'none', // 禁止选中文本
+                  WebkitUserSelect: 'none', // Safari支持
+                  MozUserSelect: 'none', // Firefox支持
+                  msUserSelect: 'none' // IE支持
                 }}
                 onClick={hideContextMenu} // 点击空白处隐藏右键菜单
               >
@@ -915,20 +1047,8 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                       onSelect={(val) => handleTreeSelect(val as string)}
                       onExpand={handleTreeExpand}
                       expandedKeys={searchText ? filteredExpandedKeys : expandedKeys}
-                      onContextMenu={(e, node): void => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        
-                        // 直接从node获取数据，Semi Design的Tree组件node就是TreeNodeData
-                        const nodeData = node as TreeNodeData & NavItem
-                        const nodeKey = nodeData.key?.toString() || ''
-                        
-                        // 根据key的格式判断是文件夹还是文件
-                        // folder:xxx 格式是文件夹，file:xxx:xxx 格式是文件
-                        const isFolder = nodeKey.startsWith('folder:')
-                        
-                        handleContextMenu(e, nodeKey, isFolder)
-                      }}
+                      renderLabel={renderTreeLabel}
+                      expandAction={false}
                       emptyContent={
                         <Typography.Text type="tertiary" className="empty-area">
                           暂无笔记
@@ -936,7 +1056,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                       }
                       style={{
                         width: '100%',
-                        borderRadius: '3px'
+                        borderRadius: '3px',
+                        userSelect: 'none', // 禁止选中文本
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none'
                       }}
                       filterTreeNode={true}
                       showFilteredOnly={showFilteredOnly}
@@ -1056,6 +1180,20 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                       >
                         <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
                         <Typography.Text>重命名笔记</Typography.Text>
+                      </div>
+                      <div
+                        className="context-menu-item"
+                        style={{
+                          padding: '8px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          transition: 'background 0.3s'
+                        }}
+                        onClick={handleCopyFileName}
+                      >
+                        <IconCopy style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                        <Typography.Text>复制文档名称</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
                       <div
