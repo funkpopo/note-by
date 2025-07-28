@@ -193,8 +193,6 @@
 }
 
 .tiptap-editor-content {
-  @apply prose dark:prose-invert focus:outline-none max-w-full;
-  
   /* 基础样式 */
   line-height: 1.6;
   font-family: inherit;
