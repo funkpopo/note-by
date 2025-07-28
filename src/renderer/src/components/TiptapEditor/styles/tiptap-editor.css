@@ -374,16 +374,19 @@
     font-style: italic;
   }
   
-  /* 表格样式 */
-  .table {
-    border-collapse: collapse;
+  /* 表格样式 - 确保所有表格都有边框 */
+  table, .table {
+    border-collapse: collapse !important;
     margin: 1rem 0;
     width: 100%;
+    border: 1px solid var(--semi-color-border) !important;
     
     th, td {
-      border: 1px solid var(--semi-color-border);
+      border: 1px solid var(--semi-color-border) !important;
       padding: 0.5rem 0.75rem;
       text-align: left;
+      vertical-align: top;
+      min-width: 50px;
     }
     
     th {
@@ -395,6 +398,29 @@
     tr:nth-child(even) td {
       background: var(--semi-color-fill-0);
     }
+  }
+  
+  /* 确保ProseMirror中的表格也有边框 */
+  .ProseMirror table {
+    border-collapse: collapse !important;
+    margin: 1rem 0;
+    width: 100%;
+    border: 1px solid var(--semi-color-border) !important;
+  }
+  
+  .ProseMirror table th,
+  .ProseMirror table td {
+    border: 1px solid var(--semi-color-border) !important;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+    min-width: 50px;
+  }
+  
+  .ProseMirror table th {
+    background: var(--semi-color-fill-1);
+    font-weight: 600;
+    color: var(--semi-color-text-0);
   }
   
   /* 图片样式 */
@@ -636,6 +662,27 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
+/* 日间主题下导出按钮的特殊样式 - 确保图标和文字为白色 */
+body:not([theme-mode='dark']) .editor-button.tertiary {
+  background: var(--semi-color-tertiary);
+  color: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body:not([theme-mode='dark']) .editor-button.tertiary svg {
+  color: white !important;
+}
+
+body:not([theme-mode='dark']) .editor-button.tertiary:hover:not(:disabled) {
+  background: var(--semi-color-fill-1);
+  color: white !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+body:not([theme-mode='dark']) .editor-button.tertiary:hover:not(:disabled) svg {
+  color: white !important;
+}
+
 .auto-save-status {
   font-size: 14px;
   color: var(--semi-color-text-2);
@@ -700,11 +747,13 @@
   }
   
   /* 表格在暗色主题下的样式 */
-  .table th {
+  table th, .table th,
+  .ProseMirror table th {
     background: rgba(255, 255, 255, 0.05);
   }
   
-  .table tr:nth-child(even) td {
+  table tr:nth-child(even) td, .table tr:nth-child(even) td,
+  .ProseMirror table tr:nth-child(even) td {
     background: rgba(255, 255, 255, 0.02);
   }
   

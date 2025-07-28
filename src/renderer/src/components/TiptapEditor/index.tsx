@@ -19,6 +19,35 @@ import CreateDialog from '../CreateDialog'
 import HistoryDropdown from '../HistoryDropdown'
 import { EditorSkeleton } from '../Skeleton'
 
+// 预处理markdown内容，确保图片正确转换
+const preprocessMarkdownContent = (content: string): string => {
+  let processedContent = content
+  
+  // 处理图片语法: ![alt](src "title") 或 ![alt](src)
+  processedContent = processedContent.replace(
+    /!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)/g,
+    (match, alt, src, title) => {
+      // 清理alt text中的特殊字符
+      const cleanAlt = alt.replace(/"/g, '&quot;')
+      const cleanTitle = title ? title.replace(/"/g, '&quot;') : cleanAlt
+      
+      return `<img src="${src}" alt="${cleanAlt}" title="${cleanTitle}" class="image" />`
+    }
+  )
+  
+  // 处理简单的markdown格式以避免显示为原始文本
+  // 但保留复杂的格式让tiptap处理
+  processedContent = processedContent
+    // 处理粗体
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // 处理斜体
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    // 处理代码
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+  
+  return processedContent
+}
+
 // 添加接口定义
 interface MarkdownAPI {
   save: (
@@ -87,6 +116,8 @@ interface BlockEditorProps {
   placeholder?: string
   onCreate?: (editor: Editor) => void
   onUpdate?: (editor: Editor) => void
+  currentFolder?: string
+  currentFile?: string
 }
 
   const BlockEditor = ({
@@ -94,6 +125,8 @@ interface BlockEditorProps {
     placeholder,
     onCreate,
     onUpdate,
+    currentFolder,
+    currentFile,
   }: BlockEditorProps) => {
     const [showSlashMenu, setShowSlashMenu] = useState(false)
     const [slashMenuPosition, setSlashMenuPosition] = useState<{ top: number; left: number } | undefined>()
@@ -179,6 +212,8 @@ interface BlockEditorProps {
               }}
               onOpen={() => setShowSlashMenu(true)}
               position={slashMenuPosition}
+              currentFolder={currentFolder}
+              currentFile={currentFile}
             />
           </>
         )}
@@ -206,13 +241,13 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
   const editorRef = useRef<Editor | null>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
-  // 智能保存相关实例
+  // 智能保存相关实例 - 3秒无操作自动保存
   const smartDebouncerRef = useRef<SmartDebouncer>(
     new SmartDebouncer({
-      fastTypingDelay: 3000,
-      normalDelay: 3000,
-      pauseDelay: 3000,
-      minContentChange: 5
+      fastTypingDelay: 3000,    // 快速输入时3秒保存
+      normalDelay: 3000,        // 正常输入时3秒保存
+      pauseDelay: 3000,         // 停顿后3秒保存
+      minContentChange: 1       // 最小1个字符变化即触发
     })
   )
   const conflictDetectorRef = useRef<ConflictDetector>(new ConflictDetector())
@@ -323,9 +358,43 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
         setEditorKey(`tiptap-editor-${Date.now()}`)
         setTitle(currentFile.replace('.md', ''))
 
-        // 设置编辑器内容
+        // 设置编辑器内容 - 确保markdown正确解析
         if (editorRef.current) {
-          editorRef.current.commands.setContent(processedData.contentWithoutTags)
+          try {
+            // 方法1: 首先尝试直接设置内容
+            editorRef.current.commands.setContent(processedData.contentWithoutTags)
+            
+            // 等待内容设置完成后检查是否正确解析
+            setTimeout(() => {
+              if (editorRef.current) {
+                const currentHTML = editorRef.current.getHTML()
+                const hasImageMarkdown = processedData.contentWithoutTags.includes('![')
+                const hasImageHTML = currentHTML.includes('<img')
+                
+                console.log('Image parsing check:', {
+                  hasImageMarkdown,
+                  hasImageHTML,
+                  originalContent: processedData.contentWithoutTags,
+                  currentHTML
+                })
+                
+                // 如果有图片markdown但没有转换为HTML，使用替代方法
+                if (hasImageMarkdown && !hasImageHTML) {
+                  console.log('Images not parsed, applying manual preprocessing')
+                  // 方法2: 手动预处理markdown内容
+                  const preprocessedContent = preprocessMarkdownContent(processedData.contentWithoutTags)
+                  console.log('Preprocessed content:', preprocessedContent)
+                  editorRef.current.commands.setContent(preprocessedContent)
+                }
+              }
+            }, 200)
+            
+          } catch (error) {
+            console.warn('Failed to set content with markdown parsing:', error)
+            // 后备方案：使用预处理的HTML
+            const fallbackHTML = preprocessMarkdownContent(processedData.contentWithoutTags)
+            editorRef.current.commands.setContent(fallbackHTML)
+          }
         }
 
         setIsEditing(false)
@@ -423,12 +492,11 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
           performanceMonitor.recordEditorPerformance('save', saveDuration)
           performanceMonitor.recordUserAction('save')
 
-          if (!isAutoSave) {
-            Toast.success('文件保存成功')
-            setIsEditing(false)
-          }
+          // 无论是手动保存还是自动保存，都需要清除编辑状态指示器
+          setIsEditing(false)
 
           if (!isAutoSave) {
+            Toast.success('文件保存成功')
             setAutoSaveStatus('saved')
             setTimeout(() => {
               setAutoSaveStatus('')
@@ -557,7 +625,24 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
     if (editorRef.current && content) {
       try {
         setEditorContent(content)
+        
+        // 使用和加载文件相同的逻辑处理内容
         editorRef.current.commands.setContent(content)
+        
+        // 检查图片是否正确解析
+        setTimeout(() => {
+          if (editorRef.current) {
+            const currentHTML = editorRef.current.getHTML()
+            const hasImageMarkdown = content.includes('![')
+            const hasImageHTML = currentHTML.includes('<img')
+            
+            if (hasImageMarkdown && !hasImageHTML) {
+              const preprocessedContent = preprocessMarkdownContent(content)
+              editorRef.current.commands.setContent(preprocessedContent)
+            }
+          }
+        }, 200)
+        
         const timestamp = Date.now()
         setEditorKey(`tiptap-editor-${timestamp}`)
 
@@ -862,6 +947,8 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
             placeholder="开始输入内容..."
             onCreate={handleEditorCreate}
             onUpdate={handleEditorChange}
+            currentFolder={currentFolder}
+            currentFile={currentFile}
           />
         )}
       </div>
