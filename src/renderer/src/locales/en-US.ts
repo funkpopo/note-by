@@ -1,7 +1,7 @@
-import { Dictionary } from '@blocknote/core'
+// English localization configuration
+// Temporarily removing BlockNote-related dictionary configuration, waiting for Tiptap implementation
 
-// 扩展字典接口以包含自定义模块
-export interface ExtendedDictionary extends Dictionary {
+export interface ExtendedDictionary {
   dataAnalysis?: {
     title: string
     analysisButton: string
@@ -105,373 +105,111 @@ export interface ExtendedDictionary extends Dictionary {
       titleUpdateFailed: string
     }
   }
+  editor?: {
+    actions: {
+      save: string
+      export: string
+      exportPdf: string
+      exportDocx: string
+      exportHtml: string
+      createFile: string
+      createFolder: string
+    }
+    status: {
+      saving: string
+      autoSaving: string
+      saved: string
+      editing: string
+      loaded: string
+    }
+    placeholder: {
+      content: string
+      title: string
+    }
+    notifications: {
+      saveSuccess: string
+      saveFailed: string
+      exportSuccess: string
+      exportFailed: string
+      loadFailed: string
+      noFileSelected: string
+      createSuccess: string
+      createFailed: string
+      restoreSuccess: string
+      restoreFailed: string
+      conflictDetected: string
+      memoryWarning: string
+      memoryCritical: string
+    }
+    shortcuts: {
+      save: string
+      title: string
+    }
+    prompts: {
+      noFile: string
+      welcomeMessage: string
+      imageUrl: string
+      linkUrl: string
+    }
+    menu: {
+      aiCommands: {
+        improve: string
+        simplify: string
+        expand: string
+        fixGrammar: string
+        translateToEn: string
+        translateToCn: string
+        summarize: string
+        continue: string
+        processing: string
+      }
+      slashCommands: {
+        heading1: string
+        heading2: string
+        heading3: string
+        bold: string
+        italic: string
+        underline: string
+        bulletList: string
+        orderedList: string
+        quote: string
+        codeBlock: string
+        image: string
+        link: string
+        noCommands: string
+        placeholder: string
+      }
+      bubbleMenu: {
+        unorderedList: string
+        orderedList: string
+        quote: string
+        divider: string
+        insertImage: string
+        ai: string
+      }
+    }
+    codeBlock: {
+      copied: string
+      copy: string
+    }
+    model: {
+      loading: string
+      select: string
+      noModels: string
+      manage: string
+      thinking: string
+    }
+    errors: {
+      apiNotConfigured: string
+      modelNotFound: string
+      incompleteConfig: string
+      processingFailed: string
+      noTextSelected: string
+    }
+  }
 }
 
 export const enUS: ExtendedDictionary = {
-  slash_menu: {
-    heading: {
-      title: 'Heading 1',
-      subtext: 'Used for a top-level heading',
-      aliases: ['h', 'heading1', 'h1'],
-      group: 'Headings'
-    },
-    heading_2: {
-      title: 'Heading 2',
-      subtext: 'Used for key sections',
-      aliases: ['h2', 'heading2', 'subheading'],
-      group: 'Headings'
-    },
-    heading_3: {
-      title: 'Heading 3',
-      subtext: 'Used for subsections and group headings',
-      aliases: ['h3', 'heading3', 'subheading'],
-      group: 'Headings'
-    },
-    heading_4: {
-      title: 'Heading 4',
-      subtext: 'Used for subsection headings',
-      aliases: ['h4', 'heading4'],
-      group: 'Headings'
-    },
-    heading_5: {
-      title: 'Heading 5',
-      subtext: 'Used for sub-subsection headings',
-      aliases: ['h5', 'heading5'],
-      group: 'Headings'
-    },
-    heading_6: {
-      title: 'Heading 6',
-      subtext: 'Used for the smallest headings',
-      aliases: ['h6', 'heading6'],
-      group: 'Headings'
-    },
-    toggle_heading: {
-      title: 'Toggle Heading 1',
-      subtext: 'Collapsible heading',
-      aliases: ['toggle', 'toggleheading', 'collapsible'],
-      group: 'Headings'
-    },
-    toggle_heading_2: {
-      title: 'Toggle Heading 2',
-      subtext: 'Collapsible heading',
-      aliases: ['toggleh2', 'toggleheading2', 'collapsible2'],
-      group: 'Headings'
-    },
-    toggle_heading_3: {
-      title: 'Toggle Heading 3',
-      subtext: 'Collapsible heading',
-      aliases: ['toggleh3', 'toggleheading3', 'collapsible3'],
-      group: 'Headings'
-    },
-    quote: {
-      title: 'Quote',
-      subtext: 'Capture a quote',
-      aliases: ['quotation', 'blockquote', 'bq'],
-      group: 'Basic blocks'
-    },
-    toggle_list: {
-      title: 'Toggle List',
-      subtext: 'A collapsible list',
-      aliases: ['togglelist', 'collapsiblelist', 'foldlist'],
-      group: 'Basic blocks'
-    },
-    numbered_list: {
-      title: 'Numbered List',
-      subtext: 'A list with numbers',
-      aliases: ['ol', 'li', 'list', 'numberedlist', 'numbered list'],
-      group: 'Basic blocks'
-    },
-    bullet_list: {
-      title: 'Bullet List',
-      subtext: 'A simple bulleted list',
-      aliases: ['ul', 'li', 'list', 'bulletlist', 'bullet list'],
-      group: 'Basic blocks'
-    },
-    check_list: {
-      title: 'Check List',
-      subtext: 'A list with checkboxes',
-      aliases: ['ul', 'li', 'list', 'checklist', 'check list', 'checked list', 'checkbox'],
-      group: 'Basic blocks'
-    },
-    paragraph: {
-      title: 'Paragraph',
-      subtext: 'The body of your document',
-      aliases: ['p', 'paragraph'],
-      group: 'Basic blocks'
-    },
-    code_block: {
-      title: 'Code Block',
-      subtext: 'Capture a code snippet with syntax highlighting',
-      aliases: ['code', 'pre'],
-      group: 'Basic blocks'
-    },
-    page_break: {
-      title: 'Page Break',
-      subtext: 'Page separator',
-      aliases: ['page', 'break', 'separator'],
-      group: 'Basic blocks'
-    },
-    table: {
-      title: 'Table',
-      subtext: 'A table with editable cells',
-      aliases: ['table'],
-      group: 'Advanced'
-    },
-    image: {
-      title: 'Image',
-      subtext: 'Resizable image with caption',
-      aliases: ['image', 'imageUpload', 'upload', 'img', 'picture', 'media', 'url'],
-      group: 'Media'
-    },
-    video: {
-      title: 'Video',
-      subtext: 'Resizable video with caption',
-      aliases: ['video', 'videoUpload', 'upload', 'mp4', 'film', 'media', 'url'],
-      group: 'Media'
-    },
-    audio: {
-      title: 'Audio',
-      subtext: 'Embed audio with caption',
-      aliases: ['audio', 'audioUpload', 'upload', 'mp3', 'sound', 'media', 'url'],
-      group: 'Media'
-    },
-    file: {
-      title: 'File',
-      subtext: 'Embed file',
-      aliases: ['file', 'upload', 'embed', 'media', 'url'],
-      group: 'Media'
-    },
-    emoji: {
-      title: 'Emoji',
-      subtext: 'Search and insert an emoji',
-      aliases: ['emoji', 'emote', 'emotion', 'face'],
-      group: 'Other'
-    }
-  },
-  placeholders: {
-    default: '',
-    heading: 'Heading',
-    bulletListItem: 'List',
-    numberedListItem: 'List',
-    checkListItem: 'List',
-    new_comment: 'Write a comment...',
-    edit_comment: 'Edit comment...',
-    comment_reply: 'Add comment...'
-  },
-  file_blocks: {
-    image: {
-      add_button_text: 'Add image'
-    },
-    video: {
-      add_button_text: 'Add video'
-    },
-    audio: {
-      add_button_text: 'Add audio'
-    },
-    file: {
-      add_button_text: 'Add file'
-    }
-  },
-  side_menu: {
-    add_block_label: 'Add block',
-    drag_handle_label: 'Open block menu'
-  },
-  drag_handle: {
-    delete_menuitem: 'Delete',
-    colors_menuitem: 'Colors',
-    header_row_menuitem: 'Header row',
-    header_column_menuitem: 'Header column'
-  },
-  table_handle: {
-    delete_column_menuitem: 'Delete column',
-    delete_row_menuitem: 'Delete row',
-    add_left_menuitem: 'Add column left',
-    add_right_menuitem: 'Add column right',
-    add_above_menuitem: 'Add row above',
-    add_below_menuitem: 'Add row below',
-    split_cell_menuitem: 'Split cell',
-    merge_cells_menuitem: 'Merge cells',
-    background_color_menuitem: 'Background color'
-  },
-  suggestion_menu: {
-    no_items_title: 'No items found'
-  },
-  color_picker: {
-    text_title: 'Text',
-    background_title: 'Background',
-    colors: {
-      default: 'Default',
-      gray: 'Gray',
-      brown: 'Brown',
-      red: 'Red',
-      orange: 'Orange',
-      yellow: 'Yellow',
-      green: 'Green',
-      blue: 'Blue',
-      purple: 'Purple',
-      pink: 'Pink'
-    }
-  },
-  formatting_toolbar: {
-    bold: {
-      tooltip: 'Bold',
-      secondary_tooltip: 'Mod+B'
-    },
-    italic: {
-      tooltip: 'Italic',
-      secondary_tooltip: 'Mod+I'
-    },
-    underline: {
-      tooltip: 'Underline',
-      secondary_tooltip: 'Mod+U'
-    },
-    strike: {
-      tooltip: 'Strike',
-      secondary_tooltip: 'Mod+Shift+S'
-    },
-    code: {
-      tooltip: 'Code',
-      secondary_tooltip: ''
-    },
-    colors: {
-      tooltip: 'Colors'
-    },
-    link: {
-      tooltip: 'Create link',
-      secondary_tooltip: 'Mod+K'
-    },
-    file_caption: {
-      tooltip: 'Edit caption',
-      input_placeholder: 'Edit caption'
-    },
-    file_replace: {
-      tooltip: {
-        image: 'Replace image',
-        video: 'Replace video',
-        audio: 'Replace audio',
-        file: 'Replace file'
-      }
-    },
-    file_rename: {
-      tooltip: {
-        image: 'Rename image',
-        video: 'Rename video',
-        audio: 'Rename audio',
-        file: 'Rename file'
-      },
-      input_placeholder: {
-        image: 'Rename image',
-        video: 'Rename video',
-        audio: 'Rename audio',
-        file: 'Rename file'
-      }
-    },
-    file_download: {
-      tooltip: {
-        image: 'Download image',
-        video: 'Download video',
-        audio: 'Download audio',
-        file: 'Download file'
-      }
-    },
-    file_delete: {
-      tooltip: {
-        image: 'Delete image',
-        video: 'Delete video',
-        audio: 'Delete audio',
-        file: 'Delete file'
-      }
-    },
-    file_preview_toggle: {
-      tooltip: 'Toggle preview'
-    },
-    nest: {
-      tooltip: 'Nest block',
-      secondary_tooltip: 'Tab'
-    },
-    unnest: {
-      tooltip: 'Unnest block',
-      secondary_tooltip: 'Shift+Tab'
-    },
-    align_left: {
-      tooltip: 'Align left'
-    },
-    align_center: {
-      tooltip: 'Align center'
-    },
-    align_right: {
-      tooltip: 'Align right'
-    },
-    align_justify: {
-      tooltip: 'Justify'
-    },
-    table_cell_merge: {
-      tooltip: 'Merge cells'
-    },
-    comment: {
-      tooltip: 'Add comment'
-    }
-  },
-  file_panel: {
-    upload: {
-      title: 'Upload',
-      file_placeholder: {
-        image: 'Upload image',
-        video: 'Upload video',
-        audio: 'Upload audio',
-        file: 'Upload file'
-      },
-      upload_error: 'Error: Upload failed'
-    },
-    embed: {
-      title: 'Embed',
-      embed_button: {
-        image: 'Embed image',
-        video: 'Embed video',
-        audio: 'Embed audio',
-        file: 'Embed file'
-      },
-      url_placeholder: 'Enter URL'
-    }
-  },
-  link_toolbar: {
-    delete: {
-      tooltip: 'Remove link'
-    },
-    edit: {
-      text: 'Edit link',
-      tooltip: 'Edit'
-    },
-    open: {
-      tooltip: 'Open in new tab'
-    },
-    form: {
-      title_placeholder: 'Edit title',
-      url_placeholder: 'Edit URL'
-    }
-  },
-  comments: {
-    edited: 'Edited',
-    save_button_text: 'Save',
-    cancel_button_text: 'Cancel',
-    actions: {
-      add_reaction: 'Add reaction',
-      resolve: 'Resolve',
-      edit_comment: 'Edit comment',
-      delete_comment: 'Delete comment',
-      more_actions: 'More actions'
-    },
-    reactions: {
-      reacted_by: 'Reacted by {users}'
-    },
-    sidebar: {
-      marked_as_resolved: 'Marked as resolved',
-      more_replies: (count: number) => `${count} more replies`
-    }
-  },
-  generic: {
-    ctrl_shortcut: 'Ctrl+'
-  },
   // Data Analysis Module Internationalization
   dataAnalysis: {
     title: 'Note Data Analysis',
@@ -580,6 +318,109 @@ export const enUS: ExtendedDictionary = {
       notFound: 'No chat history found',
       titleUpdated: 'Chat title updated',
       titleUpdateFailed: 'Failed to update chat title'
+    }
+  },
+  // Editor Interface Internationalization
+  editor: {
+    actions: {
+      save: 'Save',
+      export: 'Export',
+      exportPdf: 'Export PDF',
+      exportDocx: 'Export DOCX',
+      exportHtml: 'Export HTML',
+      createFile: 'Create File',
+      createFolder: 'Create Folder'
+    },
+    status: {
+      saving: 'Saving...',
+      autoSaving: 'Auto saving...',
+      saved: 'Saved',
+      editing: 'Editing',
+      loaded: 'Loaded'
+    },
+    placeholder: {
+      content: 'Start typing content...',
+      title: 'File title'
+    },
+    notifications: {
+      saveSuccess: 'File saved successfully',
+      saveFailed: 'Save failed',
+      exportSuccess: 'Export successful',
+      exportFailed: 'Export failed',
+      loadFailed: 'Failed to load file content',
+      noFileSelected: 'No file selected',
+      createSuccess: 'File created successfully',
+      createFailed: 'Failed to create file',
+      restoreSuccess: 'History version restored',
+      restoreFailed: 'Failed to restore history version',
+      conflictDetected: 'File conflict detected',
+      memoryWarning: 'Memory usage warning',
+      memoryCritical: 'Critical memory usage! Cleaning up...'
+    },
+    shortcuts: {
+      save: 'Use Ctrl+S to save file',
+      title: 'Tips & Shortcuts:'
+    },
+    prompts: {
+      noFile: 'Please select a file from the left sidebar to start editing, or create a new Markdown file',
+      welcomeMessage: 'Supports code block highlighting and Markdown formatting',
+      imageUrl: 'Enter image URL:',
+      linkUrl: 'Enter link URL:'
+    },
+    menu: {
+      aiCommands: {
+        improve: 'Improve Writing',
+        simplify: 'Simplify Content',
+        expand: 'Expand Content',
+        fixGrammar: 'Fix Grammar',
+        translateToEn: 'Translate to English',
+        translateToCn: 'Translate to Chinese',
+        summarize: 'Summarize',
+        continue: 'Continue Writing',
+        processing: 'Processing'
+      },
+      slashCommands: {
+        heading1: 'Large Heading',
+        heading2: 'Medium Heading',
+        heading3: 'Small Heading',
+        bold: 'Bold',
+        italic: 'Italic',
+        underline: 'Underline',
+        bulletList: 'Bullet List',
+        orderedList: 'Ordered List',
+        quote: 'Quote',
+        codeBlock: 'Code Block',
+        image: 'Insert Image',
+        link: 'Insert Link',
+        noCommands: 'No matching commands found',
+        placeholder: 'Type command...'
+      },
+      bubbleMenu: {
+        unorderedList: 'Bullet List',
+        orderedList: 'Ordered List',
+        quote: 'Quote',
+        divider: 'Divider',
+        insertImage: 'Insert Image',
+        ai: 'AI'
+      }
+    },
+    codeBlock: {
+      copied: 'Copied',
+      copy: 'Copy'
+    },
+    model: {
+      loading: 'Loading...',
+      select: 'Select Model',
+      noModels: 'No models available',
+      manage: 'Manage Models...',
+      thinking: 'Thinking Model'
+    },
+    errors: {
+      apiNotConfigured: 'Please configure AI API in settings first',
+      modelNotFound: 'Specified AI model configuration not found',
+      incompleteConfig: 'AI API configuration incomplete, please check settings',
+      processingFailed: 'AI processing failed',
+      noTextSelected: 'Please select text to process first'
     }
   }
 }

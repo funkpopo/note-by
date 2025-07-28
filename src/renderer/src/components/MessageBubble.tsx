@@ -44,18 +44,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry, onDelet
   const dropdownItems = [
     {
       key: 'copy',
+      node: 'item' as const,
       label: '复制',
       icon: <IconCopy />,
       onClick: handleCopy
     },
     ...(isAssistant ? [{
       key: 'retry',
+      node: 'item' as const,
       label: '重新生成',
       icon: <IconRefresh />,
       onClick: handleRetry
     }] : []),
     {
       key: 'delete',
+      node: 'item' as const,
       label: '删除',
       icon: <IconDelete />,
       onClick: handleDelete,
