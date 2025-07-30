@@ -135,7 +135,6 @@ const TableBubbleMenu: React.FC<TableBubbleMenuProps> = ({ editor }) => {
 
     // 菜单最大高度设置为视口高度的80%，留出边距
     const maxMenuHeight = Math.floor(viewportHeight * 0.8)
-    const menuPadding = 8 // 上下各4px的内边距
     
     // 如果菜单内容高度超过最大高度，启用滚动
     if (menuRect.height > maxMenuHeight) {
@@ -185,18 +184,20 @@ const TableBubbleMenu: React.FC<TableBubbleMenuProps> = ({ editor }) => {
     if (menuVisible) {
       // 使用多次延迟调整位置以确保DOM已更新和尺寸计算准确
       const timeouts = [0, 10, 50] // 多个时间点进行调整
+      const timeoutIds: NodeJS.Timeout[] = []
+      
       timeouts.forEach(delay => {
-        setTimeout(() => {
+        const id = setTimeout(() => {
           adjustMenuPosition()
         }, delay)
+        timeoutIds.push(id)
       })
       
       return () => {
-        timeouts.forEach((_, index) => {
-          clearTimeout(index)
-        })
+        timeoutIds.forEach(id => clearTimeout(id))
       }
     }
+    return undefined
   }, [menuVisible, adjustMenuPosition])
 
   // 处理页面滚动和窗口大小变化时的菜单位置调整
