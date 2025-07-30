@@ -203,6 +203,12 @@
   /* 添加左侧内边距以解决内容距离容器边缘过近的问题 */
   padding-left: 24px;
   padding-right: 24px;
+  /* 长文本性能优化 */
+  contain: layout style paint;
+  will-change: scroll-position;
+  /* 优化大文档渲染性能 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
   
   /* 段落间距 */
   p {
@@ -460,14 +466,49 @@
   }
   
   /* 链接样式 */
-  .link {
+  .link, a {
     color: var(--semi-color-primary);
     text-decoration: underline;
     text-decoration-color: var(--semi-color-primary-light-default);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 2px;
     
     &:hover {
       color: var(--semi-color-primary-hover);
       text-decoration-color: var(--semi-color-primary);
+      text-decoration-thickness: 2px;
+      background-color: var(--semi-color-primary-light-hover);
+      padding: 1px 2px;
+      margin: -1px -2px;
+    }
+    
+    &:focus {
+      outline: 2px solid var(--semi-color-primary-light-default);
+      outline-offset: 1px;
+      background-color: var(--semi-color-primary-light-hover);
+    }
+    
+    /* 外部链接图标 */
+    &[target="_blank"]::after {
+      content: "↗";
+      font-size: 0.8em;
+      margin-left: 2px;
+      opacity: 0.6;
+      display: inline-block;
+      transform: translateY(-1px);
+    }
+    
+    /* 邮箱链接样式 */
+    &[href^="mailto:"] {
+      &::before {
+        content: "✉";
+        margin-right: 3px;
+        opacity: 0.7;
+        font-size: 0.9em;
+      }
     }
   }
   
@@ -532,6 +573,15 @@
     outline: none !important;
     border: none !important;
     box-shadow: none !important;
+    /* 长文本性能优化 */
+    contain: layout style paint;
+    will-change: scroll-position;
+    /* 启用硬件加速 */
+    transform: translate3d(0, 0, 0);
+    /* 优化文本渲染 */
+    text-rendering: optimizeSpeed;
+    /* 禁用平滑滚动以提升性能 */
+    scroll-behavior: auto;
   }
   
   /* 移除文本选择时的边框 */

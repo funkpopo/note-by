@@ -3,6 +3,7 @@ import { Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { posToDOMRect } from '@tiptap/core'
 import AiSelector from './AiSelector'
+import LinkDialog from './LinkDialog'
 import { 
   FiBold, 
   FiItalic, 
@@ -214,6 +215,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
 
 const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
   const [placement, setPlacement] = useState<'top-start' | 'bottom-start'>('bottom-start')
   const [isInTable, setIsInTable] = useState(false)
   const bubbleMenuRef = useRef<HTMLDivElement>(null)
@@ -384,6 +386,21 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     }
   }, [editor, calculatePlacement, placement])
 
+  // 监听键盘快捷键事件
+  useEffect(() => {
+    const handleOpenLinkDialog = () => {
+      // 只有当编辑器有焦点时才响应
+      if (editor.isFocused) {
+        setShowLinkDialog(true)
+      }
+    }
+
+    document.addEventListener('openLinkDialog', handleOpenLinkDialog)
+    return () => {
+      document.removeEventListener('openLinkDialog', handleOpenLinkDialog)
+    }
+  }, [editor])
+
   // 添加ESC键处理来关闭BubbleMenu
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -413,23 +430,45 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     }
   }, [editor, showMoreOptions])
   
-  const toggleLink = () => {
-    const previousUrl = editor.getAttributes('link').href
-    const url = window.prompt('输入链接地址:', previousUrl)
+  const openLinkDialog = () => {
+    setShowLinkDialog(true)
+  }
 
-    // cancelled
-    if (url === null) {
-      return
+  const handleLinkConfirm = (url: string, text?: string) => {
+    const { from, to } = editor.state.selection
+    
+    if (text && from !== to) {
+      // 如果提供了显示文本且有选中内容，先替换选中的文本
+      editor.chain().focus().deleteSelection().insertContent(text).run()
+      // 然后选中刚插入的文本并添加链接
+      const newTo = from + text.length
+      editor.chain().focus().setTextSelection({ from, to: newTo }).setLink({ href: url }).run()
+    } else {
+      // 没有显示文本或没有选中内容，直接设置链接
+      if (from === to && text) {
+        // 没有选中内容但有显示文本，插入带链接的文本
+        editor.chain().focus().insertContent(`<a href="${url}">${text}</a>`).run()
+      } else {
+        // 有选中内容，直接添加链接
+        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+      }
     }
+  }
 
-    // empty
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-      return
+  const handleLinkRemove = () => {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+  }
+
+  const getLinkAttributes = () => {
+    const attrs = editor.getAttributes('link')
+    const { from, to } = editor.state.selection
+    const selectedText = editor.state.doc.textBetween(from, to, ' ')
+    
+    return {
+      url: attrs.href || '',
+      text: selectedText || '',
+      hasLink: editor.isActive('link')
     }
-
-    // update link
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }
 
   // 使用 useMemo 优化 BubbleMenu 的 options
@@ -567,7 +606,8 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               </button>
               <button
                 className={`bubble-menu-button ${editor.isActive('link') ? 'active' : ''}`}
-                onClick={toggleLink}
+                onClick={openLinkDialog}
+                title={editor.isActive('link') ? '编辑链接' : '插入链接'}
               >
                 <FiLink size={16} />
               </button>
@@ -668,6 +708,21 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
           )}
         </div>
       </div>
+      
+      {showLinkDialog && (() => {
+        const linkAttrs = getLinkAttributes()
+        return (
+          <LinkDialog
+            isOpen={showLinkDialog}
+            onClose={() => setShowLinkDialog(false)}
+            onConfirm={handleLinkConfirm}
+            onRemove={linkAttrs.hasLink ? handleLinkRemove : undefined}
+            initialUrl={linkAttrs.url}
+            initialText={linkAttrs.text}
+            hasLink={linkAttrs.hasLink}
+          />
+        )
+      })()}
     </BubbleMenu>
   )
 }

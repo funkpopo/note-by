@@ -13,6 +13,7 @@ import {
   FiGrid
 } from 'react-icons/fi'
 import { Editor } from '@tiptap/react'
+import LinkDialog from './LinkDialog'
 
 interface SlashMenuProps {
   editor: Editor
@@ -28,6 +29,7 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
   const [commandFilter, setCommandFilter] = useState('')
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   
   const commands = [
@@ -204,10 +206,8 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
       name: 'Link',
       icon: <FiLink />,
       command: () => {
-        const url = prompt('请输入链接地址')
-        if (url) {
-          editor.chain().focus().setLink({ href: url }).run()
-        }
+        // 显示链接对话框
+        setShowLinkDialog(true)
       },
       description: '插入链接'
     },
@@ -224,20 +224,54 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
     command.description.toLowerCase().includes(commandFilter.toLowerCase())
   )
 
-  const handleCommand = useCallback((command: () => void) => {
-    // 先删除 "/" 字符
-    const { selection } = editor.state
-    const { $from } = selection
-    const tr = editor.state.tr
-    
-    // 删除 "/" 字符
-    if ($from.pos > 0) {
-      tr.delete($from.pos - 1, $from.pos)
-      editor.view.dispatch(tr)
+  const handleCommand = useCallback((command: () => void, isLinkCommand: boolean = false) => {
+    // 对于非链接命令，删除 "/" 字符
+    if (!isLinkCommand) {
+      const { selection } = editor.state
+      const { $from } = selection
+      const tr = editor.state.tr
+      
+      // 删除 "/" 字符
+      if ($from.pos > 0) {
+        tr.delete($from.pos - 1, $from.pos)
+        editor.view.dispatch(tr)
+      }
+      
+      // 执行命令
+      command()
+      onClose()
+      setCommandFilter('')
+      
+      // 确保编辑器重新获得焦点
+      setTimeout(() => {
+        editor.commands.focus()
+      }, 100)
+    } else {
+      // 对于链接命令，先删除"/"，然后执行命令但不关闭菜单
+      const { selection } = editor.state
+      const { $from } = selection
+      const tr = editor.state.tr
+      
+      // 删除 "/" 字符
+      if ($from.pos > 0) {
+        tr.delete($from.pos - 1, $from.pos)
+        editor.view.dispatch(tr)
+      }
+      
+      // 执行链接命令
+      command()
     }
-    
-    // 执行命令
-    command()
+  }, [editor, onClose])
+
+  const handleLinkConfirm = (url: string, text?: string) => {
+    if (text) {
+      // 如果提供了显示文本，插入带链接的文本
+      editor.chain().focus().insertContent(`<a href="${url}">${text}</a>`).run()
+    } else {
+      // 没有显示文本，直接插入链接
+      editor.chain().focus().insertContent(`<a href="${url}">${url}</a>`).run()
+    }
+    setShowLinkDialog(false)
     onClose()
     setCommandFilter('')
     
@@ -245,7 +279,13 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
     setTimeout(() => {
       editor.commands.focus()
     }, 100)
-  }, [editor, onClose])
+  }
+
+  const handleLinkDialogClose = () => {
+    setShowLinkDialog(false)
+    // 重新显示slash menu
+    // 这里不调用onClose，让用户可以继续使用slash menu
+  }
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -253,10 +293,12 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
         onClose()
         setCommandFilter('')
         setSelectedIndex(0)
-        // 确保编辑器重新获得焦点
+        // 确保编辑器重新获得焦点，但不删除 "/" 字符
         setTimeout(() => {
           editor.commands.focus()
         }, 100)
@@ -273,7 +315,9 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
       } else if (e.key === 'Enter') {
         e.preventDefault()
         if (filteredCommands[selectedIndex]) {
-          handleCommand(filteredCommands[selectedIndex].command)
+          const command = filteredCommands[selectedIndex]
+          const isLinkCommand = command.name === 'Link'
+          handleCommand(command.command, isLinkCommand)
         }
       }
     }
@@ -296,7 +340,7 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
         onClose()
         setCommandFilter('')
         setSelectedIndex(0)
-        // 确保编辑器重新获得焦点
+        // 确保编辑器重新获得焦点，但不删除 "/" 字符
         setTimeout(() => {
           editor.commands.focus()
         }, 100)
@@ -381,7 +425,10 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
           <button
             key={index}
             className={`slash-menu-item ${index === selectedIndex ? 'selected' : ''}`}
-            onClick={() => handleCommand(item.command)}
+            onClick={() => {
+              const isLinkCommand = item.name === 'Link'
+              handleCommand(item.command, isLinkCommand)
+            }}
             onMouseEnter={() => setSelectedIndex(index)}
           >
             <div className="slash-menu-item-icon">
@@ -403,7 +450,21 @@ const SlashMenu: React.FC<SlashMenuProps> = ({ editor, isOpen, onClose, position
   )
 
   // 使用 Portal 渲染到 body
-  return ReactDOM.createPortal(menuContent, document.body)
+  return (
+    <>
+      {ReactDOM.createPortal(menuContent, document.body)}
+      {showLinkDialog && (
+        <LinkDialog
+          isOpen={showLinkDialog}
+          onClose={handleLinkDialogClose}
+          onConfirm={handleLinkConfirm}
+          initialUrl=""
+          initialText=""
+          hasLink={false}
+        />
+      )}
+    </>
+  )
 }
 
 export default SlashMenu

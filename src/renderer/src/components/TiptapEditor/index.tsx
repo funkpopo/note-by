@@ -141,13 +141,26 @@ interface BlockEditorProps {
       }),
     ],
     content: content,
-    immediatelyRender: true,
+    immediatelyRender: false,
     shouldRerenderOnTransaction: false,
+    enableInputRules: false,
+    enablePasteRules: false,
+    enableCoreExtensions: true,
     editorProps: {
       attributes: {
         spellcheck: 'false',
         class: 'prose dark:prose-invert focus:outline-none max-w-full z-0',
         style: 'outline: none !important; border: none !important; box-shadow: none !important;'
+      },
+      handleDOMEvents: {
+        // 优化滚动性能
+        scroll: () => {
+          return false
+        },
+        // 防抖输入事件
+        input: (view, event) => {
+          return false
+        }
       },
     },
     onCreate: ({ editor }) => {
@@ -159,16 +172,38 @@ interface BlockEditorProps {
       // Check if we should show the slash menu
       const { selection } = editor.state
       const { $from } = selection
-      const textBefore = $from.parent.textBetween(Math.max(0, $from.parentOffset - 1), $from.parentOffset, null, '\uFFFC')
       
-      if (textBefore === '/') {
+      // 只在光标位置检查，不是选择范围
+      if (selection.from !== selection.to) {
+        if (showSlashMenu) {
+          setShowSlashMenu(false)
+          setSlashMenuPosition(undefined)
+        }
+        return
+      }
+      
+      // 获取当前行的内容，检查是否是行首的"/"
+      const currentLine = $from.parent.textContent
+      const currentPos = $from.parentOffset
+      
+      // 检查是否是行首的"/"或者前面只有空格的"/"
+      const textBeforeSlash = currentLine.substring(0, currentPos - 1)
+      const isSlashAtLineStart = currentPos > 0 && 
+        $from.parent.textBetween(currentPos - 1, currentPos) === '/' &&
+        (textBeforeSlash.trim() === '' || textBeforeSlash === '')
+      
+      if (isSlashAtLineStart) {
         // 获取光标位置
         const coords = editor.view.coordsAtPos($from.pos)
         setSlashMenuPosition({ top: coords.top, left: coords.left })
         setShowSlashMenu(true)
-      } else if (showSlashMenu && textBefore !== '/') {
-        setShowSlashMenu(false)
-        setSlashMenuPosition(undefined)
+      } else if (showSlashMenu) {
+        // 如果用户继续输入其他内容，关闭slash menu
+        const textAfterSlash = currentLine.substring(currentPos - 1)
+        if (!textAfterSlash.startsWith('/')) {
+          setShowSlashMenu(false)
+          setSlashMenuPosition(undefined)
+        }
       }
     },
     onContentError: ({ error }) => {

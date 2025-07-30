@@ -1,6 +1,6 @@
 import { StarterKit } from '@tiptap/starter-kit'
 import { Heading } from '@tiptap/extension-heading'
-import { Link } from '@tiptap/extension-link'
+import { CustomLink } from './CustomLink'
 import { Image } from '@tiptap/extension-image'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Underline } from '@tiptap/extension-underline'
@@ -101,8 +101,12 @@ export const defaultExtensions = [
     levels: [1, 2, 3, 4, 5, 6],
   }),
 
-  Link.configure({
+  CustomLink.configure({
     openOnClick: false,
+    autolink: true,
+    linkOnPaste: true,
+    defaultProtocol: 'https',
+    protocols: ['http', 'https', 'ftp', 'mailto'],
     HTMLAttributes: {
       class: 'link',
       rel: 'noopener noreferrer',
