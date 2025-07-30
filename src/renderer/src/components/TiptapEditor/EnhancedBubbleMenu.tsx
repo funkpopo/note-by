@@ -119,13 +119,15 @@ interface CustomDropdownProps {
   onVisibleChange: (visible: boolean) => void
   trigger: React.ReactNode
   children: React.ReactNode
+  minSpaceNeeded?: number
 }
 
 const CustomDropdown: React.FC<CustomDropdownProps> = ({ 
   visible, 
   onVisibleChange, 
   trigger, 
-  children 
+  children,
+  minSpaceNeeded = 150 // 默认值为150，适合大多数下拉菜单
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
@@ -152,7 +154,6 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     dropdown.style.overflowY = ''
 
     let transformX = 0
-    let showOnTop = false
 
     // 检查右边界
     if (dropdownRect.right > wrapperRect.right) {
@@ -166,13 +167,11 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       transformX = overflow + 8
     }
 
-    // 检查底部边界 - 为颜色选择器预留更多空间
-    const minSpaceNeeded = 200 // 颜色选择器需要的最小空间
+    // 检查底部边界 - 使用传入的最小空间需求
     const spaceBelow = wrapperRect.bottom - dropdownRect.bottom
     const spaceAbove = dropdownRect.top - wrapperRect.top
 
     if (spaceBelow < minSpaceNeeded && spaceAbove > minSpaceNeeded) {
-      showOnTop = true
       dropdown.style.top = 'auto'
       dropdown.style.bottom = '100%'
       dropdown.style.marginTop = '0'
@@ -260,10 +259,13 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             zIndex: 1001,
             minWidth: '140px',
-            maxWidth: '200px',
+            maxWidth: '280px', // 增加最大宽度以适应更长的字体名称
             width: 'max-content',
             padding: '4px 0',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            // 确保在编辑器边界内显示
+            maxHeight: '300px',
+            overflowY: 'auto'
           }}
         >
           {children}
@@ -926,6 +928,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <CustomDropdown
                 visible={showTextColor}
                 onVisibleChange={setShowTextColor}
+                minSpaceNeeded={220} // 颜色选择器需要更多空间
                 trigger={
                   <Tooltip text="文字颜色" place="top">
                     <button className="bubble-menu-button">
@@ -963,6 +966,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <CustomDropdown
                 visible={showBgColor}
                 onVisibleChange={setShowBgColor}
+                minSpaceNeeded={220} // 颜色选择器需要更多空间
                 trigger={
                   <Tooltip text="背景颜色" place="top">
                     <button className="bubble-menu-button">

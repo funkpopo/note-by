@@ -158,7 +158,7 @@ interface BlockEditorProps {
           return false
         },
         // 防抖输入事件
-        input: (view, event) => {
+        input: () => {
           return false
         }
       },
