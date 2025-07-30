@@ -23,9 +23,12 @@ import {
   FiGrid,
   FiPlus,
   FiX,
-  FiType,
-  FiDroplet
+  FiType
 } from 'react-icons/fi'
+import {
+  MdFormatColorFill,
+  MdOutlineColorLens
+} from 'react-icons/md'
 
 interface EnhancedBubbleMenuProps {
   editor: Editor
@@ -933,16 +936,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
                   <Tooltip text="文字颜色" place="top">
                     <button className="bubble-menu-button">
                       <div style={{ position: 'relative' }}>
-                        <FiType size={16} />
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '2px',
-                          left: '2px',
-                          right: '2px',
-                          height: '2px',
-                          backgroundColor: getCurrentTextColor() || '#000',
-                          borderRadius: '1px'
-                        }} />
+                        <MdOutlineColorLens size={16} />
                       </div>
                     </button>
                   </Tooltip>
@@ -971,17 +965,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
                   <Tooltip text="背景颜色" place="top">
                     <button className="bubble-menu-button">
                       <div style={{ position: 'relative' }}>
-                        <FiDroplet size={16} />
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '2px',
-                          left: '2px',
-                          right: '2px',
-                          height: '2px',
-                          backgroundColor: getCurrentBgColor() || 'transparent',
-                          borderRadius: '1px',
-                          border: getCurrentBgColor() ? 'none' : '1px solid var(--semi-color-border)'
-                        }} />
+                        <MdFormatColorFill size={16} />
                       </div>
                     </button>
                   </Tooltip>
