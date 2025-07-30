@@ -4,7 +4,8 @@ import { CustomLink } from './CustomLink'
 import { Image } from '@tiptap/extension-image'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Underline } from '@tiptap/extension-underline'
-import { TextStyle } from '@tiptap/extension-text-style'
+import { TextStyle, Color, FontFamily, FontSize, BackgroundColor } from '@tiptap/extension-text-style'
+import { Highlight } from '@tiptap/extension-highlight'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
@@ -127,6 +128,26 @@ export const defaultExtensions = [
   Underline,
 
   TextStyle,
+
+  Color.configure({
+    types: ['textStyle'],
+  }),
+
+  FontFamily.configure({
+    types: ['textStyle'],
+  }),
+
+  FontSize.configure({
+    types: ['textStyle'],
+  }),
+
+  BackgroundColor.configure({
+    types: ['textStyle'],
+  }),
+
+  Highlight.configure({
+    multicolor: true,
+  }),
 
   CustomCodeBlock.configure({
     lowlight,
