@@ -1386,16 +1386,25 @@ div[data-tippy-root] > div {
 .custom-dropdown-menu {
   backdrop-filter: blur(12px);
   animation: dropdownSlideIn 0.15s ease-out;
-  min-width: 120px !important;
+  min-width: 140px !important;
   max-width: min(200px, calc(100vw - 32px)) !important;
   width: max-content !important;
-  overflow: hidden;
+  overflow: hidden !important;
   word-wrap: break-word;
 }
 
 /* 确保下拉菜单在编辑器范围内 */
 .block-editor-wrapper .custom-dropdown-menu {
   max-width: min(200px, calc(100% - 16px)) !important;
+}
+
+/* 颜色选择器专用样式 */
+.custom-dropdown-menu:has([style*="width: 200px"]) {
+  min-width: 200px !important;
+  max-width: 220px !important;
+  width: 220px !important;
+  padding: 0 !important;
+  overflow: visible !important;
 }
 
 @keyframes dropdownSlideIn {
@@ -1422,6 +1431,15 @@ div[data-tippy-root] > div {
 
 .custom-dropdown-item {
   font-family: inherit;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.custom-dropdown-item span {
+  min-width: 0 !important;
+  max-width: 100% !important;
 }
 
 .custom-dropdown-item svg {

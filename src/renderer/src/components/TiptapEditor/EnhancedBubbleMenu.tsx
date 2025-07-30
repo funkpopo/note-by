@@ -142,36 +142,51 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     const wrapperRect = editorWrapper.getBoundingClientRect()
     const dropdownRect = dropdown.getBoundingClientRect()
 
-    let adjustedStyle = ''
+    // 重置之前的样式修改
+    dropdown.style.transform = ''
+    dropdown.style.top = ''
+    dropdown.style.bottom = ''
+    dropdown.style.marginTop = ''
+    dropdown.style.marginBottom = ''
+    dropdown.style.maxHeight = ''
+    dropdown.style.overflowY = ''
+
+    let transformX = 0
+    let showOnTop = false
 
     // 检查右边界
     if (dropdownRect.right > wrapperRect.right) {
       const overflow = dropdownRect.right - wrapperRect.right
-      adjustedStyle += `transform: translateX(-${overflow}px); `
+      transformX = -(overflow + 8)
     }
 
     // 检查左边界
     if (dropdownRect.left < wrapperRect.left) {
       const overflow = wrapperRect.left - dropdownRect.left
-      adjustedStyle += `transform: translateX(${overflow}px); `
+      transformX = overflow + 8
     }
 
-    // 检查底部边界
-    if (dropdownRect.bottom > wrapperRect.bottom) {
-      // 如果下方空间不足，显示在上方
-      adjustedStyle += `top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; `
+    // 检查底部边界 - 为颜色选择器预留更多空间
+    const minSpaceNeeded = 200 // 颜色选择器需要的最小空间
+    const spaceBelow = wrapperRect.bottom - dropdownRect.bottom
+    const spaceAbove = dropdownRect.top - wrapperRect.top
+
+    if (spaceBelow < minSpaceNeeded && spaceAbove > minSpaceNeeded) {
+      showOnTop = true
+      dropdown.style.top = 'auto'
+      dropdown.style.bottom = '100%'
+      dropdown.style.marginTop = '0'
+      dropdown.style.marginBottom = '4px'
+    } else if (spaceBelow < minSpaceNeeded && spaceAbove <= minSpaceNeeded) {
+      // 如果上下都没有足够空间，显示在下方但限制高度
+      const maxHeight = Math.max(150, spaceBelow - 16)
+      dropdown.style.maxHeight = `${maxHeight}px`
+      dropdown.style.overflowY = 'auto'
     }
 
-    // 检查顶部边界（当显示在上方时）
-    if (dropdownRect.top < wrapperRect.top && adjustedStyle.includes('bottom: 100%')) {
-      // 如果上方也不足，恢复显示在下方但调整高度
-      adjustedStyle = adjustedStyle.replace('top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; ', '')
-      const maxHeight = wrapperRect.bottom - dropdownRect.top - 8
-      adjustedStyle += `max-height: ${maxHeight}px; overflow-y: auto; `
-    }
-
-    if (adjustedStyle) {
-      dropdown.style.cssText += adjustedStyle
+    // 应用水平变换
+    if (transformX !== 0) {
+      dropdown.style.transform = `translateX(${transformX}px)`
     }
   }, [visible])
 
@@ -244,10 +259,11 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             borderRadius: '8px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             zIndex: 1001,
-            minWidth: '120px',
+            minWidth: '140px',
             maxWidth: '200px',
             width: 'max-content',
-            padding: '4px 0'
+            padding: '4px 0',
+            overflow: 'hidden'
           }}
         >
           {children}
@@ -284,7 +300,9 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon, ac
         color: 'var(--semi-color-text-0)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis',
+        minWidth: 0,
+        boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         if (!active) {
@@ -295,8 +313,16 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon, ac
         e.currentTarget.style.background = active ? 'var(--semi-color-fill-1)' : 'transparent'
       }}
     >
-      {icon && <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>}
-      {children}
+      {icon && <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</span>}
+      <span style={{ 
+        overflow: 'hidden', 
+        textOverflow: 'ellipsis', 
+        whiteSpace: 'nowrap',
+        minWidth: 0,
+        flex: 1
+      }}>
+        {children}
+      </span>
     </button>
   )
 }
@@ -310,36 +336,54 @@ interface ColorPickerProps {
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ colors, activeColor, onColorSelect, onClear }) => {
   return (
-    <div style={{ padding: '8px', width: '180px' }}>
+    <div style={{ 
+      padding: '12px', 
+      width: '200px',
+      minWidth: '200px',
+      maxWidth: '200px'
+    }}>
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(6, 1fr)', 
-        gap: '4px',
-        marginBottom: onClear ? '8px' : '0'
+        gap: '6px',
+        marginBottom: onClear ? '12px' : '0'
       }}>
         {colors.map((color) => (
           <button
             key={color}
             onClick={() => onColorSelect(color)}
             style={{
-              width: '24px',
-              height: '24px',
+              width: '26px',
+              height: '26px',
               backgroundColor: color,
               border: activeColor === color ? '2px solid var(--semi-color-primary)' : '1px solid var(--semi-color-border)',
-              borderRadius: '4px',
+              borderRadius: '6px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              position: 'relative'
             }}
             title={color}
+            onMouseEnter={(e) => {
+              if (activeColor !== color) {
+                e.currentTarget.style.transform = 'scale(1.1)'
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           >
             {activeColor === color && (
               <div style={{
-                width: '8px',
-                height: '8px',
-                backgroundColor: color === '#ffffff' ? '#000' : '#fff',
-                borderRadius: '50%'
+                width: '10px',
+                height: '10px',
+                backgroundColor: color === '#ffffff' || color === '#f8f9fa' ? '#000' : '#fff',
+                borderRadius: '50%',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
               }} />
             )}
           </button>
@@ -350,13 +394,22 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ colors, activeColor, onColorS
           onClick={onClear}
           style={{
             width: '100%',
-            padding: '4px 8px',
+            padding: '8px 12px',
             border: '1px solid var(--semi-color-border)',
-            borderRadius: '4px',
-            background: 'transparent',
+            borderRadius: '6px',
+            background: 'var(--semi-color-bg-1)',
             color: 'var(--semi-color-text-1)',
-            fontSize: '12px',
-            cursor: 'pointer'
+            fontSize: '13px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+            e.currentTarget.style.color = 'var(--semi-color-text-0)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'var(--semi-color-bg-1)'
+            e.currentTarget.style.color = 'var(--semi-color-text-1)'
           }}
         >
           清除颜色
