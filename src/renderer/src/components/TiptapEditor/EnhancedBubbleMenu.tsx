@@ -22,11 +22,96 @@ import {
   FiMessageSquare,
   FiGrid,
   FiPlus,
-  FiX
+  FiX,
+  FiType,
+  FiDroplet
 } from 'react-icons/fi'
 
 interface EnhancedBubbleMenuProps {
   editor: Editor
+}
+
+interface TooltipProps {
+  text: string
+  children: React.ReactNode
+  place?: 'top' | 'bottom'
+}
+
+const Tooltip: React.FC<TooltipProps> = ({ text, children, place = 'top' }) => {
+  const [isVisible, setIsVisible] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => setIsVisible(true), 500)
+  }
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    setIsVisible(false)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
+  return (
+    <div 
+      className="tooltip-container" 
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+      {isVisible && (
+        <div
+          className="tooltip"
+          style={{
+            position: 'absolute',
+            ...(place === 'top' ? { bottom: '100%', marginBottom: '4px' } : { top: '100%', marginTop: '4px' }),
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'var(--semi-color-bg-4)',
+            color: 'var(--semi-color-text-0)',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            zIndex: 1002,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            border: '1px solid var(--semi-color-border)',
+            pointerEvents: 'none'
+          }}
+        >
+          {text}
+          <div
+            style={{
+              position: 'absolute',
+              ...(place === 'top' ? { top: '100%' } : { bottom: '100%' }),
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 0,
+              height: 0,
+              borderLeft: '4px solid transparent',
+              borderRight: '4px solid transparent',
+              ...(place === 'top' 
+                ? { borderTop: '4px solid var(--semi-color-bg-4)' }
+                : { borderBottom: '4px solid var(--semi-color-bg-4)' }
+              )
+            }}
+          />
+        </div>
+      )}
+    </div>
+  )
 }
 
 interface CustomDropdownProps {
@@ -34,13 +119,15 @@ interface CustomDropdownProps {
   onVisibleChange: (visible: boolean) => void
   trigger: React.ReactNode
   children: React.ReactNode
+  minSpaceNeeded?: number
 }
 
 const CustomDropdown: React.FC<CustomDropdownProps> = ({ 
   visible, 
   onVisibleChange, 
   trigger, 
-  children 
+  children,
+  minSpaceNeeded = 150 // 默认值为150，适合大多数下拉菜单
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
@@ -57,36 +144,48 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     const wrapperRect = editorWrapper.getBoundingClientRect()
     const dropdownRect = dropdown.getBoundingClientRect()
 
-    let adjustedStyle = ''
+    // 重置之前的样式修改
+    dropdown.style.transform = ''
+    dropdown.style.top = ''
+    dropdown.style.bottom = ''
+    dropdown.style.marginTop = ''
+    dropdown.style.marginBottom = ''
+    dropdown.style.maxHeight = ''
+    dropdown.style.overflowY = ''
+
+    let transformX = 0
 
     // 检查右边界
     if (dropdownRect.right > wrapperRect.right) {
       const overflow = dropdownRect.right - wrapperRect.right
-      adjustedStyle += `transform: translateX(-${overflow}px); `
+      transformX = -(overflow + 8)
     }
 
     // 检查左边界
     if (dropdownRect.left < wrapperRect.left) {
       const overflow = wrapperRect.left - dropdownRect.left
-      adjustedStyle += `transform: translateX(${overflow}px); `
+      transformX = overflow + 8
     }
 
-    // 检查底部边界
-    if (dropdownRect.bottom > wrapperRect.bottom) {
-      // 如果下方空间不足，显示在上方
-      adjustedStyle += `top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; `
+    // 检查底部边界 - 使用传入的最小空间需求
+    const spaceBelow = wrapperRect.bottom - dropdownRect.bottom
+    const spaceAbove = dropdownRect.top - wrapperRect.top
+
+    if (spaceBelow < minSpaceNeeded && spaceAbove > minSpaceNeeded) {
+      dropdown.style.top = 'auto'
+      dropdown.style.bottom = '100%'
+      dropdown.style.marginTop = '0'
+      dropdown.style.marginBottom = '4px'
+    } else if (spaceBelow < minSpaceNeeded && spaceAbove <= minSpaceNeeded) {
+      // 如果上下都没有足够空间，显示在下方但限制高度
+      const maxHeight = Math.max(150, spaceBelow - 16)
+      dropdown.style.maxHeight = `${maxHeight}px`
+      dropdown.style.overflowY = 'auto'
     }
 
-    // 检查顶部边界（当显示在上方时）
-    if (dropdownRect.top < wrapperRect.top && adjustedStyle.includes('bottom: 100%')) {
-      // 如果上方也不足，恢复显示在下方但调整高度
-      adjustedStyle = adjustedStyle.replace('top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px; ', '')
-      const maxHeight = wrapperRect.bottom - dropdownRect.top - 8
-      adjustedStyle += `max-height: ${maxHeight}px; overflow-y: auto; `
-    }
-
-    if (adjustedStyle) {
-      dropdown.style.cssText += adjustedStyle
+    // 应用水平变换
+    if (transformX !== 0) {
+      dropdown.style.transform = `translateX(${transformX}px)`
     }
   }, [visible])
 
@@ -159,10 +258,14 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             borderRadius: '8px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             zIndex: 1001,
-            minWidth: '120px',
-            maxWidth: '200px',
+            minWidth: '140px',
+            maxWidth: '280px', // 增加最大宽度以适应更长的字体名称
             width: 'max-content',
-            padding: '4px 0'
+            padding: '4px 0',
+            overflow: 'hidden',
+            // 确保在编辑器边界内显示
+            maxHeight: '300px',
+            overflowY: 'auto'
           }}
         >
           {children}
@@ -176,9 +279,10 @@ interface DropdownItemProps {
   onClick: () => void
   children: React.ReactNode
   icon?: React.ReactNode
+  active?: boolean
 }
 
-const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) => {
+const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon, active = false }) => {
   return (
     <button
       className="custom-dropdown-item"
@@ -187,7 +291,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
         width: '100%',
         padding: '8px 12px',
         border: 'none',
-        background: 'transparent',
+        background: active ? 'var(--semi-color-fill-1)' : 'transparent',
         textAlign: 'left',
         cursor: 'pointer',
         transition: 'background-color 0.2s',
@@ -198,27 +302,202 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon }) 
         color: 'var(--semi-color-text-0)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis',
+        minWidth: 0,
+        boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+        if (!active) {
+          e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+        }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent'
+        e.currentTarget.style.background = active ? 'var(--semi-color-fill-1)' : 'transparent'
       }}
     >
-      {icon && <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>}
-      {children}
+      {icon && <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</span>}
+      <span style={{ 
+        overflow: 'hidden', 
+        textOverflow: 'ellipsis', 
+        whiteSpace: 'nowrap',
+        minWidth: 0,
+        flex: 1
+      }}>
+        {children}
+      </span>
     </button>
+  )
+}
+
+interface ColorPickerProps {
+  colors: string[]
+  activeColor?: string
+  onColorSelect: (color: string) => void
+  onClear?: () => void
+}
+
+const ColorPicker: React.FC<ColorPickerProps> = ({ colors, activeColor, onColorSelect, onClear }) => {
+  return (
+    <div style={{ 
+      padding: '12px', 
+      width: '200px',
+      minWidth: '200px',
+      maxWidth: '200px'
+    }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(6, 1fr)', 
+        gap: '6px',
+        marginBottom: onClear ? '12px' : '0'
+      }}>
+        {colors.map((color) => (
+          <button
+            key={color}
+            onClick={() => onColorSelect(color)}
+            style={{
+              width: '26px',
+              height: '26px',
+              backgroundColor: color,
+              border: activeColor === color ? '2px solid var(--semi-color-primary)' : '1px solid var(--semi-color-border)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              position: 'relative'
+            }}
+            title={color}
+            onMouseEnter={(e) => {
+              if (activeColor !== color) {
+                e.currentTarget.style.transform = 'scale(1.1)'
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
+          >
+            {activeColor === color && (
+              <div style={{
+                width: '10px',
+                height: '10px',
+                backgroundColor: color === '#ffffff' || color === '#f8f9fa' ? '#000' : '#fff',
+                borderRadius: '50%',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
+              }} />
+            )}
+          </button>
+        ))}
+      </div>
+      {onClear && (
+        <button
+          onClick={onClear}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid var(--semi-color-border)',
+            borderRadius: '6px',
+            background: 'var(--semi-color-bg-1)',
+            color: 'var(--semi-color-text-1)',
+            fontSize: '13px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--semi-color-fill-0)'
+            e.currentTarget.style.color = 'var(--semi-color-text-0)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'var(--semi-color-bg-1)'
+            e.currentTarget.style.color = 'var(--semi-color-text-1)'
+          }}
+        >
+          清除颜色
+        </button>
+      )}
+    </div>
   )
 }
 
 const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [showFontFamily, setShowFontFamily] = useState(false)
+  const [showFontSize, setShowFontSize] = useState(false)
+  const [showTextColor, setShowTextColor] = useState(false)
+  const [showBgColor, setShowBgColor] = useState(false)
   const [placement, setPlacement] = useState<'top-start' | 'bottom-start'>('bottom-start')
   const [isInTable, setIsInTable] = useState(false)
   const bubbleMenuRef = useRef<HTMLDivElement>(null)
+
+  // 字体系列选项
+  const fontFamilies = [
+    { name: '默认', value: '' },
+    { name: '苹方', value: 'PingFang SC' },
+    { name: '微软雅黑', value: 'Microsoft YaHei' },
+    { name: '宋体', value: 'SimSun' },
+    { name: '黑体', value: 'SimHei' },
+    { name: 'Arial', value: 'Arial' },
+    { name: 'Helvetica', value: 'Helvetica' },
+    { name: 'Times New Roman', value: 'Times New Roman' },
+    { name: 'Courier New', value: 'Courier New' },
+    { name: 'Georgia', value: 'Georgia' },
+  ]
+
+  // 字号选项
+  const fontSizes = [
+    { name: '小', value: '12px' },
+    { name: '较小', value: '14px' },
+    { name: '正常', value: '16px' },
+    { name: '较大', value: '18px' },
+    { name: '大', value: '20px' },
+    { name: '特大', value: '24px' },
+    { name: '超大', value: '32px' },
+  ]
+
+  // 颜色选项
+  const textColors = [
+    '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
+    '#ff0000', '#ff6600', '#ffcc00', '#33cc33', '#0099cc', '#6633cc',
+    '#ff3366', '#ff9933', '#ffff00', '#66ff66', '#3399ff', '#9966ff',
+    '#cc0000', '#cc6600', '#cc9900', '#009900', '#0066cc', '#6600cc',
+    '#990033', '#cc3300', '#999900', '#006600', '#003399', '#330099',
+  ]
+
+  const backgroundColors = [
+    '#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6', '#ced4da', '#adb5bd',
+    '#ffebee', '#fff3e0', '#fff8e1', '#f1f8e9', '#e8f5e8', '#e3f2fd',
+    '#fce4ec', '#fff0f5', '#fffbf0', '#f0fff0', '#f0f8ff', '#f5f0ff',
+    '#ffcdd2', '#ffcc80', '#fff176', '#c8e6c9', '#81c784', '#64b5f6',
+    '#f8bbd9', '#ffab91', '#dce775', '#a5d6a7', '#4fc3f7', '#9575cd',
+    '#ef5350', '#ff8a65', '#ffb74d', '#81c784', '#42a5f5', '#ab47bc',
+  ]
+
+  // 获取当前字体系列
+  const getCurrentFontFamily = () => {
+    const attrs = editor.getAttributes('textStyle')
+    return attrs.fontFamily || ''
+  }
+
+  // 获取当前字号
+  const getCurrentFontSize = () => {
+    const attrs = editor.getAttributes('textStyle')
+    return attrs.fontSize || ''
+  }
+
+  // 获取当前文字颜色
+  const getCurrentTextColor = () => {
+    const attrs = editor.getAttributes('textStyle')
+    return attrs.color || ''
+  }
+
+  // 获取当前背景颜色
+  const getCurrentBgColor = () => {
+    const attrs = editor.getAttributes('textStyle')
+    return attrs.backgroundColor || ''
+  }
   
   // 获取选中区域的边界矩形
   const getSelectionRect = useCallback(() => {
@@ -512,138 +791,326 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
           {isInTable ? (
             // 表格模式：显示表格操作按钮
             <>
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().addColumnBefore().run()}
-                title="在前方插入列"
-              >
-                <FiPlus size={16} />
-              </button>
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().addColumnAfter().run()}
-                title="在后方插入列"
-              >
-                <FiPlus size={16} />
-              </button>
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().deleteColumn().run()}
-                title="删除列"
-              >
-                <FiX size={16} />
-              </button>
+              <Tooltip text="在前方插入列" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().addColumnBefore().run()}
+                >
+                  <FiPlus size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="在后方插入列" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().addColumnAfter().run()}
+                >
+                  <FiPlus size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="删除列" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().deleteColumn().run()}
+                >
+                  <FiX size={16} />
+                </button>
+              </Tooltip>
+              
               <div className="divider" />
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().addRowBefore().run()}
-                title="在上方插入行"
-              >
-                <FiPlus size={16} />
-              </button>
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().addRowAfter().run()}
-                title="在下方插入行"
-              >
-                <FiPlus size={16} />
-              </button>
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().deleteRow().run()}
-                title="删除行"
-              >
-                <FiX size={16} />
-              </button>
+              
+              <Tooltip text="在上方插入行" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().addRowBefore().run()}
+                >
+                  <FiPlus size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="在下方插入行" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().addRowAfter().run()}
+                >
+                  <FiPlus size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="删除行" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().deleteRow().run()}
+                >
+                  <FiX size={16} />
+                </button>
+              </Tooltip>
+              
               <div className="divider" />
-              <button
-                className="bubble-menu-button"
-                onClick={() => editor.chain().focus().deleteTable().run()}
-                title="删除表格"
-              >
-                <FiGrid size={16} />
-              </button>
+              
+              <Tooltip text="删除表格" place="top">
+                <button
+                  className="bubble-menu-button"
+                  onClick={() => editor.chain().focus().deleteTable().run()}
+                >
+                  <FiGrid size={16} />
+                </button>
+              </Tooltip>
             </>
           ) : (
             // 普通模式：显示常规格式化按钮
             <>
               <AiSelector editor={editor} />
               <div className="divider" />
-              <button
-                className={`bubble-menu-button ${editor.isActive('bold') ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().toggleMark('bold').run()}
-                disabled={!editor.can().chain().focus().toggleMark('bold').run()}
+              
+              {/* 字体系列下拉框 */}
+              <CustomDropdown
+                visible={showFontFamily}
+                onVisibleChange={setShowFontFamily}
+                trigger={
+                  <Tooltip text="字体" place="top">
+                    <button className="bubble-menu-button">
+                      <FiType size={16} />
+                    </button>
+                  </Tooltip>
+                }
               >
-                <FiBold size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive('italic') ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().toggleMark('italic').run()}
-                disabled={!editor.can().chain().focus().toggleMark('italic').run()}
+                {fontFamilies.map((font) => (
+                  <DropdownItem
+                    key={font.value}
+                    onClick={() => {
+                      if (font.value) {
+                        editor.chain().focus().setFontFamily(font.value).run()
+                      } else {
+                        editor.chain().focus().unsetFontFamily().run()
+                      }
+                      setShowFontFamily(false)
+                    }}
+                    active={getCurrentFontFamily() === font.value}
+                  >
+                    <span style={{ fontFamily: font.value || 'inherit' }}>
+                      {font.name}
+                    </span>
+                  </DropdownItem>
+                ))}
+              </CustomDropdown>
+
+              {/* 字号下拉框 */}
+              <CustomDropdown
+                visible={showFontSize}
+                onVisibleChange={setShowFontSize}
+                trigger={
+                  <Tooltip text="字号" place="top">
+                    <button className="bubble-menu-button">
+                      <span style={{ fontSize: '12px', fontWeight: 'bold' }}>A</span>
+                    </button>
+                  </Tooltip>
+                }
               >
-                <FiItalic size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive('underline') ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().toggleMark('underline').run()}
-                disabled={!editor.can().chain().focus().toggleMark('underline').run()}
+                {fontSizes.map((size) => (
+                  <DropdownItem
+                    key={size.value}
+                    onClick={() => {
+                      editor.chain().focus().setFontSize(size.value).run()
+                      setShowFontSize(false)
+                    }}
+                    active={getCurrentFontSize() === size.value}
+                  >
+                    <span style={{ fontSize: size.value }}>
+                      {size.name}
+                    </span>
+                  </DropdownItem>
+                ))}
+              </CustomDropdown>
+
+              {/* 文字颜色 */}
+              <CustomDropdown
+                visible={showTextColor}
+                onVisibleChange={setShowTextColor}
+                minSpaceNeeded={220} // 颜色选择器需要更多空间
+                trigger={
+                  <Tooltip text="文字颜色" place="top">
+                    <button className="bubble-menu-button">
+                      <div style={{ position: 'relative' }}>
+                        <FiType size={16} />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '2px',
+                          left: '2px',
+                          right: '2px',
+                          height: '2px',
+                          backgroundColor: getCurrentTextColor() || '#000',
+                          borderRadius: '1px'
+                        }} />
+                      </div>
+                    </button>
+                  </Tooltip>
+                }
               >
-                <FiUnderline size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive('strike') ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().toggleMark('strike').run()}
-                disabled={!editor.can().chain().focus().toggleMark('strike').run()}
+                <ColorPicker
+                  colors={textColors}
+                  activeColor={getCurrentTextColor()}
+                  onColorSelect={(color) => {
+                    editor.chain().focus().setColor(color).run()
+                    setShowTextColor(false)
+                  }}
+                  onClear={() => {
+                    editor.chain().focus().unsetColor().run()
+                    setShowTextColor(false)
+                  }}
+                />
+              </CustomDropdown>
+
+              {/* 背景颜色 */}
+              <CustomDropdown
+                visible={showBgColor}
+                onVisibleChange={setShowBgColor}
+                minSpaceNeeded={220} // 颜色选择器需要更多空间
+                trigger={
+                  <Tooltip text="背景颜色" place="top">
+                    <button className="bubble-menu-button">
+                      <div style={{ position: 'relative' }}>
+                        <FiDroplet size={16} />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '2px',
+                          left: '2px',
+                          right: '2px',
+                          height: '2px',
+                          backgroundColor: getCurrentBgColor() || 'transparent',
+                          borderRadius: '1px',
+                          border: getCurrentBgColor() ? 'none' : '1px solid var(--semi-color-border)'
+                        }} />
+                      </div>
+                    </button>
+                  </Tooltip>
+                }
               >
-                <FiSlash size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive('code') ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().toggleMark('code').run()}
-                disabled={!editor.can().chain().focus().toggleMark('code').run()}
-              >
-                <FiCode size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive('link') ? 'active' : ''}`}
-                onClick={openLinkDialog}
-                title={editor.isActive('link') ? '编辑链接' : '插入链接'}
-              >
-                <FiLink size={16} />
-              </button>
+                <ColorPicker
+                  colors={backgroundColors}
+                  activeColor={getCurrentBgColor()}
+                  onColorSelect={(color) => {
+                    editor.chain().focus().setBackgroundColor(color).run()
+                    setShowBgColor(false)
+                  }}
+                  onClear={() => {
+                    editor.chain().focus().unsetBackgroundColor().run()
+                    setShowBgColor(false)
+                  }}
+                />
+              </CustomDropdown>
+
               <div className="divider" />
-              <button
-                className={`bubble-menu-button ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().setTextAlign('left').run()}
-              >
-                <FiAlignLeft size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().setTextAlign('center').run()}
-              >
-                <FiAlignCenter size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().setTextAlign('right').run()}
-              >
-                <FiAlignRight size={16} />
-              </button>
-              <button
-                className={`bubble-menu-button ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`}
-                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-              >
-                <FiAlignJustify size={16} />
-              </button>
+              
+              <Tooltip text="粗体" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive('bold') ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().toggleMark('bold').run()}
+                  disabled={!editor.can().chain().focus().toggleMark('bold').run()}
+                >
+                  <FiBold size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="斜体" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive('italic') ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().toggleMark('italic').run()}
+                  disabled={!editor.can().chain().focus().toggleMark('italic').run()}
+                >
+                  <FiItalic size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="下划线" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive('underline') ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().toggleMark('underline').run()}
+                  disabled={!editor.can().chain().focus().toggleMark('underline').run()}
+                >
+                  <FiUnderline size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="删除线" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive('strike') ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().toggleMark('strike').run()}
+                  disabled={!editor.can().chain().focus().toggleMark('strike').run()}
+                >
+                  <FiSlash size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="行内代码" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive('code') ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().toggleMark('code').run()}
+                  disabled={!editor.can().chain().focus().toggleMark('code').run()}
+                >
+                  <FiCode size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text={editor.isActive('link') ? '编辑链接' : '插入链接'} place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive('link') ? 'active' : ''}`}
+                  onClick={openLinkDialog}
+                >
+                  <FiLink size={16} />
+                </button>
+              </Tooltip>
+              
               <div className="divider" />
+              
+              <Tooltip text="左对齐" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                >
+                  <FiAlignLeft size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="居中对齐" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                >
+                  <FiAlignCenter size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="右对齐" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                >
+                  <FiAlignRight size={16} />
+                </button>
+              </Tooltip>
+              
+              <Tooltip text="两端对齐" place="top">
+                <button
+                  className={`bubble-menu-button ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`}
+                  onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                >
+                  <FiAlignJustify size={16} />
+                </button>
+              </Tooltip>
+              
+              <div className="divider" />
+              
               <CustomDropdown
                 visible={showMoreOptions}
                 onVisibleChange={setShowMoreOptions}
                 trigger={
-                  <button className="bubble-menu-button">
-                    <FiMoreVertical size={16} />
-                  </button>
+                  <Tooltip text="更多选项" place="top">
+                    <button className="bubble-menu-button">
+                      <FiMoreVertical size={16} />
+                    </button>
+                  </Tooltip>
                 }
               >
                 <DropdownItem 

@@ -63,11 +63,10 @@ export const TableColumnResize = Extension.create<TableColumnResizeOptions>({
               const table = target.closest('table')
               
               if (table && view.state.selection.empty) {
-                const rect = table.getBoundingClientRect()
                 const cells = table.querySelectorAll('td, th')
                 
                 // 显示列边界的resize光标
-                cells.forEach((cell, index) => {
+                cells.forEach((cell) => {
                   const cellRect = cell.getBoundingClientRect()
                   const rightEdge = cellRect.right
                   
@@ -88,7 +87,7 @@ export const TableColumnResize = Extension.create<TableColumnResizeOptions>({
               return false
             },
 
-            mousedown: (view, event) => {
+            mousedown: (_view, event) => {
               const target = event.target as HTMLElement
               const table = target.closest('table')
               

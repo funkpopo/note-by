@@ -135,6 +135,41 @@ body[theme-mode='light'] {
   --semi-shadow-card:
     0 1px 2px -2px rgba(0, 0, 0, 0.04), 0 3px 6px 0 rgba(0, 0, 0, 0.06),
     0 5px 12px 4px rgba(0, 0, 0, 0.04); /* 卡片阴影 */
+
+  /* 代码块主题颜色 */
+  --code-block-bg: #f8f9fa; /* 代码块背景 */
+  --code-block-border: #e1e4e8; /* 代码块边框 */
+  --code-block-header-bg: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%); /* 头部背景 */
+  --code-block-text: #24292e; /* 代码文本颜色 */
+  --code-block-button-bg: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); /* 按钮背景 */
+  --code-block-button-border: #d1d5da; /* 按钮边框 */
+  --code-block-button-text: #586069; /* 按钮文字 */
+  --code-block-button-hover-bg: linear-gradient(135deg, #f6f8fa 0%, #e1e4e8 100%); /* 按钮悬浮背景 */
+  --code-block-button-hover-border: #0366d6; /* 按钮悬浮边框 */
+  --code-block-scrollbar-track: #f1f3f4; /* 滚动条轨道 */
+  --code-block-scrollbar-thumb: #c1c8cd; /* 滚动条滑块 */
+  --code-block-scrollbar-thumb-hover: #a1a7aa; /* 滚动条滑块悬浮 */
+  
+  /* 语法高亮 - 浅色主题 */
+  --code-syntax-keyword: #d73a49; /* 关键字 */
+  --code-syntax-string: #032f62; /* 字符串 */
+  --code-syntax-number: #005cc5; /* 数字 */
+  --code-syntax-comment: #6a737d; /* 注释 */
+  --code-syntax-function: #6f42c1; /* 函数 */
+  --code-syntax-variable: #e36209; /* 变量 */
+  --code-syntax-class: #22863a; /* 类名 */
+  --code-syntax-title: #6f42c1; /* 标题 */
+  --code-syntax-params: #e36209; /* 参数 */
+  --code-syntax-builtin: #005cc5; /* 内置函数 */
+  --code-syntax-literal: #005cc5; /* 字面量 */
+  --code-syntax-type: #22863a; /* 类型 */
+  --code-syntax-attribute: #6f42c1; /* 属性 */
+  --code-syntax-symbol: #005cc5; /* 符号 */
+  --code-syntax-meta: #6a737d; /* 元数据 */
+  --code-syntax-operator: #d73a49; /* 操作符 */
+  --code-syntax-punctuation: #24292e; /* 标点符号 */
+  --code-syntax-property: #e36209; /* 属性 */
+  --code-syntax-regexp: #032f62; /* 正则表达式 */
 }
 
 /* 深色模式 */
@@ -218,4 +253,39 @@ body[theme-mode='dark'] {
   --semi-shadow-card:
     0 1px 2px -2px rgba(0, 0, 0, 0.48), 0 3px 6px 0 rgba(0, 0, 0, 0.72),
     0 5px 12px 4px rgba(0, 0, 0, 0.48); /* 卡片阴影 */
+
+  /* 代码块主题颜色 */
+  --code-block-bg: #1e1e1e; /* 代码块背景 */
+  --code-block-border: #404040; /* 代码块边框 */
+  --code-block-header-bg: linear-gradient(135deg, #2d2d30 0%, #252526 100%); /* 头部背景 */
+  --code-block-text: #d4d4d4; /* 代码文本颜色 */
+  --code-block-button-bg: linear-gradient(135deg, #3c3c3c 0%, #2d2d30 100%); /* 按钮背景 */
+  --code-block-button-border: #404040; /* 按钮边框 */
+  --code-block-button-text: #cccccc; /* 按钮文字 */
+  --code-block-button-hover-bg: linear-gradient(135deg, #4a4a4a 0%, #3c3c3c 100%); /* 按钮悬浮背景 */
+  --code-block-button-hover-border: #569cd6; /* 按钮悬浮边框 */
+  --code-block-scrollbar-track: #2d2d30; /* 滚动条轨道 */
+  --code-block-scrollbar-thumb: #464647; /* 滚动条滑块 */
+  --code-block-scrollbar-thumb-hover: #5a5a5c; /* 滚动条滑块悬浮 */
+  
+  /* 语法高亮 - 深色主题 */
+  --code-syntax-keyword: #c586c0; /* 关键字 */
+  --code-syntax-string: #ce9178; /* 字符串 */
+  --code-syntax-number: #b5cea8; /* 数字 */
+  --code-syntax-comment: #6a9955; /* 注释 */
+  --code-syntax-function: #dcdcaa; /* 函数 */
+  --code-syntax-variable: #9cdcfe; /* 变量 */
+  --code-syntax-class: #4ec9b0; /* 类名 */
+  --code-syntax-title: #dcdcaa; /* 标题 */
+  --code-syntax-params: #9cdcfe; /* 参数 */
+  --code-syntax-builtin: #569cd6; /* 内置函数 */
+  --code-syntax-literal: #569cd6; /* 字面量 */
+  --code-syntax-type: #4ec9b0; /* 类型 */
+  --code-syntax-attribute: #92c5f8; /* 属性 */
+  --code-syntax-symbol: #4fc1ff; /* 符号 */
+  --code-syntax-meta: #808080; /* 元数据 */
+  --code-syntax-operator: #d4d4d4; /* 操作符 */
+  --code-syntax-punctuation: #d4d4d4; /* 标点符号 */
+  --code-syntax-property: #9cdcfe; /* 属性 */
+  --code-syntax-regexp: #d16969; /* 正则表达式 */
 }

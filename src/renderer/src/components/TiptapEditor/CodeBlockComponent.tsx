@@ -12,13 +12,15 @@ declare module '@tiptap/core' {
   }
 }
 
+import { Node as ProseMirrorNode } from '@tiptap/pm/model'
+
 interface CodeBlockComponentProps {
-  node: {
+  node: ProseMirrorNode & {
     attrs: {
       language: string
     }
   }
-  updateAttributes: (attrs: { language: string }) => void
+  updateAttributes: (attributes: Record<string, any>) => void
   extension: any
 }
 
@@ -30,26 +32,56 @@ const CodeBlockComponent: React.FC<CodeBlockComponentProps> = (props) => {
   
   const languages = [
     { name: 'plaintext', label: '纯文本' },
+    // 前端技术
     { name: 'javascript', label: 'JavaScript' },
     { name: 'typescript', label: 'TypeScript' },
+    { name: 'jsx', label: 'JSX' },
+    { name: 'tsx', label: 'TSX' },
+    { name: 'html', label: 'HTML' },
+    { name: 'css', label: 'CSS' },
+    { name: 'scss', label: 'SCSS' },
+    { name: 'sass', label: 'Sass' },
+    { name: 'less', label: 'Less' },
+    // 后端语言
     { name: 'python', label: 'Python' },
     { name: 'java', label: 'Java' },
     { name: 'cpp', label: 'C++' },
+    { name: 'c', label: 'C' },
     { name: 'csharp', label: 'C#' },
     { name: 'go', label: 'Go' },
     { name: 'rust', label: 'Rust' },
     { name: 'php', label: 'PHP' },
-    { name: 'css', label: 'CSS' },
-    { name: 'html', label: 'HTML' },
+    { name: 'ruby', label: 'Ruby' },
+    { name: 'swift', label: 'Swift' },
+    { name: 'kotlin', label: 'Kotlin' },
+    { name: 'scala', label: 'Scala' },
+    { name: 'dart', label: 'Dart' },
+    { name: 'lua', label: 'Lua' },
+    { name: 'r', label: 'R' },
+    { name: 'matlab', label: 'MATLAB' },
+    { name: 'perl', label: 'Perl' },
+    { name: 'groovy', label: 'Groovy' },
+    // 数据格式
     { name: 'json', label: 'JSON' },
-    { name: 'sql', label: 'SQL' },
-    { name: 'bash', label: 'Bash/Shell' },
-    { name: 'markdown', label: 'Markdown' },
-    { name: 'yaml', label: 'YAML' },
     { name: 'xml', label: 'XML' },
+    { name: 'yaml', label: 'YAML' },
+    { name: 'toml', label: 'TOML' },
+    { name: 'ini', label: 'INI/Config' },
+    { name: 'csv', label: 'CSV' },
+    // Shell 脚本
+    { name: 'bash', label: 'Bash' },
+    { name: 'sh', label: 'Shell' },
+    { name: 'zsh', label: 'Zsh' },
+    { name: 'powershell', label: 'PowerShell' },
+    // 数据库
+    { name: 'sql', label: 'SQL' },
+    { name: 'mysql', label: 'MySQL' },
+    { name: 'postgresql', label: 'PostgreSQL' },
+    // 其他
+    { name: 'markdown', label: 'Markdown' },
     { name: 'docker', label: 'Dockerfile' },
-    { name: 'jsx', label: 'JSX' },
-    { name: 'tsx', label: 'TSX' },
+    { name: 'vim', label: 'Vim Script' },
+    { name: 'gradle', label: 'Gradle' },
   ]
   
   const copyToClipboard = () => {
@@ -95,12 +127,12 @@ const CodeBlockComponent: React.FC<CodeBlockComponentProps> = (props) => {
         >
           <button className="language-selector-button">
             <span className="language-label">{getCurrentLanguageLabel()}</span>
-            <IconChevronDown size={14} />
+            <IconChevronDown size="small" />
           </button>
         </Dropdown>
         <div className="code-block-actions">
           <button
-            className="code-block-button copy-button"
+            className={`code-block-button copy-button ${copied ? 'copied' : ''}`}
             onClick={copyToClipboard}
           >
             {copied ? <FiCheck size={16} /> : <FiCopy size={16} />}
