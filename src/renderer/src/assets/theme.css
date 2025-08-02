@@ -137,18 +137,18 @@ body[theme-mode='light'] {
     0 5px 12px 4px rgba(0, 0, 0, 0.04); /* 卡片阴影 */
 
   /* 代码块主题颜色 */
-  --code-block-bg: #f8f9fa; /* 代码块背景 */
-  --code-block-border: #e1e4e8; /* 代码块边框 */
-  --code-block-header-bg: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%); /* 头部背景 */
+  --code-block-bg: #f5f7fa; /* 代码块背景 - 更深的灰色增强对比度 */
+  --code-block-border: #c8d1db; /* 代码块边框 - 进一步加深边框颜色增强可见性 */
+  --code-block-header-bg: linear-gradient(135deg, #f0f3f6 0%, #e6eaed 100%); /* 头部背景 - 增强对比度 */
   --code-block-text: #24292e; /* 代码文本颜色 */
-  --code-block-button-bg: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); /* 按钮背景 */
-  --code-block-button-border: #d1d5da; /* 按钮边框 */
+  --code-block-button-bg: linear-gradient(135deg, #ffffff 0%, #f0f3f6 100%); /* 按钮背景 */
+  --code-block-button-border: #c8d1db; /* 按钮边框 - 更明显的边框色 */
   --code-block-button-text: #586069; /* 按钮文字 */
-  --code-block-button-hover-bg: linear-gradient(135deg, #f6f8fa 0%, #e1e4e8 100%); /* 按钮悬浮背景 */
+  --code-block-button-hover-bg: linear-gradient(135deg, #f0f3f6 0%, #d0d7de 100%); /* 按钮悬浮背景 */
   --code-block-button-hover-border: #0366d6; /* 按钮悬浮边框 */
-  --code-block-scrollbar-track: #f1f3f4; /* 滚动条轨道 */
-  --code-block-scrollbar-thumb: #c1c8cd; /* 滚动条滑块 */
-  --code-block-scrollbar-thumb-hover: #a1a7aa; /* 滚动条滑块悬浮 */
+  --code-block-scrollbar-track: #e6eaed; /* 滚动条轨道 */
+  --code-block-scrollbar-thumb: #b1bac4; /* 滚动条滑块 */
+  --code-block-scrollbar-thumb-hover: #959da6; /* 滚动条滑块悬浮 */
   
   /* 语法高亮 - 浅色主题 */
   --code-syntax-keyword: #d73a49; /* 关键字 */
