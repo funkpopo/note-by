@@ -342,7 +342,7 @@ function createWindow(): void {
   appWithIsQuitting.isQuitting = false
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 900,
+    width: 950,
     height: 670,
     minWidth: 400, // 设置最小宽度
     minHeight: 300, // 设置最小高度

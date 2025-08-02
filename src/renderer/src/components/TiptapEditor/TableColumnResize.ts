@@ -1,6 +1,5 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 export interface TableColumnResizeOptions {
   handleWidth: number
@@ -18,125 +17,159 @@ export const TableColumnResize = Extension.create<TableColumnResizeOptions>({
   },
 
   addProseMirrorPlugins() {
+    const options = this.options
+    
     return [
       new Plugin({
         key: new PluginKey('tableColumnResize'),
         
-        props: {
-          decorations: (state) => {
-            const decorations: Decoration[] = []
-            const { doc } = state
+        view(editorView) {
+          let resizeHandles: HTMLElement[] = []
+          let isResizing = false
+          let currentHandle: HTMLElement | null = null
+          let startX = 0
+          let startWidth = 0
+          let resizeColumn = -1
+          
+          const addResizeHandles = () => {
+            // 清除现有的resize handles
+            resizeHandles.forEach(handle => handle.remove())
+            resizeHandles = []
             
-            doc.descendants((node, pos) => {
-              if (node.type.name === 'table') {
-                // 为每个表格添加resize装饰器
-                decorations.push(
-                  Decoration.widget(pos + node.nodeSize, () => {
-                    const resizeContainer = document.createElement('div')
-                    resizeContainer.className = 'table-resize-container'
-                    resizeContainer.style.cssText = `
-                      position: absolute;
-                      top: 0;
-                      left: 0;
-                      width: 100%;
-                      height: 100%;
-                      pointer-events: none;
-                      z-index: 1;
-                    `
-                    
-                    return resizeContainer
-                  }, {
-                    side: 1,
-                    key: `table-resize-${pos}`
-                  })
-                )
-              }
-              return false
-            })
+            const tables = editorView.dom.querySelectorAll('table')
             
-            return DecorationSet.create(doc, decorations)
-          },
-
-          handleDOMEvents: {
-            mousemove: (view, event) => {
-              const target = event.target as HTMLElement
-              const table = target.closest('table')
+            tables.forEach(table => {
+              const firstRow = table.querySelector('tr')
+              if (!firstRow) return
               
-              if (table && view.state.selection.empty) {
-                const cells = table.querySelectorAll('td, th')
-                
-                // 显示列边界的resize光标
-                cells.forEach((cell) => {
-                  const cellRect = cell.getBoundingClientRect()
-                  const rightEdge = cellRect.right
-                  
-                  if (Math.abs(event.clientX - rightEdge) < 5) {
-                    document.body.style.cursor = 'col-resize'
-                  }
-                })
-                
-                // 如果不在resize区域，重置光标
-                if (!Array.from(cells).some(cell => {
-                  const cellRect = cell.getBoundingClientRect()
-                  return Math.abs(event.clientX - cellRect.right) < 5
-                })) {
-                  document.body.style.cursor = ''
-                }
-              }
+              const cells = firstRow.querySelectorAll('td, th')
               
-              return false
-            },
-
-            mousedown: (_view, event) => {
-              const target = event.target as HTMLElement
-              const table = target.closest('table')
-              
-              if (table) {
-                const cells = table.querySelectorAll('td, th')
-                let resizingCell: Element | null = null
+              cells.forEach((cell, index) => {
+                // 不为最后一列添加resize handle
+                if (index >= cells.length - 1) return
                 
-                // 检查是否点击在列边界上
-                cells.forEach(cell => {
-                  const cellRect = cell.getBoundingClientRect()
-                  if (Math.abs(event.clientX - cellRect.right) < 5) {
-                    resizingCell = cell
-                  }
-                })
+                const handle = document.createElement('div')
+                handle.className = 'column-resize-handle'
+                handle.style.cssText = `
+                  position: absolute;
+                  top: 0;
+                  right: -2px;
+                  bottom: 0;
+                  width: 4px;
+                  background-color: var(--semi-color-primary);
+                  opacity: 0;
+                  cursor: col-resize;
+                  z-index: 20;
+                  transition: opacity 0.2s;
+                `
                 
-                if (resizingCell) {
-                  event.preventDefault()
+                // 相对于cell定位
+                const cellElement = cell as HTMLElement
+                cellElement.style.position = 'relative'
+                cellElement.appendChild(handle)
+                
+                // 添加事件监听
+                handle.addEventListener('mousedown', (e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   
-                  const startX = event.clientX
-                  const startWidth = (resizingCell as HTMLElement).offsetWidth
+                  isResizing = true
+                  currentHandle = handle
+                  startX = e.clientX
+                  startWidth = cellElement.offsetWidth
+                  resizeColumn = index
                   
-                  const handleMouseMove = (e: MouseEvent) => {
-                    const deltaX = e.clientX - startX
-                    const newWidth = Math.max(this.options.cellMinWidth, startWidth + deltaX)
-                    
-                    ;(resizingCell as HTMLElement).style.width = `${newWidth}px`
-                    ;(resizingCell as HTMLElement).style.minWidth = `${newWidth}px`
-                  }
-                  
-                  const handleMouseUp = () => {
-                    document.removeEventListener('mousemove', handleMouseMove)
-                    document.removeEventListener('mouseup', handleMouseUp)
-                    document.body.style.cursor = ''
-                  }
+                  handle.style.opacity = '1'
+                  document.body.style.cursor = 'col-resize'
+                  document.body.style.userSelect = 'none'
                   
                   document.addEventListener('mousemove', handleMouseMove)
                   document.addEventListener('mouseup', handleMouseUp)
-                  document.body.style.cursor = 'col-resize'
-                  
-                  return true
-                }
-              }
+                })
+                
+                handle.addEventListener('mouseenter', () => {
+                  if (!isResizing) {
+                    handle.style.opacity = '1'
+                  }
+                })
+                
+                handle.addEventListener('mouseleave', () => {
+                  if (!isResizing) {
+                    handle.style.opacity = '0'
+                  }
+                })
+                
+                resizeHandles.push(handle)
+              })
               
-              return false
+              // 表格hover时显示resize handles
+              table.addEventListener('mouseenter', () => {
+                resizeHandles.forEach(handle => {
+                  if (!isResizing) {
+                    handle.style.opacity = '0.6'
+                  }
+                })
+              })
+              
+              table.addEventListener('mouseleave', () => {
+                resizeHandles.forEach(handle => {
+                  if (!isResizing) {
+                    handle.style.opacity = '0'
+                  }
+                })
+              })
+            })
+          }
+          
+          const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing || !currentHandle || resizeColumn === -1) return
+            
+            const deltaX = e.clientX - startX
+            const newWidth = Math.max(options.cellMinWidth, startWidth + deltaX)
+            
+            // 找到当前表格的所有行
+            const table = currentHandle.closest('table')
+            if (!table) return
+            
+            const rows = table.querySelectorAll('tr')
+            rows.forEach(row => {
+              const cell = row.children[resizeColumn] as HTMLElement
+              if (cell) {
+                cell.style.width = `${newWidth}px`
+                cell.style.minWidth = `${newWidth}px`
+              }
+            })
+          }
+          
+          const handleMouseUp = () => {
+            if (!isResizing) return
+            
+            isResizing = false
+            if (currentHandle) {
+              currentHandle.style.opacity = '0'
+            }
+            currentHandle = null
+            resizeColumn = -1
+            
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
+            
+            document.removeEventListener('mousemove', handleMouseMove)
+            document.removeEventListener('mouseup', handleMouseUp)
+          }
+          
+          // 初始化
+          setTimeout(addResizeHandles, 0)
+          
+          return {
+            update: () => {
+              // 当编辑器更新时重新添加resize handles
+              setTimeout(addResizeHandles, 0)
             },
-
-            mouseleave: () => {
-              document.body.style.cursor = ''
-              return false
+            destroy: () => {
+              resizeHandles.forEach(handle => handle.remove())
+              document.removeEventListener('mousemove', handleMouseMove)
+              document.removeEventListener('mouseup', handleMouseUp)
             }
           }
         }
