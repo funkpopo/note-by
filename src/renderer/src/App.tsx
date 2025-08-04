@@ -45,6 +45,15 @@ const App: React.FC = () => {
     setFileListVersion((prev) => prev + 1)
   }
 
+  // 处理文件删除事件
+  const handleFileDeleted = (folder: string, file: string): void => {
+    // 如果删除的是当前打开的文件，清除当前文件状态
+    if (currentFolder === folder && currentFile === file) {
+      setCurrentFolder(undefined)
+      setCurrentFile(undefined)
+    }
+  }
+
   // 启动性能监控和智能预加载
   useEffect(() => {
     // 启动性能监控并立即执行首次数据收集
@@ -190,6 +199,7 @@ const App: React.FC = () => {
             onNavChange={handleNavChange}
             onFileSelect={handleFileSelect}
             fileListVersion={fileListVersion}
+            onFileDeleted={handleFileDeleted}
           />
         </div>
         <Layout style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden' }}>
