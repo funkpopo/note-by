@@ -2,6 +2,7 @@ appId: com.noteby.app
 productName: note-by
 directories:
   buildResources: build
+publish: null
 files:
   - '!**/.vscode/*'
   - '!src/*'
