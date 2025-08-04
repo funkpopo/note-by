@@ -40,9 +40,10 @@ interface NavigationProps {
   onNavChange: (key: string) => void
   onFileSelect?: (folder: string, file: string) => void
   fileListVersion?: number
+  onFileDeleted?: (folder: string, file: string) => void
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, fileListVersion }) => {
+const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, fileListVersion, onFileDeleted }) => {
   const { isDarkMode, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(true)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
@@ -486,6 +487,10 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
           const result = await window.api.markdown.deleteFile(path)
           if (result.success) {
             Toast.success('文件已删除')
+            // 通知父组件文件已被删除
+            if (onFileDeleted) {
+              onFileDeleted(folder, file)
+            }
             // 刷新列表
             fetchFileList()
           } else {

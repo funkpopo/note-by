@@ -477,8 +477,14 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ currentFolder, currentFile,
 
   // 当前文件改变时加载内容
   useEffect(() => {
-    loadFileContent()
-  }, [currentFolder, currentFile, loadFileContent])
+    if (!currentFolder || !currentFile) {
+      // 如果文件或文件夹为undefined，清空编辑器
+      clearEditor()
+      lastLoadedFileRef.current = null
+    } else {
+      loadFileContent()
+    }
+  }, [currentFolder, currentFile, loadFileContent, clearEditor])
 
   // 智能自动保存处理函数
   const handleSmartAutoSave = useCallback(async () => {
