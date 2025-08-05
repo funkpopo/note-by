@@ -807,23 +807,23 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     }
 
     const handleClickOutside = (event: MouseEvent) => {
-      // 检查点击是否在BubbleMenu外部
-      const bubbleMenu = document.querySelector('.enhanced-bubble-menu')
-      const editorElement = editor.view.dom
-      
       // 检查点击是否在BubbleMenu内部
+      const bubbleMenu = document.querySelector('.enhanced-bubble-menu')
       const isClickInBubbleMenu = bubbleMenu && bubbleMenu.contains(event.target as Node)
       
-      // 检查点击是否在编辑器内部
-      const isClickInEditor = editorElement.contains(event.target as Node)
-      
-      // 只有当点击既不在BubbleMenu内部，也不在编辑器内部时，才关闭BubbleMenu
-      if (!isClickInBubbleMenu && !isClickInEditor) {
-        // 点击外部时清除选择
-        const selection = window.getSelection()
-        if (selection && !selection.isCollapsed) {
-          editor.commands.focus()
-          editor.commands.setTextSelection(editor.state.selection.to)
+      // 只有当点击不在BubbleMenu内部时，才关闭BubbleMenu
+      // 编辑器内部的点击现在由编辑器的handleDOMEvents处理
+      if (!isClickInBubbleMenu) {
+        const editorElement = editor.view.dom
+        const isClickInEditor = editorElement.contains(event.target as Node)
+        
+        // 如果点击在编辑器外部，清除选择
+        if (!isClickInEditor) {
+          const selection = window.getSelection()
+          if (selection && !selection.isCollapsed) {
+            editor.commands.focus()
+            editor.commands.setTextSelection(editor.state.selection.to)
+          }
         }
       }
     }

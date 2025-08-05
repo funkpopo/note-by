@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Editor } from '@tiptap/react'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
-import { FiChevronDown } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import BounceSpinner from './BounceSpinner'
 
 interface AiSelectorProps {
@@ -414,7 +414,7 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
           {isLoading ? (
             <BounceSpinner className="ms-2" />
           ) : (
-            <FiChevronDown size={14} />
+            dropdownVisible ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />
           )}
         </button>
       }

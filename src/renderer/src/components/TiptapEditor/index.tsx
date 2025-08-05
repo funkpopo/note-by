@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Toast, Dropdown } from '@douyinfe/semi-ui'
 import { FiSave, FiFile, FiChevronDown } from 'react-icons/fi'
 import { Content, Editor, EditorContent, useEditor } from '@tiptap/react'
+import { TextSelection } from '@tiptap/pm/state'
 import Placeholder from '@tiptap/extension-placeholder'
 import { DndContext, closestCenter } from '@dnd-kit/core'
 import { defaultExtensions } from './default-extensions'
@@ -159,6 +160,60 @@ interface BlockEditorProps {
         },
         // 防抖输入事件
         input: () => {
+          return false
+        },
+        // 处理双击选中整行
+        dblclick: (view, event) => {
+          const { state, dispatch } = view
+          const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+          
+          if (pos) {
+            const $pos = state.doc.resolve(pos.pos)
+            const paragraph = $pos.parent
+            
+            // 如果双击的是段落内容，选中整个段落
+            if (paragraph.type.name === 'paragraph' || paragraph.type.name === 'heading') {
+              const start = $pos.start()
+              const end = $pos.end()
+              
+              // 使用TextSelection来创建选择范围
+              const selection = TextSelection.create(state.doc, start, end)
+              const tr = state.tr.setSelection(selection)
+              dispatch(tr)
+              
+              event.preventDefault()
+              return true
+            }
+          }
+          
+          return false
+        },
+        // 处理点击事件，用于关闭BubbleMenu
+        click: (view, event) => {
+          // 检查是否有文本选择（BubbleMenu可能显示）
+          const { state } = view
+          const { from, to } = state.selection
+          
+          if (from !== to) {
+            // 检查点击是否在BubbleMenu内部
+            const bubbleMenu = document.querySelector('.enhanced-bubble-menu')
+            const isClickInBubbleMenu = bubbleMenu && bubbleMenu.contains(event.target as Node)
+            
+            // 如果点击不在BubbleMenu内部，清除选择以关闭BubbleMenu
+            if (!isClickInBubbleMenu) {
+              // 延迟执行，避免与其他点击事件冲突
+              setTimeout(() => {
+                const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+                if (pos) {
+                  const tr = view.state.tr.setSelection(
+                    TextSelection.create(view.state.doc, pos.pos)
+                  )
+                  view.dispatch(tr)
+                }
+              }, 0)
+            }
+          }
+          
           return false
         }
       },
