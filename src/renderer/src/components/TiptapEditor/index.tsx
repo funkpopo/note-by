@@ -247,15 +247,25 @@ interface BlockEditorProps {
         $from.parent.textBetween(currentPos - 1, currentPos) === '/' &&
         (textBeforeSlash.trim() === '' || textBeforeSlash === '')
       
-      if (isSlashAtLineStart) {
+      // 同时检查"/"后面是否有其他非空白字符，如果有则可能是URL等，不应触发
+      const textAfterSlash = currentLine.substring(currentPos)
+      const hasContentAfterSlash = textAfterSlash.length > 0 && 
+        textAfterSlash.match(/^[a-zA-Z0-9]/) // 如果紧跟字母数字，可能是URL
+      
+      if (isSlashAtLineStart && !hasContentAfterSlash) {
         // 获取光标位置
         const coords = editor.view.coordsAtPos($from.pos)
         setSlashMenuPosition({ top: coords.top, left: coords.left })
         setShowSlashMenu(true)
       } else if (showSlashMenu) {
         // 如果用户继续输入其他内容，关闭slash menu
-        const textAfterSlash = currentLine.substring(currentPos - 1)
-        if (!textAfterSlash.startsWith('/')) {
+        // 检查当前位置是否还有"/"且符合条件
+        const hasValidSlash = currentPos > 0 && 
+          $from.parent.textBetween(currentPos - 1, currentPos) === '/' &&
+          (textBeforeSlash.trim() === '' || textBeforeSlash === '') &&
+          !hasContentAfterSlash
+        
+        if (!hasValidSlash) {
           setShowSlashMenu(false)
           setSlashMenuPosition(undefined)
         }

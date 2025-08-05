@@ -46,20 +46,38 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
             return false
           },
           decorations(state) {
-            const { doc } = state
+            const { doc, selection } = state
             const decorations: Decoration[] = []
+            const { $from } = selection
             
-            doc.descendants((node, pos) => {
-              if (node.isText && node.text?.includes('/')) {
-                const from = pos
-                const to = pos + node.nodeSize
-                decorations.push(
-                  Decoration.inline(from, to, {
-                    class: 'slash-command-trigger',
-                  })
-                )
+            // 只在光标位置且满足特定条件时添加装饰
+            if (selection.from === selection.to) {
+              const currentNode = $from.parent
+              const currentPos = $from.parentOffset
+              
+              if (currentNode.isText || currentNode.type.name === 'paragraph') {
+                const text = currentNode.textContent
+                
+                // 检查是否是行首的"/"或者前面只有空格的"/"
+                if (currentPos > 0 && text) {
+                  const charBeforeCursor = text.charAt(currentPos - 1)
+                  const textBeforeSlash = text.substring(0, currentPos - 1)
+                  
+                  // 只有当"/"字符在行首或前面只有空格时才添加装饰
+                  if (charBeforeCursor === '/' && 
+                      (textBeforeSlash.trim() === '' || textBeforeSlash === '')) {
+                    
+                    // 计算"/"字符的绝对位置
+                    const slashPos = $from.pos - 1
+                    decorations.push(
+                      Decoration.inline(slashPos, slashPos + 1, {
+                        class: 'slash-command-trigger',
+                      })
+                    )
+                  }
+                }
               }
-            })
+            }
             
             return DecorationSet.create(doc, decorations)
           },

@@ -145,6 +145,9 @@ export const defaultExtensions = [
     bulletList: false, // 禁用默认的无序列表，使用自定义配置
     orderedList: false, // 禁用默认的有序列表，使用自定义配置
     listItem: false, // 禁用默认的列表项，使用自定义配置
+    link: false, // 禁用默认的链接，使用自定义实现
+    blockquote: false, // 禁用默认的引用，使用自定义配置
+    horizontalRule: false, // 禁用默认的水平线，使用自定义配置
   }),
   
   Heading.configure({
