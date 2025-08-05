@@ -243,7 +243,10 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     <div className="custom-dropdown" style={{ position: 'relative' }}>
       <div
         ref={triggerRef}
-        onClick={() => onVisibleChange(!visible)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onVisibleChange(!visible)
+        }}
       >
         {trigger}
       </div>
@@ -289,7 +292,10 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ onClick, children, icon, ac
   return (
     <button
       className="custom-dropdown-item"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
       style={{
         width: '100%',
         padding: '8px 12px',
@@ -356,7 +362,10 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ colors, activeColor, onColorS
         {colors.map((color) => (
           <button
             key={color}
-            onClick={() => onColorSelect(color)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onColorSelect(color)
+            }}
             style={{
               width: '26px',
               height: '26px',
@@ -396,7 +405,10 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ colors, activeColor, onColorS
       </div>
       {onClear && (
         <button
-          onClick={onClear}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClear()
+          }}
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -434,6 +446,12 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
   const [placement, setPlacement] = useState<'top-start' | 'bottom-start'>('bottom-start')
   const [isInTable, setIsInTable] = useState(false)
   const bubbleMenuRef = useRef<HTMLDivElement>(null)
+
+  // 通用的按钮点击处理函数，阻止事件冒泡
+  const handleButtonClick = (callback: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation()
+    callback()
+  }
 
   // 字体系列选项
   const fontFamilies = [
@@ -759,6 +777,77 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
     placement: placement
   }), [placement])
 
+  // 添加滚动和点击外部关闭逻辑
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout
+
+    const handleScroll = () => {
+      // 滚动时立即清除选择，这会隐藏BubbleMenu
+      const selection = window.getSelection()
+      if (selection && !selection.isCollapsed) {
+        editor.commands.focus()
+        editor.commands.setTextSelection(editor.state.selection.to)
+      }
+      
+      // 添加滚动状态类
+      const editorWrapper = document.querySelector('.block-editor-wrapper')
+      if (editorWrapper) {
+        editorWrapper.classList.add('scrolling')
+        
+        // 清除之前的定时器
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout)
+        }
+        
+        // 滚动停止后移除滚动状态类
+        scrollTimeout = setTimeout(() => {
+          editorWrapper.classList.remove('scrolling')
+        }, 150)
+      }
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      // 检查点击是否在BubbleMenu内部
+      const bubbleMenu = document.querySelector('.enhanced-bubble-menu')
+      const isClickInBubbleMenu = bubbleMenu && bubbleMenu.contains(event.target as Node)
+      
+      // 只有当点击不在BubbleMenu内部时，才关闭BubbleMenu
+      // 编辑器内部的点击现在由编辑器的handleDOMEvents处理
+      if (!isClickInBubbleMenu) {
+        const editorElement = editor.view.dom
+        const isClickInEditor = editorElement.contains(event.target as Node)
+        
+        // 如果点击在编辑器外部，清除选择
+        if (!isClickInEditor) {
+          const selection = window.getSelection()
+          if (selection && !selection.isCollapsed) {
+            editor.commands.focus()
+            editor.commands.setTextSelection(editor.state.selection.to)
+          }
+        }
+      }
+    }
+
+    // 监听编辑器容器的滚动事件
+    const editorWrapper = document.querySelector('.block-editor-wrapper')
+    if (editorWrapper) {
+      editorWrapper.addEventListener('scroll', handleScroll, true)
+    }
+
+    // 监听文档点击事件
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      if (editorWrapper) {
+        editorWrapper.removeEventListener('scroll', handleScroll, true)
+      }
+      document.removeEventListener('mousedown', handleClickOutside)
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout)
+      }
+    }
+  }, [editor])
+
   return (
     <BubbleMenu 
       editor={editor} 
@@ -786,10 +875,32 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
           return false
         }
         
+        // 检查是否正在滚动（通过检查编辑器容器的滚动状态）
+        const editorWrapper = document.querySelector('.block-editor-wrapper')
+        if (editorWrapper && editorWrapper.classList.contains('scrolling')) {
+          return false
+        }
+        
+        // 检查编辑器是否失去焦点
+        if (!editor.isFocused) {
+          return false
+        }
+        
         return true
       }}
     >
-      <div className="enhanced-bubble-menu" ref={bubbleMenuRef}>
+      <div 
+        className="enhanced-bubble-menu" 
+        ref={bubbleMenuRef}
+        onClick={(e) => {
+          // 阻止BubbleMenu内部的点击事件冒泡
+          e.stopPropagation()
+        }}
+        onMouseDown={(e) => {
+          // 阻止BubbleMenu内部的鼠标按下事件冒泡
+          e.stopPropagation()
+        }}
+      >
         <div className="bubble-menu-container">
           {isInTable ? (
             // 表格模式：显示表格操作按钮
@@ -797,7 +908,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="在前方插入列" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().addColumnBefore().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().addColumnBefore().run())}
                 >
                   <FiPlus size={16} />
                 </button>
@@ -806,7 +917,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="在后方插入列" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().addColumnAfter().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().addColumnAfter().run())}
                 >
                   <FiPlus size={16} />
                 </button>
@@ -815,7 +926,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="删除列" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().deleteColumn().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().deleteColumn().run())}
                 >
                   <FiX size={16} />
                 </button>
@@ -826,7 +937,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="在上方插入行" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().addRowBefore().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().addRowBefore().run())}
                 >
                   <FiPlus size={16} />
                 </button>
@@ -835,7 +946,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="在下方插入行" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().addRowAfter().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().addRowAfter().run())}
                 >
                   <FiPlus size={16} />
                 </button>
@@ -844,7 +955,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="删除行" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().deleteRow().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().deleteRow().run())}
                 >
                   <FiX size={16} />
                 </button>
@@ -855,7 +966,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="删除表格" place="top">
                 <button
                   className="bubble-menu-button"
-                  onClick={() => editor.chain().focus().deleteTable().run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().deleteTable().run())}
                 >
                   <FiGrid size={16} />
                 </button>
@@ -990,7 +1101,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="粗体" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive('bold') ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().toggleMark('bold').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().toggleMark('bold').run())}
                   disabled={!editor.can().chain().focus().toggleMark('bold').run()}
                 >
                   <FiBold size={16} />
@@ -1000,7 +1111,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="斜体" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive('italic') ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().toggleMark('italic').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().toggleMark('italic').run())}
                   disabled={!editor.can().chain().focus().toggleMark('italic').run()}
                 >
                   <FiItalic size={16} />
@@ -1010,7 +1121,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="下划线" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive('underline') ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().toggleMark('underline').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().toggleMark('underline').run())}
                   disabled={!editor.can().chain().focus().toggleMark('underline').run()}
                 >
                   <FiUnderline size={16} />
@@ -1020,7 +1131,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="删除线" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive('strike') ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().toggleMark('strike').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().toggleMark('strike').run())}
                   disabled={!editor.can().chain().focus().toggleMark('strike').run()}
                 >
                   <FiSlash size={16} />
@@ -1030,7 +1141,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="行内代码" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive('code') ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().toggleMark('code').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().toggleMark('code').run())}
                   disabled={!editor.can().chain().focus().toggleMark('code').run()}
                 >
                   <FiCode size={16} />
@@ -1040,7 +1151,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text={editor.isActive('link') ? '编辑链接' : '插入链接'} place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive('link') ? 'active' : ''}`}
-                  onClick={openLinkDialog}
+                  onClick={handleButtonClick(openLinkDialog)}
                 >
                   <FiLink size={16} />
                 </button>
@@ -1051,7 +1162,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="左对齐" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().setTextAlign('left').run())}
                 >
                   <FiAlignLeft size={16} />
                 </button>
@@ -1060,7 +1171,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="居中对齐" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().setTextAlign('center').run())}
                 >
                   <FiAlignCenter size={16} />
                 </button>
@@ -1069,7 +1180,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="右对齐" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().setTextAlign('right').run())}
                 >
                   <FiAlignRight size={16} />
                 </button>
@@ -1078,7 +1189,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
               <Tooltip text="两端对齐" place="top">
                 <button
                   className={`bubble-menu-button ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`}
-                  onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                  onClick={handleButtonClick(() => editor.chain().focus().setTextAlign('justify').run())}
                 >
                   <FiAlignJustify size={16} />
                 </button>

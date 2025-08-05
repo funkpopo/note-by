@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Editor } from '@tiptap/react'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
-import { FiChevronDown } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import BounceSpinner from './BounceSpinner'
 
 interface AiSelectorProps {
@@ -165,7 +165,10 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
     <div className="ai-dropdown" style={{ position: 'relative' }}>
       <div
         ref={triggerRef}
-        onClick={() => onVisibleChange(!visible)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onVisibleChange(!visible)
+        }}
       >
         {trigger}
       </div>
@@ -208,7 +211,10 @@ const AiDropdownItem: React.FC<AiDropdownItemProps> = ({ onClick, children, disa
   return (
     <button
       className="ai-dropdown-item"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
       disabled={disabled}
       style={{
         width: '100%',
@@ -408,7 +414,7 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
           {isLoading ? (
             <BounceSpinner className="ms-2" />
           ) : (
-            <FiChevronDown size={14} />
+            dropdownVisible ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />
           )}
         </button>
       }

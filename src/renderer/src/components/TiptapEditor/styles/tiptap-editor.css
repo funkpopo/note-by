@@ -12,6 +12,8 @@
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
   -webkit-focus-ring-color: transparent !important;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .block-editor-wrapper:focus,
@@ -200,9 +202,18 @@
   font-family: inherit;
   color: var(--semi-color-text-0);
   background: var(--semi-color-bg-0);
+  /* 确保填满父容器 */
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
   /* 添加左侧内边距以解决内容距离容器边缘过近的问题 */
   padding-left: 24px;
   padding-right: 24px;
+  /* 确保padding不会增加元素总宽度 */
+  box-sizing: border-box;
+  /* 防止横向溢出 */
+  overflow-x: hidden;
   /* 长文本性能优化 */
   contain: layout style paint;
   will-change: scroll-position;
@@ -661,20 +672,27 @@
   }
   
   /* 确保编辑器内容没有边框 */
-  .ProseMirror {
-    outline: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    /* 长文本性能优化 */
-    contain: layout style paint;
-    will-change: scroll-position;
-    /* 启用硬件加速 */
-    transform: translate3d(0, 0, 0);
-    /* 优化文本渲染 */
-    text-rendering: optimizeSpeed;
-    /* 禁用平滑滚动以提升性能 */
-    scroll-behavior: auto;
-  }
+.ProseMirror {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  /* 长文本性能优化 */
+  contain: layout style paint;
+  will-change: scroll-position;
+  /* 启用硬件加速 */
+  transform: translate3d(0, 0, 0);
+  /* 优化文本渲染 */
+  text-rendering: optimizeSpeed;
+  /* 禁用平滑滚动以提升性能 */
+  scroll-behavior: auto;
+  /* 确保ProseMirror填满容器 */
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  /* 防止横向溢出 */
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
   
   /* 移除文本选择时的边框 */
   .ProseMirror-selectednode {
@@ -699,6 +717,12 @@
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
   -webkit-focus-ring-color: transparent !important;
+  /* 确保编辑器容器不会遮挡bubble menu */
+  position: relative;
+  overflow: visible;
+  /* 防止横向溢出 */
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* 防止editor-container的所有焦点状态显示边框 */
@@ -930,7 +954,7 @@ body:not([theme-mode='dark']) .editor-button.tertiary:hover:not(:disabled) svg {
   border-radius: 10px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
   padding: 4px !important;
-  z-index: 1000 !important;
+  z-index: 1001 !important;
   backdrop-filter: blur(12px) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   animation: bubbleMenuSlideIn 0.2s ease-out !important;
@@ -942,6 +966,20 @@ body:not([theme-mode='dark']) .editor-button.tertiary:hover:not(:disabled) svg {
   /* 优化：使用flex布局代替table布局 */
   display: flex !important;
   align-items: center !important;
+  /* 确保bubble menu在编辑器范围内且不被遮挡 */
+  position: absolute !important;
+  /* 滚动时隐藏BubbleMenu */
+  opacity: 1 !important;
+  visibility: visible !important;
+  transition: opacity 0.15s ease-out, visibility 0.15s ease-out !important;
+}
+
+/* 滚动时隐藏BubbleMenu */
+.block-editor-wrapper.scrolling .bubble-menu,
+.block-editor-wrapper.scrolling .enhanced-bubble-menu {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* 覆盖 Tiptap 默认样式 */
@@ -978,9 +1016,11 @@ div[data-tippy-root] > div {
 /* 确保bubble menu在编辑器范围内 */
 .block-editor-wrapper .bubble-menu,
 .block-editor-wrapper .enhanced-bubble-menu {
-  position: absolute !important;
-  max-width: min(400px, calc(100% - 16px)) !important;
+  position: fixed !important;
+  max-width: min(400px, calc(100vw - 32px)) !important;
   width: fit-content !important;
+  /* 确保不被编辑器容器遮挡 */
+  z-index: 1001 !important;
 }
 
 /* 确保所有图标都有良好的可见性 */
