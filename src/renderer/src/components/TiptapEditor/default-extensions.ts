@@ -57,6 +57,7 @@ import CodeBlockComponent from './CodeBlockComponent'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import TableColumnResize from './TableColumnResize'
 import SlashCommand from './SlashCommand'
+import { LineBreakDetector } from './LineBreakDetector'
 
 // 创建lowlight实例
 const lowlight = createLowlight()
@@ -247,4 +248,24 @@ export const defaultExtensions = [
   TableColumnResize,
   
   SlashCommand,
+  
+  LineBreakDetector.configure({
+    enabled: true,
+    styleContentNodes: [
+      'image',
+      'table',
+      'codeBlock',
+      'blockquote',
+      'horizontalRule',
+      'bulletList',
+      'orderedList',
+      'aiPlaceholder',
+      'codeBlockComponent'
+    ],
+    textNodes: [
+      'paragraph',
+      'heading',
+      'text'
+    ],
+  }),
 ]
