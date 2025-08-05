@@ -162,6 +162,14 @@ interface BlockEditorProps {
         input: () => {
           return false
         },
+        // 确保鼠标按下事件正确处理
+        mousedown: (view, event) => {
+          // 确保编辑器获得焦点
+          if (!view.hasFocus()) {
+            view.focus()
+          }
+          return false
+        },
         // 处理双击选中整行
         dblclick: (view, event) => {
           const { state, dispatch } = view
@@ -188,7 +196,7 @@ interface BlockEditorProps {
           
           return false
         },
-        // 处理点击事件，用于关闭BubbleMenu
+        // 处理点击事件，确保光标正确定位
         click: (view, event) => {
           // 检查是否有文本选择（BubbleMenu可能显示）
           const { state } = view
@@ -201,16 +209,37 @@ interface BlockEditorProps {
             
             // 如果点击不在BubbleMenu内部，清除选择以关闭BubbleMenu
             if (!isClickInBubbleMenu) {
-              // 延迟执行，避免与其他点击事件冲突
-              setTimeout(() => {
-                const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
-                if (pos) {
-                  const tr = view.state.tr.setSelection(
-                    TextSelection.create(view.state.doc, pos.pos)
-                  )
-                  view.dispatch(tr)
-                }
-              }, 0)
+              // 立即计算光标位置并设置，不使用延迟
+              const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+              if (pos) {
+                const tr = view.state.tr.setSelection(
+                  TextSelection.create(view.state.doc, pos.pos)
+                )
+                view.dispatch(tr)
+              }
+            }
+          } else {
+            // 没有文本选择时，确保光标正确定位
+            const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+            if (pos) {
+              // 添加调试日志
+              console.log('Cursor positioning:', {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                calculatedPos: pos.pos,
+                success: true
+              })
+              
+              const tr = view.state.tr.setSelection(
+                TextSelection.create(view.state.doc, pos.pos)
+              )
+              view.dispatch(tr)
+            } else {
+              // 如果无法计算位置，记录错误
+              console.warn('Failed to calculate cursor position:', {
+                clientX: event.clientX,
+                clientY: event.clientY
+              })
             }
           }
           
