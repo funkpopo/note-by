@@ -165,7 +165,10 @@ const CustomAiDropdown: React.FC<CustomAiDropdownProps> = ({
     <div className="ai-dropdown" style={{ position: 'relative' }}>
       <div
         ref={triggerRef}
-        onClick={() => onVisibleChange(!visible)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onVisibleChange(!visible)
+        }}
       >
         {trigger}
       </div>
@@ -208,7 +211,10 @@ const AiDropdownItem: React.FC<AiDropdownItemProps> = ({ onClick, children, disa
   return (
     <button
       className="ai-dropdown-item"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
       disabled={disabled}
       style={{
         width: '100%',
