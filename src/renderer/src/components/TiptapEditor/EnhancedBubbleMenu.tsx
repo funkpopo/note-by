@@ -811,8 +811,7 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
       const bubbleMenu = document.querySelector('.enhanced-bubble-menu')
       const isClickInBubbleMenu = bubbleMenu && bubbleMenu.contains(event.target as Node)
       
-      // 只有当点击不在BubbleMenu内部时，才关闭BubbleMenu
-      // 编辑器内部的点击现在由编辑器的handleDOMEvents处理
+      // 只有当点击不在BubbleMenu内部且不在编辑器内部时，才关闭BubbleMenu
       if (!isClickInBubbleMenu) {
         const editorElement = editor.view.dom
         const isClickInEditor = editorElement.contains(event.target as Node)
@@ -821,8 +820,22 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
         if (!isClickInEditor) {
           const selection = window.getSelection()
           if (selection && !selection.isCollapsed) {
-            editor.commands.focus()
-            editor.commands.setTextSelection(editor.state.selection.to)
+            // 使用更精确的光标定位
+            const range = selection.getRangeAt(0)
+            const rect = range.getBoundingClientRect()
+            const clickPos = editor.view.posAtCoords({ 
+              left: event.clientX, 
+              top: event.clientY 
+            })
+            
+            if (clickPos) {
+              editor.commands.focus()
+              editor.commands.setTextSelection(clickPos.pos)
+            } else {
+              // 后备方案
+              editor.commands.focus()
+              editor.commands.setTextSelection(editor.state.selection.to)
+            }
           }
         }
       }
@@ -883,6 +896,17 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
         
         // 检查编辑器是否失去焦点
         if (!editor.isFocused) {
+          return false
+        }
+        
+        // 确保光标位置有效
+        try {
+          const pos = editor.view.posAtCoords({ 
+            left: range.getBoundingClientRect().left, 
+            top: range.getBoundingClientRect().top 
+          })
+          if (!pos) return false
+        } catch (error) {
           return false
         }
         
