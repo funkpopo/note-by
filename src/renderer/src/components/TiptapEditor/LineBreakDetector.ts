@@ -28,9 +28,53 @@ export interface LineBreakDetectorOptions {
 }
 
 declare module '@tiptap/core' {
-  interface ExtensionOptions {
-    lineBreakDetector: LineBreakDetectorOptions
+  interface Commands<ReturnType> {
+    lineBreakDetector: {
+      insertLineBreakBeforeText: () => ReturnType
+      insertLineBreakAfterText: () => ReturnType
+      autoInsertLineBreaks: () => ReturnType
+    }
   }
+}
+
+// 辅助方法：获取前一个节点
+function getPreviousNode($pos: any): ProseMirrorNode | null {
+  const { doc } = $pos
+  const pos = $pos.pos
+  
+  if (pos <= 0) return null
+  
+  // 向前查找最近的节点
+  let currentPos = pos - 1
+  while (currentPos >= 0) {
+    const node = doc.nodeAt(currentPos)
+    if (node && node.type.name !== 'text') {
+      return node
+    }
+    currentPos--
+  }
+  
+  return null
+}
+
+// 辅助方法：获取后一个节点
+function getNextNode($pos: any): ProseMirrorNode | null {
+  const { doc } = $pos
+  const pos = $pos.pos
+  
+  if (pos >= doc.content.size) return null
+  
+  // 向后查找最近的节点
+  let currentPos = pos + 1
+  while (currentPos < doc.content.size) {
+    const node = doc.nodeAt(currentPos)
+    if (node && node.type.name !== 'text') {
+      return node
+    }
+    currentPos++
+  }
+  
+  return null
 }
 
 export const LineBreakDetector = Extension.create<LineBreakDetectorOptions>({
@@ -46,86 +90,92 @@ export const LineBreakDetector = Extension.create<LineBreakDetectorOptions>({
 
   addCommands() {
     return {
-      insertLineBreakBeforeText: () => ({ tr, dispatch }) => {
-        if (!dispatch) return false
-        
-        const { selection } = tr
-        const { $from } = selection
-        
-        // 检查当前节点是否为文本节点
-        const currentNode = $from.parent
-        if (!this.options.textNodes.includes(currentNode.type.name)) {
-          return false
-        }
-        
-        // 检查前面是否有样式内容节点
-        const prevNode = this.getPreviousNode($from)
-        if (prevNode && this.options.styleContentNodes.includes(prevNode.type.name)) {
-          // 在文本节点前插入换行
-          const brNode = tr.doc.type.schema.nodes.hardBreak.create()
-          tr.insert($from.start(), brNode)
-          return true
-        }
-        
-        return false
-      },
-
-      insertLineBreakAfterText: () => ({ tr, dispatch }) => {
-        if (!dispatch) return false
-        
-        const { selection } = tr
-        const { $from } = selection
-        
-        // 检查当前节点是否为文本节点
-        const currentNode = $from.parent
-        if (!this.options.textNodes.includes(currentNode.type.name)) {
-          return false
-        }
-        
-        // 检查后面是否有样式内容节点
-        const nextNode = this.getNextNode($from)
-        if (nextNode && this.options.styleContentNodes.includes(nextNode.type.name)) {
-          // 在文本节点后插入换行
-          const brNode = tr.doc.type.schema.nodes.hardBreak.create()
-          tr.insert($from.end(), brNode)
-          return true
-        }
-        
-        return false
-      },
-
-      autoInsertLineBreaks: () => ({ tr, dispatch }) => {
-        if (!dispatch) return false
-        
-        let hasChanges = false
-        const { doc } = tr
-        
-        // 遍历文档中的所有节点
-        doc.descendants((node: ProseMirrorNode, pos: number) => {
-          // 检查是否为文本节点
-          if (this.options.textNodes.includes(node.type.name)) {
-            const $pos = doc.resolve(pos)
-            
-            // 检查前面是否有样式内容节点
-            const prevNode = this.getPreviousNode($pos)
-            if (prevNode && this.options.styleContentNodes.includes(prevNode.type.name)) {
-              const brNode = tr.doc.type.schema.nodes.hardBreak.create()
-              tr.insert(pos, brNode)
-              hasChanges = true
-            }
-            
-            // 检查后面是否有样式内容节点
-            const nextNode = this.getNextNode($pos)
-            if (nextNode && this.options.styleContentNodes.includes(nextNode.type.name)) {
-              const brNode = tr.doc.type.schema.nodes.hardBreak.create()
-              tr.insert(pos + node.nodeSize, brNode)
-              hasChanges = true
-            }
+      insertLineBreakBeforeText:
+        () =>
+        ({ tr, dispatch }) => {
+          if (!dispatch) return false
+          
+          const { selection } = tr
+          const { $from } = selection
+          
+          // 检查当前节点是否为文本节点
+          const currentNode = $from.parent
+          if (!this.options.textNodes.includes(currentNode.type.name)) {
+            return false
           }
-        })
-        
-        return hasChanges
-      },
+          
+          // 检查前面是否有样式内容节点
+          const prevNode = getPreviousNode($from)
+          if (prevNode && this.options.styleContentNodes.includes(prevNode.type.name)) {
+            // 在文本节点前插入换行
+            const brNode = tr.doc.type.schema.nodes.hardBreak.create()
+            tr.insert($from.start(), brNode)
+            return true
+          }
+          
+          return false
+        },
+
+      insertLineBreakAfterText:
+        () =>
+        ({ tr, dispatch }) => {
+          if (!dispatch) return false
+          
+          const { selection } = tr
+          const { $from } = selection
+          
+          // 检查当前节点是否为文本节点
+          const currentNode = $from.parent
+          if (!this.options.textNodes.includes(currentNode.type.name)) {
+            return false
+          }
+          
+          // 检查后面是否有样式内容节点
+          const nextNode = getNextNode($from)
+          if (nextNode && this.options.styleContentNodes.includes(nextNode.type.name)) {
+            // 在文本节点后插入换行
+            const brNode = tr.doc.type.schema.nodes.hardBreak.create()
+            tr.insert($from.end(), brNode)
+            return true
+          }
+          
+          return false
+        },
+
+      autoInsertLineBreaks:
+        () =>
+        ({ tr, dispatch }) => {
+          if (!dispatch) return false
+          
+          let hasChanges = false
+          const { doc } = tr
+          
+          // 遍历文档中的所有节点
+          doc.descendants((node: ProseMirrorNode, pos: number) => {
+            // 检查是否为文本节点
+            if (this.options.textNodes.includes(node.type.name)) {
+              const $pos = doc.resolve(pos)
+              
+              // 检查前面是否有样式内容节点
+              const prevNode = getPreviousNode($pos)
+              if (prevNode && this.options.styleContentNodes.includes(prevNode.type.name)) {
+                const brNode = tr.doc.type.schema.nodes.hardBreak.create()
+                tr.insert(pos, brNode)
+                hasChanges = true
+              }
+              
+              // 检查后面是否有样式内容节点
+              const nextNode = getNextNode($pos)
+              if (nextNode && this.options.styleContentNodes.includes(nextNode.type.name)) {
+                const brNode = tr.doc.type.schema.nodes.hardBreak.create()
+                tr.insert(pos + node.nodeSize, brNode)
+                hasChanges = true
+              }
+            }
+          })
+          
+          return hasChanges
+        },
     }
   },
 
@@ -145,7 +195,7 @@ export const LineBreakDetector = Extension.create<LineBreakDetectorOptions>({
           const $pos = doc.resolve(pos)
           
           // 检查前面是否有样式内容节点
-          const prevNode = this.getPreviousNode($pos)
+          const prevNode = getPreviousNode($pos)
           if (prevNode && this.options.styleContentNodes.includes(prevNode.type.name)) {
             // 检查是否已经有换行符
             const prevContent = $pos.parent.textContent
@@ -158,7 +208,7 @@ export const LineBreakDetector = Extension.create<LineBreakDetectorOptions>({
           }
           
           // 检查后面是否有样式内容节点
-          const nextNode = this.getNextNode($pos)
+          const nextNode = getNextNode($pos)
           if (nextNode && this.options.styleContentNodes.includes(nextNode.type.name)) {
             // 检查是否已经有换行符
             const nextContent = $pos.parent.textContent
@@ -177,45 +227,5 @@ export const LineBreakDetector = Extension.create<LineBreakDetectorOptions>({
         this.editor.view.dispatch(newTr)
       }
     }
-  },
-
-  // 辅助方法：获取前一个节点
-  getPreviousNode($pos: any): ProseMirrorNode | null {
-    const { doc } = $pos
-    const pos = $pos.pos
-    
-    if (pos <= 0) return null
-    
-    // 向前查找最近的节点
-    let currentPos = pos - 1
-    while (currentPos >= 0) {
-      const node = doc.nodeAt(currentPos)
-      if (node && node.type.name !== 'text') {
-        return node
-      }
-      currentPos--
-    }
-    
-    return null
-  },
-
-  // 辅助方法：获取后一个节点
-  getNextNode($pos: any): ProseMirrorNode | null {
-    const { doc } = $pos
-    const pos = $pos.pos
-    
-    if (pos >= doc.content.size) return null
-    
-    // 向后查找最近的节点
-    let currentPos = pos + 1
-    while (currentPos < doc.content.size) {
-      const node = doc.nodeAt(currentPos)
-      if (node && node.type.name !== 'text') {
-        return node
-      }
-      currentPos++
-    }
-    
-    return null
   },
 }) 
