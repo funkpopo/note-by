@@ -359,8 +359,30 @@ const AiSelector: React.FC<AiSelectorProps> = ({ editor, modelId }) => {
         response += chunk
       }
       
-      // 替换选中的文本
-      editor.chain().focus().deleteSelection().insertContent(response).run()
+      // 替换选中的文本 - 使用事务安全的方式
+      try {
+        const success = editor.chain()
+          .focus()
+          .setTextSelection({ from, to })
+          .insertContent(response)
+          .run()
+        
+        if (!success) {
+          throw new Error('编辑器命令执行失败')
+        }
+      } catch (editorError) {
+        // 如果是编辑器事务错误，检查内容是否实际已经更新
+        const originalText = editor.state.doc.textBetween(from, to)
+        
+        // 如果原始选中内容已经不存在（被替换了），说明操作成功
+        if (originalText !== selectedText) {
+          console.warn('编辑器事务警告（内容已正确更新）:', editorError)
+          return // 内容已更新，忽略事务错误
+        }
+        
+        // 如果内容没有更新，则重新抛出错误
+        throw editorError
+      }
       
       showToast(`${command.label}完成`, 'success')
     } catch (error) {
