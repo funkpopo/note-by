@@ -821,8 +821,6 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
           const selection = window.getSelection()
           if (selection && !selection.isCollapsed) {
             // 使用更精确的光标定位
-            const range = selection.getRangeAt(0)
-            const rect = range.getBoundingClientRect()
             const clickPos = editor.view.posAtCoords({ 
               left: event.clientX, 
               top: event.clientY 

@@ -163,7 +163,7 @@ interface BlockEditorProps {
           return false
         },
         // 确保鼠标按下事件正确处理
-        mousedown: (view, event) => {
+        mousedown: (view) => {
           // 确保编辑器获得焦点
           if (!view.hasFocus()) {
             view.focus()
