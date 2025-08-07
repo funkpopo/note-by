@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { StarterKit } from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extension-placeholder'
 import { Underline } from '@tiptap/extension-underline'
+import { Typography } from '@tiptap/extension-typography'
 import { Highlight } from '@tiptap/extension-highlight'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Link } from '@tiptap/extension-link'
@@ -14,8 +15,22 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { CharacterCount } from '@tiptap/extension-character-count'
-import { common, createLowlight } from 'lowlight'
-import { Toast, Button, Space, Spin, Breadcrumb } from '@douyinfe/semi-ui'
+import { createLowlight } from 'lowlight'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import python from 'highlight.js/lib/languages/python'
+import java from 'highlight.js/lib/languages/java'
+import cpp from 'highlight.js/lib/languages/cpp'
+import c from 'highlight.js/lib/languages/c'
+import csharp from 'highlight.js/lib/languages/csharp'
+import go from 'highlight.js/lib/languages/go'
+import xml from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+import json from 'highlight.js/lib/languages/json'
+import sql from 'highlight.js/lib/languages/sql'
+import bash from 'highlight.js/lib/languages/bash'
+import dockerfile from 'highlight.js/lib/languages/dockerfile'
+import { Toast, Button, Space, Spin, Breadcrumb, Select } from '@douyinfe/semi-ui'
 import { 
   IconSave, 
   IconBold, 
@@ -29,11 +44,134 @@ import {
   IconOrderedList,
   IconCode,
   IconFile,
-  IconEdit
+  IconEdit,
+  IconGridStroked,
+  IconCopy
 } from '@douyinfe/semi-icons'
 import './Editor.css'
 
-const lowlight = createLowlight(common)
+const lowlight = createLowlight()
+
+// 注册需要的语言
+lowlight.register('javascript', javascript)
+lowlight.register('typescript', typescript)
+lowlight.register('python', python)
+lowlight.register('java', java)
+lowlight.register('cpp', cpp)
+lowlight.register('c', c)
+lowlight.register('csharp', csharp)
+lowlight.register('go', go)
+lowlight.register('xml', xml)
+lowlight.register('css', css)
+lowlight.register('json', json)
+lowlight.register('sql', sql)
+lowlight.register('bash', bash)
+lowlight.register('dockerfile', dockerfile)
+lowlight.register('plaintext', () => ({ 
+  name: 'plaintext', 
+  keywords: [],
+  contains: []
+})) // 纯文本不需要高亮
+
+// 支持的编程语言列表（常见语言）
+const SUPPORTED_LANGUAGES = [
+  { value: 'plaintext', label: 'Plain Text' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'java', label: 'Java' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'c', label: 'C' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'xml', label: 'XML' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'shell', label: 'Shell' },
+  { value: 'bash', label: 'Bash' },
+  { value: 'dockerfile', label: 'Dockerfile' },
+  { value: 'markdown', label: 'Markdown' }
+]
+
+// 复制到剪贴板函数
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // 降级方案
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    textArea.style.top = '-999999px'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+    const success = document.execCommand('copy')
+    document.body.removeChild(textArea)
+    return success
+  }
+}
+
+// 自定义代码块组件
+const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
+  const [isCopied, setIsCopied] = useState(false)
+  const language = node.attrs.language || 'plaintext'
+
+  const handleLanguageChange = (value: string | number | any[] | Record<string, any> | undefined) => {
+    if (typeof value === 'string') {
+      updateAttributes({ language: value })
+    }
+  }
+
+  const handleCopy = async () => {
+    const codeContent = node.textContent || ''
+    const success = await copyToClipboard(codeContent)
+    
+    if (success) {
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    }
+  }
+
+  return (
+    <NodeViewWrapper className="code-block-wrapper">
+      <div className="code-block-header">
+        <Select
+          value={language}
+          onChange={handleLanguageChange}
+          style={{ width: 120 }}
+          size="small"
+          placeholder="语言"
+        >
+          {SUPPORTED_LANGUAGES.map(lang => (
+            <Select.Option key={lang.value} value={lang.value}>
+              {lang.label}
+            </Select.Option>
+          ))}
+        </Select>
+        
+        <Button
+          icon={<IconCopy />}
+          size="small"
+          type="tertiary"
+          onClick={handleCopy}
+          className={isCopied ? 'copied' : ''}
+        >
+          {isCopied ? '已复制' : '复制'}
+        </Button>
+      </div>
+      
+      <div className="code-block-content">
+        <NodeViewContent as="div" />
+      </div>
+    </NodeViewWrapper>
+  )
+}
 
 // 欢迎页面组件
 const WelcomePage: React.FC = () => {
@@ -196,6 +334,13 @@ const EditorBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             title="有序列表"
           />
           <Button
+            icon={<IconGridStroked />}
+            size="small"
+            type={editor.isActive('table') ? 'primary' : 'tertiary'}
+            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            title="插入表格"
+          />
+          <Button
             icon={<IconCode />}
             size="small"
             type={editor.isActive('codeBlock') ? 'primary' : 'tertiary'}
@@ -252,12 +397,14 @@ const Editor: React.FC<EditorProps> = ({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        code: false,
         codeBlock: false,
       }),
       Placeholder.configure({
         placeholder,
       }),
       Underline,
+      Typography,
       Highlight.configure({
         multicolor: true,
       }),
@@ -284,6 +431,10 @@ const Editor: React.FC<EditorProps> = ({
       CodeBlockLowlight.configure({
         lowlight,
         defaultLanguage: 'plaintext',
+      }).extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockComponent)
+        },
       }),
       CharacterCount.configure({
         limit: 50000,
