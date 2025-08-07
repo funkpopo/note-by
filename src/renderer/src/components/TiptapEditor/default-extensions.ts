@@ -32,26 +32,7 @@ import xml from 'highlight.js/lib/languages/xml'
 import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
-import markdown from 'highlight.js/lib/languages/markdown'
 import yaml from 'highlight.js/lib/languages/yaml'
-import dockerfile from 'highlight.js/lib/languages/dockerfile'
-import plaintext from 'highlight.js/lib/languages/plaintext'
-// 添加更多语言支持
-import ruby from 'highlight.js/lib/languages/ruby'
-import swift from 'highlight.js/lib/languages/swift'
-import kotlin from 'highlight.js/lib/languages/kotlin'
-import scala from 'highlight.js/lib/languages/scala'
-import dart from 'highlight.js/lib/languages/dart'
-import lua from 'highlight.js/lib/languages/lua'
-import r from 'highlight.js/lib/languages/r'
-import matlab from 'highlight.js/lib/languages/matlab'
-import perl from 'highlight.js/lib/languages/perl'
-import shell from 'highlight.js/lib/languages/shell'
-import powershell from 'highlight.js/lib/languages/powershell'
-import ini from 'highlight.js/lib/languages/ini'
-import toml from 'highlight.js/lib/languages/ini' // TOML uses ini parser
-import groovy from 'highlight.js/lib/languages/groovy'
-import vim from 'highlight.js/lib/languages/vim'
 import AiPlaceholder from './AiPlaceholder'
 import CodeBlockComponent from './CodeBlockComponent'
 import { ReactNodeViewRenderer } from '@tiptap/react'
@@ -62,7 +43,7 @@ import { LineBreakDetector } from './LineBreakDetector'
 // 创建lowlight实例
 const lowlight = createLowlight()
 
-// 注册核心语言
+// 注册主流语言
 lowlight.register('javascript', javascript)
 lowlight.register('js', javascript)
 lowlight.register('jsx', javascript)
@@ -82,53 +63,13 @@ lowlight.register('rust', rust)
 lowlight.register('rs', rust)
 lowlight.register('php', php)
 lowlight.register('css', css)
-lowlight.register('scss', css)
-lowlight.register('sass', css)
-lowlight.register('less', css)
 lowlight.register('html', xml)
 lowlight.register('xml', xml)
-lowlight.register('svg', xml)
 lowlight.register('json', json)
 lowlight.register('sql', sql)
-lowlight.register('mysql', sql)
-lowlight.register('postgresql', sql)
 lowlight.register('bash', bash)
-lowlight.register('sh', bash)
-lowlight.register('zsh', bash)
-lowlight.register('shell', shell)
-lowlight.register('md', markdown)
 lowlight.register('yaml', yaml)
 lowlight.register('yml', yaml)
-lowlight.register('dockerfile', dockerfile)
-lowlight.register('docker', dockerfile)
-lowlight.register('plaintext', plaintext)
-lowlight.register('text', plaintext)
-lowlight.register('txt', plaintext)
-
-// 注册扩展语言
-lowlight.register('ruby', ruby)
-lowlight.register('rb', ruby)
-lowlight.register('swift', swift)
-lowlight.register('kotlin', kotlin)
-lowlight.register('kt', kotlin)
-lowlight.register('scala', scala)
-lowlight.register('dart', dart)
-lowlight.register('lua', lua)
-lowlight.register('r', r)
-lowlight.register('matlab', matlab)
-lowlight.register('m', matlab)
-lowlight.register('perl', perl)
-lowlight.register('pl', perl)
-lowlight.register('powershell', powershell)
-lowlight.register('ps1', powershell)
-lowlight.register('ini', ini)
-lowlight.register('toml', toml)
-lowlight.register('conf', ini)
-lowlight.register('config', ini)
-lowlight.register('groovy', groovy)
-lowlight.register('gradle', groovy)
-lowlight.register('vim', vim)
-lowlight.register('vimscript', vim)
 
 // 自定义代码块节点
 const CustomCodeBlock = CodeBlockLowlight.extend({

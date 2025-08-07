@@ -31,7 +31,6 @@ const CodeBlockComponent: React.FC<CodeBlockComponentProps> = (props) => {
   const codeRef = useRef<HTMLDivElement>(null)
   
   const languages = [
-    { name: 'plaintext', label: '纯文本' },
     // 前端技术
     { name: 'javascript', label: 'JavaScript' },
     { name: 'typescript', label: 'TypeScript' },
@@ -39,9 +38,6 @@ const CodeBlockComponent: React.FC<CodeBlockComponentProps> = (props) => {
     { name: 'tsx', label: 'TSX' },
     { name: 'html', label: 'HTML' },
     { name: 'css', label: 'CSS' },
-    { name: 'scss', label: 'SCSS' },
-    { name: 'sass', label: 'Sass' },
-    { name: 'less', label: 'Less' },
     // 后端语言
     { name: 'python', label: 'Python' },
     { name: 'java', label: 'Java' },
@@ -51,37 +47,14 @@ const CodeBlockComponent: React.FC<CodeBlockComponentProps> = (props) => {
     { name: 'go', label: 'Go' },
     { name: 'rust', label: 'Rust' },
     { name: 'php', label: 'PHP' },
-    { name: 'ruby', label: 'Ruby' },
-    { name: 'swift', label: 'Swift' },
-    { name: 'kotlin', label: 'Kotlin' },
-    { name: 'scala', label: 'Scala' },
-    { name: 'dart', label: 'Dart' },
-    { name: 'lua', label: 'Lua' },
-    { name: 'r', label: 'R' },
-    { name: 'matlab', label: 'MATLAB' },
-    { name: 'perl', label: 'Perl' },
-    { name: 'groovy', label: 'Groovy' },
     // 数据格式
     { name: 'json', label: 'JSON' },
     { name: 'xml', label: 'XML' },
     { name: 'yaml', label: 'YAML' },
-    { name: 'toml', label: 'TOML' },
-    { name: 'ini', label: 'INI/Config' },
-    { name: 'csv', label: 'CSV' },
     // Shell 脚本
     { name: 'bash', label: 'Bash' },
-    { name: 'sh', label: 'Shell' },
-    { name: 'zsh', label: 'Zsh' },
-    { name: 'powershell', label: 'PowerShell' },
     // 数据库
     { name: 'sql', label: 'SQL' },
-    { name: 'mysql', label: 'MySQL' },
-    { name: 'postgresql', label: 'PostgreSQL' },
-    // 其他
-    { name: 'markdown', label: 'Markdown' },
-    { name: 'docker', label: 'Dockerfile' },
-    { name: 'vim', label: 'Vim Script' },
-    { name: 'gradle', label: 'Gradle' },
   ]
   
   const copyToClipboard = () => {
