@@ -251,15 +251,6 @@
     margin: 0.25rem 0;
   }
   
-  /* 代码样式 */
-  code {
-    background: var(--semi-color-fill-1);
-    color: var(--semi-color-text-0);
-    padding: 0.125rem 0.25rem;
-    border-radius: 0.25rem;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
-    font-size: 0.875em;
-  }
   
   /* 代码块样式 - 增强版 */
   .code-block, .code-block-component {
@@ -375,7 +366,6 @@
     .hljs-section { color: var(--code-syntax-builtin); font-weight: 600; } /* 节 */
     .hljs-quote { color: var(--code-syntax-comment); font-style: italic; } /* 引用 */
     .hljs-bullet { color: var(--code-syntax-builtin); } /* 列表项 */
-    .hljs-code { color: var(--code-syntax-string); background: var(--semi-color-fill-0); padding: 2px 4px; border-radius: 3px; } /* 行内代码 */
     .hljs-link { color: var(--semi-color-primary); text-decoration: underline; } /* 链接 */
     .hljs-formula { color: var(--code-syntax-number); } /* 公式 */
   }

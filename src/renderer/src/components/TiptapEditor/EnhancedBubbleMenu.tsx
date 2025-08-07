@@ -9,7 +9,6 @@ import {
   FiItalic, 
   FiUnderline, 
   FiSlash, 
-  FiCode, 
   FiLink, 
   FiAlignLeft, 
   FiAlignCenter, 
@@ -1157,16 +1156,6 @@ const EnhancedBubbleMenu: React.FC<EnhancedBubbleMenuProps> = ({ editor }) => {
                   disabled={!editor.can().chain().focus().toggleMark('strike').run()}
                 >
                   <FiSlash size={16} />
-                </button>
-              </Tooltip>
-              
-              <Tooltip text="行内代码" place="top">
-                <button
-                  className={`bubble-menu-button ${editor.isActive('code') ? 'active' : ''}`}
-                  onClick={handleButtonClick(() => editor.chain().focus().toggleMark('code').run())}
-                  disabled={!editor.can().chain().focus().toggleMark('code').run()}
-                >
-                  <FiCode size={16} />
                 </button>
               </Tooltip>
               

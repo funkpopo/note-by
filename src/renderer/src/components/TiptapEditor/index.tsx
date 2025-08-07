@@ -143,7 +143,7 @@ interface BlockEditorProps {
     ],
     content: content,
     immediatelyRender: false,
-    shouldRerenderOnTransaction: false,
+    shouldRerenderOnTransaction: true, // 需要启用以确保编辑器正常更新
     enableInputRules: true,
     enablePasteRules: true,
     enableCoreExtensions: true,
@@ -160,6 +160,17 @@ interface BlockEditorProps {
         },
         // 防抖输入事件
         input: () => {
+          return false
+        },
+        // 确保方向键导航正常工作，不干扰其他键盘操作
+        keydown: (_view, event) => {
+          // 只对方向键进行特殊处理，确保它们不被其他逻辑干扰
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || 
+              event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            // 让编辑器的默认方向键处理逻辑生效
+            return false
+          }
+          // 对于其他所有按键（包括Home、End、PageUp、PageDown等定位键），也让编辑器自然处理
           return false
         },
         // 确保鼠标按下事件正确处理
@@ -218,31 +229,8 @@ interface BlockEditorProps {
                 view.dispatch(tr)
               }
             }
-          } else {
-            // 没有文本选择时，确保光标正确定位
-            const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
-            if (pos) {
-              // 添加调试日志
-              console.log('Cursor positioning:', {
-                clientX: event.clientX,
-                clientY: event.clientY,
-                calculatedPos: pos.pos,
-                success: true
-              })
-              
-              const tr = view.state.tr.setSelection(
-                TextSelection.create(view.state.doc, pos.pos)
-              )
-              view.dispatch(tr)
-            } else {
-              // 如果无法计算位置，记录错误
-              console.warn('Failed to calculate cursor position:', {
-                clientX: event.clientX,
-                clientY: event.clientY
-              })
-            }
           }
-          
+          // 对于正常的点击，让编辑器自然处理，不进行额外干预
           return false
         }
       },
