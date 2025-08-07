@@ -144,8 +144,8 @@ interface BlockEditorProps {
     content: content,
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
-    enableInputRules: false,
-    enablePasteRules: false,
+    enableInputRules: true,
+    enablePasteRules: true,
     enableCoreExtensions: true,
     editorProps: {
       attributes: {

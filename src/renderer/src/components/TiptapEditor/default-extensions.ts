@@ -249,7 +249,7 @@ export const defaultExtensions = [
   SlashCommand,
   
   LineBreakDetector.configure({
-    enabled: true,
+    enabled: false,  // 暂时禁用自动换行检测
     styleContentNodes: [
       'image',
       'table',
