@@ -29,8 +29,7 @@ import {
   IconOrderedList,
   IconCode,
   IconFile,
-  IconEdit,
-  IconFolder
+  IconEdit
 } from '@douyinfe/semi-icons'
 import './Editor.css'
 
