@@ -46,7 +46,10 @@ import {
   IconFile,
   IconEdit,
   IconGridStroked,
-  IconCopy
+  IconCopy,
+  IconPlus,
+  IconMinus,
+  IconDelete
 } from '@douyinfe/semi-icons'
 import './Editor.css'
 
@@ -339,7 +342,61 @@ const EditorBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             type={editor.isActive('table') ? 'primary' : 'tertiary'}
             onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
             title="插入表格"
+            disabled={editor.isActive('table')}
           />
+          {editor.isActive('table') && (
+            <>
+              <Button
+                icon={<IconPlus />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().addColumnBefore().run()}
+                title="在前面添加列"
+              />
+              <Button
+                icon={<IconPlus />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().addColumnAfter().run()}
+                title="在后面添加列"
+              />
+              <Button
+                icon={<IconPlus />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().addRowBefore().run()}
+                title="在上面添加行"
+              />
+              <Button
+                icon={<IconPlus />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().addRowAfter().run()}
+                title="在下面添加行"
+              />
+              <Button
+                icon={<IconMinus />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().deleteColumn().run()}
+                title="删除列"
+              />
+              <Button
+                icon={<IconMinus />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().deleteRow().run()}
+                title="删除行"
+              />
+              <Button
+                icon={<IconDelete />}
+                size="small"
+                type="tertiary"
+                onClick={() => editor.chain().focus().deleteTable().run()}
+                title="删除表格"
+              />
+            </>
+          )}
           <Button
             icon={<IconCode />}
             size="small"
