@@ -15,6 +15,8 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { CharacterCount } from '@tiptap/extension-character-count'
+import { Extension } from '@tiptap/core'
+import { wrappingInputRule, InputRule } from '@tiptap/core'
 import { createLowlight } from 'lowlight'
 import javascript from 'highlight.js/lib/languages/javascript'
 import typescript from 'highlight.js/lib/languages/typescript'
@@ -98,6 +100,87 @@ const SUPPORTED_LANGUAGES = [
   { value: 'dockerfile', label: 'Dockerfile' },
   { value: 'markdown', label: 'Markdown' }
 ]
+
+// Markdown shortcuts extension
+const MarkdownShortcuts = Extension.create({
+  name: 'markdownShortcuts',
+
+  addInputRules() {
+    return [
+      // Heading shortcuts
+      new InputRule({
+        find: /^(#{1,6})\s(.+)$/,
+        handler: ({ range, match, commands }) => {
+          const level = match[1].length as 1 | 2 | 3 | 4 | 5 | 6
+          const text = match[2]
+          
+          commands.deleteRange({ from: range.from, to: range.to })
+          commands.setNode('heading', { level })
+          commands.insertContent(text)
+        }
+      }),
+      
+      // Code block shortcuts
+      new InputRule({
+        find: /^```([a-z]*)?$/,
+        handler: ({ range, commands, match }) => {
+          const language = match[1] || 'plaintext'
+          
+          commands.deleteRange({ from: range.from, to: range.to })
+          commands.insertContent({
+            type: 'codeBlock',
+            attrs: { language }
+          })
+        }
+      }),
+      
+      // Horizontal rule shortcuts
+      new InputRule({
+        find: /^---$/,
+        handler: ({ range, commands }) => {
+          commands.deleteRange({ from: range.from, to: range.to })
+          commands.setHorizontalRule()
+        }
+      }),
+      
+      // Bullet list shortcuts
+      wrappingInputRule({
+        find: /^([-*+])\s(.*)$/,
+        type: this.editor.schema.nodes.bulletList,
+      }),
+      
+      // Ordered list shortcuts
+      wrappingInputRule({
+        find: /^(\d+\.)\s(.*)$/,
+        type: this.editor.schema.nodes.orderedList,
+      }),
+      
+      // Blockquote shortcuts  
+      wrappingInputRule({
+        find: /^>\s(.*)$/,
+        type: this.editor.schema.nodes.blockquote,
+      }),
+    ]
+  },
+  
+  addKeyboardShortcuts() {
+    return {
+      'Mod-b': () => this.editor.commands.toggleBold(),
+      'Mod-i': () => this.editor.commands.toggleItalic(),
+      'Mod-u': () => this.editor.commands.toggleUnderline(),
+      'Mod-Shift-s': () => this.editor.commands.toggleStrike(),
+      'Mod-e': () => this.editor.commands.toggleCode(),
+      'Mod-Shift-h': () => this.editor.commands.toggleHighlight(),
+      'Mod-k': () => {
+        const url = window.prompt('链接地址:')
+        if (url) {
+          this.editor.commands.setLink({ href: url })
+        }
+        return true
+      },
+    }
+  },
+})
 
 // 复制到剪贴板函数
 const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -496,6 +579,7 @@ const Editor: React.FC<EditorProps> = ({
       CharacterCount.configure({
         limit: 50000,
       }),
+      MarkdownShortcuts,
     ],
     content: loadedContent || content,
     editable,
