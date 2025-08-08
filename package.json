@@ -84,6 +84,7 @@
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "showdown": "^2.1.0",
+    "tippy.js": "^6.3.7",
     "tiptap-markdown": "^0.8.10",
     "unified": "^11.0.5",
     "uuid": "^11.1.0",
