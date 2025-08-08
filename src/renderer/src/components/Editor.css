@@ -239,10 +239,28 @@
   text-decoration: line-through;
 }
 
+/* Highlight styles with default light green */
 .ProseMirror mark {
-  background-color: var(--semi-color-warning-light-default);
+  background-color: #d4f2d4;
   padding: 0 2px;
   border-radius: 2px;
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.ProseMirror mark.editor-highlight {
+  background-color: var(--highlight-color, #d4f2d4);
+  padding: 0 2px;
+  border-radius: 2px;
+  position: relative;
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.ProseMirror mark.editor-highlight:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Links */

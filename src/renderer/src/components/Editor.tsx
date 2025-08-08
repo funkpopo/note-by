@@ -61,6 +61,7 @@ import {
   RiDeleteRow 
 } from 'react-icons/ri'
 import SlashMenu, { getSuggestionItems } from './SlashMenu'
+import HighlightColorPicker from './HighlightColorPicker'
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import './Editor.css'
@@ -414,12 +415,9 @@ const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             onClick={() => editor.chain().focus().toggleStrike().run()}
             title="删除线"
           />
-          <Button
-            icon={<span>H</span>}
-            size="small"
-            type={editor.isActive('highlight') ? 'primary' : 'tertiary'}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            title="高亮"
+          <HighlightColorPicker
+            editor={editor}
+            isActive={editor.isActive('highlight')}
           />
           <Button
             icon={<IconLink />}
@@ -539,12 +537,9 @@ const TextBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             onClick={() => editor.chain().focus().toggleStrike().run()}
             title="删除线"
           />
-          <Button
-            icon={<span>H</span>}
-            size="small"
-            type={editor.isActive('highlight') ? 'primary' : 'tertiary'}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            title="高亮"
+          <HighlightColorPicker
+            editor={editor}
+            isActive={editor.isActive('highlight')}
           />
           <Button
             icon={<IconLink />}
@@ -662,6 +657,9 @@ const Editor: React.FC<EditorProps> = ({
       Typography,
       Highlight.configure({
         multicolor: true,
+        HTMLAttributes: {
+          class: 'editor-highlight',
+        },
       }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],

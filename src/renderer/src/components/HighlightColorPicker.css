@@ -1,0 +1,75 @@
+.highlight-color-picker {
+  background: var(--semi-color-bg-2);
+  border: 1px solid var(--semi-color-border);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 140px;
+}
+
+.custom-color-section {
+  margin-bottom: 8px;
+}
+
+.custom-color-label {
+  font-size: 12px;
+  color: var(--semi-color-text-1);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.custom-color-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-input {
+  width: 40px;
+  height: 28px;
+  border: 1px solid var(--semi-color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.color-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.custom-color-value {
+  font-size: 11px;
+  color: var(--semi-color-text-2);
+  font-family: monospace;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.clear-highlight-section {
+  border-top: 1px solid var(--semi-color-border);
+  padding-top: 8px;
+}
+
+.clear-highlight-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 12px;
+  text-align: center;
+  color: var(--semi-color-text-1);
+}
+
+.clear-highlight-button:hover {
+  background-color: var(--semi-color-fill-0);
+}
