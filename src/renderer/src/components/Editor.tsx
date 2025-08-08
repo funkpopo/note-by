@@ -493,10 +493,11 @@ const TextBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
       shouldShow={({ state, from, to }) => {
         const { selection } = state
         const { $from } = selection
-        // 只在非表格区域且有选中文本时显示
+        // 只在非表格区域、非代码块区域且有选中文本时显示
         return from !== to && 
                $from.parent.type.name !== 'tableCell' && 
-               $from.parent.type.name !== 'tableHeader'
+               $from.parent.type.name !== 'tableHeader' &&
+               $from.parent.type.name !== 'codeBlock'
       }}
     >
       <div className="bubble-menu text-bubble-menu">
