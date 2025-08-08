@@ -272,6 +272,18 @@
   border-radius: 4px;
   display: block;
   margin: 1em auto;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ProseMirror img.editor-image:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 图片选中状态 */
+.ProseMirror img.editor-image.ProseMirror-selectednode {
+  outline: 2px solid var(--semi-color-primary);
+  outline-offset: 2px;
 }
 
 /* Code blocks */

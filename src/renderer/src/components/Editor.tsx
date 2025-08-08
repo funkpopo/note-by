@@ -50,7 +50,8 @@ import {
   IconEdit,
   IconGridStroked,
   IconCopy,
-  IconDelete
+  IconDelete,
+  IconImage
 } from '@douyinfe/semi-icons'
 import { 
   RiDeleteColumn, 
@@ -220,6 +221,48 @@ const MarkdownShortcuts = Extension.create({
   },
 })
 
+// 图片上传函数
+const uploadImage = async (file: File, currentFolder?: string, currentFile?: string): Promise<string> => {
+  if (!currentFolder || !currentFile) {
+    throw new Error('请先选择或创建一个文档')
+  }
+
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    throw new Error('请选择图片文件')
+  }
+
+  // 验证文件大小 (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('图片文件不能超过 5MB')
+  }
+
+  try {
+    // 读取文件为base64
+    const fileData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+    // 调用API上传文件
+    const result = await window.api.markdown.uploadFile(
+      `${currentFolder}/${currentFile}`,
+      fileData,
+      file.name
+    )
+
+    if (result.success && result.url) {
+      return result.url
+    } else {
+      throw new Error(result.error || '上传失败')
+    }
+  } catch (error) {
+    throw new Error(`上传图片失败: ${error instanceof Error ? error.message : '未知错误'}`)
+  }
+}
+
 // 复制到剪贴板函数
 const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
@@ -372,7 +415,7 @@ const EditorHeader: React.FC<{
 }
 
 // 表格专用 BubbleMenu 组件
-const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
+const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({ editor, currentFolder: _currentFolder, currentFile: _currentFile }) => {
   if (!editor) return null
 
   return (
@@ -381,7 +424,9 @@ const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
       shouldShow={({ state }) => {
         const { selection } = state
         const { $from } = selection
-        return $from.parent.type.name === 'tableCell' || $from.parent.type.name === 'tableHeader'
+        // 只在表格区域且不是图片时显示
+        return ($from.parent.type.name === 'tableCell' || $from.parent.type.name === 'tableHeader') &&
+               !editor.isActive('image') // 当图片被选中时不显示菜单
       }}
     >
       <div className="bubble-menu table-bubble-menu">
@@ -505,7 +550,7 @@ const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
 }
 
 // 纯文本专用 BubbleMenu 组件
-const TextBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
+const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({ editor, currentFolder, currentFile }) => {
   if (!editor) return null
 
   return (
@@ -514,11 +559,12 @@ const TextBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
       shouldShow={({ state, from, to }) => {
         const { selection } = state
         const { $from } = selection
-        // 只在非表格区域、非代码块区域且有选中文本时显示
+        // 只在非表格区域、非代码块区域、非图片区域且有选中文本时显示
         return from !== to && 
                $from.parent.type.name !== 'tableCell' && 
                $from.parent.type.name !== 'tableHeader' &&
-               $from.parent.type.name !== 'codeBlock'
+               $from.parent.type.name !== 'codeBlock' &&
+               !editor.isActive('image') // 当图片被选中时不显示菜单
       }}
     >
       <div className="bubble-menu text-bubble-menu">
@@ -614,6 +660,68 @@ const TextBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             title="代码块"
           />
+          <Button
+            icon={<IconImage />}
+            size="small"
+            type="tertiary"
+            onClick={() => {
+              if (!currentFolder || !currentFile) {
+                Toast.error('请先选择或创建一个文档')
+                return
+              }
+              
+              const input = document.createElement('input')
+              input.type = 'file'
+              input.accept = 'image/*'
+              input.onchange = async (e) => {
+                const target = e.target as HTMLInputElement
+                const file = target.files?.[0]
+                if (file) {
+                  try {
+                    Toast.info('正在上传图片...')
+                    const url = await uploadImage(file, currentFolder, currentFile)
+                    editor.chain().focus().setImage({ src: url }).run()
+                    Toast.success('图片上传成功')
+                  } catch (error) {
+                    Toast.error(error instanceof Error ? error.message : '图片上传失败')
+                  }
+                }
+              }
+              input.click()
+            }}
+            title="插入图片"
+          />
+          <Button
+            icon={<IconImage />}
+            size="small"
+            type="tertiary"
+            onClick={() => {
+              if (!currentFolder || !currentFile) {
+                Toast.error('请先选择或创建一个文档')
+                return
+              }
+              
+              const input = document.createElement('input')
+              input.type = 'file'
+              input.accept = 'image/*'
+              input.onchange = async (e) => {
+                const target = e.target as HTMLInputElement
+                const file = target.files?.[0]
+                if (file) {
+                  try {
+                    Toast.info('正在上传图片...')
+                    const url = await uploadImage(file, currentFolder, currentFile)
+                    editor.chain().focus().setImage({ src: url }).run()
+                    Toast.success('图片上传成功')
+                  } catch (error) {
+                    Toast.error(error instanceof Error ? error.message : '图片上传失败')
+                  }
+                }
+              }
+              input.click()
+            }}
+            title="插入图片"
+          />
         </Space>
       </div>
     </BubbleMenu>
@@ -692,6 +800,8 @@ const Editor: React.FC<EditorProps> = ({
         HTMLAttributes: {
           class: 'editor-image',
         },
+        inline: false, // 图片作为块级元素
+        allowBase64: true, // 允许 base64 图片
       }),
       Table.configure({
         resizable: true,
@@ -712,7 +822,17 @@ const Editor: React.FC<EditorProps> = ({
       }),
       SlashCommands.configure({
         suggestion: {
-          items: getSuggestionItems,
+          items: (props: any) => getSuggestionItems({
+            ...props,
+            currentFolder,
+            currentFile,
+            uploadImageFn: async (file: File) => {
+              if (!currentFolder || !currentFile) {
+                throw new Error('请先选择或创建一个文档')
+              }
+              return uploadImage(file, currentFolder, currentFile)
+            }
+          }),
           render: () => {
             let component: ReactRenderer | null = null
             let popup: any = null
@@ -781,8 +901,45 @@ const Editor: React.FC<EditorProps> = ({
       attributes: {
         class: 'editor-content',
       },
+      handleDrop: (view, event, _slice, moved) => {
+        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+          const file = event.dataTransfer.files[0]
+          
+          // 检查是否为图片文件
+          if (file.type.startsWith('image/')) {
+            // 检查文件大小 (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+              Toast.error('图片文件不能超过 5MB')
+              return true
+            }
+
+            // 上传图片
+            if (currentFolder && currentFile) {
+              Toast.info('正在上传图片...')
+              uploadImage(file, currentFolder, currentFile)
+                .then(url => {
+                  const { schema } = view.state
+                  const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
+                  if (coordinates) {
+                    const node = schema.nodes.image.create({ src: url })
+                    const transaction = view.state.tr.insert(coordinates.pos, node)
+                    view.dispatch(transaction)
+                    Toast.success('图片上传成功')
+                  }
+                })
+                .catch(error => {
+                  Toast.error(error instanceof Error ? error.message : '图片上传失败')
+                })
+            } else {
+              Toast.error('请先选择或创建一个文档')
+            }
+            return true
+          }
+        }
+        return false
+      },
     },
-  })
+  }, [loadedContent, content, editable, placeholder, currentFolder, currentFile])
 
   // 保存文档内容
   const saveDocument = useCallback(async () => {
@@ -920,8 +1077,8 @@ const Editor: React.FC<EditorProps> = ({
           <EditorContent editor={editor} />
           {editable && (
             <>
-              <TableBubbleMenu editor={editor} />
-              <TextBubbleMenu editor={editor} />
+              <TableBubbleMenu editor={editor} currentFolder={currentFolder} currentFile={currentFile} />
+              <TextBubbleMenu editor={editor} currentFolder={currentFolder} currentFile={currentFile} />
             </>
           )}
         </div>

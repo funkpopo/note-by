@@ -9,7 +9,38 @@ import {
   IconQuote,
   IconImage
 } from '@douyinfe/semi-icons'
+import { Toast, Input, Modal } from '@douyinfe/semi-ui'
 import './SlashMenu.css'
+
+// 显示输入对话框的工具函数
+const showInputDialog = (title: string, placeholder: string): Promise<string | null> => {
+  return new Promise((resolve) => {
+    let inputValue = ''
+    
+    const modal = Modal.confirm({
+      title,
+      content: (
+        <Input 
+          placeholder={placeholder}
+          onChange={(value) => { inputValue = value }}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              modal.destroy()
+              resolve(inputValue.trim() || null)
+            }
+          }}
+          autoFocus
+        />
+      ),
+      onOk: () => {
+        resolve(inputValue.trim() || null)
+      },
+      onCancel: () => {
+        resolve(null)
+      },
+    })
+  })
+}
 
 export interface SlashMenuItem {
   title: string
@@ -147,7 +178,17 @@ SlashMenu.displayName = 'SlashMenu'
 
 export default SlashMenu
 
-export const getSuggestionItems = ({ query }: { query: string }): SlashMenuItem[] => {
+export const getSuggestionItems = ({ 
+  query, 
+  currentFolder: _currentFolder, 
+  currentFile: _currentFile, 
+  uploadImageFn 
+}: { 
+  query: string;
+  currentFolder?: string;
+  currentFile?: string;
+  uploadImageFn?: (file: File) => Promise<string>;
+}): SlashMenuItem[] => {
   const items: SlashMenuItem[] = [
     {
       title: '标题1',
@@ -295,15 +336,50 @@ export const getSuggestionItems = ({ query }: { query: string }): SlashMenuItem[
       searchTerms: ['image', 'img', 'picture', '图片', '图像'],
       icon: <IconImage />,
       command: ({ editor, range }) => {
-        const url = window.prompt('请输入图片地址:')
-        if (url) {
-          editor
-            .chain()
-            .focus()
-            .deleteRange(range)
-            .setImage({ src: url })
-            .run()
+        editor.chain().focus().deleteRange(range).run()
+        
+        // 创建文件输入元素
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/*'
+        input.onchange = async (e) => {
+          const target = e.target as HTMLInputElement
+          const file = target.files?.[0]
+          if (file && uploadImageFn) {
+            try {
+              Toast.info('正在上传图片...')
+              const url = await uploadImageFn(file)
+              editor.chain().focus().setImage({ src: url }).run()
+              Toast.success('图片插入成功')
+            } catch (error) {
+              console.error('图片上传失败:', error)
+              Toast.error(error instanceof Error ? error.message : '图片上传失败')
+              
+              // 如果上传失败，询问是否使用URL输入
+              try {
+                const url = await showInputDialog('图片上传失败，请输入图片地址', 'https://example.com/image.jpg')
+                if (url) {
+                  editor.chain().focus().setImage({ src: url }).run()
+                  Toast.success('图片插入成功')
+                }
+              } catch (dialogError) {
+                // 用户取消了输入
+              }
+            }
+          } else {
+            // 如果没有上传函数或没有选择文件，使用URL输入
+            try {
+              const url = await showInputDialog('请输入图片地址', 'https://example.com/image.jpg')
+              if (url) {
+                editor.chain().focus().setImage({ src: url }).run()
+                Toast.success('图片插入成功')
+              }
+            } catch (error) {
+              // 用户取消了输入
+            }
+          }
         }
+        input.click()
       },
     },
   ]
