@@ -58,7 +58,9 @@ import {
   RiInsertColumnRight, 
   RiInsertRowBottom, 
   RiInsertRowTop, 
-  RiDeleteRow 
+  RiDeleteRow,
+  RiMergeCellsHorizontal,
+  RiSplitCellsHorizontal
 } from 'react-icons/ri'
 import SlashMenu, { getSuggestionItems } from './SlashMenu'
 import HighlightColorPicker from './HighlightColorPicker'
@@ -473,6 +475,21 @@ const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             type="tertiary"
             onClick={() => editor.chain().focus().deleteRow().run()}
             title="删除行"
+          />
+          <div className="bubble-menu-divider" />
+          <Button
+            icon={<RiMergeCellsHorizontal />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().mergeCells().run()}
+            title="合并单元格"
+          />
+          <Button
+            icon={<RiSplitCellsHorizontal />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().splitCell().run()}
+            title="拆分单元格"
           />
           <Button
             icon={<IconDelete />}
