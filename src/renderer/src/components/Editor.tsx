@@ -50,10 +50,16 @@ import {
   IconEdit,
   IconGridStroked,
   IconCopy,
-  IconPlus,
-  IconMinus,
   IconDelete
 } from '@douyinfe/semi-icons'
+import { 
+  RiDeleteColumn, 
+  RiInsertColumnLeft, 
+  RiInsertColumnRight, 
+  RiInsertRowBottom, 
+  RiInsertRowTop, 
+  RiDeleteRow 
+} from 'react-icons/ri'
 import SlashMenu, { getSuggestionItems } from './SlashMenu'
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
@@ -429,42 +435,42 @@ const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
           />
           <div className="bubble-menu-divider" />
           <Button
-            icon={<IconPlus />}
+            icon={<RiInsertColumnLeft />}
             size="small"
             type="tertiary"
             onClick={() => editor.chain().focus().addColumnBefore().run()}
             title="在前面添加列"
           />
           <Button
-            icon={<IconPlus />}
+            icon={<RiInsertColumnRight />}
             size="small"
             type="tertiary"
             onClick={() => editor.chain().focus().addColumnAfter().run()}
             title="在后面添加列"
           />
           <Button
-            icon={<IconPlus />}
+            icon={<RiInsertRowTop />}
             size="small"
             type="tertiary"
             onClick={() => editor.chain().focus().addRowBefore().run()}
             title="在上面添加行"
           />
           <Button
-            icon={<IconPlus />}
+            icon={<RiInsertRowBottom />}
             size="small"
             type="tertiary"
             onClick={() => editor.chain().focus().addRowAfter().run()}
             title="在下面添加行"
           />
           <Button
-            icon={<IconMinus />}
+            icon={<RiDeleteColumn />}
             size="small"
             type="tertiary"
             onClick={() => editor.chain().focus().deleteColumn().run()}
             title="删除列"
           />
           <Button
-            icon={<IconMinus />}
+            icon={<RiDeleteRow />}
             size="small"
             type="tertiary"
             onClick={() => editor.chain().focus().deleteRow().run()}

@@ -97,15 +97,6 @@
   align-self: center;
 }
 
-/* 取消表格专用样式，统一使用默认样式 */
-.table-bubble-menu {
-  /* 移除特殊颜色主题 */
-}
-
-.text-bubble-menu {
-  /* 保持默认样式 */
-}
-
 /* Editor Content */
 .editor-wrapper {
   flex: 1;
