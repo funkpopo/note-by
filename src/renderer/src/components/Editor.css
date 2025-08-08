@@ -114,8 +114,8 @@
   top: -35px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--semi-color-bg-4);
-  color: var(--semi-color-white);
+  background: var(--semi-color-text-0);
+  color: var(--semi-color-bg-0);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -124,6 +124,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   animation: tooltipFadeIn 0.2s ease;
   pointer-events: none;
+  border: 1px solid var(--semi-color-border);
 }
 
 .bubble-menu .semi-button[title]:hover::before {
@@ -136,7 +137,7 @@
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 5px solid var(--semi-color-bg-4);
+  border-top: 5px solid var(--semi-color-text-0);
   z-index: 1001;
   pointer-events: none;
 }

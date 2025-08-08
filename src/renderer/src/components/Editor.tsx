@@ -618,6 +618,7 @@ const Editor: React.FC<EditorProps> = ({
   const [loadedContent, setLoadedContent] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const currentFileRef = useRef<{ folder?: string; file?: string }>({})
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 读取文档内容
   const loadDocument = useCallback(async (folder: string, file: string) => {
@@ -791,6 +792,19 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [currentFolder, currentFile, onFileChanged, editor])
 
+  // 自动保存功能
+  const scheduleAutoSave = useCallback(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (hasUnsavedChanges && currentFolder && currentFile && editor) {
+        saveDocument()
+      }
+    }, 3000) // 3秒后自动保存
+  }, [hasUnsavedChanges, currentFolder, currentFile, editor, saveDocument])
+
   // 当选中的文件发生变化时，加载新文档
   useEffect(() => {
     const prevFile = currentFileRef.current
@@ -807,8 +821,31 @@ const Editor: React.FC<EditorProps> = ({
     if (editor && loadedContent !== editor.getHTML()) {
       editor.commands.setContent(loadedContent)
       setHasUnsavedChanges(false)
+      
+      // 确保字符统计正确更新
+      setTimeout(() => {
+        if (editor.storage.characterCount) {
+          editor.view.dispatch(editor.state.tr)
+        }
+      }, 0)
     }
   }, [loadedContent, editor])
+
+  // 当内容变化时触发自动保存
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      scheduleAutoSave()
+    }
+  }, [hasUnsavedChanges, scheduleAutoSave])
+
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // 键盘快捷键保存
   useEffect(() => {
