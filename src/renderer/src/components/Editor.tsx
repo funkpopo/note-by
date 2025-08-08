@@ -362,16 +362,23 @@ const EditorHeader: React.FC<{
   )
 }
 
-// BubbleMenu组件
-const EditorBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
+// 表格专用 BubbleMenu 组件
+const TableBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
   if (!editor) return null
 
   return (
     <BubbleMenu 
-      editor={editor} 
-      shouldShow={({ from, to }) => from !== to}
+      editor={editor}
+      shouldShow={({ state }) => {
+        const { selection } = state
+        const { $from } = selection
+        return $from.parent.type.name === 'tableCell' || $from.parent.type.name === 'tableHeader'
+      }}
     >
-      <div className="bubble-menu">
+      <div className="bubble-menu table-bubble-menu">
+        <div className="bubble-menu-label">
+          <span>表格工具</span>
+        </div>
         <Space>
           <Button
             icon={<IconBold />}
@@ -420,6 +427,131 @@ const EditorBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             }}
             title="链接"
           />
+          <div className="bubble-menu-divider" />
+          <Button
+            icon={<IconPlus />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().addColumnBefore().run()}
+            title="在前面添加列"
+          />
+          <Button
+            icon={<IconPlus />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+            title="在后面添加列"
+          />
+          <Button
+            icon={<IconPlus />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().addRowBefore().run()}
+            title="在上面添加行"
+          />
+          <Button
+            icon={<IconPlus />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+            title="在下面添加行"
+          />
+          <Button
+            icon={<IconMinus />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().deleteColumn().run()}
+            title="删除列"
+          />
+          <Button
+            icon={<IconMinus />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().deleteRow().run()}
+            title="删除行"
+          />
+          <Button
+            icon={<IconDelete />}
+            size="small"
+            type="tertiary"
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            title="删除表格"
+          />
+        </Space>
+      </div>
+    </BubbleMenu>
+  )
+}
+
+// 纯文本专用 BubbleMenu 组件
+const TextBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
+  if (!editor) return null
+
+  return (
+    <BubbleMenu 
+      editor={editor}
+      shouldShow={({ state, from, to }) => {
+        const { selection } = state
+        const { $from } = selection
+        // 只在非表格区域且有选中文本时显示
+        return from !== to && 
+               $from.parent.type.name !== 'tableCell' && 
+               $from.parent.type.name !== 'tableHeader'
+      }}
+    >
+      <div className="bubble-menu text-bubble-menu">
+        <div className="bubble-menu-label">
+          <span>文本工具</span>
+        </div>
+        <Space>
+          <Button
+            icon={<IconBold />}
+            size="small"
+            type={editor.isActive('bold') ? 'primary' : 'tertiary'}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            title="加粗"
+          />
+          <Button
+            icon={<IconItalic />}
+            size="small"
+            type={editor.isActive('italic') ? 'primary' : 'tertiary'}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            title="斜体"
+          />
+          <Button
+            icon={<IconUnderline />}
+            size="small"
+            type={editor.isActive('underline') ? 'primary' : 'tertiary'}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            title="下划线"
+          />
+          <Button
+            icon={<IconStrikeThrough />}
+            size="small"
+            type={editor.isActive('strike') ? 'primary' : 'tertiary'}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            title="删除线"
+          />
+          <Button
+            icon={<span>H</span>}
+            size="small"
+            type={editor.isActive('highlight') ? 'primary' : 'tertiary'}
+            onClick={() => editor.chain().focus().toggleHighlight().run()}
+            title="高亮"
+          />
+          <Button
+            icon={<IconLink />}
+            size="small"
+            type={editor.isActive('link') ? 'primary' : 'tertiary'}
+            onClick={() => {
+              const url = window.prompt('链接地址:')
+              if (url) {
+                editor.chain().focus().setLink({ href: url }).run()
+              }
+            }}
+            title="链接"
+          />
+          <div className="bubble-menu-divider" />
           <Button
             icon={<IconH1 />}
             size="small"
@@ -456,59 +588,6 @@ const EditorBubbleMenu: React.FC<{ editor: any }> = ({ editor }) => {
             title="插入表格"
             disabled={editor.isActive('table')}
           />
-          {editor.isActive('table') && (
-            <>
-              <Button
-                icon={<IconPlus />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().addColumnBefore().run()}
-                title="在前面添加列"
-              />
-              <Button
-                icon={<IconPlus />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().addColumnAfter().run()}
-                title="在后面添加列"
-              />
-              <Button
-                icon={<IconPlus />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().addRowBefore().run()}
-                title="在上面添加行"
-              />
-              <Button
-                icon={<IconPlus />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().addRowAfter().run()}
-                title="在下面添加行"
-              />
-              <Button
-                icon={<IconMinus />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().deleteColumn().run()}
-                title="删除列"
-              />
-              <Button
-                icon={<IconMinus />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().deleteRow().run()}
-                title="删除行"
-              />
-              <Button
-                icon={<IconDelete />}
-                size="small"
-                type="tertiary"
-                onClick={() => editor.chain().focus().deleteTable().run()}
-                title="删除表格"
-              />
-            </>
-          )}
           <Button
             icon={<IconCode />}
             size="small"
@@ -780,7 +859,12 @@ const Editor: React.FC<EditorProps> = ({
       ) : (
         <div className="editor-wrapper">
           <EditorContent editor={editor} />
-          {editable && <EditorBubbleMenu editor={editor} />}
+          {editable && (
+            <>
+              <TableBubbleMenu editor={editor} />
+              <TextBubbleMenu editor={editor} />
+            </>
+          )}
         </div>
       )}
 

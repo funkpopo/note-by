@@ -62,13 +62,48 @@
   border: 1px solid var(--semi-color-border);
   border-radius: 6px;
   box-shadow: var(--semi-shadow-elevated);
-  padding: 4px;
+  padding: 0;
   z-index: 1000;
+  min-width: 200px;
 }
 
 .bubble-menu .semi-button-group {
   display: flex;
   gap: 2px;
+}
+
+/* Bubble Menu 标签 */
+.bubble-menu-label {
+  position: 6px 12px;
+  padding: 2px 6px;
+  background: var(--semi-color-fill-0);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--semi-color-text-1);
+  border-radius: 6px 6px 0 0;
+}
+
+/* Bubble Menu 内容区域 */
+.bubble-menu .semi-space {
+  padding: 4px;
+}
+
+/* Bubble Menu 分隔符 */
+.bubble-menu-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--semi-color-border);
+  margin: 0 4px;
+  align-self: center;
+}
+
+/* 取消表格专用样式，统一使用默认样式 */
+.table-bubble-menu {
+  /* 移除特殊颜色主题 */
+}
+
+.text-bubble-menu {
+  /* 保持默认样式 */
 }
 
 /* Editor Content */
