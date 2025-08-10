@@ -13,7 +13,8 @@ import {
   ButtonGroup,
   Tabs,
   TabPane,
-  Radio
+  Radio,
+  Select
 } from '@douyinfe/semi-ui'
 import {
   IconPulse,
@@ -22,13 +23,16 @@ import {
   IconEdit,
   IconRefresh,
   IconPieChartStroked,
-  IconDownload
+  IconDownload,
+  IconLanguage
 } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
 import './Settings.css'
 // 导入性能监控器
 import { performanceMonitor, type PerformanceMetrics } from '../utils/PerformanceMonitor'
+// 导入多语言支持
+import { useLanguage } from '../locales'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -59,6 +63,7 @@ interface HistoryManagementSettings {
 }
 
 const Settings: React.FC = () => {
+  const { language, setLanguage, t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
@@ -655,7 +660,7 @@ const Settings: React.FC = () => {
         height: '100%'
       }}
     >
-      <Title heading={2}>设置</Title>
+      <Title heading={2}>{t('settings.title')}</Title>
 
       <Tabs
         type="line"
@@ -672,17 +677,42 @@ const Settings: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        <TabPane tab="基本设置" itemKey="basic">
+        <TabPane tab={t('settings.tabs.basic')} itemKey="basic">
           <div className="settings-scroll-container">
+            {/* 语言设置卡片 */}
+            <Card style={{ marginBottom: 20 }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <IconLanguage />
+                    <Text strong>{t('settings.language.title')}</Text>
+                  </div>
+                  <Paragraph spacing="normal" type="tertiary">
+                    {t('settings.language.description')}
+                  </Paragraph>
+                </div>
+                <Select
+                  value={language}
+                  onChange={(value) => setLanguage(value as 'zh-CN' | 'en-US')}
+                  style={{ width: 200 }}
+                >
+                  <Select.Option value="zh-CN">简体中文</Select.Option>
+                  <Select.Option value="en-US">English</Select.Option>
+                </Select>
+              </div>
+            </Card>
+            
             {/* 更新检查设置卡片 */}
             <Card style={{ marginBottom: 20 }}>
               <div
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
               >
                 <div>
-                  <Text strong>自动检查更新</Text>
+                  <Text strong>{t('settings.autoUpdate.title')}</Text>
                   <Paragraph spacing="normal" type="tertiary">
-                    应用启动时自动检查是否有新版本
+                    {t('settings.autoUpdate.description')}
                   </Paragraph>
                 </div>
                 <Switch
@@ -697,9 +727,9 @@ const Settings: React.FC = () => {
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
               >
                 <div>
-                  <Text strong>手动检查更新</Text>
+                  <Text strong>{t('settings.autoUpdate.manual')}</Text>
                   <Paragraph spacing="normal" type="tertiary">
-                    检查GitHub上是否有新版本发布
+                    {t('settings.autoUpdate.manualDescription')}
                   </Paragraph>
                 </div>
                 <Button
@@ -709,7 +739,7 @@ const Settings: React.FC = () => {
                   theme="solid"
                   type="tertiary"
                 >
-                  检查更新
+                  {t('settings.autoUpdate.checkNow')}
                 </Button>
               </div>
 
@@ -813,11 +843,11 @@ const Settings: React.FC = () => {
           </div>
         </TabPane>
 
-        <TabPane tab="历史记录管理" itemKey="history">
+        <TabPane tab={t('settings.tabs.history')} itemKey="history">
           <div className="settings-scroll-container">
             {/* 历史记录管理设置卡片 */}
             <Card
-              title="历史记录管理"
+              title={t('settings.history.title')}
               style={{ marginTop: 20, marginBottom: '16px' }}
               headerExtraContent={
                 <Button type="primary" theme="solid" onClick={saveHistoryManagement}>
@@ -873,11 +903,11 @@ const Settings: React.FC = () => {
           </div>
         </TabPane>
 
-        <TabPane tab="WebDAV同步" itemKey="webdav">
+        <TabPane tab={t('settings.tabs.webdav')} itemKey="webdav">
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </TabPane>
 
-        <TabPane tab="性能监控" itemKey="performance">
+        <TabPane tab={t('settings.tabs.performance')} itemKey="performance">
           <div className="settings-scroll-container">
             {/* 性能统计卡片 */}
             <Card

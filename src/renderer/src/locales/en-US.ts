@@ -48,7 +48,6 @@ export interface ExtendedDictionary {
     }
   }
   chat?: {
-    title: string
     inputPlaceholder: string
     modelSelector: {
       placeholder: string
@@ -56,7 +55,6 @@ export interface ExtendedDictionary {
       thinkingBadge: string
     }
     messages: {
-      thinking: string
       statusIndicator: {
         loading: string
         streaming: string
@@ -87,6 +85,8 @@ export interface ExtendedDictionary {
       retryFailed: string
       deleteFailed: string
       noUserMessage: string
+      saveFailed: string
+      loadFailed: string
     }
     history: {
       title: string
@@ -210,6 +210,255 @@ export interface ExtendedDictionary {
 }
 
 export const enUS: ExtendedDictionary = {
+  // Common text
+  common: {
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+    confirm: 'Confirm',
+    create: 'Create',
+    rename: 'Rename',
+    copy: 'Copy',
+    refresh: 'Refresh',
+    export: 'Export',
+    import: 'Import',
+    search: 'Search',
+    loading: 'Loading...',
+    success: 'Success',
+    failed: 'Failed',
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Info',
+    test: 'Test',
+    add: 'Add',
+    remove: 'Remove',
+    update: 'Update',
+    upload: 'Upload',
+    download: 'Download',
+    sync: 'Sync',
+    settings: 'Settings',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No'
+  },
+  // Navigation
+  navigation: {
+    notes: 'Notes',
+    dataAnalysis: 'Data Analysis',
+    mindMap: 'Mind Map',
+    chat: 'Chat',
+    settings: 'Settings',
+    themeToggle: 'Theme Toggle',
+    sync: 'Sync',
+    newNote: 'New Note',
+    newFolder: 'New Folder',
+    newSubFolder: 'New Subfolder',
+    renameFolder: 'Rename Folder',
+    deleteFolder: 'Delete Folder',
+    renameNote: 'Rename Note',
+    deleteNote: 'Delete Note',
+    copyDocName: 'Copy Document Name',
+    searchPlaceholder: 'Search notes and folders...',
+    emptyNotes: 'No notes yet',
+    folderName: 'Enter folder name',
+    noteName: 'Enter note name',
+    confirmDeleteFolder: 'Are you sure you want to delete folder "{name}"? All notes in the folder will be deleted.',
+    confirmDeleteNote: 'Are you sure you want to delete note "{name}"?'
+  },
+  // Settings page
+  settings: {
+    title: 'Settings',
+    tabs: {
+      basic: 'Basic Settings',
+      history: 'History Management',
+      webdav: 'WebDAV Sync',
+      performance: 'Performance Monitor'
+    },
+    language: {
+      title: 'Interface Language',
+      description: 'Select the display language for the application'
+    },
+    autoUpdate: {
+      title: 'Auto Check Updates',
+      description: 'Automatically check for new versions on startup',
+      manual: 'Manual Check',
+      manualDescription: 'Check for new releases on GitHub',
+      checkNow: 'Check Now',
+      newVersion: 'New version found:',
+      currentLatest: 'You have the latest version',
+      downloadNow: 'Download Now'
+    },
+    apiConfig: {
+      title: 'AI API Configuration',
+      name: 'Config Name',
+      apiUrl: 'API URL',
+      apiKey: 'API Key',
+      model: 'Model',
+      temperature: 'Temperature',
+      maxTokens: 'Max Tokens',
+      thinkingModel: 'Thinking Model',
+      testConnection: 'Test Connection',
+      namePlaceholder: 'Enter config name, e.g. OpenAI, Claude',
+      urlPlaceholder: 'Enter API URL, e.g. https://api.openai.com',
+      keyPlaceholder: 'Enter API Key',
+      modelPlaceholder: 'Enter model name, e.g. gpt-3.5-turbo'
+    },
+    history: {
+      title: 'History Management',
+      retentionMode: 'History Retention Mode',
+      retentionByCount: 'Retention by Count',
+      retentionByDays: 'Retention by Days',
+      retentionCount: 'Keep Recent Records',
+      retentionDays: 'Retention Days'
+    },
+    encryption: {
+      title: 'Encryption Settings',
+      useCustom: 'Use Custom Encryption',
+      setPassword: 'Set Master Password',
+      changePassword: 'Change Master Password',
+      closeEncryption: 'Disable Custom Encryption',
+      enterPassword: 'Enter Master Password',
+      confirmPassword: 'Confirm Password',
+      currentPassword: 'Current Password',
+      newPassword: 'New Password',
+      passwordMismatch: 'Passwords do not match',
+      passwordTooShort: 'Password must be at least 8 characters',
+      incorrectPassword: 'Current password is incorrect'
+    },
+    performance: {
+      title: 'Performance Statistics',
+      memory: 'Memory Usage',
+      memoryUsed: 'Used',
+      memoryTotal: 'Total',
+      memoryUsage: 'Usage',
+      editorPerf: 'Editor Performance',
+      loadTime: 'Load Time',
+      saveTime: 'Save Time',
+      renderTime: 'Render Time',
+      operations: 'Operation Statistics',
+      editCount: 'Edit Count',
+      saveCount: 'Save Count',
+      loadCount: 'Load Count',
+      searchCount: 'Search Count',
+      network: 'Network Performance',
+      uploadSpeed: 'Upload Speed',
+      downloadSpeed: 'Download Speed',
+      latency: 'Latency',
+      report: 'Performance Report',
+      exportData: 'Export Data',
+      resetStats: 'Reset Statistics'
+    }
+  },
+  // WebDAV sync
+  webdav: {
+    title: 'WebDAV Sync Settings',
+    serverSettings: 'WebDAV Server Settings',
+    serverUrl: 'WebDAV Server URL',
+    username: 'Username',
+    password: 'Password',
+    enable: 'Enable WebDAV Sync',
+    autoSync: 'Auto Sync on Startup',
+    syncDirection: 'Sync Direction',
+    uploadOnly: 'Local → Remote (Upload)',
+    downloadOnly: 'Remote → Local (Download)',
+    bidirectional: 'Bidirectional Sync',
+    syncOptions: 'Sync Options',
+    encryptionSettings: 'Encryption Settings',
+    syncOperations: 'Sync Operations',
+    clearCache: 'Clear Sync Cache',
+    uploadToCloud: 'Upload to Cloud',
+    downloadFromCloud: 'Download from Cloud',
+    testConnection: 'Test Connection',
+    masterPassword: 'Master Password',
+    inputMasterPassword: 'Enter Master Password',
+    setMasterPassword: 'Set Master Password',
+    changeMasterPassword: 'Change Master Password',
+    closeCustomEncryption: 'Disable Custom Encryption',
+    syncProgress: {
+      uploading: 'Uploading files...',
+      downloading: 'Downloading files...',
+      comparing: 'Comparing file contents...'
+    }
+  },
+  // Mind map
+  mindmap: {
+    title: 'Mind Map',
+    helpText: 'Double-click node to edit | Drag to connect nodes | Supports multi-select and shortcuts',
+    centerTopic: 'Center Topic',
+    newNode: 'New Node',
+    addNode: 'Add Node',
+    undo: 'Undo',
+    redo: 'Redo',
+    save: 'Save',
+    load: 'Load',
+    exportHtml: 'Export HTML',
+    editNode: 'Edit Node',
+    deleteNode: 'Delete Node',
+    nodeContent: 'Node Content',
+    nodeStyle: 'Node Style',
+    fontSize: 'Font Size',
+    addArrow: 'Add Arrow',
+    deleteEdge: 'Delete Edge',
+    openArrow: 'Add Open Arrow',
+    closedArrow: 'Add Closed Arrow',
+    defaultStyle: 'Default',
+    primaryStyle: 'Primary',
+    successStyle: 'Success',
+    warningStyle: 'Warning',
+    dangerStyle: 'Danger',
+    contentPlaceholder: 'Enter node content'
+  },
+  // Messages
+  messages: {
+    success: {
+      saved: 'Saved successfully',
+      deleted: 'Deleted successfully',
+      created: 'Created successfully',
+      updated: 'Updated successfully',
+      copied: 'Copied to clipboard',
+      synced: 'Synced successfully',
+      connected: 'Connected successfully',
+      exported: 'Exported successfully',
+      imported: 'Imported successfully',
+      loaded: 'Loaded successfully',
+      cleared: 'Cleared successfully',
+      renamed: 'Renamed successfully',
+      passwordSet: 'Password set successfully',
+      passwordChanged: 'Password changed successfully',
+      encryptionEnabled: 'Encryption enabled',
+      encryptionDisabled: 'Encryption disabled'
+    },
+    error: {
+      saveFailed: 'Save failed',
+      deleteFailed: 'Delete failed',
+      createFailed: 'Create failed',
+      updateFailed: 'Update failed',
+      copyFailed: 'Copy failed',
+      syncFailed: 'Sync failed',
+      connectionFailed: 'Connection failed',
+      exportFailed: 'Export failed',
+      importFailed: 'Import failed',
+      loadFailed: 'Load failed',
+      renameFailed: 'Rename failed',
+      notConfigured: 'Please configure settings first',
+      alreadySyncing: 'Already syncing...',
+      invalidFormat: 'Invalid file format',
+      parseError: 'Parse error',
+      networkError: 'Network error',
+      permissionDenied: 'Permission denied',
+      fileNotFound: 'File not found',
+      operationFailed: 'Operation failed'
+    },
+    info: {
+      syncing: 'Syncing...',
+      cancelling: 'Cancelling...',
+      loading: 'Loading...',
+      processing: 'Processing...',
+      empty: 'No data',
+      noSelection: 'Please select an item first'
+    }
+  },
   // Data Analysis Module Internationalization
   dataAnalysis: {
     title: 'Note Data Analysis',
@@ -258,7 +507,6 @@ export const enUS: ExtendedDictionary = {
   },
   // Chat Interface Internationalization
   chat: {
-    title: 'Chat Assistant',
     inputPlaceholder: 'Type your question... (Shift+Enter for new line, Enter to send)',
     modelSelector: {
       placeholder: 'Select AI Model',
@@ -266,7 +514,6 @@ export const enUS: ExtendedDictionary = {
       thinkingBadge: 'Thinking'
     },
     messages: {
-      thinking: '💭 Thinking Process',
       statusIndicator: {
         loading: 'Thinking...',
         streaming: 'AI is thinking...',
@@ -301,7 +548,9 @@ export const enUS: ExtendedDictionary = {
       noMessage: 'Cannot find corresponding user message, unable to regenerate',
       retryFailed: 'Regeneration failed, please try again later',
       deleteFailed: 'Failed to delete message, please try again later',
-      noUserMessage: '💡 Please select an AI model in the top right corner to start chatting'
+      noUserMessage: '💡 Please select an AI model in the top right corner to start chatting',
+      saveFailed: 'Failed to save chat history',
+      loadFailed: 'Failed to load chat history'
     },
     history: {
       title: 'Chat History',

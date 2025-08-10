@@ -2436,27 +2436,60 @@ const DataAnalysis: React.FC = () => {
   return (
     <div
       style={{
-        padding: '8px 12px',
-        maxWidth: '1400px',
-        margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 16px)' // 减去上下padding
+        height: '100vh',
+        overflow: 'hidden',
+        backgroundColor: 'var(--semi-color-bg-0)'
       }}
     >
-      <Title heading={3} style={{ margin: 0, color: 'var(--semi-color-text-0)' }}>
-        笔记数据分析
-      </Title>
-      <div ref={analysisContainerRef} className="settings-scroll-container">
+      <div
+        style={{
+          padding: '16px 24px',
+          borderBottom: '1px solid var(--semi-color-border)',
+          backgroundColor: 'var(--semi-color-bg-1)',
+          flexShrink: 0
+        }}
+      >
+        <Title heading={3} style={{ margin: 0, color: 'var(--semi-color-text-0)' }}>
+          笔记数据分析
+        </Title>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
         <div
+          ref={analysisContainerRef}
+          className="settings-scroll-container"
           style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            marginBottom: 16,
-            marginTop: 16
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '20px 24px',
+            maxWidth: '1400px',
+            width: '100%',
+            margin: '0 auto',
+            boxSizing: 'border-box'
           }}
         >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              marginBottom: 20,
+              position: 'sticky',
+              top: 0,
+              backgroundColor: 'var(--semi-color-bg-0)',
+              zIndex: 10,
+              padding: '12px 0'
+            }}
+          >
           <Space>
             <Select
               placeholder="选择AI模型"
@@ -2509,69 +2542,69 @@ const DataAnalysis: React.FC = () => {
                 重置缓存
               </Button>
             )}
-          </Space>
-        </div>
+            </Space>
+          </div>
 
-        {(isLoading || (isAnalyzing && !analysisResult)) && (
-          <div>
-            <DataAnalysisSkeleton
-              style={{
-                width: '100%',
-                minHeight: '600px'
-              }}
-            />
-            {isAnalyzing && (
-              <div
+          {(isLoading || (isAnalyzing && !analysisResult)) && (
+            <div style={{ position: 'relative', minHeight: '600px' }}>
+              <DataAnalysisSkeleton
                 style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  background: 'var(--semi-color-bg-0)',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  boxShadow: 'var(--semi-shadow-elevated)',
-                  textAlign: 'center',
-                  zIndex: 10
+                  width: '100%',
+                  minHeight: '600px'
                 }}
-              >
-                <Paragraph style={{ marginBottom: 16 }}>
-                  {isAnalyzing ? '正在使用AI分析您的笔记数据...' : '正在加载数据...'}
-                </Paragraph>
-                <div style={{ maxWidth: '300px', margin: '0 auto' }}>
-                  <Progress percent={progress} showInfo />
+              />
+              {isAnalyzing && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'var(--semi-color-bg-0)',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    boxShadow: 'var(--semi-shadow-elevated)',
+                    textAlign: 'center',
+                    zIndex: 10
+                  }}
+                >
+                  <Paragraph style={{ marginBottom: 16 }}>
+                    {isAnalyzing ? '正在使用AI分析您的笔记数据...' : '正在加载数据...'}
+                  </Paragraph>
+                  <div style={{ maxWidth: '300px', margin: '0 auto' }}>
+                    <Progress percent={progress} showInfo />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <div style={{ marginTop: 24, textAlign: 'center', color: 'var(--semi-color-danger)' }}>
-            <Paragraph>{typeof error === 'string' ? error : error.message}</Paragraph>
-          </div>
-        )}
-
-        {!isLoading && !isAnalyzing && !analysisResult && !error && (
-          <Card style={{ marginTop: 24, padding: '24px' }}>
-            <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <Title heading={4}>暂无分析结果</Title>
-              <Paragraph>点击 执行分析 按钮，使用AI分析您的笔记使用习惯。</Paragraph>
+              )}
             </div>
-          </Card>
-        )}
+          )}
 
-        {analysisResult && !isLoading && (
-          <div style={{ marginTop: 16, marginBottom: 16 }}>
-            {analysisCached && (
-              <div
-                style={{
-                  marginBottom: 16,
-                  backgroundColor: 'var(--semi-color-info-light-default)',
-                  padding: '8px 16px',
-                  borderRadius: '4px'
-                }}
-              >
+          {error && (
+            <div style={{ marginTop: 24, textAlign: 'center', color: 'var(--semi-color-danger)' }}>
+              <Paragraph>{typeof error === 'string' ? error : error.message}</Paragraph>
+            </div>
+          )}
+
+          {!isLoading && !isAnalyzing && !analysisResult && !error && (
+            <Card style={{ marginTop: 24, padding: '24px' }}>
+              <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                <Title heading={4}>暂无分析结果</Title>
+                <Paragraph>点击 执行分析 按钮，使用AI分析您的笔记使用习惯。</Paragraph>
+              </div>
+            </Card>
+          )}
+
+          {analysisResult && !isLoading && (
+            <div style={{ paddingBottom: 24 }}>
+              {analysisCached && (
+                <div
+                  style={{
+                    marginBottom: 16,
+                    backgroundColor: 'var(--semi-color-info-light-default)',
+                    padding: '8px 16px',
+                    borderRadius: '4px'
+                  }}
+                >
                 <Text>
                   <Space>
                     <span>当前显示的是缓存的分析结果，日期: {formatDate(cacheDate)}</span>
@@ -2583,21 +2616,21 @@ const DataAnalysis: React.FC = () => {
                     >
                       重新分析
                     </Button>
-                  </Space>
-                </Text>
-              </div>
-            )}
-
-            {isAnalyzing && (
-              <div style={{ marginBottom: 16 }}>
-                <Text type="secondary">分析正在背景中继续进行，您可以安全地切换到其它界面...</Text>
-                <div style={{ maxWidth: '500px', margin: '20px auto' }}>
-                  <Progress percent={progress} showInfo />
+                    </Space>
+                  </Text>
                 </div>
-              </div>
-            )}
+              )}
 
-            <Card style={{ padding: '4px 12px', marginBottom: '16px' }}>
+              {isAnalyzing && (
+                <div style={{ marginBottom: 16 }}>
+                  <Text type="secondary">分析正在背景中继续进行，您可以安全地切换到其它界面...</Text>
+                  <div style={{ maxWidth: '500px', margin: '20px auto' }}>
+                    <Progress percent={progress} showInfo />
+                  </div>
+                </div>
+              )}
+
+              <Card style={{ padding: '16px 20px', marginBottom: '16px' }}>
               <Title heading={4} style={{ margin: '16px 24px', color: 'var(--semi-color-text-0)' }}>
                 {analysisResult.summary}
               </Title>
@@ -2943,10 +2976,11 @@ const DataAnalysis: React.FC = () => {
                     </div>
                   )}
                 </TabPane>
-              </Tabs>
-            </Card>
-          </div>
-        )}
+                  </Tabs>
+                </Card>
+              </div>
+            )}
+        </div>
       </div>
     </div>
   )

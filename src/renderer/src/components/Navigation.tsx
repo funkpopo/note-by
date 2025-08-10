@@ -26,6 +26,8 @@ import { NavigationSkeleton } from './Skeleton'
 import { useTheme } from '../context/theme/useTheme'
 // 导入性能监控器
 import { performanceMonitor } from '../utils/PerformanceMonitor'
+// 导入多语言支持
+import { useLanguage } from '../locales'
 
 // 定义导航项类型
 interface NavItem {
@@ -50,6 +52,7 @@ const Navigation: React.FC<NavigationProps> = ({
   onFileDeleted
 }) => {
   const { isDarkMode, toggleTheme } = useTheme()
+  const { t } = useLanguage()
   const [collapsed, setCollapsed] = useState(true)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
   const [secondaryNavWidth, setSecondaryNavWidth] = useState(200)
@@ -130,7 +133,7 @@ const Navigation: React.FC<NavigationProps> = ({
     const mainNavDefinition = [
       {
         itemKey: 'Editor',
-        text: '笔记',
+        text: t('navigation.notes'),
         icon: <IconFolder />,
         onClick: (): void => {
           toggleSecondaryNav()
@@ -141,7 +144,7 @@ const Navigation: React.FC<NavigationProps> = ({
       },
       {
         itemKey: 'DataAnalysis',
-        text: '数据分析',
+        text: t('navigation.dataAnalysis'),
         icon: <IconSearchStroked />,
         onClick: (): void => {
           setShowSecondaryNav(false)
@@ -152,7 +155,7 @@ const Navigation: React.FC<NavigationProps> = ({
       },
       {
         itemKey: 'MindMap',
-        text: '思维导图',
+        text: t('navigation.mindMap'),
         icon: <IconMoreStroked />,
         onClick: (): void => {
           setShowSecondaryNav(false)
@@ -163,7 +166,7 @@ const Navigation: React.FC<NavigationProps> = ({
       },
       {
         itemKey: 'Chat',
-        text: '对话',
+        text: t('navigation.chat'),
         icon: <IconComment />,
         onClick: (): void => {
           setShowSecondaryNav(false)
@@ -174,7 +177,7 @@ const Navigation: React.FC<NavigationProps> = ({
       },
       {
         itemKey: 'Settings',
-        text: '设置',
+        text: t('navigation.settings'),
         icon: <IconSetting />,
         onClick: (): void => {
           setShowSecondaryNav(false)
@@ -185,7 +188,7 @@ const Navigation: React.FC<NavigationProps> = ({
       },
       {
         itemKey: 'ThemeToggle',
-        text: '主题切换',
+        text: t('navigation.themeToggle'),
         icon: isDarkMode ? <IconMoon /> : <IconSun />,
         onClick: (): void => {
           toggleTheme()
@@ -194,7 +197,7 @@ const Navigation: React.FC<NavigationProps> = ({
       },
       {
         itemKey: 'Sync',
-        text: '同步',
+        text: t('navigation.sync'),
         icon: <IconSync />,
         onClick: async (): Promise<void> => {
           try {
@@ -218,7 +221,7 @@ const Navigation: React.FC<NavigationProps> = ({
               !webdavConfig.username ||
               !webdavConfig.password
             ) {
-              Toast.warning('请先在设置中配置并启用WebDAV同步')
+              Toast.warning(t('messages.error.webdavNotConfigured'))
               onNavChange('Settings')
               setSelectedKeys(['Settings'])
               return
@@ -234,7 +237,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 >
                   <Space>
                     <Spin />
-                    <span>正在同步中...</span>
+                    <span>{t('messages.info.syncing')}</span>
                   </Space>
                   <Button
                     type="danger"
@@ -248,11 +251,11 @@ const Navigation: React.FC<NavigationProps> = ({
                             cancelSync: () => Promise<{ success: boolean; message: string }>
                           }
                         ).cancelSync()
-                        Toast.info('已发送取消同步请求，正在中断...')
+                        Toast.info(t('messages.info.cancellingSyncRequest'))
                       } catch (error) {}
                     }}
                   >
-                    取消
+                    {t('common.cancel')}
                   </Button>
                 </div>
               ),
@@ -271,12 +274,12 @@ const Navigation: React.FC<NavigationProps> = ({
               Toast.success(result.message)
               fetchFileList()
             } else if ((result as { cancelled?: boolean }).cancelled) {
-              Toast.warning('同步已被中断')
+              Toast.warning(t('messages.info.syncCancelled'))
             } else {
-              Toast.error(`同步失败: ${result.message}`)
+              Toast.error(t('messages.error.syncFailed', { message: result.message }))
             }
           } catch (error) {
-            Toast.error(`同步失败: ${error instanceof Error ? error.message : String(error)}`)
+            Toast.error(t('messages.error.syncFailed', { message: error instanceof Error ? error.message : String(error) }))
           }
         },
         style: { paddingBlock: '8px' }
@@ -479,11 +482,11 @@ const Navigation: React.FC<NavigationProps> = ({
           // 调用删除文件夹API
           const result = await window.api.markdown.deleteFolder(path)
           if (result.success) {
-            Toast.success('文件夹已删除')
+            Toast.success(t('messages.success.deleted'))
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(`删除失败: ${result.error}`)
+            Toast.error(t('messages.error.deleteFailed', { message: result.error }))
           }
         }
       } else {
@@ -496,7 +499,7 @@ const Navigation: React.FC<NavigationProps> = ({
           // 调用删除文件API
           const result = await window.api.markdown.deleteFile(path)
           if (result.success) {
-            Toast.success('文件已删除')
+            Toast.success(t('messages.success.deleted'))
             // 通知父组件文件已被删除
             if (onFileDeleted) {
               onFileDeleted(folder, file)
@@ -504,12 +507,12 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(`删除失败: ${result.error}`)
+            Toast.error(t('messages.error.deleteFailed', { message: result.error }))
           }
         }
       }
     } catch (error) {
-      Toast.error('删除操作失败')
+      Toast.error(t('messages.error.deleteFailed'))
     }
 
     hideContextMenu()
@@ -558,11 +561,11 @@ const Navigation: React.FC<NavigationProps> = ({
           // 调用重命名文件夹API
           const result = await window.api.markdown.renameFolder(folderName, newName)
           if (result.success) {
-            Toast.success('文件夹已重命名')
+            Toast.success(t('messages.success.renamed'))
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(`重命名失败: ${result.error}`)
+            Toast.error(t('messages.error.renameFailed', { message: result.error }))
           }
         }
       } else {
@@ -579,17 +582,17 @@ const Navigation: React.FC<NavigationProps> = ({
               `${folder}/${newName}.md`
             )
             if (result.success) {
-              Toast.success('笔记已重命名')
+              Toast.success(t('messages.success.renamed'))
               // 刷新列表
               fetchFileList()
             } else {
-              Toast.error(`重命名失败: ${result.error}`)
+              Toast.error(t('messages.error.renameFailed', { message: result.error }))
             }
           }
         }
       }
     } catch (error) {
-      Toast.error('重命名操作失败')
+      Toast.error(t('messages.error.renameFailed'))
     }
 
     closeRenameDialog()
@@ -602,7 +605,7 @@ const Navigation: React.FC<NavigationProps> = ({
     // 从itemKey中提取文件夹名
     if (itemKey.startsWith('folder:')) {
       const folderName = itemKey.split(':')[1]
-      openRenameDialog('重命名文件夹', folderName, 'folder', itemKey)
+      openRenameDialog(t('navigation.renameFolder'), folderName, 'folder', itemKey)
     }
 
     hideContextMenu()
@@ -612,7 +615,7 @@ const Navigation: React.FC<NavigationProps> = ({
   const copyToClipboard = async (text: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text)
-      Toast.success('已复制到剪贴板')
+      Toast.success(t('messages.success.copied'))
     } catch (error) {
       // 如果navigator.clipboard不可用，使用fallback方法
       const textArea = document.createElement('textarea')
@@ -622,9 +625,9 @@ const Navigation: React.FC<NavigationProps> = ({
       textArea.select()
       try {
         document.execCommand('copy')
-        Toast.success('已复制到剪贴板')
+        Toast.success(t('messages.success.copied'))
       } catch (fallbackError) {
-        Toast.error('复制失败')
+        Toast.error(t('messages.error.copyFailed'))
       }
       document.body.removeChild(textArea)
     }
@@ -656,7 +659,7 @@ const Navigation: React.FC<NavigationProps> = ({
       if (parts.length === 3) {
         const file = parts[2]
         const fileName = file.replace('.md', '')
-        openRenameDialog('重命名笔记', fileName, 'file', itemKey)
+        openRenameDialog(t('navigation.renameNote'), fileName, 'file', itemKey)
       }
     }
 
@@ -704,7 +707,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
         // 检查API是否存在
         if (!window.api.markdown.createFolder) {
-          Toast.error('创建文件夹API不存在，请检查应用实现')
+          Toast.error(t('messages.error.apiNotFound', { api: 'createFolder' }))
           return
         }
 
@@ -714,29 +717,29 @@ const Navigation: React.FC<NavigationProps> = ({
         const result = await window.api.markdown.createFolder(folderPath)
 
         if (result.success) {
-          Toast.success('文件夹已创建')
+          Toast.success(t('messages.success.created'))
           // 刷新列表
           fetchFileList()
         } else {
-          Toast.error(`创建失败: ${result.error}`)
+          Toast.error(t('messages.error.createFailed', { message: result.error }))
         }
       } else {
         // 创建笔记
         if (!finalFolder) {
-          Toast.error('未指定文件夹')
+          Toast.error(t('messages.error.folderNotSpecified'))
           return
         }
 
         // 检查API是否存在
         if (!window.api.markdown.createNote) {
-          Toast.error('创建笔记API不存在，请检查应用实现')
+          Toast.error(t('messages.error.apiNotFound', { api: 'createNote' }))
           return
         }
 
         const result = await window.api.markdown.createNote(finalFolder, `${name}.md`, '')
 
         if (result.success) {
-          Toast.success('笔记已创建')
+          Toast.success(t('messages.success.created'))
           // 刷新列表
           fetchFileList()
           // 可选：打开新创建的笔记
@@ -744,11 +747,11 @@ const Navigation: React.FC<NavigationProps> = ({
             onFileSelect(finalFolder, `${name}.md`)
           }
         } else {
-          Toast.error(`创建失败: ${result.error}`)
+          Toast.error(t('messages.error.createFailed', { message: result.error }))
         }
       }
     } catch (error) {
-      Toast.error(`创建${type === 'folder' ? '文件夹' : '笔记'}失败`)
+      Toast.error(t('messages.error.createFailed'))
     }
 
     closeCreateDialog()
@@ -756,13 +759,13 @@ const Navigation: React.FC<NavigationProps> = ({
 
   // 新建文件夹
   const handleCreateFolder = (): void => {
-    openCreateDialog('新建文件夹', 'folder')
+    openCreateDialog(t('navigation.newFolder'), 'folder')
     hideContextMenu()
   }
 
   // 新建笔记
   const handleCreateNote = (folder?: string): void => {
-    openCreateDialog('新建笔记', 'note', folder)
+    openCreateDialog(t('navigation.newNote'), 'note', folder)
     hideContextMenu()
   }
 
@@ -770,7 +773,7 @@ const Navigation: React.FC<NavigationProps> = ({
   const handleCreateNoteInFolder = (): void => {
     const { itemKey } = contextMenu
     const folder = itemKey.split(':')[1]
-    openCreateDialog('新建笔记', 'note', folder)
+    openCreateDialog(t('navigation.newNote'), 'note', folder)
     setContextMenu({ visible: false, x: 0, y: 0, itemKey: '', isFolder: false, isEmpty: false })
   }
 
@@ -781,7 +784,7 @@ const Navigation: React.FC<NavigationProps> = ({
     // 从itemKey中提取父文件夹名
     if (itemKey.startsWith('folder:')) {
       const parentFolder = itemKey.split(':')[1]
-      openCreateDialog(`在 '${parentFolder}' 中新建子文件夹`, 'folder', parentFolder)
+      openCreateDialog(t('navigation.newSubFolder', { parentFolder }), 'folder', parentFolder)
     }
 
     hideContextMenu()
@@ -964,7 +967,7 @@ const Navigation: React.FC<NavigationProps> = ({
       <Input
         {...searchProps}
         prefix={<IconSearch />}
-        placeholder="搜索笔记和文件夹..."
+        placeholder={t('navigation.searchPlaceholder')}
         size="small"
         style={{ margin: '0px 2px 0px 2px' }}
         onChange={(value) => {
@@ -1071,7 +1074,7 @@ const Navigation: React.FC<NavigationProps> = ({
                       expandAction={false}
                       emptyContent={
                         <Typography.Text type="tertiary" className="empty-area">
-                          暂无笔记
+                          {t('navigation.emptyNotes')}
                         </Typography.Text>
                       }
                       style={{
@@ -1126,7 +1129,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         <IconPlus
                           style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
                         />
-                        <Typography.Text>新建笔记</Typography.Text>
+                        <Typography.Text>{t('navigation.newNote')}</Typography.Text>
                       </div>
                       <div
                         className="context-menu-item"
@@ -1142,7 +1145,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         <IconFolder
                           style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
                         />
-                        <Typography.Text>新建子文件夹</Typography.Text>
+                        <Typography.Text>{t('navigation.newSubFolder')}</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
                       <div
@@ -1159,7 +1162,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         <IconEdit
                           style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
                         />
-                        <Typography.Text>重命名文件夹</Typography.Text>
+                        <Typography.Text>{t('navigation.renameFolder')}</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
                       <div
@@ -1175,8 +1178,8 @@ const Navigation: React.FC<NavigationProps> = ({
                           // 从itemKey中提取文件夹名称
                           const folderName = contextMenu.itemKey.split(':')[1]
                           openConfirmDialog(
-                            `删除文件夹 "${folderName}"`,
-                            `确定要删除文件夹 "${folderName}" 吗？文件夹中的所有笔记都将被删除。`,
+                            t('navigation.confirmDeleteFolder', { name: folderName }),
+                            t('navigation.confirmDeleteFolder', { name: folderName }),
                             handleDelete,
                             'danger'
                           )
@@ -1187,7 +1190,7 @@ const Navigation: React.FC<NavigationProps> = ({
                           style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
                         />
                         <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
-                          删除文件夹
+                          {t('navigation.deleteFolder')}
                         </Typography.Text>
                       </div>
                     </>
@@ -1209,7 +1212,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         <IconEdit
                           style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
                         />
-                        <Typography.Text>重命名笔记</Typography.Text>
+                        <Typography.Text>{t('navigation.renameNote')}</Typography.Text>
                       </div>
                       <div
                         className="context-menu-item"
@@ -1223,7 +1226,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         onClick={handleCopyFileName}
                       >
                         <IconCopy style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
-                        <Typography.Text>复制文档名称</Typography.Text>
+                        <Typography.Text>{t('navigation.copyDocName')}</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
                       <div
@@ -1241,15 +1244,15 @@ const Navigation: React.FC<NavigationProps> = ({
                           if (parts.length === 3) {
                             const fileName = parts[2].replace('.md', '')
                             openConfirmDialog(
-                              `删除笔记 "${fileName}"`,
-                              `确定要删除笔记 "${fileName}" 吗？`,
+                              t('navigation.confirmDeleteNote', { name: fileName }),
+                              t('navigation.confirmDeleteNote', { name: fileName }),
                               handleDelete,
                               'danger'
                             )
                           } else {
                             openConfirmDialog(
-                              '删除笔记',
-                              '确定要删除此笔记吗？',
+                              t('navigation.deleteNote'),
+                              t('navigation.confirmDeleteNote'),
                               handleDelete,
                               'danger'
                             )
@@ -1261,7 +1264,7 @@ const Navigation: React.FC<NavigationProps> = ({
                           style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
                         />
                         <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
-                          删除笔记
+                          {t('navigation.deleteNote')}
                         </Typography.Text>
                       </div>
                     </>
@@ -1283,7 +1286,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         <IconFolder
                           style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
                         />
-                        <Typography.Text>新建文件夹</Typography.Text>
+                        <Typography.Text>{t('navigation.newFolder')}</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
                       <div
@@ -1300,7 +1303,7 @@ const Navigation: React.FC<NavigationProps> = ({
                         <IconFile
                           style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
                         />
-                        <Typography.Text>新建笔记</Typography.Text>
+                        <Typography.Text>{t('navigation.newNote')}</Typography.Text>
                       </div>
                     </>
                   )}
@@ -1391,7 +1394,7 @@ const Navigation: React.FC<NavigationProps> = ({
         folders={getAllFolderPaths(navItems)}
         onConfirm={handleCreateConfirm}
         onCancel={closeCreateDialog}
-        placeholder={createDialogConfig.type === 'folder' ? '请输入文件夹名称' : '请输入笔记名称'}
+        placeholder={createDialogConfig.type === 'folder' ? t('placeholder.folderName') : t('placeholder.noteName')}
         defaultFolder={createDialogConfig.defaultFolder}
       />
     </div>

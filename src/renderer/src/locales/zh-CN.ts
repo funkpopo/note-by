@@ -2,6 +2,249 @@
 // 临时移除BlockNote相关的字典配置，等待Tiptap实现
 
 export interface ExtendedDictionary {
+  common?: {
+    save: string
+    cancel: string
+    delete: string
+    edit: string
+    confirm: string
+    create: string
+    rename: string
+    copy: string
+    refresh: string
+    export: string
+    import: string
+    search: string
+    loading: string
+    success: string
+    failed: string
+    error: string
+    warning: string
+    info: string
+    test: string
+    add: string
+    remove: string
+    update: string
+    upload: string
+    download: string
+    sync: string
+    settings: string
+    close: string
+    yes: string
+    no: string
+  }
+  navigation?: {
+    notes: string
+    dataAnalysis: string
+    mindMap: string
+    chat: string
+    settings: string
+    themeToggle: string
+    sync: string
+    newNote: string
+    newFolder: string
+    newSubFolder: string
+    renameFolder: string
+    deleteFolder: string
+    renameNote: string
+    deleteNote: string
+    copyDocName: string
+    searchPlaceholder: string
+    emptyNotes: string
+    folderName: string
+    noteName: string
+    confirmDeleteFolder: string
+    confirmDeleteNote: string
+  }
+  settings?: {
+    title: string
+    tabs: {
+      basic: string
+      history: string
+      webdav: string
+      performance: string
+    }
+    language: {
+      title: string
+      description: string
+    }
+    autoUpdate: {
+      title: string
+      description: string
+      manual: string
+      manualDescription: string
+      checkNow: string
+      newVersion: string
+      currentLatest: string
+      downloadNow: string
+    }
+    apiConfig: {
+      title: string
+      name: string
+      apiUrl: string
+      apiKey: string
+      model: string
+      temperature: string
+      maxTokens: string
+      thinkingModel: string
+      testConnection: string
+      namePlaceholder: string
+      urlPlaceholder: string
+      keyPlaceholder: string
+      modelPlaceholder: string
+    }
+    history: {
+      title: string
+      retentionMode: string
+      retentionByCount: string
+      retentionByDays: string
+      retentionCount: string
+      retentionDays: string
+    }
+    encryption: {
+      title: string
+      useCustom: string
+      setPassword: string
+      changePassword: string
+      closeEncryption: string
+      enterPassword: string
+      confirmPassword: string
+      currentPassword: string
+      newPassword: string
+      passwordMismatch: string
+      passwordTooShort: string
+      incorrectPassword: string
+    }
+    performance: {
+      title: string
+      memory: string
+      memoryUsed: string
+      memoryTotal: string
+      memoryUsage: string
+      editorPerf: string
+      loadTime: string
+      saveTime: string
+      renderTime: string
+      operations: string
+      editCount: string
+      saveCount: string
+      loadCount: string
+      searchCount: string
+      network: string
+      uploadSpeed: string
+      downloadSpeed: string
+      latency: string
+      report: string
+      exportData: string
+      resetStats: string
+    }
+  }
+  webdav?: {
+    title: string
+    serverSettings: string
+    serverUrl: string
+    username: string
+    password: string
+    enable: string
+    autoSync: string
+    syncDirection: string
+    uploadOnly: string
+    downloadOnly: string
+    bidirectional: string
+    syncOptions: string
+    encryptionSettings: string
+    syncOperations: string
+    clearCache: string
+    uploadToCloud: string
+    downloadFromCloud: string
+    testConnection: string
+    masterPassword: string
+    inputMasterPassword: string
+    setMasterPassword: string
+    changeMasterPassword: string
+    closeCustomEncryption: string
+    syncProgress: {
+      uploading: string
+      downloading: string
+      comparing: string
+    }
+  }
+  mindmap?: {
+    title: string
+    helpText: string
+    centerTopic: string
+    newNode: string
+    addNode: string
+    undo: string
+    redo: string
+    save: string
+    load: string
+    exportHtml: string
+    editNode: string
+    deleteNode: string
+    nodeContent: string
+    nodeStyle: string
+    fontSize: string
+    addArrow: string
+    deleteEdge: string
+    openArrow: string
+    closedArrow: string
+    defaultStyle: string
+    primaryStyle: string
+    successStyle: string
+    warningStyle: string
+    dangerStyle: string
+    contentPlaceholder: string
+  }
+  messages?: {
+    success: {
+      saved: string
+      deleted: string
+      created: string
+      updated: string
+      copied: string
+      synced: string
+      connected: string
+      exported: string
+      imported: string
+      loaded: string
+      cleared: string
+      renamed: string
+      passwordSet: string
+      passwordChanged: string
+      encryptionEnabled: string
+      encryptionDisabled: string
+    }
+    error: {
+      saveFailed: string
+      deleteFailed: string
+      createFailed: string
+      updateFailed: string
+      copyFailed: string
+      syncFailed: string
+      connectionFailed: string
+      exportFailed: string
+      importFailed: string
+      loadFailed: string
+      renameFailed: string
+      notConfigured: string
+      alreadySyncing: string
+      invalidFormat: string
+      parseError: string
+      networkError: string
+      permissionDenied: string
+      fileNotFound: string
+      operationFailed: string
+    }
+    info: {
+      syncing: string
+      cancelling: string
+      loading: string
+      processing: string
+      empty: string
+      noSelection: string
+    }
+  }
   dataAnalysis?: {
     title: string
     analysisButton: string
@@ -207,6 +450,255 @@ export interface ExtendedDictionary {
 }
 
 export const zhCN: ExtendedDictionary = {
+  // 通用文本
+  common: {
+    save: '保存',
+    cancel: '取消',
+    delete: '删除',
+    edit: '编辑',
+    confirm: '确认',
+    create: '创建',
+    rename: '重命名',
+    copy: '复制',
+    refresh: '刷新',
+    export: '导出',
+    import: '导入',
+    search: '搜索',
+    loading: '加载中...',
+    success: '成功',
+    failed: '失败',
+    error: '错误',
+    warning: '警告',
+    info: '信息',
+    test: '测试',
+    add: '添加',
+    remove: '移除',
+    update: '更新',
+    upload: '上传',
+    download: '下载',
+    sync: '同步',
+    settings: '设置',
+    close: '关闭',
+    yes: '是',
+    no: '否'
+  },
+  // 导航栏
+  navigation: {
+    notes: '笔记',
+    dataAnalysis: '数据分析',
+    mindMap: '思维导图',
+    chat: '对话',
+    settings: '设置',
+    themeToggle: '主题切换',
+    sync: '同步',
+    newNote: '新建笔记',
+    newFolder: '新建文件夹',
+    newSubFolder: '新建子文件夹',
+    renameFolder: '重命名文件夹',
+    deleteFolder: '删除文件夹',
+    renameNote: '重命名笔记',
+    deleteNote: '删除笔记',
+    copyDocName: '复制文档名称',
+    searchPlaceholder: '搜索笔记和文件夹...',
+    emptyNotes: '暂无笔记',
+    folderName: '请输入文件夹名称',
+    noteName: '请输入笔记名称',
+    confirmDeleteFolder: '确定要删除文件夹 "{name}" 吗？文件夹中的所有笔记都将被删除。',
+    confirmDeleteNote: '确定要删除笔记 "{name}" 吗？'
+  },
+  // 设置页面
+  settings: {
+    title: '设置',
+    tabs: {
+      basic: '基本设置',
+      history: '历史记录管理',
+      webdav: 'WebDAV同步',
+      performance: '性能监控'
+    },
+    language: {
+      title: '界面语言',
+      description: '选择应用程序的显示语言'
+    },
+    autoUpdate: {
+      title: '自动检查更新',
+      description: '应用启动时自动检查是否有新版本',
+      manual: '手动检查更新',
+      manualDescription: '检查GitHub上是否有新版本发布',
+      checkNow: '检查更新',
+      newVersion: '发现新版本:',
+      currentLatest: '当前已是最新版本',
+      downloadNow: '前往下载'
+    },
+    apiConfig: {
+      title: 'AI API配置',
+      name: '配置名称',
+      apiUrl: 'API URL',
+      apiKey: 'API Key',
+      model: '模型',
+      temperature: '温度 (Temperature)',
+      maxTokens: '最大Token数 (Max Tokens)',
+      thinkingModel: '思维模型',
+      testConnection: '测试连接',
+      namePlaceholder: '请输入配置名称，如OpenAI、Claude等',
+      urlPlaceholder: '请输入API URL，如https://api.openai.com',
+      keyPlaceholder: '请输入API Key',
+      modelPlaceholder: '请输入模型名称，如gpt-3.5-turbo'
+    },
+    history: {
+      title: '历史记录管理',
+      retentionMode: '历史记录保留方式',
+      retentionByCount: '按数量保留',
+      retentionByDays: '按时间保留',
+      retentionCount: '保留最近的记录数量',
+      retentionDays: '保留天数'
+    },
+    encryption: {
+      title: '加密设置',
+      useCustom: '使用自定义加密',
+      setPassword: '设置主密码',
+      changePassword: '更改主密码',
+      closeEncryption: '关闭自定义加密',
+      enterPassword: '请输入主密码',
+      confirmPassword: '确认密码',
+      currentPassword: '当前密码',
+      newPassword: '新密码',
+      passwordMismatch: '两次输入的密码不一致',
+      passwordTooShort: '密码长度至少为8个字符',
+      incorrectPassword: '当前密码不正确'
+    },
+    performance: {
+      title: '性能统计',
+      memory: '内存使用',
+      memoryUsed: '已使用',
+      memoryTotal: '总量',
+      memoryUsage: '使用率',
+      editorPerf: '编辑器性能',
+      loadTime: '加载时间',
+      saveTime: '保存时间',
+      renderTime: '渲染时间',
+      operations: '操作统计',
+      editCount: '编辑次数',
+      saveCount: '保存次数',
+      loadCount: '加载次数',
+      searchCount: '搜索次数',
+      network: '网络性能',
+      uploadSpeed: '上传速度',
+      downloadSpeed: '下载速度',
+      latency: '延迟',
+      report: '性能分析报告',
+      exportData: '导出数据',
+      resetStats: '重置统计'
+    }
+  },
+  // WebDAV同步
+  webdav: {
+    title: 'WebDAV同步设置',
+    serverSettings: 'WebDAV 服务器设置',
+    serverUrl: 'WebDAV服务器地址',
+    username: '用户名',
+    password: '密码',
+    enable: '启用WebDAV同步',
+    autoSync: '应用启动时自动同步',
+    syncDirection: '同步方向',
+    uploadOnly: '本地 → 远程 (上传)',
+    downloadOnly: '远程 → 本地 (下载)',
+    bidirectional: '双向同步',
+    syncOptions: '同步选项',
+    encryptionSettings: '加密设置',
+    syncOperations: '同步操作',
+    clearCache: '清除同步缓存',
+    uploadToCloud: '上传到云端',
+    downloadFromCloud: '从云端下载',
+    testConnection: '测试连接',
+    masterPassword: '主密码',
+    inputMasterPassword: '输入主密码',
+    setMasterPassword: '设置主密码',
+    changeMasterPassword: '更改主密码',
+    closeCustomEncryption: '关闭自定义加密',
+    syncProgress: {
+      uploading: '正在上传文件...',
+      downloading: '正在下载文件...',
+      comparing: '正在比较文件内容...'
+    }
+  },
+  // 思维导图
+  mindmap: {
+    title: '思维导图',
+    helpText: '双击节点编辑内容 | 拖拽连接节点 | 支持多选和快捷键操作',
+    centerTopic: '中心主题',
+    newNode: '新节点',
+    addNode: '添加节点',
+    undo: '撤销',
+    redo: '重做',
+    save: '保存',
+    load: '加载',
+    exportHtml: '导出HTML',
+    editNode: '编辑节点',
+    deleteNode: '删除节点',
+    nodeContent: '节点内容',
+    nodeStyle: '节点样式',
+    fontSize: '字体大小',
+    addArrow: '添加箭头',
+    deleteEdge: '删除连线',
+    openArrow: '添加开放箭头',
+    closedArrow: '添加封闭箭头',
+    defaultStyle: '默认',
+    primaryStyle: '主要',
+    successStyle: '成功',
+    warningStyle: '警告',
+    dangerStyle: '危险',
+    contentPlaceholder: '请输入节点内容'
+  },
+  // 消息提示
+  messages: {
+    success: {
+      saved: '保存成功',
+      deleted: '删除成功',
+      created: '创建成功',
+      updated: '更新成功',
+      copied: '已复制到剪贴板',
+      synced: '同步成功',
+      connected: '连接成功',
+      exported: '导出成功',
+      imported: '导入成功',
+      loaded: '加载成功',
+      cleared: '清除成功',
+      renamed: '重命名成功',
+      passwordSet: '密码设置成功',
+      passwordChanged: '密码更改成功',
+      encryptionEnabled: '已启用加密',
+      encryptionDisabled: '已关闭加密'
+    },
+    error: {
+      saveFailed: '保存失败',
+      deleteFailed: '删除失败',
+      createFailed: '创建失败',
+      updateFailed: '更新失败',
+      copyFailed: '复制失败',
+      syncFailed: '同步失败',
+      connectionFailed: '连接失败',
+      exportFailed: '导出失败',
+      importFailed: '导入失败',
+      loadFailed: '加载失败',
+      renameFailed: '重命名失败',
+      notConfigured: '请先配置相关设置',
+      alreadySyncing: '正在同步中...',
+      invalidFormat: '文件格式不正确',
+      parseError: '解析失败',
+      networkError: '网络错误',
+      permissionDenied: '权限不足',
+      fileNotFound: '文件未找到',
+      operationFailed: '操作失败'
+    },
+    info: {
+      syncing: '正在同步...',
+      cancelling: '正在取消...',
+      loading: '正在加载...',
+      processing: '处理中...',
+      empty: '暂无数据',
+      noSelection: '请先选择项目'
+    }
+  },
   // 数据分析模块国际化
   dataAnalysis: {
     title: '笔记数据分析',

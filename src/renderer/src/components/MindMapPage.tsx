@@ -949,16 +949,28 @@ const MindMapFlow: React.FC = () => {
 // 主组件
 const MindMapPage: React.FC = () => {
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '16px 0', borderBottom: '1px solid #e8e8e8' }}>
-        <Title heading={3} style={{ margin: 0 }}>
-          思维导图
-        </Title>
-        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-          双击节点编辑内容 | 拖拽连接节点 | 支持多选和快捷键操作
+    <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{
+          padding: '16px 24px',
+          borderBottom: '1px solid var(--semi-color-border)',
+          backgroundColor: 'var(--semi-color-bg-1)',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
+      >
+        <div>
+          <Title heading={3} style={{ margin: 0, color: 'var(--semi-color-text-0)' }}>
+            思维导图
+          </Title>
+          <div style={{ fontSize: '12px', color: 'var(--semi-color-text-2)', marginTop: '4px' }}>
+            双击节点编辑内容 | 拖拽连接节点 | 支持多选和快捷键操作
+          </div>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <ReactFlowProvider>
           <MindMapFlow />
         </ReactFlowProvider>

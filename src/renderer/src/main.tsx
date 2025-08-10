@@ -4,9 +4,12 @@ import '@douyinfe/semi-ui/dist/css/semi.min.css'
 import './styles/index.css'
 import './assets/theme.css'
 import { ThemeProvider } from './context/theme/ThemeProvider'
+import { LanguageProvider } from './locales'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ThemeProvider>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </ThemeProvider>
 )
