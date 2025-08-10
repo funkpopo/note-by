@@ -231,7 +231,7 @@ function createTray(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appWithIsQuitting = app as any
   tray = new Tray(icon)
-  
+
   // 导航到指定视图的辅助函数
   const navigateToView = async (viewKey: string): Promise<void> => {
     try {
@@ -376,7 +376,7 @@ function createWindow(): void {
     // 完全禁用CSP以避免限制
     delete responseHeaders['Content-Security-Policy']
     delete responseHeaders['content-security-policy']
-    
+
     callback({ responseHeaders })
   })
 
@@ -2254,23 +2254,29 @@ ${htmlContent}
   })
 
   // 保存聊天消息
-  ipcMain.handle(IPC_CHANNELS.CHAT_SAVE_MESSAGE, async (_, message: {
-    id: string
-    sessionId: string
-    role: 'user' | 'assistant' | 'system'
-    content: string
-    status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
-    parentId?: string
-    modelId?: string
-  }) => {
-    try {
-      const success = await saveChatMessage(message)
-      return success
-    } catch (error) {
-      console.error('保存聊天消息失败:', error)
-      return false
+  ipcMain.handle(
+    IPC_CHANNELS.CHAT_SAVE_MESSAGE,
+    async (
+      _,
+      message: {
+        id: string
+        sessionId: string
+        role: 'user' | 'assistant' | 'system'
+        content: string
+        status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
+        parentId?: string
+        modelId?: string
+      }
+    ) => {
+      try {
+        const success = await saveChatMessage(message)
+        return success
+      } catch (error) {
+        console.error('保存聊天消息失败:', error)
+        return false
+      }
     }
-  })
+  )
 
   // 获取所有聊天会话
   ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSIONS, async () => {
@@ -2295,15 +2301,18 @@ ${htmlContent}
   })
 
   // 更新会话标题
-  ipcMain.handle(IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE, async (_, sessionId: string, title: string) => {
-    try {
-      const success = await updateChatSessionTitle(sessionId, title)
-      return success
-    } catch (error) {
-      console.error('更新会话标题失败:', error)
-      return false
+  ipcMain.handle(
+    IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE,
+    async (_, sessionId: string, title: string) => {
+      try {
+        const success = await updateChatSessionTitle(sessionId, title)
+        return success
+      } catch (error) {
+        console.error('更新会话标题失败:', error)
+        return false
+      }
     }
-  })
+  )
 
   // 删除聊天会话
   ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_SESSION, async (_, sessionId: string) => {

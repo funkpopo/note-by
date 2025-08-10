@@ -33,7 +33,7 @@ class RenderOptimizer {
   private taskQueue: Map<string, RenderTask> = new Map()
   private runningTasks: Set<string> = new Set()
   private completedTasks: Set<string> = new Set()
-  
+
   // 配置
   private priorityConfig: RenderPriorityConfig = {
     high: { timeout: 5000, maxConcurrent: 3 }, // 5秒超时
@@ -86,10 +86,10 @@ class RenderOptimizer {
     }
 
     this.taskQueue.set(task.id, enhancedTask)
-    
+
     // 记录任务添加
     performanceMonitor.recordUserAction('edit')
-    
+
     // 如果没有在处理，开始处理
     if (!this.isProcessing) {
       this.processTasks()
@@ -101,7 +101,7 @@ class RenderOptimizer {
    */
   private async processTasks(): Promise<void> {
     if (this.isProcessing) return
-    
+
     this.isProcessing = true
     this.processingController = new AbortController()
 
@@ -136,7 +136,7 @@ class RenderOptimizer {
    * 获取指定优先级的任务
    */
   private getTasksByPriority(priority: keyof RenderPriorityConfig): RenderTask[] {
-    return Array.from(this.taskQueue.values()).filter(task => task.priority === priority)
+    return Array.from(this.taskQueue.values()).filter((task) => task.priority === priority)
   }
 
   /**
@@ -148,11 +148,11 @@ class RenderOptimizer {
   ): Promise<void> {
     const config = this.priorityConfig[priority]
     const maxConcurrent = Math.min(config.maxConcurrent, tasks.length)
-    
+
     // 分批执行任务
     for (let i = 0; i < tasks.length; i += maxConcurrent) {
       const batch = tasks.slice(i, i + maxConcurrent)
-      
+
       if (this.batchConfig.useIdleCallback && priority === 'low') {
         await this.executeTasksInIdleTime(batch, config.timeout)
       } else {
@@ -186,25 +186,24 @@ class RenderOptimizer {
    */
   private async executeTasksImmediately(tasks: RenderTask[], timeout: number): Promise<void> {
     const startTime = performance.now()
-    
+
     const promises = tasks.map(async (task) => {
       const taskStartTime = performance.now()
-      
+
       try {
         this.runningTasks.add(task.id)
         const result = await Promise.race([
           Promise.resolve(task.callback()),
           this.timeoutPromise(task.timeout || timeout)
         ])
-        
+
         // 记录性能
         const duration = performance.now() - taskStartTime
         performanceMonitor.recordEditorPerformance('render', duration)
-        
+
         this.completedTasks.add(task.id)
         this.taskQueue.delete(task.id)
         ;(task as any).resolve(result)
-        
       } catch (error) {
         console.error(`任务 ${task.id} 执行失败:`, error)
         this.taskQueue.delete(task.id)
@@ -215,7 +214,7 @@ class RenderOptimizer {
     })
 
     await Promise.allSettled(promises)
-    
+
     const totalDuration = performance.now() - startTime
     performanceMonitor.recordEditorPerformance('render', totalDuration)
   }
@@ -233,17 +232,17 @@ class RenderOptimizer {
 
     for (let i = 0; i < items.length; i += config.batchSize) {
       const batch = items.slice(i, i + config.batchSize)
-      
+
       const batchResults = await Promise.all(
         batch.map((item, batchIndex) => processor(item, i + batchIndex))
       )
-      
+
       results.push(...batchResults)
 
       // 批次间让出主线程
       if (i + config.batchSize < items.length) {
         if (config.useIdleCallback) {
-          await new Promise(resolve => this.requestIdleCallback(() => resolve(undefined)))
+          await new Promise((resolve) => this.requestIdleCallback(() => resolve(undefined)))
         } else {
           await this.delay(config.delayBetweenBatches)
         }
@@ -257,7 +256,7 @@ class RenderOptimizer {
    * 异步延迟
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   /**
@@ -272,10 +271,7 @@ class RenderOptimizer {
   /**
    * requestIdleCallback 封装
    */
-  private requestIdleCallback(
-    callback: () => void,
-    options?: { timeout?: number }
-  ): void {
+  private requestIdleCallback(callback: () => void, options?: { timeout?: number }): void {
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(callback, options)
     } else {
@@ -288,7 +284,7 @@ class RenderOptimizer {
    * 检查依赖是否满足
    */
   private areDependenciesMet(dependencies: string[]): boolean {
-    return dependencies.every(dep => this.completedTasks.has(dep))
+    return dependencies.every((dep) => this.completedTasks.has(dep))
   }
 
   /**
@@ -296,7 +292,7 @@ class RenderOptimizer {
    */
   private async waitForDependencies(dependencies: string[]): Promise<void> {
     const checkInterval = 16 // 1帧的时间
-    
+
     while (!this.areDependenciesMet(dependencies)) {
       await this.delay(checkInterval)
     }
@@ -309,12 +305,12 @@ class RenderOptimizer {
     if (this.processingController) {
       this.processingController.abort()
     }
-    
+
     // 拒绝所有未完成的任务
     for (const task of this.taskQueue.values()) {
       ;(task as any).reject(new Error('任务被取消'))
     }
-    
+
     this.taskQueue.clear()
     this.runningTasks.clear()
   }
@@ -367,4 +363,4 @@ export const processBatch = <T, R>(
   items: T[],
   processor: (item: T, index: number) => Promise<R> | R,
   options?: Partial<BatchConfig>
-) => renderOptimizer.processBatch(items, processor, options) 
+) => renderOptimizer.processBatch(items, processor, options)

@@ -819,7 +819,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       action?: 'upload' | 'download' | 'compare' | 'skip'
     }
 
-      const filesToProcess: FileSyncInfo[] = []
+    const filesToProcess: FileSyncInfo[] = []
 
     // 收集需要同步的文件信息
     async function collectFilesToSync(localDir: string, remoteDir: string): Promise<void> {

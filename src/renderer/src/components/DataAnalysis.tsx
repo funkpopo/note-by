@@ -437,31 +437,33 @@ const generateChartConfigAsync = async (
               data: data.labels,
               textStyle: { color: isDarkMode ? '#e9e9e9' : '#333' }
             },
-            series: [{
-              name: data.datasets[0].label,
-              type: 'pie',
-              radius: '70%',
-              center: ['50%', '45%'],
-              data: seriesData,
-              label: {
-                show: true,
-                formatter: '{b}: {d}%',
-                color: isDarkMode ? '#e9e9e9' : '#333'
-              },
-              emphasis: {
+            series: [
+              {
+                name: data.datasets[0].label,
+                type: 'pie',
+                radius: '70%',
+                center: ['50%', '45%'],
+                data: seriesData,
+                label: {
+                  show: true,
+                  formatter: '{b}: {d}%',
+                  color: isDarkMode ? '#e9e9e9' : '#333'
+                },
+                emphasis: {
+                  itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                  }
+                },
                 itemStyle: {
-                  shadowBlur: 10,
-                  shadowOffsetX: 0,
-                  shadowColor: 'rgba(0, 0, 0, 0.5)'
-                }
-              },
-              itemStyle: {
-                borderWidth: data.datasets[0].borderWidth || 1,
-                borderColor: isDarkMode ? '#1c1c1c' : '#fff'
-              },
-              animationDuration: 800,
-              animationEasing: 'cubicOut'
-            }],
+                  borderWidth: data.datasets[0].borderWidth || 1,
+                  borderColor: isDarkMode ? '#1c1c1c' : '#fff'
+                },
+                animationDuration: 800,
+                animationEasing: 'cubicOut'
+              }
+            ],
             color: colors,
             backgroundColor: 'transparent',
             textStyle: { color: isDarkMode ? '#e9e9e9' : '#333' }
@@ -474,7 +476,7 @@ const generateChartConfigAsync = async (
             data.datasets,
             async (dataset) => ({
               name: dataset.label,
-              type: 'bar' as 'bar',
+              type: 'bar' as const,
               data: dataset.data,
               itemStyle: {
                 color: (params: any) => {
@@ -504,7 +506,7 @@ const generateChartConfigAsync = async (
               textStyle: { color: isDarkMode ? '#fff' : '#333' }
             },
             legend: {
-              data: data.datasets.map(dataset => dataset.label),
+              data: data.datasets.map((dataset) => dataset.label),
               top: 0,
               textStyle: { color: isDarkMode ? '#e9e9e9' : '#333' }
             },
@@ -515,49 +517,69 @@ const generateChartConfigAsync = async (
               top: vertical ? '15%' : '10%',
               containLabel: true
             },
-            xAxis: vertical ? {
-              type: 'category',
-              data: data.labels,
-              axisLabel: {
-                color: isDarkMode ? '#e9e9e9' : '#333',
-                rotate: data.labels.length > 10 ? 45 : 0
-              },
-              axisLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)' }
-              },
-              splitLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }
-              }
-            } : {
-              type: 'value',
-              axisLabel: { color: isDarkMode ? '#e9e9e9' : '#333' },
-              axisLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)' }
-              },
-              splitLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }
-              }
-            },
-            yAxis: vertical ? {
-              type: 'value',
-              axisLabel: { color: isDarkMode ? '#e9e9e9' : '#333' },
-              axisLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)' }
-              },
-              splitLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }
-              }
-            } : {
-              type: 'category',
-              data: data.labels,
-              axisLabel: { color: isDarkMode ? '#e9e9e9' : '#333' },
-              axisLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)' }
-              },
-              splitLine: {
-                lineStyle: { color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }
-              }
-            },
+            xAxis: vertical
+              ? {
+                  type: 'category',
+                  data: data.labels,
+                  axisLabel: {
+                    color: isDarkMode ? '#e9e9e9' : '#333',
+                    rotate: data.labels.length > 10 ? 45 : 0
+                  },
+                  axisLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                    }
+                  },
+                  splitLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    }
+                  }
+                }
+              : {
+                  type: 'value',
+                  axisLabel: { color: isDarkMode ? '#e9e9e9' : '#333' },
+                  axisLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                    }
+                  },
+                  splitLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    }
+                  }
+                },
+            yAxis: vertical
+              ? {
+                  type: 'value',
+                  axisLabel: { color: isDarkMode ? '#e9e9e9' : '#333' },
+                  axisLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                    }
+                  },
+                  splitLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    }
+                  }
+                }
+              : {
+                  type: 'category',
+                  data: data.labels,
+                  axisLabel: { color: isDarkMode ? '#e9e9e9' : '#333' },
+                  axisLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                    }
+                  },
+                  splitLine: {
+                    lineStyle: {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    }
+                  }
+                },
             series: seriesData,
             backgroundColor: 'transparent',
             textStyle: { color: isDarkMode ? '#e9e9e9' : '#333' },
@@ -572,22 +594,28 @@ const generateChartConfigAsync = async (
             data.datasets,
             async (dataset) => ({
               name: dataset.label,
-              type: 'line' as 'line',
+              type: 'line' as const,
               data: dataset.data,
               itemStyle: {
-                color: Array.isArray(dataset.borderColor) ? dataset.borderColor[0] : dataset.borderColor
+                color: Array.isArray(dataset.borderColor)
+                  ? dataset.borderColor[0]
+                  : dataset.borderColor
               },
               lineStyle: {
                 width: dataset.borderWidth || 2,
                 type: 'solid',
-                color: Array.isArray(dataset.borderColor) ? dataset.borderColor[0] : dataset.borderColor
+                color: Array.isArray(dataset.borderColor)
+                  ? dataset.borderColor[0]
+                  : dataset.borderColor
               },
-              areaStyle: dataset.backgroundColor ? {
-                color: Array.isArray(dataset.backgroundColor)
-                  ? dataset.backgroundColor[0]
-                  : dataset.backgroundColor,
-                opacity: 0.3
-              } : undefined,
+              areaStyle: dataset.backgroundColor
+                ? {
+                    color: Array.isArray(dataset.backgroundColor)
+                      ? dataset.backgroundColor[0]
+                      : dataset.backgroundColor,
+                    opacity: 0.3
+                  }
+                : undefined,
               smooth: dataset.tension ? true : false,
               symbol: 'circle',
               symbolSize: 6,
@@ -605,7 +633,7 @@ const generateChartConfigAsync = async (
               textStyle: { color: isDarkMode ? '#fff' : '#333' }
             },
             legend: {
-              data: data.datasets.map(dataset => dataset.label),
+              data: data.datasets.map((dataset) => dataset.label),
               top: 0,
               textStyle: { color: isDarkMode ? '#e9e9e9' : '#333' }
             },
@@ -669,31 +697,33 @@ const generateChartConfigAsync = async (
               backgroundColor: isDarkMode ? '#333' : '#fff',
               textStyle: { color: isDarkMode ? '#fff' : '#333' }
             },
-            series: [{
-              type: 'wordCloud' as 'wordCloud',
-              shape: 'circle',
-              left: 'center',
-              top: 'center',
-              width: '90%',
-              height: '90%',
-              sizeRange: [12, 28],
-              rotationRange: [-45, 45],
-              rotationStep: 15,
-              gridSize: 20,
-              textStyle: {
-                color: function () {
-                  return colors[Math.floor(Math.random() * colors.length)]
+            series: [
+              {
+                type: 'wordCloud' as const,
+                shape: 'circle',
+                left: 'center',
+                top: 'center',
+                width: '90%',
+                height: '90%',
+                sizeRange: [12, 28],
+                rotationRange: [-45, 45],
+                rotationStep: 15,
+                gridSize: 20,
+                textStyle: {
+                  color: function () {
+                    return colors[Math.floor(Math.random() * colors.length)]
+                  },
+                  fontWeight: 'bold'
                 },
-                fontWeight: 'bold'
-              },
-              emphasis: {
-                itemStyle: {
-                  shadowBlur: 10,
-                  shadowColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.5)'
-                }
-              },
-              data: cloudData
-            }],
+                emphasis: {
+                  itemStyle: {
+                    shadowBlur: 10,
+                    shadowColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.5)'
+                  }
+                },
+                data: cloudData
+              }
+            ],
             backgroundColor: 'transparent'
           }
         }
@@ -714,86 +744,111 @@ const AsyncChartContainer: React.FC<{
   vertical?: boolean
   highlightIndex?: number
   isDarkMode: boolean
-}> = memo(({ chartType, data, title, height = 350, vertical = true, highlightIndex, isDarkMode }) => {
-  const [chartOption, setChartOption] = useState<EChartsOption | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const cacheKey = `chart-${chartType}-${title}-${JSON.stringify(data).slice(0, 100)}`
+}> = memo(
+  ({ chartType, data, title, height = 350, vertical = true, highlightIndex, isDarkMode }) => {
+    const [chartOption, setChartOption] = useState<EChartsOption | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const cacheKey = `chart-${chartType}-${title}-${JSON.stringify(data).slice(0, 100)}`
 
-  useEffect(() => {
-    const loadChart = async () => {
-      setIsLoading(true)
-      
-      try {
-        // 尝试从缓存获取渲染结果
-        const cachedOption = editorMemoryManager.getCachedRenderResult(cacheKey)
-        
-        if (cachedOption) {
-          setChartOption(cachedOption)
+    useEffect(() => {
+      const loadChart = async () => {
+        setIsLoading(true)
+
+        try {
+          // 尝试从缓存获取渲染结果
+          const cachedOption = editorMemoryManager.getCachedRenderResult(cacheKey)
+
+          if (cachedOption) {
+            setChartOption(cachedOption)
+            setIsLoading(false)
+            return
+          }
+
+          // 异步生成图表配置
+          const option = await generateChartConfigAsync(chartType, data, {
+            title,
+            vertical,
+            highlightIndex,
+            isDarkMode
+          })
+
+          // 缓存渲染结果
+          editorMemoryManager.cacheRenderResult(cacheKey, option)
+
+          setChartOption(option)
           setIsLoading(false)
-          return
+        } catch (error) {
+          console.error('Chart generation failed:', error)
+          setIsLoading(false)
         }
-
-        // 异步生成图表配置
-        const option = await generateChartConfigAsync(chartType, data, {
-          title,
-          vertical,
-          highlightIndex,
-          isDarkMode
-        })
-
-        // 缓存渲染结果
-        editorMemoryManager.cacheRenderResult(cacheKey, option)
-        
-        setChartOption(option)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Chart generation failed:', error)
-        setIsLoading(false)
       }
-    }
 
-    loadChart()
-  }, [chartType, data, title, vertical, highlightIndex, isDarkMode, cacheKey])
+      loadChart()
+    }, [chartType, data, title, vertical, highlightIndex, isDarkMode, cacheKey])
 
-  if (isLoading) {
-    return (
-      <div style={{ maxWidth: '100%', height, marginBottom: 16 }}>
-        <Title
-          heading={6}
-          style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
-        >
-          {title}
-        </Title>
-        <div
-          style={{
-            height: height - 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--semi-color-bg-1)',
-            borderRadius: 8
-          }}
-        >
-          <div style={{ textAlign: 'center' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                border: '3px solid var(--semi-color-primary)',
-                borderTop: '3px solid transparent',
-                borderRadius: '50%',
-                margin: '0 auto 8px',
-                animation: 'spin 1s linear infinite'
-              }}
-            />
-            <Text type="tertiary">图表生成中...</Text>
+    if (isLoading) {
+      return (
+        <div style={{ maxWidth: '100%', height, marginBottom: 16 }}>
+          <Title
+            heading={6}
+            style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+          >
+            {title}
+          </Title>
+          <div
+            style={{
+              height: height - 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--semi-color-bg-1)',
+              borderRadius: 8
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  border: '3px solid var(--semi-color-primary)',
+                  borderTop: '3px solid transparent',
+                  borderRadius: '50%',
+                  margin: '0 auto 8px',
+                  animation: 'spin 1s linear infinite'
+                }}
+              />
+              <Text type="tertiary">图表生成中...</Text>
+            </div>
           </div>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
-  if (!chartOption) {
+    if (!chartOption) {
+      return (
+        <div style={{ maxWidth: '100%', height, marginBottom: 16 }}>
+          <Title
+            heading={6}
+            style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+          >
+            {title}
+          </Title>
+          <div
+            style={{
+              height: height - 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--semi-color-bg-1)',
+              borderRadius: 8
+            }}
+          >
+            <Text type="tertiary">图表加载失败</Text>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div style={{ maxWidth: '100%', height, marginBottom: 16 }}>
         <Title
@@ -802,45 +857,22 @@ const AsyncChartContainer: React.FC<{
         >
           {title}
         </Title>
-        <div
-          style={{
-            height: height - 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--semi-color-bg-1)',
-            borderRadius: 8
-          }}
-        >
-          <Text type="tertiary">图表加载失败</Text>
-        </div>
+        {highlightIndex !== undefined && highlightIndex >= 0 && data.labels[highlightIndex] && (
+          <Paragraph
+            style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
+          >
+            最活跃时段: {data.labels[highlightIndex]} ({data.datasets[0].data[highlightIndex]}%)
+          </Paragraph>
+        )}
+        <ReactECharts
+          option={chartOption}
+          style={{ height: height - 50 }}
+          opts={{ renderer: 'canvas' }}
+        />
       </div>
     )
   }
-
-  return (
-    <div style={{ maxWidth: '100%', height, marginBottom: 16 }}>
-      <Title
-        heading={6}
-        style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
-      >
-        {title}
-      </Title>
-      {highlightIndex !== undefined && highlightIndex >= 0 && data.labels[highlightIndex] && (
-        <Paragraph
-          style={{ textAlign: 'center', marginBottom: 16, color: 'var(--semi-color-text-0)' }}
-        >
-          最活跃时段: {data.labels[highlightIndex]} ({data.datasets[0].data[highlightIndex]}%)
-        </Paragraph>
-      )}
-      <ReactECharts
-        option={chartOption}
-        style={{ height: height - 50 }}
-        opts={{ renderer: 'canvas' }}
-      />
-    </div>
-  )
-})
+)
 
 AsyncChartContainer.displayName = 'AsyncChartContainer'
 
@@ -1530,7 +1562,7 @@ const DataAnalysis: React.FC = () => {
     const seriesData = data.datasets.map((dataset) => {
       return {
         name: dataset.label,
-        type: 'bar' as 'bar', // 显式类型转换
+        type: 'bar' as const, // 显式类型转换
         data: dataset.data,
         itemStyle: {
           color: (params) => {
@@ -1693,7 +1725,7 @@ const DataAnalysis: React.FC = () => {
     const seriesData = data.datasets.map((dataset) => {
       return {
         name: dataset.label,
-        type: 'line' as 'line', // 显式类型转换
+        type: 'line' as const, // 显式类型转换
         data: dataset.data,
         itemStyle: {
           color: Array.isArray(dataset.borderColor) ? dataset.borderColor[0] : dataset.borderColor
@@ -1830,7 +1862,7 @@ const DataAnalysis: React.FC = () => {
       },
       series: [
         {
-          type: 'wordCloud' as 'wordCloud',
+          type: 'wordCloud' as const,
           shape: 'circle',
           left: 'center',
           top: 'center',
@@ -1928,7 +1960,7 @@ const DataAnalysis: React.FC = () => {
       series: [
         {
           name: '关联强度',
-          type: 'pie' as 'pie', // 显式类型转换
+          type: 'pie' as const, // 显式类型转换
           radius: '70%',
           center: ['40%', '50%'],
           data: seriesData,

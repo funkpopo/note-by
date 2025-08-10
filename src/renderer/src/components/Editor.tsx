@@ -1,5 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { useEditor, EditorContent, NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react'
+import {
+  useEditor,
+  EditorContent,
+  NodeViewWrapper,
+  NodeViewContent,
+  ReactNodeViewRenderer
+} from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { StarterKit } from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extension-placeholder'
@@ -34,15 +40,15 @@ import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
 import { Toast, Button, Space, Spin, Breadcrumb, Select } from '@douyinfe/semi-ui'
-import { 
-  IconSave, 
-  IconBold, 
-  IconItalic, 
-  IconUnderline, 
-  IconStrikeThrough, 
+import {
+  IconSave,
+  IconBold,
+  IconItalic,
+  IconUnderline,
+  IconStrikeThrough,
   IconLink,
   IconH1,
-  IconH2, 
+  IconH2,
   IconList,
   IconOrderedList,
   IconCode,
@@ -53,12 +59,12 @@ import {
   IconDelete,
   IconImage
 } from '@douyinfe/semi-icons'
-import { 
-  RiDeleteColumn, 
-  RiInsertColumnLeft, 
-  RiInsertColumnRight, 
-  RiInsertRowBottom, 
-  RiInsertRowTop, 
+import {
+  RiDeleteColumn,
+  RiInsertColumnLeft,
+  RiInsertColumnRight,
+  RiInsertRowBottom,
+  RiInsertRowTop,
   RiDeleteRow,
   RiMergeCellsHorizontal,
   RiSplitCellsHorizontal
@@ -86,8 +92,8 @@ lowlight.register('json', json)
 lowlight.register('sql', sql)
 lowlight.register('bash', bash)
 lowlight.register('dockerfile', dockerfile)
-lowlight.register('plaintext', () => ({ 
-  name: 'plaintext', 
+lowlight.register('plaintext', () => ({
+  name: 'plaintext',
   keywords: [],
   contains: []
 })) // 纯文本不需要高亮
@@ -125,8 +131,8 @@ const SlashCommands = Extension.create({
         char: '/',
         command: ({ editor, range, props }: any) => {
           props.command({ editor, range })
-        },
-      },
+        }
+      }
     }
   },
 
@@ -134,10 +140,10 @@ const SlashCommands = Extension.create({
     return [
       Suggestion({
         editor: this.editor,
-        ...this.options.suggestion,
-      }),
+        ...this.options.suggestion
+      })
     ]
-  },
+  }
 })
 
 // Markdown shortcuts extension
@@ -152,19 +158,19 @@ const MarkdownShortcuts = Extension.create({
         handler: ({ range, match, commands }) => {
           const level = match[1].length as 1 | 2 | 3 | 4 | 5 | 6
           const text = match[2]
-          
+
           commands.deleteRange({ from: range.from, to: range.to })
           commands.setNode('heading', { level })
           commands.insertContent(text)
         }
       }),
-      
+
       // Code block shortcuts
       new InputRule({
         find: /^```([a-z]*)?$/,
         handler: ({ range, commands, match }) => {
           const language = match[1] || 'plaintext'
-          
+
           commands.deleteRange({ from: range.from, to: range.to })
           commands.insertContent({
             type: 'codeBlock',
@@ -172,7 +178,7 @@ const MarkdownShortcuts = Extension.create({
           })
         }
       }),
-      
+
       // Horizontal rule shortcuts
       new InputRule({
         find: /^---$/,
@@ -181,27 +187,27 @@ const MarkdownShortcuts = Extension.create({
           commands.setHorizontalRule()
         }
       }),
-      
+
       // Bullet list shortcuts
       wrappingInputRule({
         find: /^([-*+])\s(.*)$/,
-        type: this.editor.schema.nodes.bulletList,
+        type: this.editor.schema.nodes.bulletList
       }),
-      
+
       // Ordered list shortcuts
       wrappingInputRule({
         find: /^(\d+\.)\s(.*)$/,
-        type: this.editor.schema.nodes.orderedList,
+        type: this.editor.schema.nodes.orderedList
       }),
-      
-      // Blockquote shortcuts  
+
+      // Blockquote shortcuts
       wrappingInputRule({
         find: /^>\s(.*)$/,
-        type: this.editor.schema.nodes.blockquote,
-      }),
+        type: this.editor.schema.nodes.blockquote
+      })
     ]
   },
-  
+
   addKeyboardShortcuts() {
     return {
       'Mod-b': () => this.editor.commands.toggleBold(),
@@ -216,13 +222,17 @@ const MarkdownShortcuts = Extension.create({
           this.editor.commands.setLink({ href: url })
         }
         return true
-      },
+      }
     }
-  },
+  }
 })
 
 // 图片上传函数
-const uploadImage = async (file: File, currentFolder?: string, currentFile?: string): Promise<string> => {
+const uploadImage = async (
+  file: File,
+  currentFolder?: string,
+  currentFile?: string
+): Promise<string> => {
   if (!currentFolder || !currentFile) {
     throw new Error('请先选择或创建一个文档')
   }
@@ -289,7 +299,9 @@ const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
   const [isCopied, setIsCopied] = useState(false)
   const language = node.attrs.language || 'plaintext'
 
-  const handleLanguageChange = (value: string | number | any[] | Record<string, any> | undefined) => {
+  const handleLanguageChange = (
+    value: string | number | any[] | Record<string, any> | undefined
+  ) => {
     if (typeof value === 'string') {
       updateAttributes({ language: value })
     }
@@ -298,7 +310,7 @@ const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
   const handleCopy = async () => {
     const codeContent = node.textContent || ''
     const success = await copyToClipboard(codeContent)
-    
+
     if (success) {
       setIsCopied(true)
       setTimeout(() => setIsCopied(false), 2000)
@@ -315,13 +327,13 @@ const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
           size="small"
           placeholder="语言"
         >
-          {SUPPORTED_LANGUAGES.map(lang => (
+          {SUPPORTED_LANGUAGES.map((lang) => (
             <Select.Option key={lang.value} value={lang.value}>
               {lang.label}
             </Select.Option>
           ))}
         </Select>
-        
+
         <Button
           icon={<IconCopy />}
           size="small"
@@ -332,7 +344,7 @@ const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
           {isCopied ? '已复制' : '复制'}
         </Button>
       </div>
-      
+
       <div className="code-block-content">
         <NodeViewContent as="div" />
       </div>
@@ -349,9 +361,7 @@ const WelcomePage: React.FC = () => {
           <IconEdit size="extra-large" />
         </div>
         <h1 className="welcome-title">开始写作</h1>
-        <p className="welcome-description">
-          选择左侧的文件夹和文档开始编辑，或者创建新的文档。
-        </p>
+        <p className="welcome-description">选择左侧的文件夹和文档开始编辑，或者创建新的文档。</p>
       </div>
     </div>
   )
@@ -396,11 +406,11 @@ const EditorHeader: React.FC<{
           )}
         </div>
       </div>
-      
+
       <div className="editor-header-right">
         <Space>
-          <Button 
-            icon={<IconSave />} 
+          <Button
+            icon={<IconSave />}
             type="primary"
             size="default"
             onClick={onSave}
@@ -415,18 +425,24 @@ const EditorHeader: React.FC<{
 }
 
 // 表格专用 BubbleMenu 组件
-const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({ editor, currentFolder: _currentFolder, currentFile: _currentFile }) => {
+const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({
+  editor,
+  currentFolder: _currentFolder,
+  currentFile: _currentFile
+}) => {
   if (!editor) return null
 
   return (
-    <BubbleMenu 
+    <BubbleMenu
       editor={editor}
       shouldShow={({ state }) => {
         const { selection } = state
         const { $from } = selection
         // 只在表格区域且不是图片时显示
-        return ($from.parent.type.name === 'tableCell' || $from.parent.type.name === 'tableHeader') &&
-               !editor.isActive('image') // 当图片被选中时不显示菜单
+        return (
+          ($from.parent.type.name === 'tableCell' || $from.parent.type.name === 'tableHeader') &&
+          !editor.isActive('image')
+        ) // 当图片被选中时不显示菜单
       }}
     >
       <div className="bubble-menu table-bubble-menu">
@@ -462,10 +478,7 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
             onClick={() => editor.chain().focus().toggleStrike().run()}
             title="删除线"
           />
-          <HighlightColorPicker
-            editor={editor}
-            isActive={editor.isActive('highlight')}
-          />
+          <HighlightColorPicker editor={editor} isActive={editor.isActive('highlight')} />
           <Button
             icon={<IconLink />}
             size="small"
@@ -550,21 +563,27 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
 }
 
 // 纯文本专用 BubbleMenu 组件
-const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({ editor, currentFolder, currentFile }) => {
+const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({
+  editor,
+  currentFolder,
+  currentFile
+}) => {
   if (!editor) return null
 
   return (
-    <BubbleMenu 
+    <BubbleMenu
       editor={editor}
       shouldShow={({ state, from, to }) => {
         const { selection } = state
         const { $from } = selection
         // 只在非表格区域、非代码块区域、非图片区域且有选中文本时显示
-        return from !== to && 
-               $from.parent.type.name !== 'tableCell' && 
-               $from.parent.type.name !== 'tableHeader' &&
-               $from.parent.type.name !== 'codeBlock' &&
-               !editor.isActive('image') // 当图片被选中时不显示菜单
+        return (
+          from !== to &&
+          $from.parent.type.name !== 'tableCell' &&
+          $from.parent.type.name !== 'tableHeader' &&
+          $from.parent.type.name !== 'codeBlock' &&
+          !editor.isActive('image')
+        ) // 当图片被选中时不显示菜单
       }}
     >
       <div className="bubble-menu text-bubble-menu">
@@ -600,10 +619,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             onClick={() => editor.chain().focus().toggleStrike().run()}
             title="删除线"
           />
-          <HighlightColorPicker
-            editor={editor}
-            isActive={editor.isActive('highlight')}
-          />
+          <HighlightColorPicker editor={editor} isActive={editor.isActive('highlight')} />
           <Button
             icon={<IconLink />}
             size="small"
@@ -649,7 +665,9 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             icon={<IconGridStroked />}
             size="small"
             type={editor.isActive('table') ? 'primary' : 'tertiary'}
-            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            onClick={() =>
+              editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+            }
             title="插入表格"
             disabled={editor.isActive('table')}
           />
@@ -669,7 +687,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 Toast.error('请先选择或创建一个文档')
                 return
               }
-              
+
               const input = document.createElement('input')
               input.type = 'file'
               input.accept = 'image/*'
@@ -700,7 +718,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 Toast.error('请先选择或创建一个文档')
                 return
               }
-              
+
               const input = document.createElement('input')
               input.type = 'file'
               input.accept = 'image/*'
@@ -748,12 +766,12 @@ const Editor: React.FC<EditorProps> = ({
   // 读取文档内容
   const loadDocument = useCallback(async (folder: string, file: string) => {
     if (!folder || !file) return
-    
+
     setIsLoading(true)
     try {
       const filePath = `${folder}/${file}`
       const result = await window.api.markdown.readFile(filePath)
-      
+
       if (result.success && result.content !== undefined) {
         setLoadedContent(result.content)
         setHasUnsavedChanges(false)
@@ -770,187 +788,199 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [])
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        code: false,
-        codeBlock: false,
-      }),
-      Placeholder.configure({
-        placeholder,
-      }),
-      Underline,
-      Typography,
-      Highlight.configure({
-        multicolor: true,
-        HTMLAttributes: {
-          class: 'editor-highlight',
-        },
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'editor-link',
-        },
-      }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'editor-image',
-        },
-        inline: false, // 图片作为块级元素
-        allowBase64: true, // 允许 base64 图片
-      }),
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      CodeBlockLowlight.configure({
-        lowlight,
-        defaultLanguage: 'plaintext',
-      }).extend({
-        addNodeView() {
-          return ReactNodeViewRenderer(CodeBlockComponent)
-        },
-      }),
-      CharacterCount.configure({
-        limit: 50000,
-      }),
-      SlashCommands.configure({
-        suggestion: {
-          items: (props: any) => getSuggestionItems({
-            ...props,
-            currentFolder,
-            currentFile,
-            uploadImageFn: async (file: File) => {
-              if (!currentFolder || !currentFile) {
-                throw new Error('请先选择或创建一个文档')
-              }
-              return uploadImage(file, currentFolder, currentFile)
-            }
-          }),
-          render: () => {
-            let component: ReactRenderer | null = null
-            let popup: any = null
-
-            return {
-              onStart: (props: any) => {
-                component = new ReactRenderer(SlashMenu, {
-                  props,
-                  editor: props.editor,
-                })
-
-                if (!props.clientRect) {
-                  return
-                }
-
-                popup = tippy('body', {
-                  getReferenceClientRect: props.clientRect,
-                  appendTo: () => document.body,
-                  content: component.element,
-                  showOnCreate: true,
-                  interactive: true,
-                  trigger: 'manual',
-                  placement: 'bottom-start',
-                })
-              },
-
-              onUpdate(props: any) {
-                component?.updateProps(props)
-
-                if (!props.clientRect) {
-                  return
-                }
-
-                popup?.[0]?.setProps({
-                  getReferenceClientRect: props.clientRect,
-                })
-              },
-
-              onKeyDown(props: any) {
-                if (props.event.key === 'Escape') {
-                  popup?.[0]?.hide()
-                  return true
-                }
-
-                return (component?.ref as any)?.onKeyDown?.(props.event) || false
-              },
-
-              onExit() {
-                popup?.[0]?.destroy()
-                component?.destroy()
-              },
-            }
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          code: false,
+          codeBlock: false
+        }),
+        Placeholder.configure({
+          placeholder
+        }),
+        Underline,
+        Typography,
+        Highlight.configure({
+          multicolor: true,
+          HTMLAttributes: {
+            class: 'editor-highlight'
+          }
+        }),
+        TextAlign.configure({
+          types: ['heading', 'paragraph']
+        }),
+        Link.configure({
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'editor-link'
+          }
+        }),
+        Image.configure({
+          HTMLAttributes: {
+            class: 'editor-image'
           },
-        },
-      }),
-      MarkdownShortcuts,
-    ],
-    content: loadedContent || content,
-    editable,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
-      setHasUnsavedChanges(true)
-      onUpdate?.(html)
-    },
-    editorProps: {
-      attributes: {
-        class: 'editor-content',
+          inline: false, // 图片作为块级元素
+          allowBase64: true // 允许 base64 图片
+        }),
+        Table.configure({
+          resizable: true
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        CodeBlockLowlight.configure({
+          lowlight,
+          defaultLanguage: 'plaintext'
+        }).extend({
+          addNodeView() {
+            return ReactNodeViewRenderer(CodeBlockComponent)
+          }
+        }),
+        CharacterCount.configure({
+          limit: 50000
+        }),
+        SlashCommands.configure({
+          suggestion: {
+            items: (props: any) =>
+              getSuggestionItems({
+                ...props,
+                currentFolder,
+                currentFile,
+                uploadImageFn: async (file: File) => {
+                  if (!currentFolder || !currentFile) {
+                    throw new Error('请先选择或创建一个文档')
+                  }
+                  return uploadImage(file, currentFolder, currentFile)
+                }
+              }),
+            render: () => {
+              let component: ReactRenderer | null = null
+              let popup: any = null
+
+              return {
+                onStart: (props: any) => {
+                  component = new ReactRenderer(SlashMenu, {
+                    props,
+                    editor: props.editor
+                  })
+
+                  if (!props.clientRect) {
+                    return
+                  }
+
+                  popup = tippy('body', {
+                    getReferenceClientRect: props.clientRect,
+                    appendTo: () => document.body,
+                    content: component.element,
+                    showOnCreate: true,
+                    interactive: true,
+                    trigger: 'manual',
+                    placement: 'bottom-start'
+                  })
+                },
+
+                onUpdate(props: any) {
+                  component?.updateProps(props)
+
+                  if (!props.clientRect) {
+                    return
+                  }
+
+                  popup?.[0]?.setProps({
+                    getReferenceClientRect: props.clientRect
+                  })
+                },
+
+                onKeyDown(props: any) {
+                  if (props.event.key === 'Escape') {
+                    popup?.[0]?.hide()
+                    return true
+                  }
+
+                  return (component?.ref as any)?.onKeyDown?.(props.event) || false
+                },
+
+                onExit() {
+                  popup?.[0]?.destroy()
+                  component?.destroy()
+                }
+              }
+            }
+          }
+        }),
+        MarkdownShortcuts
+      ],
+      content: loadedContent || content,
+      editable,
+      onUpdate: ({ editor }) => {
+        const html = editor.getHTML()
+        setHasUnsavedChanges(true)
+        onUpdate?.(html)
       },
-      handleDrop: (view, event, _slice, moved) => {
-        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
-          const file = event.dataTransfer.files[0]
-          
-          // 检查是否为图片文件
-          if (file.type.startsWith('image/')) {
-            // 检查文件大小 (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-              Toast.error('图片文件不能超过 5MB')
+      editorProps: {
+        attributes: {
+          class: 'editor-content'
+        },
+        handleDrop: (view, event, _slice, moved) => {
+          if (
+            !moved &&
+            event.dataTransfer &&
+            event.dataTransfer.files &&
+            event.dataTransfer.files[0]
+          ) {
+            const file = event.dataTransfer.files[0]
+
+            // 检查是否为图片文件
+            if (file.type.startsWith('image/')) {
+              // 检查文件大小 (5MB)
+              if (file.size > 5 * 1024 * 1024) {
+                Toast.error('图片文件不能超过 5MB')
+                return true
+              }
+
+              // 上传图片
+              if (currentFolder && currentFile) {
+                Toast.info('正在上传图片...')
+                uploadImage(file, currentFolder, currentFile)
+                  .then((url) => {
+                    const { schema } = view.state
+                    const coordinates = view.posAtCoords({
+                      left: event.clientX,
+                      top: event.clientY
+                    })
+                    if (coordinates) {
+                      const node = schema.nodes.image.create({ src: url })
+                      const transaction = view.state.tr.insert(coordinates.pos, node)
+                      view.dispatch(transaction)
+                      Toast.success('图片上传成功')
+                    }
+                  })
+                  .catch((error) => {
+                    Toast.error(error instanceof Error ? error.message : '图片上传失败')
+                  })
+              } else {
+                Toast.error('请先选择或创建一个文档')
+              }
               return true
             }
-
-            // 上传图片
-            if (currentFolder && currentFile) {
-              Toast.info('正在上传图片...')
-              uploadImage(file, currentFolder, currentFile)
-                .then(url => {
-                  const { schema } = view.state
-                  const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
-                  if (coordinates) {
-                    const node = schema.nodes.image.create({ src: url })
-                    const transaction = view.state.tr.insert(coordinates.pos, node)
-                    view.dispatch(transaction)
-                    Toast.success('图片上传成功')
-                  }
-                })
-                .catch(error => {
-                  Toast.error(error instanceof Error ? error.message : '图片上传失败')
-                })
-            } else {
-              Toast.error('请先选择或创建一个文档')
-            }
-            return true
           }
+          return false
         }
-        return false
-      },
+      }
     },
-  }, [loadedContent, content, editable, placeholder, currentFolder, currentFile])
+    [loadedContent, content, editable, placeholder, currentFolder, currentFile]
+  )
 
   // 保存文档内容
   const saveDocument = useCallback(async () => {
     if (!currentFolder || !currentFile || !editor) return
-    
+
     setIsSaving(true)
     try {
       const filePath = `${currentFolder}/${currentFile}`
       const content = editor.getHTML()
       const result = await window.api.markdown.save(filePath, content)
-      
+
       if (result.success) {
         setHasUnsavedChanges(false)
         Toast.success(`文档已保存`)
@@ -971,7 +1001,7 @@ const Editor: React.FC<EditorProps> = ({
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
     }
-    
+
     autoSaveTimeoutRef.current = setTimeout(() => {
       if (hasUnsavedChanges && currentFolder && currentFile && editor) {
         saveDocument()
@@ -984,8 +1014,11 @@ const Editor: React.FC<EditorProps> = ({
     const prevFile = currentFileRef.current
     currentFileRef.current = { folder: currentFolder, file: currentFile }
 
-    if (currentFolder && currentFile && 
-        (prevFile.folder !== currentFolder || prevFile.file !== currentFile)) {
+    if (
+      currentFolder &&
+      currentFile &&
+      (prevFile.folder !== currentFolder || prevFile.file !== currentFile)
+    ) {
       loadDocument(currentFolder, currentFile)
     }
   }, [currentFolder, currentFile, loadDocument])
@@ -995,7 +1028,7 @@ const Editor: React.FC<EditorProps> = ({
     if (editor && loadedContent !== editor.getHTML()) {
       editor.commands.setContent(loadedContent)
       setHasUnsavedChanges(false)
-      
+
       // 确保字符统计正确更新
       setTimeout(() => {
         if (editor.storage.characterCount) {
@@ -1050,7 +1083,7 @@ const Editor: React.FC<EditorProps> = ({
   return (
     <div className={`tiptap-editor ${className}`}>
       {editable && (
-        <EditorHeader 
+        <EditorHeader
           currentFolder={currentFolder}
           currentFile={currentFile}
           hasUnsavedChanges={hasUnsavedChanges}
@@ -1059,16 +1092,18 @@ const Editor: React.FC<EditorProps> = ({
           onSave={saveDocument}
         />
       )}
-      
+
       {isLoading ? (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '200px',
-          flexDirection: 'column',
-          gap: '12px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '200px',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+        >
           <Spin size="large" />
           <span style={{ color: 'var(--semi-color-text-2)' }}>加载文档中...</span>
         </div>
@@ -1077,8 +1112,16 @@ const Editor: React.FC<EditorProps> = ({
           <EditorContent editor={editor} />
           {editable && (
             <>
-              <TableBubbleMenu editor={editor} currentFolder={currentFolder} currentFile={currentFile} />
-              <TextBubbleMenu editor={editor} currentFolder={currentFolder} currentFile={currentFile} />
+              <TableBubbleMenu
+                editor={editor}
+                currentFolder={currentFolder}
+                currentFile={currentFile}
+              />
+              <TextBubbleMenu
+                editor={editor}
+                currentFolder={currentFolder}
+                currentFile={currentFile}
+              />
             </>
           )}
         </div>
@@ -1089,9 +1132,7 @@ const Editor: React.FC<EditorProps> = ({
           <span className="character-count">
             {editor.storage.characterCount.characters()} / 50000 字符
           </span>
-          <span className="word-count">
-            {editor.storage.characterCount.words()} 词
-          </span>
+          <span className="word-count">{editor.storage.characterCount.words()} 词</span>
         </div>
       )}
     </div>

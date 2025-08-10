@@ -39,8 +39,6 @@ export default defineConfig({
       // 增加chunk大小警告阈值
       chunkSizeWarningLimit: 2000
     },
-    plugins: [
-      react()
-    ]
+    plugins: [react()]
   }
 })

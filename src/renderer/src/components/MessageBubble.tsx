@@ -49,13 +49,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry, onDelet
       icon: <IconCopy />,
       onClick: handleCopy
     },
-    ...(isAssistant ? [{
-      key: 'retry',
-      node: 'item' as const,
-      label: '重新生成',
-      icon: <IconRefresh />,
-      onClick: handleRetry
-    }] : []),
+    ...(isAssistant
+      ? [
+          {
+            key: 'retry',
+            node: 'item' as const,
+            label: '重新生成',
+            icon: <IconRefresh />,
+            onClick: handleRetry
+          }
+        ]
+      : []),
     {
       key: 'delete',
       node: 'item' as const,
@@ -136,9 +140,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry, onDelet
           style={{
             padding: '12px 16px',
             borderRadius: '12px',
-            backgroundColor: isUser 
-              ? 'var(--semi-color-primary)' 
-              : 'var(--semi-color-bg-2)',
+            backgroundColor: isUser ? 'var(--semi-color-primary)' : 'var(--semi-color-bg-2)',
             color: isUser ? 'white' : 'var(--semi-color-text-0)',
             border: isUser ? 'none' : '1px solid var(--semi-color-border)',
             position: 'relative',
@@ -147,9 +149,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry, onDelet
         >
           {/* 消息内容 */}
           {isUser ? (
-            <div style={{ lineHeight: '1.5' }}>
-              {message.content}
-            </div>
+            <div style={{ lineHeight: '1.5' }}>{message.content}</div>
           ) : (
             <MessageRenderer
               content={message.content || getStatusText()}
@@ -161,32 +161,33 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry, onDelet
           )}
 
           {/* 状态指示器 */}
-          {message.status && ['loading', 'streaming', 'incomplete', 'error'].includes(message.status) && (
-            <div
-              style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: getStatusColor(),
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              {(message.status === 'loading' || message.status === 'streaming') && (
-                <div
-                  style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    border: '2px solid var(--semi-color-primary)',
-                    borderTopColor: 'transparent',
-                    animation: 'spin 1s linear infinite'
-                  }}
-                />
-              )}
-              {getStatusText()}
-            </div>
-          )}
+          {message.status &&
+            ['loading', 'streaming', 'incomplete', 'error'].includes(message.status) && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: getStatusColor(),
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {(message.status === 'loading' || message.status === 'streaming') && (
+                  <div
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      border: '2px solid var(--semi-color-primary)',
+                      borderTopColor: 'transparent',
+                      animation: 'spin 1s linear infinite'
+                    }}
+                  />
+                )}
+                {getStatusText()}
+              </div>
+            )}
         </div>
 
         {/* 时间戳和操作按钮 */}
@@ -209,11 +210,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry, onDelet
           </span>
 
           {/* 操作菜单 */}
-          <Dropdown
-            trigger="click"
-            menu={dropdownItems}
-            position="bottomLeft"
-          >
+          <Dropdown trigger="click" menu={dropdownItems} position="bottomLeft">
             <Button
               icon={<IconMore />}
               type="tertiary"

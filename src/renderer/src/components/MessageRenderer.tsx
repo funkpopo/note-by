@@ -30,7 +30,8 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
         // 自定义代码块样式 - 支持主题适配
         code({ node, className, children, ...props }: any) {
           const match = /language-(\w+)/.exec(className || '')
-          const isInline = !node?.position?.start || node.position.start.line === node.position.end?.line
+          const isInline =
+            !node?.position?.start || node.position.start.line === node.position.end?.line
           return !isInline && match ? (
             <pre
               style={{
@@ -42,7 +43,8 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
                 overflow: 'auto',
                 fontSize: '14px',
                 margin: '12px 0',
-                fontFamily: '"SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                fontFamily:
+                  '"SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                 ...customStyle
               }}
             >
@@ -59,7 +61,8 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
                 padding: '2px 6px',
                 borderRadius: '4px',
                 fontSize: '0.9em',
-                fontFamily: '"SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                fontFamily:
+                  '"SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                 ...customStyle
               }}
               className={className}
@@ -299,7 +302,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
               💭 思维过程
             </Text>
           </div>
-          
+
           {isThinkingExpanded && (
             <div
               style={{
@@ -321,7 +324,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ content, className, s
           )}
         </div>
       )}
-      
+
       {displayText && renderMarkdown(displayText)}
     </div>
   )

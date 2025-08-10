@@ -27,7 +27,7 @@ const App: React.FC = () => {
   const [currentFolder, setCurrentFolder] = useState<string | undefined>(undefined)
   const [currentFile, setCurrentFile] = useState<string | undefined>(undefined)
   const [fileListVersion, setFileListVersion] = useState(0)
-  const [useSmartPreloading ] = useState(true)
+  const [useSmartPreloading] = useState(true)
 
   const handleNavChange = (key: string): void => {
     setCurrentView(key)
@@ -96,7 +96,7 @@ const App: React.FC = () => {
 
       // 延迟5秒后开始预加载，避免影响初始加载性能
       const timer = setTimeout(preloadComponents, 5000)
-      
+
       // 组件卸载时清理性能监控
       return () => {
         clearTimeout(timer)

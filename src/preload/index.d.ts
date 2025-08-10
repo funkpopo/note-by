@@ -257,7 +257,7 @@ interface TagsAPI {
 interface NavigationAPI {
   // 导航到指定视图
   navigateToView: (viewKey: string) => Promise<{ success: boolean; error?: string }>
-  
+
   // 监听导航事件
   onNavigate: (callback: (viewKey: string) => void) => () => void
 }
@@ -279,26 +279,30 @@ interface ChatAPI {
   }) => Promise<boolean>
 
   // 获取所有聊天会话
-  getSessions: () => Promise<Array<{
-    id: string
-    title?: string
-    createdAt: number
-    updatedAt: number
-    messageCount: number
-    isArchived: boolean
-  }>>
+  getSessions: () => Promise<
+    Array<{
+      id: string
+      title?: string
+      createdAt: number
+      updatedAt: number
+      messageCount: number
+      isArchived: boolean
+    }>
+  >
 
   // 获取指定会话的消息
-  getSessionMessages: (sessionId: string) => Promise<Array<{
-    id: string
-    sessionId: string
-    role: 'user' | 'assistant' | 'system'
-    content: string
-    status?: string
-    parentId?: string
-    createdAt: number
-    modelId?: string
-  }>>
+  getSessionMessages: (sessionId: string) => Promise<
+    Array<{
+      id: string
+      sessionId: string
+      role: 'user' | 'assistant' | 'system'
+      content: string
+      status?: string
+      parentId?: string
+      createdAt: number
+      modelId?: string
+    }>
+  >
 
   // 更新会话标题
   updateSessionTitle: (sessionId: string, title: string) => Promise<boolean>

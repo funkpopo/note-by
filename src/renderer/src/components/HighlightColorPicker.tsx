@@ -8,7 +8,6 @@ interface HighlightColorPickerProps {
   isActive?: boolean
 }
 
-
 const HighlightColorPicker: React.FC<HighlightColorPickerProps> = ({ editor, isActive }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [customColor, setCustomColor] = useState('#d4f2d4')
@@ -44,12 +43,9 @@ const HighlightColorPicker: React.FC<HighlightColorPickerProps> = ({ editor, isA
           <span className="custom-color-value">{customColor}</span>
         </div>
       </div>
-      
+
       <div className="clear-highlight-section">
-        <div 
-          className="clear-highlight-button"
-          onClick={() => handleColorSelect(true)}
-        >
+        <div className="clear-highlight-button" onClick={() => handleColorSelect(true)}>
           <span>清除高亮</span>
         </div>
       </div>
@@ -70,7 +66,7 @@ const HighlightColorPicker: React.FC<HighlightColorPickerProps> = ({ editor, isA
         type={isActive ? 'primary' : 'tertiary'}
         icon={<span>H</span>}
         iconPosition="left"
-        style={{ 
+        style={{
           minWidth: '32px',
           display: 'flex',
           alignItems: 'center',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'
-import { 
+import {
   IconH1,
   IconH2,
   IconList,
@@ -16,13 +16,15 @@ import './SlashMenu.css'
 const showInputDialog = (title: string, placeholder: string): Promise<string | null> => {
   return new Promise((resolve) => {
     let inputValue = ''
-    
+
     const modal = Modal.confirm({
       title,
       content: (
-        <Input 
+        <Input
           placeholder={placeholder}
-          onChange={(value) => { inputValue = value }}
+          onChange={(value) => {
+            inputValue = value
+          }}
           onKeyPress={(e) => {
             if (e.key === 'Enter') {
               modal.destroy()
@@ -37,7 +39,7 @@ const showInputDialog = (title: string, placeholder: string): Promise<string | n
       },
       onCancel: () => {
         resolve(null)
-      },
+      }
     })
   })
 }
@@ -157,9 +159,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(({ items, command }, 
               onClick={() => selectItem(index)}
               key={index}
             >
-              <div className="slash-menu-item-icon">
-                {item.icon}
-              </div>
+              <div className="slash-menu-item-icon">{item.icon}</div>
               <div className="slash-menu-item-content">
                 <div className="slash-menu-item-title">{item.title}</div>
                 <div className="slash-menu-item-description">{item.description}</div>
@@ -178,16 +178,16 @@ SlashMenu.displayName = 'SlashMenu'
 
 export default SlashMenu
 
-export const getSuggestionItems = ({ 
-  query, 
-  currentFolder: _currentFolder, 
-  currentFile: _currentFile, 
-  uploadImageFn 
-}: { 
-  query: string;
-  currentFolder?: string;
-  currentFile?: string;
-  uploadImageFn?: (file: File) => Promise<string>;
+export const getSuggestionItems = ({
+  query,
+  currentFolder: _currentFolder,
+  currentFile: _currentFile,
+  uploadImageFn
+}: {
+  query: string
+  currentFolder?: string
+  currentFile?: string
+  uploadImageFn?: (file: File) => Promise<string>
 }): SlashMenuItem[] => {
   const items: SlashMenuItem[] = [
     {
@@ -196,13 +196,8 @@ export const getSuggestionItems = ({
       searchTerms: ['h1', 'heading', '标题', 'title'],
       icon: <IconH1 />,
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setNode('heading', { level: 1 })
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run()
+      }
     },
     {
       title: '标题2',
@@ -210,13 +205,8 @@ export const getSuggestionItems = ({
       searchTerms: ['h2', 'heading', '标题', 'subtitle'],
       icon: <IconH2 />,
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setNode('heading', { level: 2 })
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run()
+      }
     },
     {
       title: '标题3',
@@ -224,13 +214,8 @@ export const getSuggestionItems = ({
       searchTerms: ['h3', 'heading', '标题', 'subheading'],
       icon: <IconH2 />, // Using IconH2 as IconH3 doesn't exist
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setNode('heading', { level: 3 })
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run()
+      }
     },
     {
       title: '无序列表',
@@ -238,13 +223,8 @@ export const getSuggestionItems = ({
       searchTerms: ['unordered', 'bullet', 'list', '列表', '无序'],
       icon: <IconList />,
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleBulletList()
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).toggleBulletList().run()
+      }
     },
     {
       title: '有序列表',
@@ -252,13 +232,8 @@ export const getSuggestionItems = ({
       searchTerms: ['ordered', 'numbered', 'list', '列表', '有序', '数字'],
       icon: <IconOrderedList />,
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleOrderedList()
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).toggleOrderedList().run()
+      }
     },
     {
       title: '任务列表',
@@ -266,13 +241,8 @@ export const getSuggestionItems = ({
       searchTerms: ['task', 'todo', 'check', 'checkbox', '任务', '待办', '勾选'],
       icon: <IconList />, // Using IconList as IconCheckList doesn't exist
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleTaskList()
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).toggleTaskList().run()
+      }
     },
     {
       title: '引用',
@@ -280,13 +250,8 @@ export const getSuggestionItems = ({
       searchTerms: ['quote', 'blockquote', '引用', '块引用'],
       icon: <IconQuote />,
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleBlockquote()
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).toggleBlockquote().run()
+      }
     },
     {
       title: '代码块',
@@ -294,13 +259,8 @@ export const getSuggestionItems = ({
       searchTerms: ['code', 'codeblock', '代码', '代码块'],
       icon: <IconCode />,
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .toggleCodeBlock()
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).toggleCodeBlock().run()
+      }
     },
     {
       title: '表格',
@@ -314,7 +274,7 @@ export const getSuggestionItems = ({
           .deleteRange(range)
           .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
           .run()
-      },
+      }
     },
     {
       title: '分割线',
@@ -322,13 +282,8 @@ export const getSuggestionItems = ({
       searchTerms: ['hr', 'divider', 'horizontal', '分割线', '分隔符'],
       icon: <span style={{ fontSize: '16px', fontWeight: 'bold' }}>—</span>, // Using text as IconDivider doesn't exist
       command: ({ editor, range }) => {
-        editor
-          .chain()
-          .focus()
-          .deleteRange(range)
-          .setHorizontalRule()
-          .run()
-      },
+        editor.chain().focus().deleteRange(range).setHorizontalRule().run()
+      }
     },
     {
       title: '图片',
@@ -337,7 +292,7 @@ export const getSuggestionItems = ({
       icon: <IconImage />,
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run()
-        
+
         // 创建文件输入元素
         const input = document.createElement('input')
         input.type = 'file'
@@ -354,10 +309,13 @@ export const getSuggestionItems = ({
             } catch (error) {
               console.error('图片上传失败:', error)
               Toast.error(error instanceof Error ? error.message : '图片上传失败')
-              
+
               // 如果上传失败，询问是否使用URL输入
               try {
-                const url = await showInputDialog('图片上传失败，请输入图片地址', 'https://example.com/image.jpg')
+                const url = await showInputDialog(
+                  '图片上传失败，请输入图片地址',
+                  'https://example.com/image.jpg'
+                )
                 if (url) {
                   editor.chain().focus().setImage({ src: url }).run()
                   Toast.success('图片插入成功')
@@ -380,17 +338,17 @@ export const getSuggestionItems = ({
           }
         }
         input.click()
-      },
-    },
+      }
+    }
   ]
 
-  return items.filter(item => {
+  return items.filter((item) => {
     if (typeof query === 'string' && query.length > 0) {
       const search = query.toLowerCase()
       return (
         item.title.toLowerCase().includes(search) ||
         item.description.toLowerCase().includes(search) ||
-        item.searchTerms.some(term => term.toLowerCase().includes(search))
+        item.searchTerms.some((term) => term.toLowerCase().includes(search))
       )
     }
     return true

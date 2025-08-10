@@ -1,6 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Typography, Button, Toast, TextArea, Select, Space, Spin, Dropdown, Card } from '@douyinfe/semi-ui'
-import { IconSend, IconStop, IconRefresh, IconMore, IconCopy, IconDelete, IconHistory } from '@douyinfe/semi-icons'
+import {
+  Typography,
+  Button,
+  Toast,
+  TextArea,
+  Select,
+  Space,
+  Spin,
+  Dropdown,
+  Card
+} from '@douyinfe/semi-ui'
+import {
+  IconSend,
+  IconStop,
+  IconRefresh,
+  IconMore,
+  IconCopy,
+  IconDelete,
+  IconHistory
+} from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
 import { processThinkingContent } from '../utils/filterThinking'
@@ -38,7 +56,7 @@ const MessageBubbleCustom: React.FC<{
   // 获取AI模型名称首字母
   const getAiModelInitial = () => {
     if (!isAssistant) return ''
-    const aiConfig = aiApiConfigs.find(config => config.id === selectedAiConfig)
+    const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
     return aiConfig?.name?.charAt(0)?.toUpperCase() || 'AI'
   }
 
@@ -56,21 +74,29 @@ const MessageBubbleCustom: React.FC<{
       icon: <IconCopy />,
       onClick: handleCopy
     },
-    ...(isAssistant && onRetry ? [{
-      node: 'item' as const,
-      key: 'retry',
-      name: t.chat?.actions.retry || '重新生成',
-      icon: <IconRefresh />,
-      onClick: () => onRetry(message)
-    }] : []),
-    ...(onDelete ? [{
-      node: 'item' as const,
-      key: 'delete',
-      name: t.chat?.actions.delete || '删除',
-      icon: <IconDelete />,
-      onClick: () => onDelete(message),
-      type: 'danger' as const
-    }] : [])
+    ...(isAssistant && onRetry
+      ? [
+          {
+            node: 'item' as const,
+            key: 'retry',
+            name: t.chat?.actions.retry || '重新生成',
+            icon: <IconRefresh />,
+            onClick: () => onRetry(message)
+          }
+        ]
+      : []),
+    ...(onDelete
+      ? [
+          {
+            node: 'item' as const,
+            key: 'delete',
+            name: t.chat?.actions.delete || '删除',
+            icon: <IconDelete />,
+            onClick: () => onDelete(message),
+            type: 'danger' as const
+          }
+        ]
+      : [])
   ]
 
   const getStatusIndicator = () => {
@@ -79,32 +105,42 @@ const MessageBubbleCustom: React.FC<{
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
             <Spin size="small" />
-            <Text size="small" type="tertiary">{t.chat?.messages.statusIndicator.loading || '正在思考中...'}</Text>
+            <Text size="small" type="tertiary">
+              {t.chat?.messages.statusIndicator.loading || '正在思考中...'}
+            </Text>
           </div>
         )
       case 'streaming':
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              background: 'var(--semi-color-primary)',
-              borderRadius: '50%',
-              animation: 'pulse 1.5s ease-in-out infinite'
-            }} />
-            <Text size="small" type="tertiary">{t.chat?.messages.statusIndicator.streaming || 'AI正在思考...'}</Text>
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                background: 'var(--semi-color-primary)',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s ease-in-out infinite'
+              }}
+            />
+            <Text size="small" type="tertiary">
+              {t.chat?.messages.statusIndicator.streaming || 'AI正在思考...'}
+            </Text>
           </div>
         )
       case 'incomplete':
         return (
           <div style={{ marginTop: '12px' }}>
-            <Text size="small" type="warning">{t.chat?.messages.statusIndicator.incomplete || '⚠️ 生成被中断'}</Text>
+            <Text size="small" type="warning">
+              {t.chat?.messages.statusIndicator.incomplete || '⚠️ 生成被中断'}
+            </Text>
           </div>
         )
       case 'error':
         return (
           <div style={{ marginTop: '12px' }}>
-            <Text size="small" type="danger">{t.chat?.messages.statusIndicator.error || '❌ 生成出错'}</Text>
+            <Text size="small" type="danger">
+              {t.chat?.messages.statusIndicator.error || '❌ 生成出错'}
+            </Text>
           </div>
         )
       default:
@@ -113,59 +149,64 @@ const MessageBubbleCustom: React.FC<{
   }
 
   return (
-    <div style={{ 
-      marginBottom: isLast ? '8px' : '32px',
-      display: 'flex',
-      flexDirection: isUser ? 'row-reverse' : 'row',
-      gap: '16px',
-      alignItems: 'flex-start'
-    }}>
-      {/* 头像 - 改为文字显示 */}
-      <div style={{
-        width: '40px',
-        height: '40px',
-        borderRadius: '50%',
-        background: isUser 
-          ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
-          : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
+    <div
+      style={{
+        marginBottom: isLast ? '8px' : '32px',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontSize: '14px',
-        fontWeight: '600',
-        flexShrink: 0,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-      }}>
+        flexDirection: isUser ? 'row-reverse' : 'row',
+        gap: '16px',
+        alignItems: 'flex-start'
+      }}
+    >
+      {/* 头像 - 改为文字显示 */}
+      <div
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: isUser
+            ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+            : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontSize: '14px',
+          fontWeight: '600',
+          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        }}
+      >
         {isUser ? '我' : getAiModelInitial()}
       </div>
 
       {/* 消息内容 */}
-      <div style={{ 
-        flex: 1, 
-        maxWidth: 'calc(100% - 80px)',
-        minWidth: 0,
-        position: 'relative'
-      }}
-      onMouseEnter={(e) => {
-        // 显示快速操作按钮组
-        const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
-        if (quickActions) {
-          quickActions.style.opacity = '1'
-        }
-      }}
-      onMouseLeave={(e) => {
-        // 隐藏快速操作按钮组
-        const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
-        if (quickActions) {
-          quickActions.style.opacity = '0'
-        }
-      }}
+      <div
+        style={{
+          flex: 1,
+          maxWidth: 'calc(100% - 80px)',
+          minWidth: 0,
+          position: 'relative'
+        }}
+        onMouseEnter={(e) => {
+          // 显示快速操作按钮组
+          const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
+          if (quickActions) {
+            quickActions.style.opacity = '1'
+          }
+        }}
+        onMouseLeave={(e) => {
+          // 隐藏快速操作按钮组
+          const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
+          if (quickActions) {
+            quickActions.style.opacity = '0'
+          }
+        }}
       >
         {/* 消息内容 */}
         <Card
           style={{
-            background: isUser 
+            background: isUser
               ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
               : 'var(--semi-color-bg-2)',
             border: isUser ? 'none' : '1px solid var(--semi-color-border)',
@@ -174,14 +215,14 @@ const MessageBubbleCustom: React.FC<{
             padding: '0',
             position: 'relative'
           }}
-          bodyStyle={{ 
+          bodyStyle={{
             padding: '16px 20px',
             color: isUser ? 'white' : 'var(--semi-color-text-0)'
           }}
         >
           {/* 快速操作按钮组 - 仅对AI消息显示 */}
           {isAssistant && (
-            <div 
+            <div
               className="quick-actions"
               style={{
                 position: 'absolute',
@@ -215,7 +256,8 @@ const MessageBubbleCustom: React.FC<{
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-default)'
+                    e.currentTarget.style.backgroundColor =
+                      'var(--semi-color-success-light-default)'
                     e.currentTarget.style.color = 'var(--semi-color-success)'
                   }}
                   onMouseLeave={(e) => {
@@ -257,11 +299,13 @@ const MessageBubbleCustom: React.FC<{
           )}
 
           {isUser ? (
-            <div style={{ 
-              fontSize: '15px', 
-              lineHeight: '1.6',
-              wordBreak: 'break-word'
-            }}>
+            <div
+              style={{
+                fontSize: '15px',
+                lineHeight: '1.6',
+                wordBreak: 'break-word'
+              }}
+            >
               {message.content}
             </div>
           ) : (
@@ -274,27 +318,25 @@ const MessageBubbleCustom: React.FC<{
               }}
             />
           )}
-          
+
           {getStatusIndicator()}
         </Card>
 
         {/* 时间和操作 */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isUser ? 'flex-end' : 'flex-start',
-          marginTop: '8px',
-          gap: '12px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isUser ? 'flex-end' : 'flex-start',
+            marginTop: '8px',
+            gap: '12px'
+          }}
+        >
           <Text size="small" type="tertiary">
             {new Date(message.createdAt).toLocaleTimeString()}
           </Text>
-          
-          <Dropdown
-            trigger="click"
-            menu={dropdownItems}
-            position="bottomLeft"
-          >
+
+          <Dropdown trigger="click" menu={dropdownItems} position="bottomLeft">
             <Button
               icon={<IconMore />}
               type="tertiary"
@@ -385,59 +427,65 @@ const ChatInterface: React.FC = () => {
   }, [])
 
   // 加载指定会话的消息
-  const loadSessionMessages = useCallback(async (sessionId: string) => {
-    try {
-      const sessionMessages = await window.api.chat.getSessionMessages(sessionId)
-      console.log('加载会话消息:', sessionId, sessionMessages) // 添加调试日志
-      setMessages(sessionMessages)
-      setCurrentSessionId(sessionId)
-      setUnsavedMessages(new Set())
-    } catch (error) {
-      console.error('加载会话消息失败:', error)
-      Toast.error(t.chat?.history.loadFailed || '加载对话失败')
-    }
-  }, [t])
+  const loadSessionMessages = useCallback(
+    async (sessionId: string) => {
+      try {
+        const sessionMessages = await window.api.chat.getSessionMessages(sessionId)
+        console.log('加载会话消息:', sessionId, sessionMessages) // 添加调试日志
+        setMessages(sessionMessages)
+        setCurrentSessionId(sessionId)
+        setUnsavedMessages(new Set())
+      } catch (error) {
+        console.error('加载会话消息失败:', error)
+        Toast.error(t.chat?.history.loadFailed || '加载对话失败')
+      }
+    },
+    [t]
+  )
 
   // 保存消息到数据库
-  const saveMessageToDatabase = useCallback(async (message: ChatMessage) => {
-    if (!currentSessionId) {
-      console.warn('无法保存消息：当前会话ID为空')
-      return
-    }
-
-    try {
-      const saveResult = await window.api.chat.saveMessage({
-        ...message,
-        sessionId: currentSessionId,
-        createdAt: message.createdAt // Ensure correct property name
-      })
-      
-      if (saveResult) {
-        // 从未保存集合中移除
-        setUnsavedMessages(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(message.id.toString())
-          return newSet
-        })
-      } else {
-        console.error('保存消息失败: API返回false')
-        // 将消息ID添加到未保存集合
-        setUnsavedMessages(prev => new Set(prev).add(message.id.toString()))
+  const saveMessageToDatabase = useCallback(
+    async (message: ChatMessage) => {
+      if (!currentSessionId) {
+        console.warn('无法保存消息：当前会话ID为空')
+        return
       }
-    } catch (error) {
-      console.error('保存消息失败:', error)
-      // 将消息ID添加到未保存集合
-      setUnsavedMessages(prev => new Set(prev).add(message.id.toString()))
-    }
-  }, [currentSessionId])
+
+      try {
+        const saveResult = await window.api.chat.saveMessage({
+          ...message,
+          sessionId: currentSessionId,
+          createdAt: message.createdAt // Ensure correct property name
+        })
+
+        if (saveResult) {
+          // 从未保存集合中移除
+          setUnsavedMessages((prev) => {
+            const newSet = new Set(prev)
+            newSet.delete(message.id.toString())
+            return newSet
+          })
+        } else {
+          console.error('保存消息失败: API返回false')
+          // 将消息ID添加到未保存集合
+          setUnsavedMessages((prev) => new Set(prev).add(message.id.toString()))
+        }
+      } catch (error) {
+        console.error('保存消息失败:', error)
+        // 将消息ID添加到未保存集合
+        setUnsavedMessages((prev) => new Set(prev).add(message.id.toString()))
+      }
+    },
+    [currentSessionId]
+  )
 
   // 自动保存未保存的消息
   useEffect(() => {
     if (unsavedMessages.size === 0) return
 
     const saveUnsavedMessages = async () => {
-      const messagesToSave = messages.filter(msg => unsavedMessages.has(msg.id.toString()))
-      
+      const messagesToSave = messages.filter((msg) => unsavedMessages.has(msg.id.toString()))
+
       for (const message of messagesToSave) {
         await saveMessageToDatabase(message)
       }
@@ -514,22 +562,25 @@ const ChatInterface: React.FC = () => {
   }, [])
 
   // 构建对话历史上下文
-  const buildConversationContext = useCallback((userContent: string): string => {
-    // 获取最近的几条消息作为上下文（通常是最后5-10条）
-    const contextMessages = messages.slice(-5); // 使用最后5条消息作为上下文
-    
-    // 构建上下文字符串
-    let context = '';
-    contextMessages.forEach(msg => {
-      const role = msg.role === 'user' ? '用户' : '助手';
-      context += `${role}: ${msg.content}\n\n`;
-    });
-    
-    // 添加当前用户消息
-    context += `用户: ${userContent}\n\n助手:`;
-    
-    return context;
-  }, [messages]);
+  const buildConversationContext = useCallback(
+    (userContent: string): string => {
+      // 获取最近的几条消息作为上下文（通常是最后5-10条）
+      const contextMessages = messages.slice(-5) // 使用最后5条消息作为上下文
+
+      // 构建上下文字符串
+      let context = ''
+      contextMessages.forEach((msg) => {
+        const role = msg.role === 'user' ? '用户' : '助手'
+        context += `${role}: ${msg.content}\n\n`
+      })
+
+      // 添加当前用户消息
+      context += `用户: ${userContent}\n\n助手:`
+
+      return context
+    },
+    [messages]
+  )
 
   // 执行AI回复 - 流式响应版本（带上下文）
   const performAIResponse = useCallback(
@@ -542,7 +593,7 @@ const ChatInterface: React.FC = () => {
         }
 
         // 构建带有上下文的提示
-        const contextualPrompt = buildConversationContext(userContent);
+        const contextualPrompt = buildConversationContext(userContent)
 
         // 创建初始的流式消息
         const streamMessage: ChatMessage = {
@@ -558,7 +609,7 @@ const ChatInterface: React.FC = () => {
         setStreamingMessageId(streamMessage.id?.toString() || null)
 
         // 标记AI消息为待保存
-        setUnsavedMessages(prev => new Set(prev).add(streamMessage.id.toString()))
+        setUnsavedMessages((prev) => new Set(prev).add(streamMessage.id.toString()))
 
         // 调用流式AI API，使用带上下文的提示
         const streamResult = await window.api.openai.streamGenerateContent(
@@ -724,7 +775,7 @@ const ChatInterface: React.FC = () => {
     setIsLoading(true)
 
     // 标记消息为待保存
-    setUnsavedMessages(prev => new Set(prev).add(userMessage.id.toString()))
+    setUnsavedMessages((prev) => new Set(prev).add(userMessage.id.toString()))
 
     // 执行AI回复
     performAIResponse(userMessage.content, userMessage.id?.toString())
@@ -761,40 +812,43 @@ const ChatInterface: React.FC = () => {
   }, [currentStreamCleanup, streamingMessageId])
 
   // 创建新的聊天会话
-  const createNewSession = useCallback(async (saveCurrentSession = true) => {
-    try {
-      // 如果需要保存当前会话，确保所有消息都已保存
-      if (saveCurrentSession && currentSessionId && messages.length > 0) {
-        // 等待所有未保存的消息完成保存
-        if (unsavedMessages.size > 0) {
-          // 创建一个Promise来等待所有未保存的消息完成
-          await new Promise<void>((resolve) => {
-            const checkUnsaved = () => {
-              if (unsavedMessages.size === 0) {
-                resolve();
-              } else {
-                setTimeout(checkUnsaved, 100);
+  const createNewSession = useCallback(
+    async (saveCurrentSession = true) => {
+      try {
+        // 如果需要保存当前会话，确保所有消息都已保存
+        if (saveCurrentSession && currentSessionId && messages.length > 0) {
+          // 等待所有未保存的消息完成保存
+          if (unsavedMessages.size > 0) {
+            // 创建一个Promise来等待所有未保存的消息完成
+            await new Promise<void>((resolve) => {
+              const checkUnsaved = () => {
+                if (unsavedMessages.size === 0) {
+                  resolve()
+                } else {
+                  setTimeout(checkUnsaved, 100)
+                }
               }
-            };
-            checkUnsaved();
-          });
+              checkUnsaved()
+            })
+          }
         }
+
+        const newSessionId = await window.api.chat.createSession()
+        if (newSessionId) {
+          setCurrentSessionId(newSessionId)
+          setMessages([])
+          setLastUserMessage(null)
+          setUnsavedMessages(new Set())
+          return newSessionId
+        }
+      } catch (error) {
+        console.error('创建新会话失败:', error)
+        Toast.error('创建新会话失败')
       }
-      
-      const newSessionId = await window.api.chat.createSession()
-      if (newSessionId) {
-        setCurrentSessionId(newSessionId)
-        setMessages([])
-        setLastUserMessage(null)
-        setUnsavedMessages(new Set())
-        return newSessionId
-      }
-    } catch (error) {
-      console.error('创建新会话失败:', error)
-      Toast.error('创建新会话失败')
-    }
-    return null
-  }, [currentSessionId, messages, unsavedMessages])
+      return null
+    },
+    [currentSessionId, messages, unsavedMessages]
+  )
 
   // 清空对话
   const handleClearChat = useCallback(async () => {
@@ -863,65 +917,75 @@ const ChatInterface: React.FC = () => {
         Toast.error(t.chat?.notifications.retryFailed || '重新生成失败，请稍后重试')
       }
     },
-    [selectedAiConfig, isGenerating, currentStreamCleanup, messages, lastUserMessage, performAIResponse]
+    [
+      selectedAiConfig,
+      isGenerating,
+      currentStreamCleanup,
+      messages,
+      lastUserMessage,
+      performAIResponse
+    ]
   )
 
   // 删除消息
-  const handleDeleteMessage = useCallback((message: ChatMessage) => {
-    try {
-      // 如果正在生成且删除的是正在生成的消息，先停止生成
-      if (isGenerating && streamingMessageId === message.id?.toString() && currentStreamCleanup) {
-        currentStreamCleanup()
-      }
-
-      // 从数据库中删除消息
-      if (message.id) {
-        window.api.chat.deleteMessage(message.id.toString()).catch((error) => {
-          console.error('从数据库删除消息失败:', error)
-          Toast.error('从数据库删除消息失败')
-        })
-      }
-
-      setMessages((prev) => {
-        let newMessages = [...prev]
-
-        // 如果删除的是用户消息，同时删除对应的AI回复
-        if (message.role === 'user') {
-          // 找到所有以此用户消息为父消息的AI回复
-          const relatedAIMessages = newMessages.filter(
-            (msg) => msg.parentId === message.id?.toString()
-          )
-
-          // 删除用户消息和相关的AI回复
-          newMessages = newMessages.filter(
-            (msg) =>
-              msg.id !== message.id && !relatedAIMessages.some((aiMsg) => aiMsg.id === msg.id)
-          )
-
-          // 如果删除的是最后一条用户消息，更新lastUserMessage
-          if (lastUserMessage && lastUserMessage.id === message.id) {
-            // 找到剩余消息中最后一条用户消息
-            const remainingUserMessages = newMessages.filter((msg) => msg.role === 'user')
-            setLastUserMessage(
-              remainingUserMessages.length > 0
-                ? remainingUserMessages[remainingUserMessages.length - 1]
-                : null
-            )
-          }
-        } else {
-          // 如果删除的是AI消息，只删除该消息
-          newMessages = newMessages.filter((msg) => msg.id !== message.id)
+  const handleDeleteMessage = useCallback(
+    (message: ChatMessage) => {
+      try {
+        // 如果正在生成且删除的是正在生成的消息，先停止生成
+        if (isGenerating && streamingMessageId === message.id?.toString() && currentStreamCleanup) {
+          currentStreamCleanup()
         }
 
-        return newMessages
-      })
+        // 从数据库中删除消息
+        if (message.id) {
+          window.api.chat.deleteMessage(message.id.toString()).catch((error) => {
+            console.error('从数据库删除消息失败:', error)
+            Toast.error('从数据库删除消息失败')
+          })
+        }
 
-      Toast.success(t.chat?.notifications.deleted || '消息已删除')
-    } catch (error) {
-      console.error('消息删除失败:', error)
-      Toast.error(t.chat?.notifications.deleteFailed || '删除消息失败，请稍后重试')
-    }
-  }, [isGenerating, streamingMessageId, currentStreamCleanup, lastUserMessage])
+        setMessages((prev) => {
+          let newMessages = [...prev]
+
+          // 如果删除的是用户消息，同时删除对应的AI回复
+          if (message.role === 'user') {
+            // 找到所有以此用户消息为父消息的AI回复
+            const relatedAIMessages = newMessages.filter(
+              (msg) => msg.parentId === message.id?.toString()
+            )
+
+            // 删除用户消息和相关的AI回复
+            newMessages = newMessages.filter(
+              (msg) =>
+                msg.id !== message.id && !relatedAIMessages.some((aiMsg) => aiMsg.id === msg.id)
+            )
+
+            // 如果删除的是最后一条用户消息，更新lastUserMessage
+            if (lastUserMessage && lastUserMessage.id === message.id) {
+              // 找到剩余消息中最后一条用户消息
+              const remainingUserMessages = newMessages.filter((msg) => msg.role === 'user')
+              setLastUserMessage(
+                remainingUserMessages.length > 0
+                  ? remainingUserMessages[remainingUserMessages.length - 1]
+                  : null
+              )
+            }
+          } else {
+            // 如果删除的是AI消息，只删除该消息
+            newMessages = newMessages.filter((msg) => msg.id !== message.id)
+          }
+
+          return newMessages
+        })
+
+        Toast.success(t.chat?.notifications.deleted || '消息已删除')
+      } catch (error) {
+        console.error('消息删除失败:', error)
+        Toast.error(t.chat?.notifications.deleteFailed || '删除消息失败，请稍后重试')
+      }
+    },
+    [isGenerating, streamingMessageId, currentStreamCleanup, lastUserMessage]
+  )
 
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -954,13 +1018,13 @@ const ChatInterface: React.FC = () => {
         className="chat-header-container"
         style={{
           padding: '20px',
-          background: 'linear-gradient(135deg, var(--semi-color-bg-2) 0%, var(--semi-color-bg-1) 100%)',
+          background:
+            'linear-gradient(135deg, var(--semi-color-bg-2) 0%, var(--semi-color-bg-1) 100%)',
           borderBottom: '1px solid var(--semi-color-border)',
           flexShrink: 0,
           boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
         }}
       >
-        
         <div
           className="chat-header-container-right"
           style={{
@@ -997,7 +1061,7 @@ const ChatInterface: React.FC = () => {
                     Toast.error('保存模型选择失败')
                   }
                 }}
-                style={{ 
+                style={{
                   width: 220,
                   borderRadius: '10px'
                 }}
@@ -1026,14 +1090,15 @@ const ChatInterface: React.FC = () => {
                 ))}
               </Select>
             ) : (
-              <div 
-              className="chat-model-llm-container"
-              style={{ 
-                padding: '8px 12px',
-                background: 'var(--semi-color-warning-light-default)',
-                borderRadius: '8px',
-                border: '1px solid var(--semi-color-warning-light-active)'
-              }}>
+              <div
+                className="chat-model-llm-container"
+                style={{
+                  padding: '8px 12px',
+                  background: 'var(--semi-color-warning-light-default)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--semi-color-warning-light-active)'
+                }}
+              >
                 <Text type="warning" size="small">
                   {t.chat?.modelSelector.noModels || '⚠️ 暂无AI配置'}
                 </Text>
@@ -1045,7 +1110,7 @@ const ChatInterface: React.FC = () => {
               onClick={handleClearChat}
               type="primary"
               theme="light"
-              style={{ 
+              style={{
                 borderRadius: '10px',
                 backgroundColor: 'var(--semi-color-success-light-default)',
                 borderColor: 'var(--semi-color-success-light-default)',
@@ -1053,12 +1118,12 @@ const ChatInterface: React.FC = () => {
               }}
               disabled={isGenerating}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-hover)';
-                e.currentTarget.style.borderColor = 'var(--semi-color-success-light-hover)';
+                e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-hover)'
+                e.currentTarget.style.borderColor = 'var(--semi-color-success-light-hover)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-default)';
-                e.currentTarget.style.borderColor = 'var(--semi-color-success-light-default)';
+                e.currentTarget.style.backgroundColor = 'var(--semi-color-success-light-default)'
+                e.currentTarget.style.borderColor = 'var(--semi-color-success-light-default)'
               }}
             >
               {t.chat?.actions.newSession || '新建会话'}
@@ -1073,7 +1138,8 @@ const ChatInterface: React.FC = () => {
         style={{
           flex: 1,
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-bg-1) 100%)',
+          background:
+            'linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-bg-1) 100%)',
           display: 'flex',
           flexDirection: 'row'
         }}
@@ -1085,12 +1151,9 @@ const ChatInterface: React.FC = () => {
           onSelectSession={loadSessionMessages}
           currentSessionId={currentSessionId || undefined}
         />
-        
+
         {/* 消息内容区域 */}
-        <div 
-          ref={messagesContainerRef}
-          style={{ flex: 1, overflowY: 'auto', padding: '20px' }}
-        >
+        <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
           {messages.length === 0 ? (
             <div
               className="chat-suggestions-container"
@@ -1104,41 +1167,47 @@ const ChatInterface: React.FC = () => {
                 textAlign: 'center'
               }}
             >
-              <div 
-              className="chat-suggestions-container-content"
-              style={{ 
-                marginTop: '32px',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '12px',
-                justifyContent: 'center'
-              }}>
-                {(t.chat?.suggestions || [
-                  '📝 帮我写一篇文章，题材是: ',
-                  '🧮 需要解决下述的数学问题: ', 
-                  '💡 给我一些建议，关于',
-                  '🔍 解释这个概念: '
-                ]).slice(0, 4).map((suggestion) => (
-                  <Button
-                    key={suggestion}
-                    type="tertiary"
-                    theme="light"
-                    onClick={() => setInputValue(suggestion.split(' ')[1])}
-                    style={{
-                      borderRadius: '20px',
-                      padding: '8px 16px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    {suggestion}
-                  </Button>
-                ))}
+              <div
+                className="chat-suggestions-container-content"
+                style={{
+                  marginTop: '32px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  justifyContent: 'center'
+                }}
+              >
+                {(
+                  t.chat?.suggestions || [
+                    '📝 帮我写一篇文章，题材是: ',
+                    '🧮 需要解决下述的数学问题: ',
+                    '💡 给我一些建议，关于',
+                    '🔍 解释这个概念: '
+                  ]
+                )
+                  .slice(0, 4)
+                  .map((suggestion) => (
+                    <Button
+                      key={suggestion}
+                      type="tertiary"
+                      theme="light"
+                      onClick={() => setInputValue(suggestion.split(' ')[1])}
+                      style={{
+                        borderRadius: '20px',
+                        padding: '8px 16px',
+                        fontSize: '14px'
+                      }}
+                    >
+                      {suggestion}
+                    </Button>
+                  ))}
               </div>
             </div>
           ) : (
-            <div 
-            className="chat-messages-container"
-            style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <div
+              className="chat-messages-container"
+              style={{ maxWidth: '900px', margin: '0 auto' }}
+            >
               {messages.map((message, index) => (
                 <MessageBubbleCustom
                   key={message.id}
@@ -1156,7 +1225,8 @@ const ChatInterface: React.FC = () => {
       </div>
 
       {/* 输入区域 */}
-      <div className="chat-input-container"
+      <div
+        className="chat-input-container"
         style={{
           padding: '5px 10px 10px 10px', // 减少一半高度的内边距
           background: 'var(--semi-color-bg-1)',
@@ -1164,9 +1234,10 @@ const ChatInterface: React.FC = () => {
           flexShrink: 0
         }}
       >
-        <div 
-        className="chat-input-container-content"
-        style={{ maxWidth: '700px', margin: '0 auto' }}>
+        <div
+          className="chat-input-container-content"
+          style={{ maxWidth: '700px', margin: '0 auto' }}
+        >
           <div
             className="chat-input-container-content"
             style={{
@@ -1184,9 +1255,11 @@ const ChatInterface: React.FC = () => {
               value={inputValue}
               onChange={(value: string) => setInputValue(value)}
               onKeyDown={handleKeyDown}
-              placeholder={t.chat?.inputPlaceholder || '输入你的问题... (Shift+Enter换行，Enter发送)'}
+              placeholder={
+                t.chat?.inputPlaceholder || '输入你的问题... (Shift+Enter换行，Enter发送)'
+              }
               autosize={{ minRows: 1, maxRows: 4 }}
-              style={{ 
+              style={{
                 flex: 1,
                 border: 'none',
                 background: 'transparent',
@@ -1201,7 +1274,7 @@ const ChatInterface: React.FC = () => {
               onClick={isGenerating ? handleStopGenerate : handleSendMessage}
               loading={isLoading && !isGenerating}
               disabled={!isGenerating && (!inputValue.trim() || !selectedAiConfig)}
-              style={{ 
+              style={{
                 height: '36px',
                 width: '36px',
                 borderRadius: '10px',
@@ -1213,7 +1286,7 @@ const ChatInterface: React.FC = () => {
               theme="solid"
             />
           </div>
-          
+
           {!selectedAiConfig && (
             <div style={{ marginTop: '12px', textAlign: 'center' }}>
               <Text type="warning" size="small">
@@ -1223,8 +1296,6 @@ const ChatInterface: React.FC = () => {
           )}
         </div>
       </div>
-
-      
     </div>
   )
 }

@@ -362,7 +362,8 @@ export const enUS: ExtendedDictionary = {
       title: 'Tips & Shortcuts:'
     },
     prompts: {
-      noFile: 'Please select a file from the left sidebar to start editing, or create a new Markdown file',
+      noFile:
+        'Please select a file from the left sidebar to start editing, or create a new Markdown file',
       welcomeMessage: 'Supports code block highlighting and Markdown formatting',
       imageUrl: 'Enter image URL:',
       linkUrl: 'Enter link URL:'

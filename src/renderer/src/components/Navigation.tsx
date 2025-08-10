@@ -43,7 +43,12 @@ interface NavigationProps {
   onFileDeleted?: (folder: string, file: string) => void
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, fileListVersion, onFileDeleted }) => {
+const Navigation: React.FC<NavigationProps> = ({
+  onNavChange,
+  onFileSelect,
+  fileListVersion,
+  onFileDeleted
+}) => {
   const { isDarkMode, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(true)
   const [showSecondaryNav, setShowSecondaryNav] = useState(false)
@@ -290,8 +295,11 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const fetchFileList = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { success: foldersSuccess, folders, error: foldersError } =
-        await window.api.markdown.getFolders()
+      const {
+        success: foldersSuccess,
+        folders,
+        error: foldersError
+      } = await window.api.markdown.getFolders()
       if (!foldersSuccess) {
         throw new Error(foldersError || 'Failed to get folders')
       }
@@ -325,7 +333,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       }
       setNavItems(newNavItems)
     } catch (error) {
-      Toast.error(`Error loading file list: ${error instanceof Error ? error.message : String(error)}`)
+      Toast.error(
+        `Error loading file list: ${error instanceof Error ? error.message : String(error)}`
+      )
       console.error('Error fetching file list:', error)
     } finally {
       setIsLoading(false)
@@ -623,7 +633,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   // 复制文档名称
   const handleCopyFileName = (): void => {
     const { itemKey } = contextMenu
-    
+
     // 从itemKey中提取文件信息
     if (itemKey.startsWith('file:')) {
       const parts = itemKey.split(':')
@@ -632,7 +642,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         copyToClipboard(fileName)
       }
     }
-    
+
     hideContextMenu()
   }
 
@@ -793,7 +803,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
     if (doubleClickTimer) {
       return
     }
-    
+
     // 只对文件夹使用延迟机制，文件直接选择
     if (selectedKey.startsWith('file:')) {
       setSelectedKeys([selectedKey])
@@ -801,7 +811,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
       if (parts.length === 3) {
         const folder = parts[1]
         const file = parts[2]
-        
+
         // 通知父组件选中了文件
         if (onFileSelect) {
           onFileSelect(folder, file)
@@ -813,7 +823,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         setSelectedKeys([selectedKey])
         setDoubleClickTimer(null)
       }, 150)
-      
+
       setDoubleClickTimer(timer)
     } else {
       // 其他情况直接选择
@@ -830,7 +840,7 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
   const handleTreeDoubleClick = (e: React.MouseEvent, nodeKey: string): void => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     // 只对文件夹处理双击事件
     if (nodeKey.startsWith('folder:')) {
       // 清除单击的计时器，阻止单击的选择行为
@@ -838,14 +848,14 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
         clearTimeout(doubleClickTimer)
         setDoubleClickTimer(null)
       }
-      
+
       // 根据当前是否在搜索状态选择正确的展开状态
       const currentExpandedKeys = searchText ? filteredExpandedKeys : expandedKeys
       const setCurrentExpandedKeys = searchText ? setFilteredExpandedKeys : setExpandedKeys
-      
+
       if (currentExpandedKeys.includes(nodeKey)) {
         // 收起文件夹
-        setCurrentExpandedKeys(currentExpandedKeys.filter(key => key !== nodeKey))
+        setCurrentExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey))
       } else {
         // 展开文件夹
         setCurrentExpandedKeys([...currentExpandedKeys, nodeKey])
@@ -855,18 +865,18 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
 
   // 自定义渲染Tree节点标签
   const renderTreeLabel = (
-    label?: React.ReactNode, 
-    data?: TreeNodeData, 
+    label?: React.ReactNode,
+    data?: TreeNodeData,
     _searchWord?: string
   ): React.ReactNode => {
     // 处理可能为undefined的情况
     if (!data || !data.key) {
       return label
     }
-    
+
     const nodeKey = data.key.toString()
     const isFolder = nodeKey.startsWith('folder:')
-    
+
     return (
       <span
         style={{
@@ -1044,7 +1054,12 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                 ) : (
                   <div
                     className="secondary-nav-tree"
-                    style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '0px 0px 0px 0px' }}
+                    style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      padding: '0px 0px 0px 0px'
+                    }}
                   >
                     <Tree
                       treeData={convertNavItemsToTreeData(navItems)}
@@ -1108,7 +1123,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleCreateNoteInFolder}
                       >
-                        <IconPlus style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                        <IconPlus
+                          style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                        />
                         <Typography.Text>新建笔记</Typography.Text>
                       </div>
                       <div
@@ -1122,7 +1139,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleCreateSubFolder}
                       >
-                        <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                        <IconFolder
+                          style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
+                        />
                         <Typography.Text>新建子文件夹</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1137,7 +1156,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleRenameFolder}
                       >
-                        <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
+                        <IconEdit
+                          style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
+                        />
                         <Typography.Text>重命名文件夹</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1162,7 +1183,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                           hideContextMenu()
                         }}
                       >
-                        <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                        <IconDelete
+                          style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
+                        />
                         <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
                           删除文件夹
                         </Typography.Text>
@@ -1183,7 +1206,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleRenameFile}
                       >
-                        <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
+                        <IconEdit
+                          style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
+                        />
                         <Typography.Text>重命名笔记</Typography.Text>
                       </div>
                       <div
@@ -1222,12 +1247,19 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                               'danger'
                             )
                           } else {
-                            openConfirmDialog('删除笔记', '确定要删除此笔记吗？', handleDelete, 'danger')
+                            openConfirmDialog(
+                              '删除笔记',
+                              '确定要删除此笔记吗？',
+                              handleDelete,
+                              'danger'
+                            )
                           }
                           hideContextMenu()
                         }}
                       >
-                        <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
+                        <IconDelete
+                          style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
+                        />
                         <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
                           删除笔记
                         </Typography.Text>
@@ -1248,7 +1280,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={handleCreateFolder}
                       >
-                        <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                        <IconFolder
+                          style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
+                        />
                         <Typography.Text>新建文件夹</Typography.Text>
                       </div>
                       <div className="context-menu-divider" />
@@ -1263,7 +1297,9 @@ const Navigation: React.FC<NavigationProps> = ({ onNavChange, onFileSelect, file
                         }}
                         onClick={() => handleCreateNote()}
                       >
-                        <IconFile style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
+                        <IconFile
+                          style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                        />
                         <Typography.Text>新建笔记</Typography.Text>
                       </div>
                     </>

@@ -157,8 +157,8 @@ export class EditorMemoryManager {
 
     // 估算总内存使用（包括缓存等）
     const cacheMemory =
-      this.currentCacheSize / (1024 * 1024) + 
-      this.currentImageCacheSize / (1024 * 1024) + 
+      this.currentCacheSize / (1024 * 1024) +
+      this.currentImageCacheSize / (1024 * 1024) +
       this.currentRenderCacheSize / (1024 * 1024)
     const totalUsed = jsHeapUsed + cacheMemory
     const totalAvailable = Math.max(jsHeapLimit, totalUsed * 1.5) // 估算总可用内存

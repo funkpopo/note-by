@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Button, Input, List, Toast} from '@douyinfe/semi-ui'
+import { Typography, Button, Input, List, Toast } from '@douyinfe/semi-ui'
 import { IconSearch, IconDelete, IconClose } from '@douyinfe/semi-icons'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
@@ -33,18 +33,18 @@ interface ChatHistorySidebarProps {
   currentSessionId?: string
 }
 
-const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSelectSession, 
-  currentSessionId 
+const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
+  isOpen,
+  onClose,
+  onSelectSession,
+  currentSessionId
 }) => {
   const t = getTranslations()
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [filteredSessions, setFilteredSessions] = useState<ChatSession[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(false)
-  const [lastUserMessages, setLastUserMessages] = useState<Record<string, string>>({});
+  const [lastUserMessages, setLastUserMessages] = useState<Record<string, string>>({})
 
   // 加载聊天会话列表
   const loadSessions = async () => {
@@ -55,11 +55,15 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       setFilteredSessions(sessionList)
       // 获取所有会话的最后一条用户消息
       const lastUserMsgMap: Record<string, string> = {}
-      await Promise.all(sessionList.map(async (session) => {
-        const messages = await window.api.chat.getSessionMessages(session.id)
-        const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
-        lastUserMsgMap[session.id] = lastUserMsg ? lastUserMsg.content : (session.title || t.chat?.history.newChat || '新对话')
-      }))
+      await Promise.all(
+        sessionList.map(async (session) => {
+          const messages = await window.api.chat.getSessionMessages(session.id)
+          const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+          lastUserMsgMap[session.id] = lastUserMsg
+            ? lastUserMsg.content
+            : session.title || t.chat?.history.newChat || '新对话'
+        })
+      )
       setLastUserMessages(lastUserMsgMap)
     } catch (error) {
       console.error('加载聊天会话失败:', error)
@@ -74,7 +78,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     if (!searchTerm.trim()) {
       setFilteredSessions(sessions)
     } else {
-      const filtered = sessions.filter(session => {
+      const filtered = sessions.filter((session) => {
         const titleMatch = session.title?.toLowerCase().includes(searchTerm.toLowerCase())
         const idMatch = session.id.includes(searchTerm)
         const lastMsg = lastUserMessages[session.id] || ''
@@ -97,7 +101,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
     const date = new Date(timestamp)
     const now = new Date()
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diffInDays === 0) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     } else if (diffInDays === 1) {
@@ -129,40 +133,54 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
 
   // 生成会话显示标题（用户最后一条消息）
   const getSessionDisplayTitle = (session: ChatSession) => {
-    return lastUserMessages[session.id] || session.title || `${t.chat?.history.newChat || '新对话'} ${session.messageCount}`
+    return (
+      lastUserMessages[session.id] ||
+      session.title ||
+      `${t.chat?.history.newChat || '新对话'} ${session.messageCount}`
+    )
   }
 
   if (!isOpen) return null
 
   return (
-    <div style={{
-      width: '200px',
-      height: '100%',
-      background: 'var(--semi-color-bg-1)',
-      borderRight: '1px solid var(--semi-color-border)',
-      zIndex: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
-    }}>
+    <div
+      style={{
+        width: '200px',
+        height: '100%',
+        background: 'var(--semi-color-bg-1)',
+        borderRight: '1px solid var(--semi-color-border)',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
+      }}
+    >
       {/* 侧边栏头部 */}
-      <div style={{
-        padding: '16px 20px',
-        borderBottom: '1px solid var(--semi-color-border)',
-        background: 'var(--semi-color-bg-2)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+      <div
+        style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--semi-color-border)',
+          background: 'var(--semi-color-bg-2)'
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '12px'
+          }}
+        >
           <Text strong>{t.chat?.history.title || '对话历史'}</Text>
-          <Button 
-            icon={<IconClose />} 
-            type="tertiary" 
+          <Button
+            icon={<IconClose />}
+            type="tertiary"
             theme="borderless"
             size="small"
             onClick={onClose}
           />
         </div>
-        
-        
+
         {/* 搜索框 */}
         <Input
           prefix={<IconSearch />}
@@ -173,11 +191,13 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       </div>
 
       {/* 会话列表 */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '8px 0'
-      }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '8px 0'
+        }}
+      >
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center' }}>
             <Text type="tertiary">加载中...</Text>
@@ -185,7 +205,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
         ) : filteredSessions.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center' }}>
             <Text type="tertiary">
-              {searchTerm ? '未找到匹配的对话' : (t.chat?.history.empty || '暂无对话历史')}
+              {searchTerm ? '未找到匹配的对话' : t.chat?.history.empty || '暂无对话历史'}
             </Text>
           </div>
         ) : (
@@ -198,8 +218,14 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                   padding: '12px 20px',
                   margin: 0,
                   cursor: 'pointer',
-                  background: session.id === currentSessionId ? 'var(--semi-color-primary-light-default)' : 'transparent',
-                  borderLeft: session.id === currentSessionId ? '3px solid var(--semi-color-primary)' : '3px solid transparent'
+                  background:
+                    session.id === currentSessionId
+                      ? 'var(--semi-color-primary-light-default)'
+                      : 'transparent',
+                  borderLeft:
+                    session.id === currentSessionId
+                      ? '3px solid var(--semi-color-primary)'
+                      : '3px solid transparent'
                 }}
                 onMouseEnter={(e) => {
                   if (session.id !== currentSessionId) {
@@ -216,36 +242,51 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
                   onClose()
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}
+                >
                   {/* 会话标题 */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <Text 
-                          strong 
-                          style={{ 
-                            fontSize: '14px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            flex: 1,
-                            marginRight: '8px'
-                          }}
-                        >
-                          {getSessionDisplayTitle(session)}
-                        </Text>
-                        <Button
-                          icon={<IconDelete />}
-                          type="tertiary"
-                          theme="borderless"
-                          size="small"
-                          onClick={e => {
-                            e.stopPropagation();
-                            deleteSession(session.id);
-                          }}
-                        />
-                    </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '4px'
+                    }}
+                  >
+                    <Text
+                      strong
+                      style={{
+                        fontSize: '14px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                        marginRight: '8px'
+                      }}
+                    >
+                      {getSessionDisplayTitle(session)}
+                    </Text>
+                    <Button
+                      icon={<IconDelete />}
+                      type="tertiary"
+                      theme="borderless"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteSession(session.id)
+                      }}
+                    />
+                  </div>
 
                   {/* 会话信息 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
                     <Text size="small" type="tertiary">
                       {session.messageCount} 条消息
                     </Text>

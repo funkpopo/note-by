@@ -811,7 +811,7 @@ const api = {
     // 导航到指定视图
     navigateToView: (viewKey: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.NAVIGATE_TO_VIEW, viewKey),
-    
+
     // 监听导航事件
     onNavigate: (callback: (viewKey: string) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, viewKey: string): void => {
@@ -885,32 +885,35 @@ const api = {
       status?: string
       parentId?: string
       modelId?: string
-    }): Promise<boolean> =>
-      ipcRenderer.invoke(IPC_CHANNELS.CHAT_SAVE_MESSAGE, message),
+    }): Promise<boolean> => ipcRenderer.invoke(IPC_CHANNELS.CHAT_SAVE_MESSAGE, message),
 
     // 获取所有聊天会话
-    getSessions: (): Promise<Array<{
-      id: string
-      title?: string
-      createdAt: number
-      updatedAt: number
-      messageCount: number
-      isArchived: boolean
-    }>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSIONS),
+    getSessions: (): Promise<
+      Array<{
+        id: string
+        title?: string
+        createdAt: number
+        updatedAt: number
+        messageCount: number
+        isArchived: boolean
+      }>
+    > => ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSIONS),
 
     // 获取指定会话的消息
-    getSessionMessages: (sessionId: string): Promise<Array<{
-      id: string
+    getSessionMessages: (
       sessionId: string
-      role: 'user' | 'assistant' | 'system'
-      content: string
-      status?: string
-      parentId?: string
-      createdAt: number
-      modelId?: string
-    }>> =>
-      ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSION_MESSAGES, sessionId),
+    ): Promise<
+      Array<{
+        id: string
+        sessionId: string
+        role: 'user' | 'assistant' | 'system'
+        content: string
+        status?: string
+        parentId?: string
+        createdAt: number
+        modelId?: string
+      }>
+    > => ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSION_MESSAGES, sessionId),
 
     // 更新会话标题
     updateSessionTitle: (sessionId: string, title: string): Promise<boolean> =>
@@ -929,8 +932,7 @@ const api = {
       totalSessions: number
       totalMessages: number
       activeSessions: number
-    }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSION_STATS),
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CHAT_GET_SESSION_STATS),
 
     // 清理旧的会话
     cleanupOldSessions: (keepCount?: number): Promise<number> =>

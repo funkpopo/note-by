@@ -1877,7 +1877,7 @@ export interface ChatSession {
   isArchived: boolean
 }
 
-// 聊天消息接口  
+// 聊天消息接口
 export interface ChatMessage {
   id: string
   sessionId: string
@@ -1894,16 +1894,16 @@ export async function createChatSession(title?: string): Promise<string | null> 
   const result = await withDatabase(async (database) => {
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const now = Date.now()
-    
+
     const stmt = database.prepare(`
       INSERT INTO chat_sessions (id, title, created_at, updated_at, message_count)
       VALUES (?, ?, ?, ?, 0)
     `)
-    
+
     stmt.run(sessionId, title || null, now, now)
     return sessionId
   })
-  
+
   return result
 }
 
@@ -1911,13 +1911,13 @@ export async function createChatSession(title?: string): Promise<string | null> 
 export async function saveChatMessage(message: Omit<ChatMessage, 'createdAt'>): Promise<boolean> {
   const result = await withDatabase(async (database) => {
     const now = Date.now()
-    
+
     // 插入消息
     const insertMessageStmt = database.prepare(`
       INSERT INTO chat_messages (id, session_id, role, content, status, parent_id, created_at, model_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    
+
     insertMessageStmt.run(
       message.id,
       message.sessionId,
@@ -1928,19 +1928,19 @@ export async function saveChatMessage(message: Omit<ChatMessage, 'createdAt'>): 
       now,
       message.modelId || null
     )
-    
+
     // 更新会话的消息数量和最后更新时间
     const updateSessionStmt = database.prepare(`
       UPDATE chat_sessions 
       SET message_count = message_count + 1, updated_at = ?
       WHERE id = ?
     `)
-    
+
     updateSessionStmt.run(now, message.sessionId)
-    
+
     return true
   })
-  
+
   return result !== null
 }
 
@@ -1960,10 +1960,10 @@ export async function getChatSessions(): Promise<ChatSession[]> {
       ORDER BY updated_at DESC
       LIMIT 50
     `)
-    
+
     return stmt.all() as ChatSession[]
   })
-  
+
   return result || []
 }
 
@@ -1984,10 +1984,10 @@ export async function getChatMessages(sessionId: string): Promise<ChatMessage[]>
       WHERE session_id = ?
       ORDER BY created_at ASC
     `)
-    
+
     return stmt.all(sessionId) as ChatMessage[]
   })
-  
+
   return result || []
 }
 
@@ -1999,11 +1999,11 @@ export async function updateChatSessionTitle(sessionId: string, title: string): 
       SET title = ?, updated_at = ?
       WHERE id = ?
     `)
-    
+
     stmt.run(title, Date.now(), sessionId)
     return true
   })
-  
+
   return result !== null
 }
 
@@ -2015,7 +2015,7 @@ export async function deleteChatSession(sessionId: string): Promise<boolean> {
     stmt.run(sessionId)
     return true
   })
-  
+
   return result !== null
 }
 
@@ -2025,15 +2025,15 @@ export async function deleteChatMessage(messageId: string): Promise<boolean> {
     // 首先获取消息信息，以便更新会话统计
     const getMessageStmt = database.prepare('SELECT session_id FROM chat_messages WHERE id = ?')
     const message = getMessageStmt.get(messageId) as { session_id: string } | undefined
-    
+
     if (!message) {
       return false // 消息不存在
     }
-    
+
     // 删除消息
     const deleteStmt = database.prepare('DELETE FROM chat_messages WHERE id = ?')
     const info = deleteStmt.run(messageId)
-    
+
     // 如果成功删除了消息，更新会话统计
     if (info.changes > 0) {
       const updateSessionStmt = database.prepare(`
@@ -2043,10 +2043,10 @@ export async function deleteChatMessage(messageId: string): Promise<boolean> {
       `)
       updateSessionStmt.run(Date.now(), message.session_id)
     }
-    
+
     return info.changes > 0 // 返回是否成功删除了记录
   })
-  
+
   return result !== null && result
 }
 
@@ -2057,26 +2057,28 @@ export async function getChatSessionStats(): Promise<{
   activeSessions: number
 }> {
   const result = await withDatabase(async (database) => {
-    const sessionStmt = database.prepare('SELECT COUNT(*) as count FROM chat_sessions WHERE is_archived = 0')
+    const sessionStmt = database.prepare(
+      'SELECT COUNT(*) as count FROM chat_sessions WHERE is_archived = 0'
+    )
     const messageStmt = database.prepare('SELECT COUNT(*) as count FROM chat_messages')
     const activeStmt = database.prepare(`
       SELECT COUNT(*) as count FROM chat_sessions 
       WHERE is_archived = 0 AND updated_at > ?
     `)
-    
+
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-    
+
     const sessionCount = (sessionStmt.get() as { count: number }).count
     const messageCount = (messageStmt.get() as { count: number }).count
     const activeCount = (activeStmt.get(weekAgo) as { count: number }).count
-    
+
     return {
       totalSessions: sessionCount,
       totalMessages: messageCount,
       activeSessions: activeCount
     }
   })
-  
+
   return result || { totalSessions: 0, totalMessages: 0, activeSessions: 0 }
 }
 
@@ -2090,24 +2092,24 @@ export async function cleanupOldChatSessions(keepCount: number = 100): Promise<n
       ORDER BY updated_at DESC
       LIMIT -1 OFFSET ?
     `)
-    
+
     const sessionsToDelete = stmt.all(keepCount) as Array<{ id: string }>
-    
+
     if (sessionsToDelete.length === 0) {
       return 0
     }
-    
+
     // 删除这些会话
     const deleteStmt = database.prepare('DELETE FROM chat_sessions WHERE id = ?')
-    
+
     let deletedCount = 0
     for (const session of sessionsToDelete) {
       deleteStmt.run(session.id)
       deletedCount++
     }
-    
+
     return deletedCount
   })
-  
+
   return result || 0
 }

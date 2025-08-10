@@ -19,11 +19,11 @@ export function processThinkingContent(text: string): {
   if (!text) return { hasThinking: false, displayText: text }
 
   const thinkingMatch = /<think>([\s\S]*?)<\/think>/g.exec(text)
-  
+
   if (thinkingMatch) {
     const thinkingContent = thinkingMatch[1].trim()
     const displayText = text.replace(/<think>[\s\S]*?<\/think>(\r?\n)?/g, '').trim()
-    
+
     return {
       hasThinking: true,
       displayText,
