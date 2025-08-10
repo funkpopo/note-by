@@ -1,5 +1,112 @@
 .settings-scroll-container {
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* WebDAV设置特定样式 */
+.webdav-settings {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.webdav-settings .semi-card {
+  margin-bottom: 20px;
+}
+
+/* 优化卡片网格布局响应式 */
+.api-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* 优化大屏幕下的布局 */
+@media (min-width: 1400px) {
+  .api-config-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .performance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 优化中等屏幕下的布局 */
+@media (max-width: 1000px) {
+  .api-config-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .performance-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-scroll-container {
+    padding: 12px;
+  }
+}
+
+/* 性能统计网格布局 */
+.performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* 设置标签页面板样式 */
+.semi-tabs-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.semi-tabs-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 确保内容区域充满空间 */
+.semi-tabs-content-inner {
+  height: 100%;
+}
+
+/* 设置模态框最大高度 */
+.semi-modal-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+/* 优化卡片间距 */
+.semi-card {
+  width: 100%;
+}
+
+/* 优化按钮组布局 */
+.semi-button-group {
+  display: flex;
+  gap: 8px;
+}
+
+/* 优化表单布局 */
+.semi-form-vertical .semi-form-field {
+  margin-bottom: 16px;
+}
+
+/* 确保主容器铺满屏幕 */
+.settings-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 } 

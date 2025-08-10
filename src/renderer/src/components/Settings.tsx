@@ -12,7 +12,6 @@ import {
   Spin,
   ButtonGroup,
   Tabs,
-  TabPane,
   Radio,
   Select
 } from '@douyinfe/semi-ui'
@@ -35,6 +34,7 @@ import { performanceMonitor, type PerformanceMetrics } from '../utils/Performanc
 import { useLanguage } from '../locales'
 
 const { Title, Paragraph, Text } = Typography
+const { TabPane } = Tabs
 
 // API配置接口
 interface AiApiConfig {
@@ -64,6 +64,7 @@ interface HistoryManagementSettings {
 
 const Settings: React.FC = () => {
   const { language, setLanguage, t } = useLanguage()
+  const [activeTab, setActiveTab] = useState('basic')
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
@@ -311,7 +312,7 @@ const Settings: React.FC = () => {
     }
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+      <div className="api-config-grid">
         {AiApiConfigs.map((config) => (
           <Card
             key={config.id}
@@ -652,32 +653,46 @@ const Settings: React.FC = () => {
   return (
     <div
       style={{
-        padding: '0px',
-        maxWidth: '1200px',
-        margin: '0 auto',
+        padding: '20px',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%'
+        height: '100vh',
+        width: '100%',
+        boxSizing: 'border-box'
       }}
     >
-      <Title heading={2}>{t('settings.title')}</Title>
+      <Title 
+        heading={2} 
+        style={{ 
+          marginBottom: '20px',
+          flexShrink: 0
+        }}
+      >
+        {t('settings.title')}
+      </Title>
 
       <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
         type="line"
         size="large"
         style={{
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
-          overflow: 'hidden'
+          minHeight: 0,
+          width: '100%'
         }}
         tabPosition="top"
         contentStyle={{
           flex: 1,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0
         }}
       >
-        <TabPane tab={t('settings.tabs.basic')} itemKey="basic">
+        <TabPane tab={t('settings.tabs.basic')} itemKey="basic" style={{ height: '100%' }}>
           <div className="settings-scroll-container">
             {/* 语言设置卡片 */}
             <Card style={{ marginBottom: 20 }}>
@@ -843,7 +858,7 @@ const Settings: React.FC = () => {
           </div>
         </TabPane>
 
-        <TabPane tab={t('settings.tabs.history')} itemKey="history">
+        <TabPane tab={t('settings.tabs.history')} itemKey="history" style={{ height: '100%' }}>
           <div className="settings-scroll-container">
             {/* 历史记录管理设置卡片 */}
             <Card
@@ -903,11 +918,11 @@ const Settings: React.FC = () => {
           </div>
         </TabPane>
 
-        <TabPane tab={t('settings.tabs.webdav')} itemKey="webdav">
+        <TabPane tab={t('settings.tabs.webdav')} itemKey="webdav" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </TabPane>
 
-        <TabPane tab={t('settings.tabs.performance')} itemKey="performance">
+        <TabPane tab={t('settings.tabs.performance')} itemKey="performance" style={{ height: '100%' }}>
           <div className="settings-scroll-container">
             {/* 性能统计卡片 */}
             <Card
@@ -951,9 +966,7 @@ const Settings: React.FC = () => {
               }
             >
               {performanceMetrics ? (
-                <div
-                  style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}
-                >
+                <div className="performance-grid">
                   {/* 内存使用 */}
                   <div
                     style={{

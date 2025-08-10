@@ -754,12 +754,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
   }
 
   return (
-    <div
-      className="settings-scroll-container webdav-settings"
-      style={{
-        padding: '0'
-      }}
-    >
+    <div className="settings-scroll-container webdav-settings">
       {syncStatus && syncStatus.show && (
         <Banner
           type={syncStatus.type}
