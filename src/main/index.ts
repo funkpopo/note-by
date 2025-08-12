@@ -385,8 +385,7 @@ function createWindow(): void {
       mainWindow.show()
       // 设置更新服务的主窗口引用
       updaterService.setMainWindow(mainWindow)
-      // 初始化自动更新检查
-      updaterService.initializeAutoCheck()
+      // 自动更新检查已被禁用，仅支持手动检查
     }
   })
 
@@ -557,32 +556,32 @@ async function checkForUpdates(): Promise<{
   }
 }
 
-// 在应用启动时检查更新
-async function checkUpdatesOnStartup(): Promise<void> {
-  try {
-    const settings = readSettings()
-    const shouldCheckUpdates = settings.checkUpdatesOnStartup !== false
-
-    if (shouldCheckUpdates) {
-      const updateInfo = await checkForUpdates()
-
-      if (updateInfo.hasUpdate) {
-        // 发送更新通知到渲染进程
-        const mainWindow = BrowserWindow.getAllWindows()[0]
-        if (mainWindow) {
-          mainWindow.webContents.send('update-available', updateInfo)
-        }
-      }
-    }
-  } catch (error) {
-    mainErrorHandler.error(
-      'Failed to check for updates on startup',
-      error,
-      ErrorCategory.UPDATER,
-      'checkUpdatesOnStartup'
-    )
-  }
-}
+// 自动更新检查已禁用 - 仅支持手动检查
+// async function checkUpdatesOnStartup(): Promise<void> {
+//   try {
+//     const settings = readSettings()
+//     const shouldCheckUpdates = settings.checkUpdatesOnStartup !== false
+//
+//     if (shouldCheckUpdates) {
+//       const updateInfo = await checkForUpdates()
+//
+//       if (updateInfo.hasUpdate) {
+//         // 发送更新通知到渲染进程
+//         const mainWindow = BrowserWindow.getAllWindows()[0]
+//         if (mainWindow) {
+//           mainWindow.webContents.send('update-available', updateInfo)
+//         }
+//       }
+//     }
+//   } catch (error) {
+//     mainErrorHandler.error(
+//       'Failed to check for updates on startup',
+//       error,
+//       ErrorCategory.UPDATER,
+//       'checkUpdatesOnStartup'
+//     )
+//   }
+// }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -2368,8 +2367,8 @@ ${htmlContent}
   // 应用启动时执行自动同步
   performAutoSync()
 
-  // 在应用启动时检查更新
-  checkUpdatesOnStartup()
+  // 自动更新检查已禁用，仅支持手动检查
+  // checkUpdatesOnStartup()
 
   // 启动内存监控
   memoryMonitor.start()
