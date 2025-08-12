@@ -656,8 +656,9 @@ const Settings: React.FC = () => {
       </div>
 
       <div className="settings-scroll-container">
+        <div className="settings-content">
         {/* 语言设置卡片 */}
-        <Card style={{ marginBottom: 20 }}>
+        <Card style={{ marginBottom: 16 }}>
           <div
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
@@ -682,7 +683,7 @@ const Settings: React.FC = () => {
         </Card>
         
         {/* 更新检查设置卡片 */}
-        <Card style={{ marginBottom: 20 }}>
+        <Card style={{ marginBottom: 16 }}>
           <div
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
@@ -821,7 +822,7 @@ const Settings: React.FC = () => {
         {/* 历史记录管理设置卡片 */}
         <Card
           title={t('settings.history.title')}
-          style={{ marginTop: 20, marginBottom: 20 }}
+          style={{ marginTop: 16, marginBottom: 16 }}
           headerExtraContent={
             <Button type="primary" theme="solid" onClick={saveHistoryManagement}>
               保存
@@ -875,7 +876,7 @@ const Settings: React.FC = () => {
         </Card>
 
         {/* WebDAV设置 */}
-        <Card title="WebDAV 同步" style={{ marginBottom: 20 }}>
+        <Card title="WebDAV 同步" style={{ marginBottom: 16 }}>
           <WebDAVSettings onSyncComplete={handleSyncComplete} />
         </Card>
 
@@ -887,7 +888,7 @@ const Settings: React.FC = () => {
               <span>性能统计</span>
             </div>
           }
-          style={{ marginBottom: 20 }}
+          style={{ marginBottom: 16 }}
           headerExtraContent={
             <ButtonGroup>
               <Button
@@ -1167,6 +1168,7 @@ const Settings: React.FC = () => {
             性能数据每1分钟自动更新一次。导出的数据包含详细的历史记录和分析报告，可用于进一步分析和优化。
           </Paragraph>
         </Card>
+        </div>
       </div>
 
       {/* 添加/编辑配置模态框 */}

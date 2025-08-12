@@ -1,27 +1,35 @@
 .settings-container {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
 .settings-header {
-  padding: 20px 20px 0 20px;
+  padding: 16px 16px 0 16px;
   flex-shrink: 0;
 }
 
 .settings-scroll-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
   width: 100%;
   box-sizing: border-box;
-  max-width: 1400px;
   margin: 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* WebDAV设置特定样式 */
+.settings-content {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
 .webdav-settings {
   display: flex;
   flex-direction: column;
@@ -35,15 +43,15 @@
 /* 优化卡片网格布局响应式 */
 .api-config-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 12px;
   width: 100%;
 }
 
 /* 优化大屏幕下的布局 */
 @media (min-width: 1400px) {
   .api-config-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
   
   .performance-grid {
@@ -51,26 +59,42 @@
   }
 }
 
+@media (min-width: 1800px) {
+  .api-config-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  
+  .performance-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* 优化中等屏幕下的布局 */
 @media (max-width: 1000px) {
   .api-config-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   
   .performance-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   
   .settings-scroll-container {
-    padding: 12px;
+    padding: 10px;
+  }
+  
+  .settings-header {
+    padding: 16px 10px 0 10px;
   }
 }
 
 /* 性能统计网格布局 */
 .performance-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
   width: 100%;
 }
 
