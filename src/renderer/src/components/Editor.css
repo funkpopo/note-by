@@ -523,7 +523,224 @@
   margin: 0;
 }
 
-/* Bubble Menu 旧样式已删除 */
+/* AI Bubble Menu Loading Styles */
+.bubble-menu.ai-bubble-menu {
+  background: linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-fill-0) 100%);
+  border: 1px solid var(--semi-color-primary-light-default);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  min-width: 280px;
+  backdrop-filter: blur(8px);
+  animation: aiMenuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ai-loading-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-loading-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(var(--semi-blue-5), 0.1), transparent);
+  animation: aiShimmer 2s infinite;
+}
+
+.ai-loading-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--semi-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  position: relative;
+}
+
+.ai-loading-text::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background: var(--semi-color-primary);
+  border-radius: 50%;
+  animation: aiDotPulse 1.5s infinite;
+}
+
+.bubble-menu.ai-bubble-menu .semi-spin {
+  color: var(--semi-color-primary);
+}
+
+.bubble-menu.ai-bubble-menu .semi-button {
+  border: 1px solid var(--semi-color-danger-light-default);
+  background: var(--semi-color-danger-light-default);
+  color: var(--semi-color-danger);
+  font-size: 12px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-weight: 500;
+}
+
+.bubble-menu.ai-bubble-menu .semi-button:hover {
+  background: var(--semi-color-danger);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--semi-red-5), 0.3);
+}
+
+/* AI Menu Animations */
+@keyframes aiMenuSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes aiShimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes aiDotPulse {
+  0%, 60%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  30% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+/* Enhanced AI Assistant Button in Text Bubble Menu */
+.text-bubble-menu .semi-button[type="primary"] {
+  background: linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-hover) 100%);
+  border: none;
+  box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-weight: 500;
+}
+
+.text-bubble-menu .semi-button[type="primary"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(var(--semi-blue-5), 0.4);
+  background: linear-gradient(135deg, var(--semi-color-primary-hover) 0%, var(--semi-color-primary) 100%);
+}
+
+.text-bubble-menu .semi-button[type="primary"]:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3);
+}
+
+/* AI Feature Progress Indicator */
+.ai-progress-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--semi-color-bg-0);
+  border: 1px solid var(--semi-color-primary-light-default);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  z-index: 2000;
+  min-width: 300px;
+  backdrop-filter: blur(8px);
+  animation: aiProgressSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ai-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ai-progress-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--semi-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-progress-close {
+  color: var(--semi-color-text-2);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.ai-progress-close:hover {
+  background: var(--semi-color-fill-1);
+  color: var(--semi-color-text-0);
+}
+
+.ai-progress-content {
+  font-size: 13px;
+  color: var(--semi-color-text-1);
+  line-height: 1.5;
+}
+
+.ai-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--semi-color-fill-1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.ai-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--semi-color-primary), var(--semi-color-primary-light-hover));
+  border-radius: 2px;
+  width: 0%;
+  animation: aiProgressFill 3s ease-in-out infinite;
+}
+
+@keyframes aiProgressSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes aiProgressFill {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+}
 
 /* Editor Footer */
 .editor-footer {

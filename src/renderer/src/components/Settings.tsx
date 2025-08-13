@@ -714,49 +714,6 @@ const Settings: React.FC = () => {
                 </div>
               </Card>
 
-          {/* AI API配置标签 */}
-          <Tabs.TabPane
-            tab={
-              <span className="tab-label">
-                <IconCloud className="tab-icon" />
-                AI 配置
-              </span>
-            }
-            itemKey="api"
-          >
-            <div className="tab-content">
-              <div className="section-header">
-                <div className="section-title">
-                  <IconCloud size="large" className="section-icon" />
-                  <div>
-                    <Title heading={4}>AI API 配置</Title>
-                    <Text type="tertiary">管理和配置AI服务接口</Text>
-                  </div>
-                </div>
-                <Button
-                  icon={<IconPlus />}
-                  onClick={handleAddConfig}
-                  theme="solid"
-                  type="primary"
-                  className="add-config-btn"
-                >
-                  添加配置
-                </Button>
-              </div>
-
-              {isLoading ? (
-                <div className="loading-container">
-                  <Spin size="large" />
-                  <Text type="tertiary">加载配置中...</Text>
-                </div>
-              ) : (
-                <div className="api-configs-container">
-                  {renderApiConfigCards()}
-                </div>
-              )}
-            </div>
-          </Tabs.TabPane>
-
               {/* 历史记录管理设置卡片 */}
               <Card className="settings-card animated-card">
                 <div className="card-header">
@@ -838,6 +795,49 @@ const Settings: React.FC = () => {
                   </Form>
                 </div>
               </Card>
+            </div>
+          </Tabs.TabPane>
+
+          {/* AI API配置标签 */}
+          <Tabs.TabPane
+            tab={
+              <span className="tab-label">
+                <IconCloud className="tab-icon" />
+                AI 配置
+              </span>
+            }
+            itemKey="api"
+          >
+            <div className="tab-content">
+              <div className="section-header">
+                <div className="section-title">
+                  <IconCloud size="large" className="section-icon" />
+                  <div>
+                    <Title heading={4}>AI API 配置</Title>
+                    <Text type="tertiary">管理和配置AI服务接口</Text>
+                  </div>
+                </div>
+                <Button
+                  icon={<IconPlus />}
+                  onClick={handleAddConfig}
+                  theme="solid"
+                  type="primary"
+                  className="add-config-btn"
+                >
+                  添加配置
+                </Button>
+              </div>
+
+              {isLoading ? (
+                <div className="loading-container">
+                  <Spin size="large" />
+                  <Text type="tertiary">加载配置中...</Text>
+                </div>
+              ) : (
+                <div className="api-configs-container">
+                  {renderApiConfigCards()}
+                </div>
+              )}
             </div>
           </Tabs.TabPane>
 

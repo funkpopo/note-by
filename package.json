@@ -21,8 +21,6 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.8",
-    "@ai-sdk/provider": "^2.0.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -68,7 +66,7 @@
     "lowlight": "^3.3.0",
     "lru-cache": "^11.1.0",
     "md-to-pdf": "^5.2.4",
-    "openai": "^5.10.1",
+    "openai": "^5.12.2",
     "react-icons": "^5.5.0",
     "react-katex": "^3.1.0",
     "react-markdown": "^10.1.0",

@@ -14,7 +14,7 @@ import {
   verifyMasterPassword,
   encryptWebDAVWithMasterPassword
 } from './settings'
-import { testOpenAIConnection, generateContent, streamGenerateContent } from './openai'
+import { testOpenAIConnection, generateContent, generateWithMessages, streamGenerateContent } from './openai'
 import { promises as fsPromises } from 'fs'
 import showdown from 'showdown'
 import {
@@ -147,6 +147,7 @@ const IPC_CHANNELS = {
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   GENERATE_CONTENT: 'openai:generate-content',
+  GENERATE_WITH_MESSAGES: 'openai:generate-with-messages',
   STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
   STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
   SAVE_API_CONFIG: 'api:save-config',
@@ -718,6 +719,11 @@ app.whenReady().then(() => {
   // 内容生成
   ipcMain.handle(IPC_CHANNELS.GENERATE_CONTENT, async (_, request) => {
     return await generateContent(request)
+  })
+
+  // AI生成（支持消息格式）
+  ipcMain.handle(IPC_CHANNELS.GENERATE_WITH_MESSAGES, async (_, request) => {
+    return await generateWithMessages(request)
   })
 
   // 流式请求管理Map

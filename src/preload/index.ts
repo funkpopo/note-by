@@ -33,6 +33,7 @@ const IPC_CHANNELS = {
   SET_SETTING: 'setting:set',
   TEST_OPENAI_CONNECTION: 'openai:test-connection',
   GENERATE_CONTENT: 'openai:generate-content',
+  GENERATE_WITH_MESSAGES: 'openai:generate-with-messages',
   STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
   STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
   SAVE_API_CONFIG: 'api:save-config',
@@ -231,6 +232,17 @@ const api = {
       request: ContentGenerationRequest
     ): Promise<{ success: boolean; content?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.GENERATE_CONTENT, request),
+    
+    // AI生成（支持消息格式）
+    generate: (
+      request: { 
+        config: AiApiConfig; 
+        messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>; 
+        maxTokens?: number; 
+        temperature?: number 
+      }
+    ): Promise<{ success: boolean; content?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GENERATE_WITH_MESSAGES, request),
 
     // 流式生成内容
     streamGenerateContent: (

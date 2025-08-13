@@ -38,7 +38,7 @@ import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
-import { Toast, Button, Space, Spin, Breadcrumb, Select } from '@douyinfe/semi-ui'
+import { Toast, Button, Space, Spin, Breadcrumb, Select, Dropdown } from '@douyinfe/semi-ui'
 import {
   IconSave,
   IconBold,
@@ -57,7 +57,8 @@ import {
   IconCopy,
   IconDelete,
   IconImage,
-  IconPlay
+  IconPlay,
+  IconChevronDown
 } from '@douyinfe/semi-icons'
 import {
   RiDeleteColumn,
@@ -1101,7 +1102,197 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
   currentFolder,
   currentFile
 }) => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingFeature, setLoadingFeature] = useState<string | null>(null)
+  const [apiConfigs, setApiConfigs] = useState<any[]>([])
+  const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null)
+
+  // 加载API配置
+  const loadApiConfigs = useCallback(async () => {
+    try {
+      const settings = await window.api.settings.getAll()
+      if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
+        setApiConfigs(settings.AiApiConfigs)
+        // 如果没有选中的配置且有可用配置，选择第一个
+        if (!selectedConfigId && settings.AiApiConfigs.length > 0) {
+          setSelectedConfigId(settings.AiApiConfigs[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load API configs:', error)
+    }
+  }, [selectedConfigId])
+
+  // 组件加载时获取API配置
+  useEffect(() => {
+    loadApiConfigs()
+  }, [loadApiConfigs])
+
+  // 获取选中的文本
+  const getSelectedText = useCallback((): string => {
+    const { from, to } = editor.state.selection
+    return editor.state.doc.textBetween(from, to, ' ')
+  }, [editor])
+
+  // 获取当前选中的API配置
+  const getCurrentConfig = useCallback(() => {
+    return apiConfigs.find(config => config.id === selectedConfigId) || null
+  }, [apiConfigs, selectedConfigId])
+
+  // 调用AI API
+  const callAI = useCallback(async (prompt: string, selectedText: string): Promise<string> => {
+    const config = getCurrentConfig()
+    if (!config) {
+      throw new Error('请先在设置中配置AI API')
+    }
+
+    if (!config.apiKey || !config.apiUrl || !config.modelName) {
+      throw new Error('API配置不完整，请检查设置')
+    }
+
+    try {
+      const result = await window.api.openai.generate({
+        config,
+        messages: [
+          {
+            role: 'user',
+            content: `${prompt}\n\n${selectedText}`
+          }
+        ],
+        maxTokens: parseInt(config.maxTokens || '2000'),
+        temperature: parseFloat(config.temperature || '0.7')
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || '生成失败')
+      }
+
+      return result.content || ''
+    } catch (error) {
+      throw error
+    }
+  }, [getCurrentConfig])
+
+  // AI功能
+  const AI_FEATURES = [
+    {
+      key: 'summarize',
+      label: '总结',
+      prompt: '请总结以下内容的主要要点，用简洁的语言概括核心信息：'
+    },
+    {
+      key: 'expand',
+      label: '扩写',
+      prompt: '请对以下内容进行扩写，增加更多细节、例子或解释，使其更加丰富和详细：'
+    },
+    {
+      key: 'continue',
+      label: '续写',
+      prompt: '请根据以下内容的语境和风格，自然地续写后续内容：'
+    },
+    {
+      key: 'translate',
+      label: '翻译',
+      prompt: '请将以下内容翻译成中文（如果原文是中文则翻译成英文）：'
+    },
+    {
+      key: 'check',
+      label: '检查',
+      prompt: '请检查以下文本的语法、拼写、标点和表达错误，并提供修改建议：'
+    }
+  ]
+
+  // 处理AI功能
+  const handleAIFeature = useCallback(async (feature: any) => {
+    const selectedText = getSelectedText()
+    if (!selectedText.trim()) {
+      Toast.error('请先选择要处理的文本')
+      return
+    }
+
+    if (apiConfigs.length === 0) {
+      Toast.error('请先在设置中配置AI API')
+      return
+    }
+
+    const config = getCurrentConfig()
+    if (!config) {
+      Toast.error('请先选择一个API配置')
+      return
+    }
+
+    setIsLoading(true)
+    setLoadingFeature(feature.key)
+
+    try {
+      const result = await callAI(feature.prompt, selectedText)
+      
+      if (result.trim()) {
+        const { from, to } = editor.state.selection
+        
+        switch (feature.key) {
+          case 'summarize':
+          case 'check':
+            editor.chain().focus().setTextSelection(to).insertContent(`\n\n**${feature.label}结果：**\n${result}`).run()
+            break
+          case 'expand':
+          case 'translate':
+            editor.chain().focus().setTextSelection({ from, to }).insertContent(result).run()
+            break
+          case 'continue':
+            editor.chain().focus().setTextSelection(to).insertContent(result).run()
+            break
+          default:
+            editor.chain().focus().setTextSelection(to).insertContent(`\n\n${result}`).run()
+        }
+        
+        Toast.success(`${feature.label}完成`)
+      } else {
+        Toast.error('AI返回了空结果')
+      }
+    } catch (error) {
+      console.error(`AI ${feature.label} failed:`, error)
+      Toast.error(`${feature.label}失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    } finally {
+      setIsLoading(false)
+      setLoadingFeature(null)
+    }
+  }, [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor])
+
   if (!editor) return null
+
+  // 如果正在加载AI功能，显示加载状态
+  if (isLoading && loadingFeature) {
+    const currentFeature = AI_FEATURES.find(f => f.key === loadingFeature)
+    return (
+      <BubbleMenu
+        editor={editor}
+        shouldShow={({ from, to }) => {
+          return from !== to && !editor.isActive('image') && !editor.isActive('iframe')
+        }}
+      >
+        <div className="bubble-menu ai-bubble-menu">
+          <div className="ai-loading-content">
+            <div className="ai-loading-text">
+              <Spin size="small" />
+              AI正在{currentFeature?.label}中
+            </div>
+            <Button 
+              size="small" 
+              type="danger"
+              theme="borderless"
+              onClick={() => {
+                setIsLoading(false)
+                setLoadingFeature(null)
+              }}
+            >
+              停止
+            </Button>
+          </div>
+        </div>
+      </BubbleMenu>
+    )
+  }
 
   return (
     <BubbleMenu
@@ -1118,7 +1309,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
           $from.parent.type.name !== 'iframe' &&
           !editor.isActive('image') &&
           !editor.isActive('iframe')
-        ) // 当图片或iframe被选中时不显示菜单
+        )
       }}
     >
       <div className="bubble-menu text-bubble-menu">
@@ -1126,6 +1317,51 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
           <span>文本工具</span>
         </div>
         <Space>
+          {/* AI功能下拉菜单 - 第一个位置 */}
+          <Dropdown
+            trigger="click"
+            position="bottomLeft"
+            menu={[
+              ...AI_FEATURES.map(feature => ({
+                node: 'item' as const,
+                key: feature.key,
+                name: feature.label,
+                onClick: () => handleAIFeature(feature),
+                disabled: isLoading
+              }))
+            ]}
+            disabled={isLoading}
+          >
+            <Button
+              rightIcon={<IconChevronDown />}
+              size="small"
+              type="primary"
+              disabled={isLoading}
+              style={{ marginRight: '8px' }}
+            >
+              AI助手
+            </Button>
+          </Dropdown>
+          
+          {/* API配置选择（如果有多个配置） */}
+          {apiConfigs.length > 1 && (
+            <Select
+              value={selectedConfigId || undefined}
+              onChange={(value) => setSelectedConfigId(value as string)}
+              size="small"
+              style={{ width: 120, marginRight: '8px' }}
+              placeholder="选择API"
+            >
+              {apiConfigs.map(config => (
+                <Select.Option key={config.id} value={config.id}>
+                  {config.name}
+                </Select.Option>
+              ))}
+            </Select>
+          )}
+          
+          <div className="bubble-menu-divider" />
+          
           <Button
             icon={<IconBold />}
             size="small"

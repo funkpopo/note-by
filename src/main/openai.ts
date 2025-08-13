@@ -111,6 +111,109 @@ export async function testOpenAIConnection(
   }
 }
 
+// AI生成请求参数接口
+interface AIGenerateRequest {
+  config: AiApiConfig
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
+  maxTokens?: number
+  temperature?: number
+}
+
+// AI生成功能（支持对话格式）
+export async function generateWithMessages(
+  request: AIGenerateRequest
+): Promise<{ success: boolean; content?: string; error?: string }> {
+  try {
+    const { config, messages, maxTokens = 2000, temperature = 0.7 } = request
+
+    if (!config.apiKey) {
+      return { success: false, error: 'API Key 未设置' }
+    }
+
+    if (!config.apiUrl) {
+      return { success: false, error: 'API URL 未设置' }
+    }
+
+    if (!config.modelName) {
+      return { success: false, error: '模型名称未设置' }
+    }
+
+    // 处理并规范化API URL
+    const normalizedApiUrl = normalizeApiUrl(config.apiUrl)
+
+    // 创建 AI 客户端
+    const openai = new OpenAI({
+      apiKey: config.apiKey,
+      baseURL: normalizedApiUrl
+    })
+
+    // 发送内容生成请求
+    const response = await openai.chat.completions.create({
+      model: config.modelName,
+      messages,
+      max_tokens: maxTokens,
+      temperature
+    })
+
+    // 尝试提取内容
+    let content = ''
+
+    try {
+      // 标准OpenAI格式
+      if (response?.choices?.[0]?.message?.content) {
+        content = response.choices[0].message.content
+      }
+      // 兼容其他可能的返回格式
+      else if (response && typeof response === 'object') {
+        if ('text' in response && typeof response.text === 'string') {
+          content = response.text
+        } else if ('content' in response && typeof response.content === 'string') {
+          content = response.content
+        } else {
+          const jsonContent = JSON.stringify(response)
+          if (jsonContent && jsonContent.length > 2) {
+            content = '返回数据格式异常，无法提取文本内容'
+          }
+        }
+      }
+    } catch (err) {
+      return { success: false, error: '解析响应内容时出错' }
+    }
+
+    if (content) {
+      return { success: true, content }
+    } else {
+      return { success: false, error: '生成内容为空' }
+    }
+  } catch (error: unknown) {
+    // 提取更友好的错误信息
+    let errorMessage = '生成失败'
+
+    if (error instanceof Error) {
+      errorMessage += `: ${error.message}`
+    }
+
+    // 处理AI API的错误，它们可能有特定的结构
+    const apiError = error as { response?: { status?: number }; status?: number }
+    const statusCode = apiError.status || apiError.response?.status
+
+    if (statusCode) {
+      errorMessage += ` (HTTP 状态码: ${statusCode})`
+
+      // 为常见错误提供更具体的说明
+      if (statusCode === 404) {
+        errorMessage += '。可能是API URL不正确，请检查URL格式。'
+      } else if (statusCode === 401) {
+        errorMessage += '。API密钥可能无效或已过期。'
+      } else if (statusCode === 429) {
+        errorMessage += '。请求频率过高或达到API限制。'
+      }
+    }
+
+    return { success: false, error: errorMessage }
+  }
+}
+
 // 生成内容
 export async function generateContent(
   request: ContentGenerationRequest
