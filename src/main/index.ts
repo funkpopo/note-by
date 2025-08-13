@@ -16,6 +16,7 @@ import {
 } from './settings'
 import { testOpenAIConnection, generateContent, streamGenerateContent } from './openai'
 import { promises as fsPromises } from 'fs'
+import showdown from 'showdown'
 import {
   testWebDAVConnection,
   syncLocalToRemote,
@@ -64,6 +65,57 @@ import { mainErrorHandler, ErrorCategory } from './utils/ErrorHandler'
 
 // 导出mainWindow，用于在其他模块中发送事件
 export let mainWindow: BrowserWindow | null = null
+
+// Markdown 转换器配置
+const markdownConverter = new showdown.Converter({
+  tables: true,
+  strikethrough: true,
+  tasklists: true,
+  ghCodeBlocks: true,
+  encodeEmails: false,
+  simplifiedAutoLink: true,
+  openLinksInNewWindow: false,
+  backslashEscapesHTMLTags: false,
+  ghMentions: false,
+  headerLevelStart: 1
+})
+
+// 检测内容是否为 Markdown 格式
+function isMarkdownContent(content: string): boolean {
+  if (!content.trim()) return false
+  
+  // 检查是否包含复杂的 HTML 标签（不是简单的换行）
+  const complexHtmlPattern = /<(?!br\s*\/?>|p>|\/p>)[^>]+>/gi
+  const hasComplexHtmlTags = complexHtmlPattern.test(content)
+  
+  // 如果包含复杂 HTML 标签，很可能已经是转换后的内容
+  if (hasComplexHtmlTags) return false
+  
+  // 检查是否包含常见的 Markdown 语法
+  const markdownPatterns = [
+    /^#{1,6}\s+.+$/m,       // 标题 (# ## ### 等)
+    /^\s*[-*+]\s+.+$/m,     // 无序列表
+    /^\s*\d+\.\s+.+$/m,     // 有序列表
+    /```[\s\S]*?```/,       // 代码块
+    /`[^`\r\n]+`/,          // 行内代码
+    /\*\*[^*\r\n]+\*\*/,    // 粗体
+    /\*[^*\r\n]+\*/,        // 斜体（但不是粗体）
+    /\[[^\]\r\n]+\]\([^)\r\n]+\)/, // 链接
+    /^\s*>\s+.+$/m,         // 引用
+    /^\s*[-=]{3,}\s*$/m,    // 分隔线
+    /!\[[^\]]*\]\([^)]+\)/  // 图片
+  ]
+  
+  const markdownMatches = markdownPatterns.filter(pattern => pattern.test(content)).length
+  
+  // 如果有多个 Markdown 模式匹配，或者内容看起来像纯文本，则认为是 Markdown
+  return markdownMatches >= 1 || (!hasComplexHtmlTags && !/<[^>]+>/g.test(content))
+}
+
+// 将 Markdown 内容转换为 HTML
+function convertMarkdownToHtml(content: string): string {
+  return markdownConverter.makeHtml(content)
+}
 
 // 实现单实例锁，确保只有一个应用实例在运行
 const gotTheLock = app.requestSingleInstanceLock()
@@ -867,15 +919,30 @@ app.whenReady().then(() => {
       const folderPath = fullPath.substring(0, fullPath.lastIndexOf('\\'))
       await ensureMarkdownFolders(folderPath)
 
+      // 格式化HTML内容，在HTML标签之间添加换行符以提高可读性
+      const formattedContent = content
+        // 在块级元素后添加换行符
+        .replace(/(<\/p>|<\/div>|<\/h[1-6]>|<\/blockquote>|<\/pre>|<\/table>|<\/li>|<\/ul>|<\/ol>)/g, '$1\n')
+        // 在块级元素前添加换行符
+        .replace(/(<p>|<div>|<h[1-6]>|<blockquote>|<pre>|<table>|<li>|<ul>|<ol>)/g, '\n$1')
+        // 在表格行后添加换行符
+        .replace(/(<\/tr>)/g, '$1\n')
+        // 在表格行前添加换行符
+        .replace(/(<tr>)/g, '\n$1')
+        // 清理多余的空行
+        .replace(/\n\s*\n\s*\n/g, '\n\n')
+        // 清理开头和结尾的空白字符
+        .trim()
+
       // 使用流式写入优化大文件处理
-      await fileStreamManager.writeFileStream(fullPath, content, {
+      await fileStreamManager.writeFileStream(fullPath, formattedContent, {
         encoding: 'utf-8'
       })
 
       // 添加历史记录
       await addNoteHistory({
         filePath,
-        content
+        content: formattedContent
       })
 
       return { success: true, path: fullPath }
@@ -1286,7 +1353,16 @@ ${htmlContent}
       })
 
       if (result.success && result.content !== undefined) {
-        return { success: true, content: result.content }
+        let content = result.content
+        
+        // 检测并转换 Markdown 内容
+        if (isMarkdownContent(content)) {
+          console.log('检测到 Markdown 格式，正在转换为 HTML...')
+          content = convertMarkdownToHtml(content)
+          console.log('Markdown 转换完成')
+        }
+        
+        return { success: true, content }
       } else {
         return { success: false, error: result.error || '读取文件失败', content: '' }
       }
