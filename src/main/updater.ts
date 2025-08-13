@@ -205,13 +205,6 @@ class UpdaterService {
   //   ) // 4小时
   // }
 
-  private async checkForUpdates(): Promise<void> {
-    try {
-      await autoUpdater.checkForUpdates()
-    } catch (error) {
-      console.error('Failed to check for updates:', error)
-    }
-  }
 }
 
 // 导出单例实例
