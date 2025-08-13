@@ -14,7 +14,6 @@ import { Typography } from '@tiptap/extension-typography'
 import { Highlight } from '@tiptap/extension-highlight'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Link } from '@tiptap/extension-link'
-import { Image } from '@tiptap/extension-image'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
@@ -295,6 +294,15 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 }
 
+// Image extension type definitions
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    image: {
+      setImage: (options: { src: string; alt?: string; width?: string; height?: string }) => ReturnType
+    }
+  }
+}
+
 // Iframe 扩展
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -450,6 +458,95 @@ const IframeComponent: React.FC<any> = ({ node, updateAttributes }) => {
   )
 }
 
+// 自定义 Image 扩展定义
+const CustomImageExtension = Node.create({
+  name: 'image',
+
+  group: 'block',
+
+  atom: true,
+
+  selectable: true,
+
+  draggable: true,
+
+  addAttributes() {
+    return {
+      src: {
+        default: null,
+        parseHTML: element => element.getAttribute('src'),
+        renderHTML: attributes => {
+          if (!attributes.src) {
+            return {}
+          }
+          return {
+            src: attributes.src,
+          }
+        },
+      },
+      alt: {
+        default: null,
+        parseHTML: element => element.getAttribute('alt'),
+        renderHTML: attributes => {
+          if (!attributes.alt) {
+            return {}
+          }
+          return {
+            alt: attributes.alt,
+          }
+        },
+      },
+      width: {
+        default: '100%',
+        parseHTML: element => element.getAttribute('width') || element.style.width,
+        renderHTML: attributes => {
+          return {
+            width: attributes.width,
+          }
+        },
+      },
+      height: {
+        default: 'auto',
+        parseHTML: element => element.getAttribute('height') || element.style.height,
+        renderHTML: attributes => {
+          return {
+            height: attributes.height,
+          }
+        },
+      },
+    }
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: 'img',
+      },
+    ]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['img', mergeAttributes(HTMLAttributes)]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageComponent)
+  },
+
+  addCommands() {
+    return {
+      setImage:
+        (options: { src: string; alt?: string; width?: string; height?: string }) =>
+        ({ commands }: { commands: any }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: options,
+          })
+        },
+    }
+  },
+})
+
 // Iframe 扩展定义
 const IframeExtension = Node.create({
   name: 'iframe',
@@ -524,6 +621,210 @@ const IframeExtension = Node.create({
     }
   },
 })
+
+// 自定义图片组件
+const ImageComponent: React.FC<any> = ({ node, updateAttributes }) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [src, setSrc] = useState(node.attrs.src)
+  const [width, setWidth] = useState(node.attrs.width || '100%')
+  const [height, setHeight] = useState(node.attrs.height || 'auto')
+  const [alt, setAlt] = useState(node.attrs.alt || '')
+
+  const handleSave = () => {
+    updateAttributes({
+      src: src.trim(),
+      width: width || '100%',
+      height: height || 'auto',
+      alt: alt.trim()
+    })
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setSrc(node.attrs.src)
+    setWidth(node.attrs.width || '100%')
+    setHeight(node.attrs.height || 'auto')
+    setAlt(node.attrs.alt || '')
+    setIsEditing(false)
+  }
+
+  if (isEditing) {
+    return (
+      <NodeViewWrapper className="image-wrapper editing">
+        <div className="image-edit-form">
+          <div className="image-edit-header">
+            <span>编辑图片</span>
+          </div>
+          <div className="image-edit-body">
+            <Space vertical style={{ width: '100%' }}>
+              <div>
+                <label>图片地址:</label>
+                <input
+                  type="text"
+                  value={src}
+                  onChange={(e) => setSrc(e.target.value)}
+                  placeholder="输入图片地址"
+                  style={{ 
+                    marginTop: '4px', 
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid var(--semi-color-border)',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+              <div>
+                <label>替代文本:</label>
+                <input
+                  type="text"
+                  value={alt}
+                  onChange={(e) => setAlt(e.target.value)}
+                  placeholder="图片的替代文本"
+                  style={{ 
+                    marginTop: '4px', 
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid var(--semi-color-border)',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label>宽度:</label>
+                  <Select
+                    value={width}
+                    onChange={setWidth}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <Select.Option value="25%">25%</Select.Option>
+                    <Select.Option value="33%">33%</Select.Option>
+                    <Select.Option value="50%">50%</Select.Option>
+                    <Select.Option value="66%">66%</Select.Option>
+                    <Select.Option value="75%">75%</Select.Option>
+                    <Select.Option value="100%">100%</Select.Option>
+                    <Select.Option value="200px">小 (200px)</Select.Option>
+                    <Select.Option value="400px">中 (400px)</Select.Option>
+                    <Select.Option value="600px">大 (600px)</Select.Option>
+                    <Select.Option value="800px">特大 (800px)</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label>高度:</label>
+                  <Select
+                    value={height}
+                    onChange={setHeight}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <Select.Option value="auto">自动</Select.Option>
+                    <Select.Option value="150px">小 (150px)</Select.Option>
+                    <Select.Option value="300px">中 (300px)</Select.Option>
+                    <Select.Option value="450px">大 (450px)</Select.Option>
+                    <Select.Option value="600px">特大 (600px)</Select.Option>
+                  </Select>
+                </div>
+              </div>
+            </Space>
+          </div>
+          <div className="image-edit-footer">
+            <Space>
+              <Button onClick={handleCancel} size="small">
+                取消
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                type="primary" 
+                size="small"
+                disabled={!src.trim()}
+              >
+                保存
+              </Button>
+            </Space>
+          </div>
+        </div>
+      </NodeViewWrapper>
+    )
+  }
+
+  return (
+    <NodeViewWrapper className="image-wrapper">
+      <div 
+        className="image-container"
+        style={{
+          width: node.attrs.width || '100%',
+          maxWidth: '100%',
+          display: 'inline-block'
+        }}
+      >
+        <div className="image-controls">
+          <span className="image-info">
+            {width} × {height}
+            {alt && ` - ${alt}`}
+          </span>
+          <Space>
+            <Button
+              icon={<IconEdit />}
+              size="small"
+              type="tertiary"
+              onClick={() => setIsEditing(true)}
+              title="编辑图片"
+            />
+            <Button
+              icon={<IconDelete />}
+              size="small"
+              type="tertiary"
+              onClick={() => {
+                const { view } = (node as any)
+                const { state, dispatch } = view
+                const tr = state.tr.delete(
+                  (node as any).getPos(),
+                  (node as any).getPos() + node.nodeSize
+                )
+                dispatch(tr)
+              }}
+              title="删除图片"
+            />
+          </Space>
+        </div>
+        <div className="image-content">
+          <img
+            src={node.attrs.src}
+            alt={node.attrs.alt || ''}
+            style={{
+              width: '100%',
+              height: node.attrs.height || 'auto',
+              display: 'block'
+            }}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.style.display = 'none'
+              const errorDiv = document.createElement('div')
+              errorDiv.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--semi-color-fill-0);
+                color: var(--semi-color-text-2);
+                border: 1px dashed var(--semi-color-border);
+                border-radius: 4px;
+                padding: 40px;
+                font-size: 14px;
+                width: 100%;
+                box-sizing: border-box;
+              `
+              errorDiv.textContent = '图片加载失败'
+              target.parentNode?.insertBefore(errorDiv, target)
+            }}
+          />
+        </div>
+      </div>
+    </NodeViewWrapper>
+  )
+}
 
 // 自定义代码块组件
 const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
@@ -1062,13 +1363,7 @@ const Editor: React.FC<EditorProps> = ({
             class: 'editor-link'
           }
         }),
-        Image.configure({
-          HTMLAttributes: {
-            class: 'editor-image'
-          },
-          inline: false, // 图片作为块级元素
-          allowBase64: true // 允许 base64 图片
-        }),
+        CustomImageExtension,
         Table.configure({
           resizable: true
         }),
