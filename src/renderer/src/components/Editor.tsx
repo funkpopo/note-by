@@ -38,7 +38,8 @@ import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
-import { Toast, Button, Space, Spin, Breadcrumb, Select, Dropdown } from '@douyinfe/semi-ui'
+import { Toast, Button, Space, Spin, Breadcrumb, Select } from '@douyinfe/semi-ui'
+import CustomDropdown from './CustomDropdown'
 import {
   IconSave,
   IconBold,
@@ -58,8 +59,8 @@ import {
   IconDelete,
   IconImage,
   IconPlay,
-  IconChevronDown
 } from '@douyinfe/semi-icons'
+import { IconChevronDown } from './Icons'
 import {
   RiDeleteColumn,
   RiInsertColumnLeft,
@@ -1492,11 +1493,9 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
         </div>
         <Space>
           {/* AI功能下拉菜单 - 第一个位置 */}
-          <Dropdown
+          <CustomDropdown
             trigger="click"
             position="bottomLeft"
-            autoAdjustOverflow={true}
-            getPopupContainer={() => document.body}
             menu={[
               ...AI_FEATURES.map(feature => ({
                 node: 'item' as const,
@@ -1535,7 +1534,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             >
               AI助手
             </Button>
-          </Dropdown>
+          </CustomDropdown>
           
           {/* API配置选择（如果有多个配置） */}
           {apiConfigs.length > 1 && (

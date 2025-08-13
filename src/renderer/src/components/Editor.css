@@ -759,63 +759,16 @@
   background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
 }
 
-/* AI Dropdown Menu Scrollable Styles */
-.ai-features-dropdown .semi-dropdown-menu {
-  max-height: 300px !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+/* AI Dropdown Menu Custom Styles */
+.ai-features-dropdown {
   position: relative;
 }
 
-/* Ensure dropdown is always visible and positioned correctly */
-.ai-features-dropdown .semi-dropdown {
+.ai-features-dropdown .dropdown-menu {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   z-index: 9999 !important;
-}
-
-/* Custom scrollbar for ALL dropdown menus */
-.semi-dropdown-menu::-webkit-scrollbar {
-  width: 6px;
-}
-
-.semi-dropdown-menu::-webkit-scrollbar-track {
-  background: var(--semi-color-fill-0);
-  border-radius: 3px;
-}
-
-.semi-dropdown-menu::-webkit-scrollbar-thumb {
-  background: var(--semi-color-border);
-  border-radius: 3px;
-  transition: background 0.2s ease;
-}
-
-.semi-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: var(--semi-color-text-2);
-}
-
-/* Dark theme scrollbar */
-[theme-mode="dark"] .semi-dropdown-menu::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-[theme-mode="dark"] .semi-dropdown-menu::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-[theme-mode="dark"] .semi-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
-}
-
-/* Light theme scrollbar */
-[theme-mode="light"] .semi-dropdown-menu::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[theme-mode="light"] .semi-dropdown-menu::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-[theme-mode="light"] .semi-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
 }
 
 /* Enhanced text selection visibility when AI bubble menu is active */
