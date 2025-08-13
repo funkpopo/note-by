@@ -21,7 +21,7 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { CharacterCount } from '@tiptap/extension-character-count'
-import { Extension } from '@tiptap/core'
+import { Extension, Node, mergeAttributes } from '@tiptap/core'
 import { wrappingInputRule, InputRule } from '@tiptap/core'
 import { Suggestion } from '@tiptap/suggestion'
 import { createLowlight } from 'lowlight'
@@ -57,7 +57,8 @@ import {
   IconGridStroked,
   IconCopy,
   IconDelete,
-  IconImage
+  IconImage,
+  IconPlay
 } from '@douyinfe/semi-icons'
 import {
   RiDeleteColumn,
@@ -294,6 +295,236 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 }
 
+// Iframe 扩展
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    iframe: {
+      setIframe: (options: { src: string; width?: string; height?: string }) => ReturnType
+    }
+  }
+}
+
+// 自定义 Iframe 组件
+const IframeComponent: React.FC<any> = ({ node, updateAttributes }) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [src, setSrc] = useState(node.attrs.src)
+  const [width, setWidth] = useState(node.attrs.width || '100%')
+  const [height, setHeight] = useState(node.attrs.height || '300px')
+
+  const handleSave = () => {
+    updateAttributes({
+      src: src.trim(),
+      width: width || '100%',
+      height: height || '400px'
+    })
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setSrc(node.attrs.src)
+    setWidth(node.attrs.width || '100%')
+    setHeight(node.attrs.height || '300px')
+    setIsEditing(false)
+  }
+
+  if (isEditing) {
+    return (
+      <NodeViewWrapper className="iframe-wrapper editing">
+        <div className="iframe-edit-form">
+          <div className="iframe-edit-header">
+            <span>编辑嵌入内容</span>
+          </div>
+          <div className="iframe-edit-body">
+            <Space vertical style={{ width: '100%' }}>
+              <div>
+                <label>嵌入地址:</label>
+                <Select
+                  value={src}
+                  onChange={setSrc}
+                  placeholder="输入或选择嵌入地址"
+                  filter
+                  style={{ marginTop: '4px', width: '100%' }}
+                  showClear
+                >
+                  <Select.Option value="https://www.youtube.com/embed/dQw4w9WgXcQ">YouTube 示例</Select.Option>
+                  <Select.Option value="https://player.bilibili.com/player.html?bvid=BV1xx411c7mD">Bilibili 示例</Select.Option>
+                  <Select.Option value="https://codepen.io/pen/PNaGbb">CodePen 示例</Select.Option>
+                </Select>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label>宽度:</label>
+                  <Select
+                    value={width}
+                    onChange={setWidth}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <Select.Option value="25%">25%</Select.Option>
+                    <Select.Option value="50%">50%</Select.Option>
+                    <Select.Option value="75%">75%</Select.Option>
+                    <Select.Option value="100%">100%</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label>高度:</label>
+                  <Select
+                    value={height}
+                    onChange={setHeight}
+                    style={{ marginTop: '4px', width: '100%' }}
+                  >
+                    <Select.Option value="200px">小（200px）</Select.Option>
+                    <Select.Option value="300px">中（300px）</Select.Option>
+                    <Select.Option value="500px">大（500px）</Select.Option>
+                    <Select.Option value="700px">特大（700px）</Select.Option>
+                  </Select>
+                </div>
+              </div>
+            </Space>
+          </div>
+          <div className="iframe-edit-footer">
+            <Space>
+              <Button onClick={handleCancel} size="small">
+                取消
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                type="primary" 
+                size="small"
+                disabled={!src.trim()}
+              >
+                保存
+              </Button>
+            </Space>
+          </div>
+        </div>
+      </NodeViewWrapper>
+    )
+  }
+
+  return (
+    <NodeViewWrapper className="iframe-wrapper">
+      <div className="iframe-container">
+        <div className="iframe-controls">
+          <span className="iframe-url">{node.attrs.src}</span>
+          <Space>
+            <Button
+              icon={<IconEdit />}
+              size="small"
+              type="tertiary"
+              onClick={() => setIsEditing(true)}
+              title="编辑"
+            />
+            <Button
+              icon={<IconDelete />}
+              size="small"
+              type="tertiary"
+              onClick={() => {
+                const { view } = (node as any)
+                const { state, dispatch } = view
+                const tr = state.tr.delete(
+                  (node as any).getPos(),
+                  (node as any).getPos() + node.nodeSize
+                )
+                dispatch(tr)
+              }}
+              title="删除"
+            />
+          </Space>
+        </div>
+        <div className="iframe-content">
+          <iframe
+            src={node.attrs.src}
+            width={node.attrs.width || '100%'}
+            height={node.attrs.height || '300px'}
+            frameBorder="0"
+            allowFullScreen
+            title="嵌入内容"
+            style={{
+              borderRadius: '4px',
+              border: '1px solid var(--semi-color-border)',
+            }}
+          />
+        </div>
+      </div>
+    </NodeViewWrapper>
+  )
+}
+
+// Iframe 扩展定义
+const IframeExtension = Node.create({
+  name: 'iframe',
+
+  group: 'block',
+
+  atom: true,
+
+  selectable: true,
+
+  draggable: true,
+
+  addAttributes() {
+    return {
+      src: {
+        default: null,
+        parseHTML: element => element.getAttribute('src'),
+        renderHTML: attributes => {
+          if (!attributes.src) {
+            return {}
+          }
+          return {
+            src: attributes.src,
+          }
+        },
+      },
+      width: {
+        default: '100%',
+        parseHTML: element => element.getAttribute('width'),
+        renderHTML: attributes => {
+          return {
+            width: attributes.width,
+          }
+        },
+      },
+      height: {
+        default: '300px',
+        parseHTML: element => element.getAttribute('height'),
+        renderHTML: attributes => {
+          return {
+            height: attributes.height,
+          }
+        },
+      },
+    }
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: 'iframe',
+      },
+    ]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['iframe', mergeAttributes(HTMLAttributes)]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(IframeComponent)
+  },
+
+  addCommands() {
+    return {
+      setIframe: options => ({ commands }) => {
+        return commands.insertContent({
+          type: this.name,
+          attrs: options,
+        })
+      },
+    }
+  },
+})
+
 // 自定义代码块组件
 const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
   const [isCopied, setIsCopied] = useState(false)
@@ -438,11 +669,12 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
       shouldShow={({ state }) => {
         const { selection } = state
         const { $from } = selection
-        // 只在表格区域且不是图片时显示
+        // 只在表格区域且不是图片和iframe时显示
         return (
           ($from.parent.type.name === 'tableCell' || $from.parent.type.name === 'tableHeader') &&
-          !editor.isActive('image')
-        ) // 当图片被选中时不显示菜单
+          !editor.isActive('image') &&
+          !editor.isActive('iframe')
+        ) // 当图片或iframe被选中时不显示菜单
       }}
     >
       <div className="bubble-menu table-bubble-menu">
@@ -576,14 +808,16 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       shouldShow={({ state, from, to }) => {
         const { selection } = state
         const { $from } = selection
-        // 只在非表格区域、非代码块区域、非图片区域且有选中文本时显示
+        // 只在非表格区域、非代码块区域、非图片区域、非iframe区域且有选中文本时显示
         return (
           from !== to &&
           $from.parent.type.name !== 'tableCell' &&
           $from.parent.type.name !== 'tableHeader' &&
           $from.parent.type.name !== 'codeBlock' &&
-          !editor.isActive('image')
-        ) // 当图片被选中时不显示菜单
+          $from.parent.type.name !== 'iframe' &&
+          !editor.isActive('image') &&
+          !editor.isActive('iframe')
+        ) // 当图片或iframe被选中时不显示菜单
       }}
     >
       <div className="bubble-menu text-bubble-menu">
@@ -739,6 +973,19 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               input.click()
             }}
             title="插入图片"
+          />
+          <Button
+            icon={<IconPlay />}
+            size="small"
+            type="tertiary"
+            onClick={() => {
+              const url = window.prompt('请输入嵌入地址:', 'https://www.youtube.com/embed/dQw4w9WgXcQ')
+              if (url) {
+                editor.chain().focus().setIframe({ src: url }).run()
+                Toast.success('嵌入内容插入成功')
+              }
+            }}
+            title="插入嵌入内容"
           />
         </Space>
       </div>
@@ -908,7 +1155,8 @@ const Editor: React.FC<EditorProps> = ({
             }
           }
         }),
-        MarkdownShortcuts
+        MarkdownShortcuts,
+        IframeExtension
       ],
       content: loadedContent || content,
       editable,

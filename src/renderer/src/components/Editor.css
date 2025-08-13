@@ -676,3 +676,133 @@
     padding: 12px;
   }
 }
+
+/* Iframe Extension Styles */
+.iframe-wrapper {
+  display: block;
+  margin: 16px 0;
+  border-radius: 8px;
+  border: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-0);
+  overflow: hidden;
+  user-select: none; /* 防止文本选择 */
+}
+
+.iframe-wrapper.editing {
+  border-color: var(--semi-color-primary);
+  box-shadow: 0 0 0 2px var(--semi-color-primary-light-default);
+}
+
+.iframe-container {
+  position: relative;
+}
+
+.iframe-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--semi-color-fill-0);
+  border-bottom: 1px solid var(--semi-color-border);
+  font-size: 12px;
+  user-select: none; /* 防止控制栏文本选择 */
+}
+
+.iframe-url {
+  color: var(--semi-color-text-2);
+  font-family: var(--semi-font-family-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+  user-select: text; /* 允许URL文本选择，方便复制 */
+}
+
+.iframe-content {
+  position: relative;
+  overflow: hidden;
+}
+
+.iframe-content iframe {
+  display: block;
+  width: 100%;
+  background: var(--semi-color-bg-0);
+  pointer-events: auto; /* 允许iframe交互 */
+}
+
+/* 当iframe被选中时，添加视觉反馈 */
+.iframe-wrapper.ProseMirror-selectednode {
+  border-color: var(--semi-color-primary);
+  box-shadow: 0 0 0 2px var(--semi-color-primary-light-default);
+}
+
+/* 当iframe被选中时，显示遮罩防止交互 */
+.iframe-wrapper.ProseMirror-selectednode .iframe-content::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(var(--semi-blue-5), 0.1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Edit form styles */
+.iframe-edit-form {
+  padding: 16px;
+}
+
+.iframe-edit-header {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--semi-color-text-0);
+}
+
+.iframe-edit-body {
+  margin-bottom: 16px;
+}
+
+.iframe-edit-body label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--semi-color-text-1);
+  margin-bottom: 4px;
+}
+
+.iframe-edit-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Hover effects */
+.iframe-wrapper:hover .iframe-controls {
+  background: var(--semi-color-fill-1);
+}
+
+/* Focus states */
+.iframe-wrapper.ProseMirror-selectednode {
+  border-color: var(--semi-color-primary);
+  box-shadow: 0 0 0 2px var(--semi-color-primary-light-default);
+}
+
+/* Responsive design for iframe */
+@media (max-width: 768px) {
+  .iframe-wrapper {
+    margin: 12px 0;
+  }
+  
+  .iframe-controls {
+    padding: 6px 8px;
+  }
+  
+  .iframe-url {
+    max-width: 200px;
+  }
+  
+  .iframe-edit-form {
+    padding: 12px;
+  }
+}

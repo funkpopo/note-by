@@ -7,7 +7,8 @@ import {
   IconGridStroked,
   IconCode,
   IconQuote,
-  IconImage
+  IconImage,
+  IconPlay
 } from '@douyinfe/semi-icons'
 import { Toast, Input, Modal } from '@douyinfe/semi-ui'
 import './SlashMenu.css'
@@ -338,6 +339,27 @@ export const getSuggestionItems = ({
           }
         }
         input.click()
+      }
+    },
+    {
+      title: '嵌入内容',
+      description: '插入iframe嵌入内容',
+      searchTerms: ['iframe', 'embed', 'video', 'youtube', 'bilibili', '嵌入', '视频'],
+      icon: <IconPlay />,
+      command: ({ editor, range }) => {
+        editor.chain().focus().deleteRange(range).run()
+        
+        // 显示输入对话框
+        showInputDialog('请输入嵌入地址', 'https://www.youtube.com/embed/dQw4w9WgXcQ')
+          .then((url) => {
+            if (url) {
+              editor.chain().focus().setIframe({ src: url }).run()
+              Toast.success('嵌入内容插入成功')
+            }
+          })
+          .catch(() => {
+            // 用户取消了输入
+          })
       }
     }
   ]
