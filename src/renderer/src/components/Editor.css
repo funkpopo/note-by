@@ -525,24 +525,71 @@
 
 /* AI Bubble Menu Loading Styles */
 .bubble-menu.ai-bubble-menu {
-  background: linear-gradient(135deg, var(--semi-color-bg-0) 0%, var(--semi-color-fill-0) 100%);
-  border: 1px solid var(--semi-color-primary-light-default);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--semi-color-bg-0);
+  border: 1px solid var(--semi-color-border);
+  border-radius: 8px;
+  box-shadow: var(--semi-shadow-elevated);
   padding: 0;
-  min-width: 280px;
-  backdrop-filter: blur(8px);
-  animation: aiMenuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 200px;
+  max-width: 250px;
+  backdrop-filter: blur(6px);
+  animation: aiMenuSlideIn 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  opacity: 0.98;
+}
+
+/* AI Loading Menu positioned at bubble menu location */
+.bubble-menu.ai-bubble-menu.ai-loading-menu {
+  position: fixed !important;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  will-change: transform !important;
+  backface-visibility: hidden !important;
+  transition: none !important;
+}
+
+/* Dark theme specific AI bubble menu */
+[theme-mode="dark"] .bubble-menu.ai-bubble-menu {
+  background: var(--semi-color-bg-0);
+  border-color: var(--semi-color-border);
+  box-shadow: var(--semi-shadow-elevated);
+}
+
+/* Light theme specific AI bubble menu */
+[theme-mode="light"] .bubble-menu.ai-bubble-menu {
+  background: var(--semi-color-bg-0);
+  border-color: var(--semi-color-border);
+  box-shadow: var(--semi-shadow-elevated);
+}
+
+/* Enhanced shimmer effect for better visibility */
+.bubble-menu.ai-bubble-menu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(var(--semi-color-primary), 0.05), 
+    transparent);
+  animation: aiShimmer 2s infinite;
+  z-index: 0;
 }
 
 .ai-loading-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  gap: 12px;
+  padding: 8px 12px;
+  gap: 8px;
   position: relative;
-  overflow: hidden;
+  z-index: 1;
+  min-height: 36px;
+  border-radius: 6px;
 }
 
 .ai-loading-content::before {
@@ -557,23 +604,37 @@
 }
 
 .ai-loading-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--semi-color-primary);
+  color: var(--semi-color-text-0);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dark theme loading text enhancement */
+[theme-mode="dark"] .ai-loading-text {
+  color: var(--semi-color-text-0);
+}
+
+/* Light theme loading text enhancement */
+[theme-mode="light"] .ai-loading-text {
+  color: var(--semi-color-text-0);
 }
 
 .ai-loading-text::after {
   content: '';
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   background: var(--semi-color-primary);
   border-radius: 50%;
-  animation: aiDotPulse 1.5s infinite;
+  animation: aiDotPulse 1.2s infinite;
 }
 
 .bubble-menu.ai-bubble-menu .semi-spin {
@@ -581,29 +642,29 @@
 }
 
 .bubble-menu.ai-bubble-menu .semi-button {
-  border: 1px solid var(--semi-color-danger-light-default);
-  background: var(--semi-color-danger-light-default);
-  color: var(--semi-color-danger);
+  border: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-0);
+  color: var(--semi-color-text-1);
   font-size: 12px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-weight: 500;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-weight: 400;
 }
 
 .bubble-menu.ai-bubble-menu .semi-button:hover {
-  background: var(--semi-color-danger);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--semi-red-5), 0.3);
+  background: var(--semi-color-fill-0);
+  border-color: var(--semi-color-border);
+  color: var(--semi-color-text-0);
+  transform: none;
 }
 
 /* AI Menu Animations */
 @keyframes aiMenuSlideIn {
   0% {
     opacity: 0;
-    transform: translateY(-8px) scale(0.95);
+    transform: translateY(-4px) scale(0.98);
   }
   100% {
     opacity: 1;
@@ -634,24 +695,236 @@
 /* Enhanced AI Assistant Button in Text Bubble Menu */
 .text-bubble-menu .semi-button[type="primary"] {
   background: linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-hover) 100%);
-  border: none;
-  box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3);
+  border: 2px solid var(--semi-color-primary-light-active);
+  box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3), 0 0 0 1px rgba(var(--semi-color-primary), 0.1);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--semi-color-white);
+  position: relative;
+  overflow: hidden;
+}
+
+.text-bubble-menu .semi-button[type="primary"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.2), 
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.text-bubble-menu .semi-button[type="primary"]:hover::before {
+  left: 100%;
 }
 
 .text-bubble-menu .semi-button[type="primary"]:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(var(--semi-blue-5), 0.4);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(var(--semi-blue-5), 0.4), 0 0 0 2px rgba(var(--semi-color-primary), 0.2);
   background: linear-gradient(135deg, var(--semi-color-primary-hover) 0%, var(--semi-color-primary) 100%);
+  border-color: var(--semi-color-primary);
 }
 
 .text-bubble-menu .semi-button[type="primary"]:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
   box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3);
 }
 
-/* AI Feature Progress Indicator */
+/* Dark theme specific enhancements */
+[theme-mode="dark"] .text-bubble-menu .semi-button[type="primary"] {
+  background: linear-gradient(135deg, var(--semi-color-primary) 0%, #4dabf7 100%);
+  border-color: var(--semi-color-primary-light-default);
+  box-shadow: 0 2px 12px rgba(77, 171, 247, 0.4), 0 0 0 1px rgba(var(--semi-color-primary), 0.2);
+}
+
+[theme-mode="dark"] .text-bubble-menu .semi-button[type="primary"]:hover {
+  box-shadow: 0 6px 24px rgba(77, 171, 247, 0.5), 0 0 0 2px rgba(var(--semi-color-primary), 0.3);
+  background: linear-gradient(135deg, #4dabf7 0%, var(--semi-color-primary-hover) 100%);
+}
+
+/* Light theme specific enhancements */
+[theme-mode="light"] .text-bubble-menu .semi-button[type="primary"] {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3), 0 0 0 1px rgba(24, 144, 255, 0.1);
+}
+
+[theme-mode="light"] .text-bubble-menu .semi-button[type="primary"]:hover {
+  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4), 0 0 0 2px rgba(24, 144, 255, 0.2);
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+}
+
+/* AI Dropdown Menu Scrollable Styles */
+.ai-features-dropdown .semi-dropdown-menu {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative;
+}
+
+/* Ensure dropdown is always visible and positioned correctly */
+.ai-features-dropdown .semi-dropdown {
+  z-index: 9999 !important;
+}
+
+/* Custom scrollbar for ALL dropdown menus */
+.semi-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.semi-dropdown-menu::-webkit-scrollbar-track {
+  background: var(--semi-color-fill-0);
+  border-radius: 3px;
+}
+
+.semi-dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--semi-color-border);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.semi-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--semi-color-text-2);
+}
+
+/* Dark theme scrollbar */
+[theme-mode="dark"] .semi-dropdown-menu::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[theme-mode="dark"] .semi-dropdown-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[theme-mode="dark"] .semi-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Light theme scrollbar */
+[theme-mode="light"] .semi-dropdown-menu::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[theme-mode="light"] .semi-dropdown-menu::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+[theme-mode="light"] .semi-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced text selection visibility when AI bubble menu is active */
+.ProseMirror ::selection {
+  background: var(--semi-color-primary-light-default);
+  color: var(--semi-color-text-0);
+}
+
+.ProseMirror ::-moz-selection {
+  background: var(--semi-color-primary-light-default);
+  color: var(--semi-color-text-0);
+}
+
+/* More prominent selection when AI is processing - maintain visibility */
+body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::selection,
+.tiptap-editor.ai-processing .ProseMirror ::selection {
+  background: rgba(var(--semi-blue-5), 0.4) !important;
+  color: var(--semi-color-text-0) !important;
+  mix-blend-mode: multiply;
+}
+
+body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-selection,
+.tiptap-editor.ai-processing .ProseMirror ::-moz-selection {
+  background: rgba(var(--semi-blue-5), 0.4) !important;
+  color: var(--semi-color-text-0) !important;
+  mix-blend-mode: multiply;
+}
+
+/* Ensure selection remains visible by preventing overlay */
+.ProseMirror .ProseMirror-selectednode::selection {
+  background: transparent !important;
+}
+
+/* Dark theme specific selection enhancements */
+[theme-mode="dark"] .tiptap-editor.ai-processing .ProseMirror ::selection,
+[theme-mode="dark"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::selection {
+  background: rgba(77, 171, 247, 0.5) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="dark"] .tiptap-editor.ai-processing .ProseMirror ::-moz-selection,
+[theme-mode="dark"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-selection {
+  background: rgba(77, 171, 247, 0.5) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
+/* Light theme specific selection enhancements */
+[theme-mode="light"] .tiptap-editor.ai-processing .ProseMirror ::selection,
+[theme-mode="light"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::selection {
+  background: rgba(24, 144, 255, 0.3) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
+[theme-mode="light"] .tiptap-editor.ai-processing .ProseMirror ::-moz-selection,
+[theme-mode="light"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-selection {
+  background: rgba(24, 144, 255, 0.3) !important;
+  color: var(--semi-color-text-0) !important;
+}
+
+/* Fallback for browsers that don't support :has() */
+.tiptap-editor:has(.ai-bubble-menu) .ProseMirror ::selection,
+.editor-wrapper:has(.ai-bubble-menu) .ProseMirror ::selection,
+.tiptap-editor.ai-processing .ProseMirror ::selection {
+  background: var(--semi-color-primary) !important;
+  color: var(--semi-color-white) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  opacity: 1 !important;
+}
+
+.tiptap-editor:has(.ai-bubble-menu) .ProseMirror ::-moz-selection,
+.editor-wrapper:has(.ai-bubble-menu) .ProseMirror ::-moz-selection,
+.tiptap-editor.ai-processing .ProseMirror ::-moz-selection {
+  background: var(--semi-color-primary) !important;
+  color: var(--semi-color-white) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  opacity: 1 !important;
+}
+
+/* Enhanced selection visibility during AI processing */
+.tiptap-editor.ai-processing .ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid var(--semi-color-primary) !important;
+  background: rgba(var(--semi-color-primary), 0.1) !important;
+}
+
+/* Prevent selection from being lost during AI processing */
+.tiptap-editor.ai-processing .ProseMirror {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Force preserve selection state during AI operations */
+.ai-selection-preserved {
+  background: var(--semi-color-primary) !important;
+  color: var(--semi-color-white) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
+/* Enhanced loading menu positioning */
+.bubble-menu.ai-loading-menu {
+  position: fixed !important;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 .ai-progress-indicator {
   position: fixed;
   top: 20px;

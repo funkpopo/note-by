@@ -1106,6 +1106,8 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
   const [loadingFeature, setLoadingFeature] = useState<string | null>(null)
   const [apiConfigs, setApiConfigs] = useState<any[]>([])
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null)
+  const [bubbleMenuPosition, setBubbleMenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const [preservedSelection, setPreservedSelection] = useState<{ from: number; to: number } | null>(null)
 
   // 加载API配置
   const loadApiConfigs = useCallback(async () => {
@@ -1127,6 +1129,36 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
   useEffect(() => {
     loadApiConfigs()
   }, [loadApiConfigs])
+
+  // 管理AI处理时的编辑器样式类名
+  useEffect(() => {
+    const editorElement = editor?.view?.dom?.closest('.tiptap-editor')
+    if (editorElement) {
+      if (isLoading && loadingFeature) {
+        editorElement.classList.add('ai-processing')
+        // 强制维持选中状态
+        if (preservedSelection) {
+          try {
+            const selection = editor.state.selection
+            if (selection.empty || selection.from !== preservedSelection.from || selection.to !== preservedSelection.to) {
+              editor.commands.setTextSelection(preservedSelection)
+            }
+          } catch (error) {
+            console.warn('Failed to maintain selection during processing:', error)
+          }
+        }
+      } else {
+        editorElement.classList.remove('ai-processing')
+      }
+    }
+    
+    // 清理函数
+    return () => {
+      if (editorElement) {
+        editorElement.classList.remove('ai-processing')
+      }
+    }
+  }, [isLoading, loadingFeature, editor, preservedSelection])
 
   // 获取选中的文本
   const getSelectedText = useCallback((): string => {
@@ -1178,29 +1210,138 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
     {
       key: 'summarize',
       label: '总结',
-      prompt: '请总结以下内容的主要要点，用简洁的语言概括核心信息：'
+      prompt: '请总结以下内容的主要要点，用简洁的语言概括核心信息。只输出总结结果，不要包含任何解释、介绍或其他额外文字：'
     },
     {
       key: 'expand',
       label: '扩写',
-      prompt: '请对以下内容进行扩写，增加更多细节、例子或解释，使其更加丰富和详细：'
+      prompt: '请对以下内容进行扩写，增加更多细节、例子或解释，使其更加丰富和详细。只输出扩写后的完整内容，不要包含任何解释或介绍：'
     },
     {
       key: 'continue',
       label: '续写',
-      prompt: '请根据以下内容的语境和风格，自然地续写后续内容：'
-    },
-    {
-      key: 'translate',
-      label: '翻译',
-      prompt: '请将以下内容翻译成中文（如果原文是中文则翻译成英文）：'
+      prompt: '请根据以下内容的语境和风格，自然地续写后续内容。只输出续写的部分，不要包含任何解释或介绍：'
     },
     {
       key: 'check',
       label: '检查',
-      prompt: '请检查以下文本的语法、拼写、标点和表达错误，并提供修改建议：'
+      prompt: '请检查以下文本的语法、拼写、标点和表达错误，并直接输出修改后的正确版本。只输出修正后的内容，不要包含任何解释或修改说明：'
     }
   ]
+
+  // 翻译语言选项
+  const TRANSLATION_LANGUAGES = [
+    { key: 'translate_zh', label: '翻译为中文', targetLang: '中文' },
+    { key: 'translate_en', label: '翻译为英文', targetLang: '英文' },
+    { key: 'translate_ja', label: '翻译为日文', targetLang: '日文' },
+    { key: 'translate_ko', label: '翻译为韩文', targetLang: '韩文' },
+    { key: 'translate_fr', label: '翻译为法文', targetLang: '法文' },
+    { key: 'translate_ru', label: '翻译为俄文', targetLang: '俄文' },
+  ]
+
+  // 捕获bubble menu位置
+  const captureBubbleMenuPosition = useCallback(() => {
+    try {
+      // 获取当前bubble menu的位置
+      const bubbleMenuElement = document.querySelector('.text-bubble-menu')
+      if (bubbleMenuElement) {
+        const rect = bubbleMenuElement.getBoundingClientRect()
+        
+        // 确保位置在视口范围内
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+        const menuWidth = 200 // AI加载菜单的最大宽度
+        const menuHeight = 50 // AI加载菜单的大概高度
+        
+        let adjustedTop = rect.top
+        let adjustedLeft = rect.left
+        
+        // 防止菜单超出右边界
+        if (adjustedLeft + menuWidth > viewportWidth) {
+          adjustedLeft = viewportWidth - menuWidth - 10
+        }
+        
+        // 防止菜单超出左边界
+        if (adjustedLeft < 10) {
+          adjustedLeft = 10
+        }
+        
+        // 防止菜单超出上边界
+        if (adjustedTop < 10) {
+          adjustedTop = rect.bottom + 5
+        }
+        
+        // 防止菜单超出下边界
+        if (adjustedTop + menuHeight > viewportHeight) {
+          adjustedTop = Math.max(10, rect.top - menuHeight - 5)
+        }
+        
+        setBubbleMenuPosition({
+          top: adjustedTop,
+          left: adjustedLeft
+        })
+        
+        console.log('Captured bubble menu position:', { 
+          original: { top: rect.top, left: rect.left },
+          adjusted: { top: adjustedTop, left: adjustedLeft }
+        })
+      } else {
+        console.warn('Text bubble menu element not found')
+      }
+    } catch (error) {
+      console.error('Error capturing bubble menu position:', error)
+      setBubbleMenuPosition(null)
+    }
+  }, [])
+
+  // 处理翻译功能
+  const handleTranslation = useCallback(async (targetLanguage: string) => {
+    const selectedText = getSelectedText()
+    if (!selectedText.trim()) {
+      Toast.error('请先选择要处理的文本')
+      return
+    }
+
+    if (apiConfigs.length === 0) {
+      Toast.error('请先在设置中配置AI API')
+      return
+    }
+
+    const config = getCurrentConfig()
+    if (!config) {
+      Toast.error('请先选择一个API配置')
+      return
+    }
+
+    const finalPrompt = `请将以下内容翻译成${targetLanguage}。只输出翻译结果，不要包含任何解释、介绍或其他额外文字：`
+
+    // 在开始处理前保存当前bubble menu的位置和选中状态
+    captureBubbleMenuPosition()
+    const { from, to } = editor.state.selection
+    setPreservedSelection({ from, to })
+    setIsLoading(true)
+    setLoadingFeature('translate')
+
+    try {
+      const result = await callAI(finalPrompt, selectedText)
+      
+      if (result.trim()) {
+        const { from, to } = editor.state.selection
+        editor.chain().focus().setTextSelection({ from, to }).insertContent(result).run()
+        Toast.success('翻译完成')
+      } else {
+        Toast.error('AI返回了空结果')
+      }
+    } catch (error) {
+      console.error('AI 翻译失败:', error)
+      Toast.error(`翻译失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    } finally {
+      setIsLoading(false)
+      setLoadingFeature(null)
+      setBubbleMenuPosition(null)
+      setPreservedSelection(null)
+    }
+  }, [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition])
 
   // 处理AI功能
   const handleAIFeature = useCallback(async (feature: any) => {
@@ -1221,6 +1362,10 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       return
     }
 
+    // 在开始处理前保存当前bubble menu的位置和选中状态
+    captureBubbleMenuPosition()
+    const { from, to } = editor.state.selection
+    setPreservedSelection({ from, to })
     setIsLoading(true)
     setLoadingFeature(feature.key)
 
@@ -1236,7 +1381,6 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             editor.chain().focus().setTextSelection(to).insertContent(`\n\n**${feature.label}结果：**\n${result}`).run()
             break
           case 'expand':
-          case 'translate':
             editor.chain().focus().setTextSelection({ from, to }).insertContent(result).run()
             break
           case 'continue':
@@ -1256,26 +1400,52 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
     } finally {
       setIsLoading(false)
       setLoadingFeature(null)
+      setBubbleMenuPosition(null)
+      setPreservedSelection(null)
     }
-  }, [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor])
+  }, [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition])
 
   if (!editor) return null
 
   // 如果正在加载AI功能，显示加载状态
   if (isLoading && loadingFeature) {
-    const currentFeature = AI_FEATURES.find(f => f.key === loadingFeature)
+    const currentFeature = AI_FEATURES.find(f => f.key === loadingFeature) || 
+                          TRANSLATION_LANGUAGES.find(() => loadingFeature === 'translate')
+    const featureLabel = loadingFeature === 'translate' ? '翻译' : currentFeature?.label
+    
     return (
       <BubbleMenu
         editor={editor}
-        shouldShow={({ from, to }) => {
-          return from !== to && !editor.isActive('image') && !editor.isActive('iframe')
+        shouldShow={() => {
+          // 确保在加载期间保持显示，并尝试保持选中状态
+          if (preservedSelection && editor) {
+            try {
+              const { from, to } = preservedSelection
+              // 检查选择范围是否有效
+              if (from <= editor.state.doc.content.size && to <= editor.state.doc.content.size) {
+                editor.commands.setTextSelection({ from, to })
+              }
+            } catch (error) {
+              console.warn('Failed to restore selection:', error)
+            }
+          }
+          return true
         }}
+        updateDelay={0}
       >
-        <div className="bubble-menu ai-bubble-menu">
+        <div 
+          className="bubble-menu ai-bubble-menu ai-loading-menu"
+          style={bubbleMenuPosition ? {
+            position: 'fixed',
+            top: bubbleMenuPosition.top,
+            left: bubbleMenuPosition.left,
+            zIndex: 10000
+          } : undefined}
+        >
           <div className="ai-loading-content">
             <div className="ai-loading-text">
               <Spin size="small" />
-              AI正在{currentFeature?.label}中
+              AI正在{featureLabel}中
             </div>
             <Button 
               size="small" 
@@ -1284,6 +1454,10 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               onClick={() => {
                 setIsLoading(false)
                 setLoadingFeature(null)
+                setBubbleMenuPosition(null)
+                setPreservedSelection(null)
+                // 恢复编辑器焦点
+                editor.commands.focus()
               }}
             >
               停止
@@ -1321,16 +1495,36 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
           <Dropdown
             trigger="click"
             position="bottomLeft"
+            autoAdjustOverflow={true}
+            getPopupContainer={() => document.body}
             menu={[
               ...AI_FEATURES.map(feature => ({
                 node: 'item' as const,
-                key: feature.key,
                 name: feature.label,
                 onClick: () => handleAIFeature(feature),
+                disabled: isLoading
+              })),
+              {
+                node: 'divider' as const
+              },
+              {
+                node: 'title' as const,
+                name: '翻译功能'
+              },
+              ...TRANSLATION_LANGUAGES.map(lang => ({
+                node: 'item' as const,
+                name: lang.label,
+                onClick: () => handleTranslation(lang.targetLang),
                 disabled: isLoading
               }))
             ]}
             disabled={isLoading}
+            dropdownStyle={{ 
+              maxHeight: '300px',
+              overflowY: 'auto',
+              zIndex: 9999
+            }}
+            className="ai-features-dropdown"
           >
             <Button
               rightIcon={<IconChevronDown />}
