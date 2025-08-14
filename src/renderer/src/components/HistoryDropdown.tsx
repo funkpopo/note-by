@@ -260,19 +260,19 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
     }
   }
 
-  // 格式化时间戳 - 使用更紧凑的格式
+  // 格式化时间戳 - 显示年月日+时间格式
   const formatTimestamp = (timestamp: number): string => {
     const date = new Date(timestamp)
-    return (
-      date.toLocaleDateString('zh-CN') +
-      ' ' +
-      date.getHours().toString().padStart(2, '0') +
-      ':' +
-      date.getMinutes().toString().padStart(2, '0')
-    )
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
-  // 在侧边栏显示完整时间戳
+  // 在侧边栏显示完整时间戳，包含秒数
   const formatFullTimestamp = (timestamp: number): string => {
     const date = new Date(timestamp)
     return date.toLocaleString('zh-CN', {

@@ -276,31 +276,11 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
     }
   }
 
-  // 格式化时间戳
+  // 格式化时间戳 - 显示年月日+时间格式
   const formatTimestamp = (timestamp: number): string => {
     const date = new Date(timestamp)
-    const now = new Date()
-    const diff = now.getTime() - timestamp
-
-    // 如果是今天
-    if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-    
-    // 如果是一周内
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-      const days = Math.floor(diff / (24 * 60 * 60 * 1000))
-      return `${days}天前 ${date.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })}`
-    }
-    
-    // 超过一周显示完整日期
     return date.toLocaleString('zh-CN', {
+      year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -378,7 +358,14 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
             <div className="history-preview-header">
               <h3>历史版本内容</h3>
               <div className="history-preview-time">
-                {new Date(selectedHistory.timestamp).toLocaleString('zh-CN')}
+                {new Date(selectedHistory.timestamp).toLocaleString('zh-CN', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                })} - 版本历史记录
               </div>
               <button 
                 className="history-preview-close"
