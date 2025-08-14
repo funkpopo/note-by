@@ -218,11 +218,90 @@ const MarkdownShortcuts = Extension.create({
       'Mod-Shift-s': () => this.editor.commands.toggleStrike(),
       'Mod-e': () => this.editor.commands.toggleCode(),
       'Mod-Shift-h': () => this.editor.commands.toggleHighlight(),
-      'Mod-k': () => {
-        const url = window.prompt('链接地址:')
-        if (url) {
-          this.editor.commands.setLink({ href: url })
-        }
+      'Mod-k': () => {        
+        // Create a simple input dialog
+        const modalContent = document.createElement('div');
+        modalContent.innerHTML = `
+          <div style="padding: 16px;">
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; margin-bottom: 8px; font-weight: 500;">链接地址:</label>
+              <input 
+                id="link-url-input" 
+                type="url" 
+                placeholder="https://example.com" 
+                style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px;"
+              />
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+              <button id="link-cancel-btn" style="padding: 8px 16px; border: 1px solid var(--semi-color-border); background: var(--semi-color-bg-2); border-radius: 4px; cursor: pointer;">取消</button>
+              <button id="link-ok-btn" style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: white; border-radius: 4px; cursor: pointer;">确定</button>
+            </div>
+          </div>
+        `;
+        
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+        `;
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          background: var(--semi-color-bg-0);
+          border-radius: 8px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+          min-width: 400px;
+          max-width: 500px;
+        `;
+        
+        modal.appendChild(modalContent);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        const input = modal.querySelector('#link-url-input') as HTMLInputElement;
+        const okBtn = modal.querySelector('#link-ok-btn') as HTMLButtonElement;
+        const cancelBtn = modal.querySelector('#link-cancel-btn') as HTMLButtonElement;
+        
+        setTimeout(() => {
+          input.focus();
+        }, 100);
+        
+        const cleanup = () => {
+          document.body.removeChild(overlay);
+        };
+        
+        const handleOk = () => {
+          const url = input.value.trim();
+          if (url) {
+            this.editor.commands.setLink({ href: url });
+          }
+          cleanup();
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', cleanup);
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) cleanup();
+        });
+        
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleOk();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cleanup();
+          }
+        });
+        
         return true
       }
     }
@@ -315,7 +394,7 @@ declare module '@tiptap/core' {
 }
 
 // 自定义 Iframe 组件
-const IframeComponent: React.FC<any> = ({ node, updateAttributes }) => {
+const IframeComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [src, setSrc] = useState(node.attrs.src)
   const [width, setWidth] = useState(node.attrs.width || '100%')
@@ -356,9 +435,7 @@ const IframeComponent: React.FC<any> = ({ node, updateAttributes }) => {
                   style={{ marginTop: '4px', width: '100%' }}
                   showClear
                 >
-                  <Select.Option value="https://www.youtube.com/embed/dQw4w9WgXcQ">YouTube 示例</Select.Option>
-                  <Select.Option value="https://player.bilibili.com/player.html?bvid=BV1xx411c7mD">Bilibili 示例</Select.Option>
-                  <Select.Option value="https://codepen.io/pen/PNaGbb">CodePen 示例</Select.Option>
+                  <Select.Option value="https://www.youtube.com/">YouTube 示例</Select.Option>
                 </Select>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -428,15 +505,7 @@ const IframeComponent: React.FC<any> = ({ node, updateAttributes }) => {
               icon={<IconDelete />}
               size="small"
               type="tertiary"
-              onClick={() => {
-                const { view } = (node as any)
-                const { state, dispatch } = view
-                const tr = state.tr.delete(
-                  (node as any).getPos(),
-                  (node as any).getPos() + node.nodeSize
-                )
-                dispatch(tr)
-              }}
+              onClick={() => deleteNode()}
               title="删除"
             />
           </Space>
@@ -625,7 +694,7 @@ const IframeExtension = Node.create({
 })
 
 // 自定义图片组件
-const ImageComponent: React.FC<any> = ({ node, updateAttributes }) => {
+const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [src, setSrc] = useState(node.attrs.src)
   const [width, setWidth] = useState(node.attrs.width || '100%')
@@ -779,15 +848,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes }) => {
               icon={<IconDelete />}
               size="small"
               type="tertiary"
-              onClick={() => {
-                const { view } = (node as any)
-                const { state, dispatch } = view
-                const tr = state.tr.delete(
-                  (node as any).getPos(),
-                  (node as any).getPos() + node.nodeSize
-                )
-                dispatch(tr)
-              }}
+              onClick={() => deleteNode()}
               title="删除图片"
             />
           </Space>
@@ -1019,10 +1080,88 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
             size="small"
             type={editor.isActive('link') ? 'primary' : 'tertiary'}
             onClick={() => {
-              const url = window.prompt('链接地址:')
-              if (url) {
-                editor.chain().focus().setLink({ href: url }).run()
-              }
+              // Create a simple input dialog
+              const modalContent = document.createElement('div');
+              modalContent.innerHTML = `
+                <div style="padding: 16px;">
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">链接地址:</label>
+                    <input 
+                      id="table-link-url-input" 
+                      type="url" 
+                      placeholder="https://example.com" 
+                      style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px;"
+                    />
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+                    <button id="table-link-cancel-btn" style="padding: 8px 16px; border: 1px solid var(--semi-color-border); background: var(--semi-color-bg-2); border-radius: 4px; cursor: pointer;">取消</button>
+                    <button id="table-link-ok-btn" style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: white; border-radius: 4px; cursor: pointer;">确定</button>
+                  </div>
+                </div>
+              `;
+              
+              const overlay = document.createElement('div');
+              overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+              `;
+              
+              const modal = document.createElement('div');
+              modal.style.cssText = `
+                background: var(--semi-color-bg-0);
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                min-width: 400px;
+                max-width: 500px;
+              `;
+              
+              modal.appendChild(modalContent);
+              overlay.appendChild(modal);
+              document.body.appendChild(overlay);
+              
+              const input = modal.querySelector('#table-link-url-input') as HTMLInputElement;
+              const okBtn = modal.querySelector('#table-link-ok-btn') as HTMLButtonElement;
+              const cancelBtn = modal.querySelector('#table-link-cancel-btn') as HTMLButtonElement;
+              
+              setTimeout(() => {
+                input.focus();
+              }, 100);
+              
+              const cleanup = () => {
+                document.body.removeChild(overlay);
+              };
+              
+              const handleOk = () => {
+                const url = input.value.trim();
+                if (url) {
+                  editor.chain().focus().setLink({ href: url }).run();
+                }
+                cleanup();
+              };
+              
+              okBtn.addEventListener('click', handleOk);
+              cancelBtn.addEventListener('click', cleanup);
+              overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup();
+              });
+              
+              input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleOk();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cleanup();
+                }
+              });
             }}
             title="链接"
           />
@@ -1589,10 +1728,88 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             size="small"
             type={editor.isActive('link') ? 'primary' : 'tertiary'}
             onClick={() => {
-              const url = window.prompt('链接地址:')
-              if (url) {
-                editor.chain().focus().setLink({ href: url }).run()
-              }
+              // Create a simple input dialog
+              const modalContent = document.createElement('div');
+              modalContent.innerHTML = `
+                <div style="padding: 16px;">
+                  <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">链接地址:</label>
+                    <input 
+                      id="text-link-url-input" 
+                      type="url" 
+                      placeholder="https://example.com" 
+                      style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px;"
+                    />
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+                    <button id="text-link-cancel-btn" style="padding: 8px 16px; border: 1px solid var(--semi-color-border); background: var(--semi-color-bg-2); border-radius: 4px; cursor: pointer;">取消</button>
+                    <button id="text-link-ok-btn" style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: white; border-radius: 4px; cursor: pointer;">确定</button>
+                  </div>
+                </div>
+              `;
+              
+              const overlay = document.createElement('div');
+              overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+              `;
+              
+              const modal = document.createElement('div');
+              modal.style.cssText = `
+                background: var(--semi-color-bg-0);
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                min-width: 400px;
+                max-width: 500px;
+              `;
+              
+              modal.appendChild(modalContent);
+              overlay.appendChild(modal);
+              document.body.appendChild(overlay);
+              
+              const input = modal.querySelector('#text-link-url-input') as HTMLInputElement;
+              const okBtn = modal.querySelector('#text-link-ok-btn') as HTMLButtonElement;
+              const cancelBtn = modal.querySelector('#text-link-cancel-btn') as HTMLButtonElement;
+              
+              setTimeout(() => {
+                input.focus();
+              }, 100);
+              
+              const cleanup = () => {
+                document.body.removeChild(overlay);
+              };
+              
+              const handleOk = () => {
+                const url = input.value.trim();
+                if (url) {
+                  editor.chain().focus().setLink({ href: url }).run();
+                }
+                cleanup();
+              };
+              
+              okBtn.addEventListener('click', handleOk);
+              cancelBtn.addEventListener('click', cleanup);
+              overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup();
+              });
+              
+              input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleOk();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cleanup();
+                }
+              });
             }}
             title="链接"
           />
@@ -1674,46 +1891,210 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             title="插入图片"
           />
           <Button
-            icon={<IconImage />}
-            size="small"
-            type="tertiary"
-            onClick={() => {
-              if (!currentFolder || !currentFile) {
-                Toast.error('请先选择或创建一个文档')
-                return
-              }
-
-              const input = document.createElement('input')
-              input.type = 'file'
-              input.accept = 'image/*'
-              input.onchange = async (e) => {
-                const target = e.target as HTMLInputElement
-                const file = target.files?.[0]
-                if (file) {
-                  try {
-                    Toast.info('正在上传图片...')
-                    const url = await uploadImage(file, currentFolder, currentFile)
-                    editor.chain().focus().setImage({ src: url }).run()
-                    Toast.success('图片上传成功')
-                  } catch (error) {
-                    Toast.error(error instanceof Error ? error.message : '图片上传失败')
-                  }
-                }
-              }
-              input.click()
-            }}
-            title="插入图片"
-          />
-          <Button
             icon={<IconPlay />}
             size="small"
             type="tertiary"
             onClick={() => {
-              const url = window.prompt('请输入嵌入地址:', 'https://www.youtube.com/embed/dQw4w9WgXcQ')
-              if (url) {
-                editor.chain().focus().setIframe({ src: url }).run()
-                Toast.success('嵌入内容插入成功')
-              }
+              // Get selected text from editor
+              const { from, to } = editor.state.selection;
+              const selectedText = editor.state.doc.textBetween(from, to, ' ').trim();
+              
+              // Create a more sophisticated modal dialog with Semi Design theme styling
+              const modalContent = document.createElement('div');
+              modalContent.innerHTML = `
+                <div class="iframe-edit-form">
+                  <div class="iframe-edit-header">
+                    <span>插入嵌入内容</span>
+                  </div>
+                  <div class="iframe-edit-body">
+                    <div style="margin-bottom: 12px;">
+                      <label style="display: block; font-size: 12px; font-weight: 500; color: var(--semi-color-text-1); margin-bottom: 8px;">嵌入地址:</label>
+                      <input 
+                        id="iframe-url-input" 
+                        type="url" 
+                        placeholder="输入嵌入地址 (如: https://www.youtube.com/)" 
+                        value="${selectedText || ''}"
+                        style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px; background: var(--semi-color-bg-0); color: var(--semi-color-text-0); margin-top: 4px;"
+                      />
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                      <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; font-weight: 500; color: var(--semi-color-text-1); margin-bottom: 4px;">宽度:</label>
+                        <select 
+                          id="iframe-width-select"
+                          style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px; background: var(--semi-color-bg-0); color: var(--semi-color-text-0); margin-top: 4px;"
+                        >
+                          <option value="25%">25%</option>
+                          <option value="50%">50%</option>
+                          <option value="75%">75%</option>
+                          <option value="100%" selected>100%</option>
+                        </select>
+                      </div>
+                      <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; font-weight: 500; color: var(--semi-color-text-1); margin-bottom: 4px;">高度:</label>
+                        <select 
+                          id="iframe-height-select"
+                          style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px; background: var(--semi-color-bg-0); color: var(--semi-color-text-0); margin-top: 4px;"
+                        >
+                          <option value="200px">小（200px）</option>
+                          <option value="300px" selected>中（300px）</option>
+                          <option value="500px">大（500px）</option>
+                          <option value="700px">特大（700px）</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="iframe-edit-footer">
+                    <div style="display: flex; gap: 8px;">
+                      <button 
+                        id="iframe-cancel-btn" 
+                        style="padding: 8px 16px; border: 1px solid var(--semi-color-border); background: var(--semi-color-bg-0); color: var(--semi-color-text-1); border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;"
+                      >
+                        取消
+                      </button>
+                      <button 
+                        id="iframe-ok-btn" 
+                        style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: var(--semi-color-white); border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s ease;"
+                      >
+                        确定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+              
+              // Create modal overlay with consistent styling
+              const overlay = document.createElement('div');
+              overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                backdrop-filter: blur(4px);
+                animation: fadeIn 0.2s ease;
+              `;
+              
+              const modal = document.createElement('div');
+              modal.style.cssText = `
+                background: var(--semi-color-bg-0);
+                border: 1px solid var(--semi-color-border);
+                border-radius: 8px;
+                box-shadow: var(--semi-shadow-elevated);
+                min-width: 480px;
+                max-width: 600px;
+                max-height: 80vh;
+                overflow: hidden;
+                animation: slideIn 0.2s ease-out;
+              `;
+              
+              // Add animation styles
+              const style = document.createElement('style');
+              style.textContent = `
+                @keyframes fadeIn {
+                  from { opacity: 0; }
+                  to { opacity: 1; }
+                }
+                @keyframes slideIn {
+                  from { 
+                    opacity: 0; 
+                    transform: translateY(-20px) scale(0.95); 
+                  }
+                  to { 
+                    opacity: 1; 
+                    transform: translateY(0) scale(1); 
+                  }
+                }
+              `;
+              document.head.appendChild(style);
+              
+              modal.appendChild(modalContent);
+              overlay.appendChild(modal);
+              document.body.appendChild(overlay);
+              
+              const input = modal.querySelector('#iframe-url-input') as HTMLInputElement;
+              const widthSelect = modal.querySelector('#iframe-width-select') as HTMLSelectElement;
+              const heightSelect = modal.querySelector('#iframe-height-select') as HTMLSelectElement;
+              const okBtn = modal.querySelector('#iframe-ok-btn') as HTMLButtonElement;
+              const cancelBtn = modal.querySelector('#iframe-cancel-btn') as HTMLButtonElement;
+              
+              // Add hover effects
+              okBtn.addEventListener('mouseenter', () => {
+                okBtn.style.background = 'var(--semi-color-primary-hover)';
+                okBtn.style.transform = 'translateY(-1px)';
+                okBtn.style.boxShadow = '0 2px 8px rgba(var(--semi-blue-5), 0.3)';
+              });
+              
+              okBtn.addEventListener('mouseleave', () => {
+                okBtn.style.background = 'var(--semi-color-primary)';
+                okBtn.style.transform = 'translateY(0)';
+                okBtn.style.boxShadow = 'none';
+              });
+              
+              cancelBtn.addEventListener('mouseenter', () => {
+                cancelBtn.style.background = 'var(--semi-color-fill-0)';
+                cancelBtn.style.borderColor = 'var(--semi-color-primary-light-default)';
+              });
+              
+              cancelBtn.addEventListener('mouseleave', () => {
+                cancelBtn.style.background = 'var(--semi-color-bg-0)';
+                cancelBtn.style.borderColor = 'var(--semi-color-border)';
+              });
+              
+              // Focus the input and select text if pre-filled
+              setTimeout(() => {
+                input.focus();
+                if (selectedText) {
+                  input.select(); // Select all text if there was selected content
+                }
+              }, 100);
+              
+              const cleanup = () => {
+                document.body.removeChild(overlay);
+                document.head.removeChild(style);
+              };
+              
+              const handleOk = () => {
+                const url = input.value.trim();
+                
+                if (url) {
+                  const width = widthSelect.value;
+                  const height = heightSelect.value;
+                  
+                  editor.chain().focus().setIframe({ 
+                    src: url,
+                    width: width,
+                    height: height
+                  }).run();
+                  Toast.success('嵌入内容插入成功');
+                } else {
+                  Toast.error('请输入有效的嵌入地址');
+                  return;
+                }
+                cleanup();
+              };
+              
+              okBtn.addEventListener('click', handleOk);
+              cancelBtn.addEventListener('click', cleanup);
+              overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup();
+              });
+              
+              // Handle Enter key
+              input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleOk();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cleanup();
+                }
+              });
             }}
             title="插入嵌入内容"
           />
