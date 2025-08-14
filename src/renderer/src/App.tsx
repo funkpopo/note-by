@@ -200,6 +200,7 @@ const App: React.FC = () => {
             onFileSelect={handleFileSelect}
             fileListVersion={fileListVersion}
             onFileDeleted={handleFileDeleted}
+            currentView={currentView}
           />
         </div>
         <Layout style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden' }}>

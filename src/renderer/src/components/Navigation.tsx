@@ -43,13 +43,15 @@ interface NavigationProps {
   onFileSelect?: (folder: string, file: string) => void
   fileListVersion?: number
   onFileDeleted?: (folder: string, file: string) => void
+  currentView?: string
 }
 
 const Navigation: React.FC<NavigationProps> = ({
   onNavChange,
   onFileSelect,
   fileListVersion,
-  onFileDeleted
+  onFileDeleted,
+  currentView
 }) => {
   const { isDarkMode, toggleTheme } = useTheme()
   const { t } = useLanguage()
@@ -368,6 +370,13 @@ const Navigation: React.FC<NavigationProps> = ({
     }
   }, [showSecondaryNav, fileListVersion, fetchFileList])
 
+  // 监听当前视图变化，自动隐藏二级侧边栏（除Editor外）
+  useEffect(() => {
+    if (currentView && currentView !== 'Editor' && showSecondaryNav) {
+      setShowSecondaryNav(false)
+    }
+  }, [currentView])
+
   // 计算右键菜单位置，确保不超出窗口边界
   const calculateMenuPosition = (
     x: number,
@@ -486,7 +495,7 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(t('messages.error.deleteFailed', { message: result.error }))
+            Toast.error(t('messages.error.deleteFailed', { message: result.error || 'Unknown error' }))
           }
         }
       } else {
@@ -507,7 +516,7 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(t('messages.error.deleteFailed', { message: result.error }))
+            Toast.error(t('messages.error.deleteFailed', { message: result.error || 'Unknown error' }))
           }
         }
       }
@@ -565,7 +574,7 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(t('messages.error.renameFailed', { message: result.error }))
+            Toast.error(t('messages.error.renameFailed', { message: result.error || 'Unknown error' }))
           }
         }
       } else {
@@ -586,7 +595,7 @@ const Navigation: React.FC<NavigationProps> = ({
               // 刷新列表
               fetchFileList()
             } else {
-              Toast.error(t('messages.error.renameFailed', { message: result.error }))
+              Toast.error(t('messages.error.renameFailed', { message: result.error || 'Unknown error' }))
             }
           }
         }
@@ -721,7 +730,7 @@ const Navigation: React.FC<NavigationProps> = ({
           // 刷新列表
           fetchFileList()
         } else {
-          Toast.error(t('messages.error.createFailed', { message: result.error }))
+          Toast.error(t('messages.error.createFailed', { message: result.error || 'Unknown error' }))
         }
       } else {
         // 创建笔记
@@ -747,7 +756,7 @@ const Navigation: React.FC<NavigationProps> = ({
             onFileSelect(finalFolder, `${name}.md`)
           }
         } else {
-          Toast.error(t('messages.error.createFailed', { message: result.error }))
+          Toast.error(t('messages.error.createFailed', { message: result.error || 'Unknown error' }))
         }
       }
     } catch (error) {
