@@ -2409,7 +2409,33 @@ const Editor: React.FC<EditorProps> = ({
     }
 
     autoSaveTimeoutRef.current = setTimeout(() => {
-      if (hasUnsavedChanges && currentFolder && currentFile && editor) {
+      // 检查是否有AI处理正在进行，如果有则跳过自动保存
+      const editorElement = editor?.view?.dom?.closest('.tiptap-editor')
+      const isAIProcessing = editorElement?.classList.contains('ai-processing')
+      
+      // 检查是否有AI结果小窗正在显示 - 扩展检查多个可能的AI相关元素
+      const aiLoadingMenu = document.querySelector('.ai-loading-menu')
+      const aiBubbleMenu = document.querySelector('.ai-bubble-menu')
+      const aiLoadingContent = document.querySelector('.ai-loading-content')
+      const textBubbleMenuWithAI = document.querySelector('.text-bubble-menu .ai-features-dropdown')
+      const inlineDiffWrapper = document.querySelector('.inline-diff-wrapper')
+      const inlineDiff = document.querySelector('.inline-diff')
+      
+      const isAIResultWindowVisible = !!(aiLoadingMenu || aiBubbleMenu || aiLoadingContent || textBubbleMenuWithAI || inlineDiffWrapper || inlineDiff)
+      
+      // 输出调试信息
+      if (isAIResultWindowVisible) {
+        console.log('AI窗口检测到，跳过自动保存:', {
+          aiLoadingMenu: !!aiLoadingMenu,
+          aiBubbleMenu: !!aiBubbleMenu,
+          aiLoadingContent: !!aiLoadingContent,
+          textBubbleMenuWithAI: !!textBubbleMenuWithAI,
+          inlineDiffWrapper: !!inlineDiffWrapper,
+          inlineDiff: !!inlineDiff
+        })
+      }
+      
+      if (hasUnsavedChanges && currentFolder && currentFile && editor && !isAIProcessing && !isAIResultWindowVisible) {
         saveDocument()
       }
     }, 3000) // 3秒后自动保存

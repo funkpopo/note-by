@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { Button, Space } from '@douyinfe/semi-ui'
-import { IconClose, IconEdit } from '@douyinfe/semi-icons'
+import { IconClose } from '@douyinfe/semi-icons'
 import { NodeViewWrapper } from '@tiptap/react'
-import { DiffResult, DiffItem } from '../utils/diffUtils'
+import { DiffItem } from '../utils/diffUtils'
 import './InlineDiff.css'
 
 // 自定义Check图标
@@ -20,18 +20,16 @@ interface InlineDiffProps {
   editor: any
 }
 
-const InlineDiff: React.FC<InlineDiffProps> = ({ node, updateAttributes, deleteNode, getPos, editor }) => {
+const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   const { originalText, newText, diffResult, feature } = node.attrs
-  const [isCollapsed, setIsCollapsed] = useState(false)
 
   // 组件挂载时记录节点，卸载时清理
   useEffect(() => {
-    const pos = getPos()
-    
-    // 这里可以添加节点跟踪逻辑
+    console.log('InlineDiff组件挂载')
     
     return () => {
       // 组件卸载时的清理逻辑
+      console.log('InlineDiff组件卸载')
     }
   }, [getPos])
 
@@ -61,12 +59,6 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, updateAttributes, deleteN
     editor.view.dispatch(
       editor.state.tr.replaceWith(pos, pos + nodeSize, editor.schema.text(originalText))
     )
-  }
-
-  const handleToggle = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsCollapsed(!isCollapsed)
   }
 
   const renderDiffText = () => {
@@ -124,52 +116,33 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, updateAttributes, deleteN
           e.preventDefault()
           e.stopPropagation()
         }}
-        onSelectStart={(e) => {
-          e.preventDefault()
-          return false
-        }}
       >
         <div className="inline-diff-header">
           <span className="inline-diff-label">AI{feature?.label || '处理'}结果</span>
-          <Space size="small">
-            <Button
-              size="small"
-              type="tertiary"
-              onClick={handleToggle}
-            >
-              {isCollapsed ? '展开' : '收起'}
-            </Button>
-          </Space>
         </div>
         
-        {!isCollapsed && (
-          <div className="inline-diff-content">
-            <div className="inline-diff-text">
-              {renderDiffText()}
-            </div>
-            
-            <div className="inline-diff-actions">
-              <Space size="small">
-                <Button
-                  icon={<IconClose />}
-                  size="small"
-                  type="tertiary"
-                  onClick={handleReject}
-                >
-                  拒绝
-                </Button>
-                <Button
-                  icon={<IconCheck />}
-                  size="small"
-                  type="primary"
-                  onClick={handleAccept}
-                >
-                  接受
-                </Button>
-              </Space>
-            </div>
+        <div className="inline-diff-content">
+          <div className="inline-diff-text">
+            {renderDiffText()}
           </div>
-        )}
+          
+          <div className="inline-diff-actions">
+            <Space>
+              <Button
+                icon={<IconClose />}
+                size="small"
+                type="tertiary"
+                onClick={handleReject}
+              />
+              <Button
+                icon={<IconCheck />}
+                size="small"
+                type="primary"
+                onClick={handleAccept}
+              />
+            </Space>
+          </div>
+        </div>
       </div>
     </NodeViewWrapper>
   )
