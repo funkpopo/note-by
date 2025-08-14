@@ -38,10 +38,12 @@ import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
-import { Toast, Button, Space, Spin, Breadcrumb, Select } from '@douyinfe/semi-ui'
+import { Toast, Button, Space, Spin, Breadcrumb, Select, Dropdown, List, Typography as SemiTypography } from '@douyinfe/semi-ui'
 import CustomDropdown from './CustomDropdown'
+import CustomHistoryDropdown from './CustomHistoryDropdown'
 import { smartDiff } from '../utils/diffUtils'
 import { InlineDiffExtension } from '../extensions/InlineDiffExtension'
+import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import {
   IconSave,
   IconBold,
@@ -61,6 +63,7 @@ import {
   IconDelete,
   IconImage,
   IconPlay,
+  IconChevronDown as IconChevronDownSemi,
 } from '@douyinfe/semi-icons'
 import { IconChevronDown } from './Icons'
 import {
@@ -964,6 +967,108 @@ const WelcomePage: React.FC = () => {
   )
 }
 
+// AI模型选择下拉菜单组件
+const AIModelDropdown: React.FC = () => {
+  const [availableModels, setAvailableModels] = useState<AiApiConfig[]>([])
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+
+  // 加载可用模型
+  const loadModels = useCallback(async () => {
+    setLoading(true)
+    try {
+      const models = await modelSelectionService.getAvailableModels()
+      const currentModelId = await modelSelectionService.getSelectedModelId()
+      setAvailableModels(models)
+      setSelectedModelId(currentModelId)
+    } catch (error) {
+      console.error('加载AI模型失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // 处理模型选择
+  const handleModelSelect = useCallback(async (modelId: string) => {
+    try {
+      await modelSelectionService.setSelectedModelId(modelId)
+      setSelectedModelId(modelId)
+      Toast.success('AI模型已切换')
+    } catch (error) {
+      Toast.error('切换AI模型失败')
+    }
+  }, [])
+
+  useEffect(() => {
+    loadModels()
+  }, [loadModels])
+
+  const selectedModel = availableModels.find(model => model.id === selectedModelId)
+
+  return (
+    <Dropdown
+      trigger="click"
+      position="bottomLeft"
+      render={
+        <div style={{ minWidth: '200px', maxWidth: '250px' }}>
+          {loading ? (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+              <Spin size="middle" />
+            </div>
+          ) : availableModels.length === 0 ? (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+              <SemiTypography.Text type="tertiary">暂无可用模型</SemiTypography.Text>
+              <div style={{ marginTop: '8px' }}>
+                <SemiTypography.Text type="tertiary" size="small">请在设置中配置AI API</SemiTypography.Text>
+              </div>
+            </div>
+          ) : (
+            <List
+              dataSource={availableModels}
+              renderItem={(item) => (
+                <List.Item
+                  style={{ 
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    backgroundColor: item.id === selectedModelId ? 'var(--semi-color-fill-0)' : 'transparent'
+                  }}
+                  onClick={() => handleModelSelect(item.id)}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                    <SemiTypography.Text 
+                      strong={item.id === selectedModelId}
+                      style={{ fontSize: '14px' }}
+                    >
+                      {item.name}
+                    </SemiTypography.Text>
+                    <SemiTypography.Text 
+                      type="tertiary" 
+                      size="small"
+                      style={{ marginTop: '2px' }}
+                    >
+                      {item.modelName}
+                    </SemiTypography.Text>
+                  </div>
+                </List.Item>
+              )}
+            />
+          )}
+        </div>
+      }
+    >
+      <Button 
+        icon={<IconChevronDownSemi />} 
+        iconPosition="right"
+        type="tertiary"
+        size="default"
+        disabled={loading || availableModels.length === 0}
+      >
+        {loading ? '加载中...' : selectedModel ? selectedModel.name : 'AI模型'}
+      </Button>
+    </Dropdown>
+  )
+}
+
 interface EditorProps {
   content?: string
   placeholder?: string
@@ -983,8 +1088,11 @@ const EditorHeader: React.FC<{
   isLoading: boolean
   isSaving: boolean
   onSave: () => void
-}> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, onSave }) => {
+  onContentRestore?: (content: string) => void
+}> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, onSave, onContentRestore }) => {
   if (!currentFolder || !currentFile) return null
+  
+  const filePath = `${currentFolder}/${currentFile}`
 
   return (
     <div className="editor-header">
@@ -1002,10 +1110,16 @@ const EditorHeader: React.FC<{
             </div>
           )}
         </div>
+        <AIModelDropdown />
       </div>
 
       <div className="editor-header-right">
         <Space>
+          <CustomHistoryDropdown 
+            filePath={filePath}
+            onRestore={onContentRestore}
+            disabled={hasUnsavedChanges}
+          />
           <Button
             icon={<IconSave />}
             type="primary"
@@ -2551,6 +2665,11 @@ const Editor: React.FC<EditorProps> = ({
           isLoading={isLoading}
           isSaving={isSaving}
           onSave={saveDocument}
+          onContentRestore={(content) => {
+            editor.commands.setContent(content)
+            setHasUnsavedChanges(true)
+            Toast.success('历史版本已恢复')
+          }}
         />
       )}
 

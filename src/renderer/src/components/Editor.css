@@ -33,11 +33,13 @@
   display: flex;
   align-items: center;
   flex: 1;
+  gap: 16px;
 }
 
 .editor-header-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .file-info {

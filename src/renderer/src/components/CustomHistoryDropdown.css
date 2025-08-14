@@ -1,0 +1,277 @@
+/* 自定义历史记录下拉菜单样式 */
+.custom-history-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-history-dropdown-content {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--semi-color-bg-2);
+  border: 1px solid var(--semi-color-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 400px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.history-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  gap: 8px;
+  color: var(--semi-color-text-2);
+  font-size: 14px;
+}
+
+.history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  color: var(--semi-color-text-3);
+  font-size: 14px;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.history-header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid var(--semi-color-border);
+  background: var(--semi-color-fill-0);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--semi-color-text-0);
+}
+
+.history-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--semi-color-border);
+  transition: background-color 0.2s;
+}
+
+.history-item:hover {
+  background: var(--semi-color-fill-0);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item-time {
+  font-size: 13px;
+  color: var(--semi-color-text-1);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.history-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.history-action-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-0);
+  color: var(--semi-color-text-0);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.4;
+}
+
+.history-action-btn:hover {
+  background: var(--semi-color-fill-0);
+}
+
+.history-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.history-action-btn:disabled:hover {
+  background: var(--semi-color-bg-0);
+}
+
+.history-action-btn.preview-btn {
+  color: var(--semi-color-primary);
+  border-color: var(--semi-color-primary);
+}
+
+.history-action-btn.preview-btn:hover {
+  background: var(--semi-color-primary-light-hover);
+}
+
+.history-action-btn.restore-btn {
+  color: var(--semi-color-success);
+  border-color: var(--semi-color-success);
+}
+
+.history-action-btn.restore-btn:hover {
+  background: var(--semi-color-success-light-hover);
+}
+
+/* 预览模态框样式 */
+.history-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.history-preview-modal {
+  background: var(--semi-color-bg-0);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-preview-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--semi-color-border);
+  background: var(--semi-color-fill-0);
+}
+
+.history-preview-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--semi-color-text-0);
+  flex: 1;
+}
+
+.history-preview-time {
+  font-size: 14px;
+  color: var(--semi-color-text-2);
+  margin-right: 16px;
+}
+
+.history-preview-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--semi-color-text-2);
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.history-preview-close:hover {
+  background: var(--semi-color-fill-1);
+  color: var(--semi-color-text-0);
+}
+
+.history-preview-content {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+  background: var(--semi-color-bg-0);
+}
+
+.history-preview-content pre {
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--semi-color-text-0);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.history-preview-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--semi-color-border);
+  background: var(--semi-color-fill-0);
+}
+
+.history-preview-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.history-preview-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.history-preview-btn.cancel-btn {
+  background: var(--semi-color-bg-0);
+  border: 1px solid var(--semi-color-border);
+  color: var(--semi-color-text-0);
+}
+
+.history-preview-btn.cancel-btn:hover:not(:disabled) {
+  background: var(--semi-color-fill-0);
+}
+
+.history-preview-btn.restore-btn {
+  background: var(--semi-color-primary);
+  border: 1px solid var(--semi-color-primary);
+  color: var(--semi-color-white);
+}
+
+.history-preview-btn.restore-btn:hover:not(:disabled) {
+  background: var(--semi-color-primary-hover);
+  border-color: var(--semi-color-primary-hover);
+}
+
+/* 滚动条样式 */
+.history-list::-webkit-scrollbar,
+.history-preview-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-list::-webkit-scrollbar-track,
+.history-preview-content::-webkit-scrollbar-track {
+  background: var(--semi-color-fill-0);
+}
+
+.history-list::-webkit-scrollbar-thumb,
+.history-preview-content::-webkit-scrollbar-thumb {
+  background: var(--semi-color-fill-2);
+  border-radius: 3px;
+}
+
+.history-list::-webkit-scrollbar-thumb:hover,
+.history-preview-content::-webkit-scrollbar-thumb:hover {
+  background: var(--semi-color-fill-3);
+}
