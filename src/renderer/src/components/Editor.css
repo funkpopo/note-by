@@ -9,6 +9,15 @@
   overflow: hidden;
 }
 
+/* Editor Diff Viewer */
+.editor-diff-viewer {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
 /* Editor Header */
 .editor-header {
   display: flex;

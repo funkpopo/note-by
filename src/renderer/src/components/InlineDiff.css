@@ -1,0 +1,153 @@
+/* 内联 Diff 样式 */
+
+.inline-diff-wrapper {
+  display: inline-block;
+  margin: 4px 0;
+  max-width: 100%;
+  user-select: none; /* 防止文本选择 */
+}
+
+.inline-diff {
+  border: 1px solid var(--semi-color-border);
+  border-radius: 6px;
+  background: var(--semi-color-bg-0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 600px;
+  user-select: none; /* 防止文本选择 */
+  cursor: default; /* 使用默认光标而不是文本光标 */
+}
+
+.inline-diff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--semi-color-fill-0);
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+.inline-diff-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--semi-color-text-1);
+}
+
+.inline-diff-content {
+  padding: 12px;
+}
+
+.inline-diff-text {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.diff-text {
+  transition: all 0.2s ease;
+}
+
+.diff-text.diff-equal {
+  color: var(--semi-color-text-0);
+}
+
+.diff-text.diff-insert {
+  background: var(--semi-color-success-light-active);
+  color: var(--semi-color-success);
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.diff-text.diff-delete {
+  background: var(--semi-color-danger-light-active);
+  color: var(--semi-color-danger);
+  text-decoration: line-through;
+  padding: 1px 2px;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.diff-replace {
+  display: inline-block;
+}
+
+.diff-replace .diff-delete {
+  margin-right: 4px;
+}
+
+.diff-replace .diff-insert {
+  margin-left: 4px;
+}
+
+.inline-diff-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--semi-color-border);
+}
+
+/* 悬停效果 */
+.inline-diff:hover {
+  border-color: var(--semi-color-primary-light-default);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* 动画效果 */
+@keyframes diff-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inline-diff {
+  animation: diff-appear 0.3s ease-out;
+}
+
+/* 暗色主题适配 */
+[theme-mode="dark"] .inline-diff {
+  border-color: var(--semi-color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[theme-mode="dark"] .diff-text.diff-insert {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+[theme-mode="dark"] .diff-text.diff-delete {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+[theme-mode="dark"] .inline-diff:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .inline-diff {
+    max-width: 100%;
+    min-width: 150px;
+  }
+  
+  .inline-diff-header {
+    padding: 6px 8px;
+  }
+  
+  .inline-diff-content {
+    padding: 8px;
+  }
+  
+  .inline-diff-text {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+}

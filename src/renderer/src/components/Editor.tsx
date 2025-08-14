@@ -40,6 +40,8 @@ import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
 import { Toast, Button, Space, Spin, Breadcrumb, Select } from '@douyinfe/semi-ui'
 import CustomDropdown from './CustomDropdown'
+import { smartDiff } from '../utils/diffUtils'
+import { InlineDiffExtension } from '../extensions/InlineDiffExtension'
 import {
   IconSave,
   IconBold,
@@ -1475,8 +1477,22 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       const result = await callAI(finalPrompt, selectedText)
       
       if (result.trim()) {
+        // 计算diff
+        const diffResult = smartDiff(selectedText, result.trim())
+        
+        // 在选中位置插入内联diff节点
         const { from, to } = editor.state.selection
-        editor.chain().focus().setTextSelection({ from, to }).insertContent(result).run()
+        editor.chain().focus()
+          .setTextSelection({ from, to })
+          .deleteSelection()
+          .setInlineDiff({
+            originalText: selectedText,
+            newText: result.trim(),
+            diffResult,
+            feature: { key: 'translate', label: '翻译' }
+          })
+          .run()
+        
         Toast.success('翻译完成')
       } else {
         Toast.error('AI返回了空结果')
@@ -1522,22 +1538,21 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       const result = await callAI(feature.prompt, selectedText)
       
       if (result.trim()) {
-        const { from, to } = editor.state.selection
+        // 计算diff
+        const diffResult = smartDiff(selectedText, result.trim())
         
-        switch (feature.key) {
-          case 'summarize':
-          case 'check':
-            editor.chain().focus().setTextSelection(to).insertContent(`\n\n**${feature.label}结果：**\n${result}`).run()
-            break
-          case 'expand':
-            editor.chain().focus().setTextSelection({ from, to }).insertContent(result).run()
-            break
-          case 'continue':
-            editor.chain().focus().setTextSelection(to).insertContent(result).run()
-            break
-          default:
-            editor.chain().focus().setTextSelection(to).insertContent(`\n\n${result}`).run()
-        }
+        // 在选中位置插入内联diff节点
+        const { from, to } = editor.state.selection
+        editor.chain().focus()
+          .setTextSelection({ from, to })
+          .deleteSelection()
+          .setInlineDiff({
+            originalText: selectedText,
+            newText: result.trim(),
+            diffResult,
+            feature
+          })
+          .run()
         
         Toast.success(`${feature.label}完成`)
       } else {
@@ -2130,6 +2145,31 @@ const Editor: React.FC<EditorProps> = ({
   const currentFileRef = useRef<{ folder?: string; file?: string }>({})
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // 清理所有未处理的diff节点
+  const clearAllDiffNodes = useCallback((editorInstance: any) => {
+    if (!editorInstance) return
+    
+    const { state } = editorInstance
+    const { tr } = state
+    let hasChanges = false
+    
+    // 从后往前遍历，避免位置偏移问题
+    state.doc.descendants((node: any, pos: number) => {
+      if (node.type.name === 'inlineDiff') {
+        const { originalText } = node.attrs
+        // 将diff节点替换为原文本
+        tr.replaceWith(pos, pos + node.nodeSize, editorInstance.schema.text(originalText || ''))
+        hasChanges = true
+        return false // 停止遍历子节点
+      }
+      return true // 继续遍历
+    })
+    
+    if (hasChanges) {
+      editorInstance.view.dispatch(tr)
+    }
+  }, [])
+
   // 读取文档内容
   const loadDocument = useCallback(async (folder: string, file: string) => {
     if (!folder || !file) return
@@ -2270,7 +2310,8 @@ const Editor: React.FC<EditorProps> = ({
           }
         }),
         MarkdownShortcuts,
-        IframeExtension
+        IframeExtension,
+        InlineDiffExtension
       ],
       content: loadedContent || content,
       editable,
@@ -2337,6 +2378,9 @@ const Editor: React.FC<EditorProps> = ({
   const saveDocument = useCallback(async () => {
     if (!currentFolder || !currentFile || !editor) return
 
+    // 保存前先清理所有未处理的diff节点
+    clearAllDiffNodes(editor)
+
     setIsSaving(true)
     try {
       const filePath = `${currentFolder}/${currentFile}`
@@ -2356,7 +2400,7 @@ const Editor: React.FC<EditorProps> = ({
     } finally {
       setIsSaving(false)
     }
-  }, [currentFolder, currentFile, onFileChanged, editor])
+  }, [currentFolder, currentFile, onFileChanged, editor, clearAllDiffNodes])
 
   // 自动保存功能
   const scheduleAutoSave = useCallback(() => {
@@ -2376,6 +2420,16 @@ const Editor: React.FC<EditorProps> = ({
     const prevFile = currentFileRef.current
     currentFileRef.current = { folder: currentFolder, file: currentFile }
 
+    // 如果文件切换，清理所有diff节点
+    if (
+      prevFile.folder !== currentFolder || 
+      prevFile.file !== currentFile
+    ) {
+      if (editor) {
+        clearAllDiffNodes(editor)
+      }
+    }
+
     if (
       currentFolder &&
       currentFile &&
@@ -2383,7 +2437,7 @@ const Editor: React.FC<EditorProps> = ({
     ) {
       loadDocument(currentFolder, currentFile)
     }
-  }, [currentFolder, currentFile, loadDocument])
+  }, [currentFolder, currentFile, loadDocument, clearAllDiffNodes, editor])
 
   // 当加载的内容发生变化时，更新编辑器内容
   useEffect(() => {
@@ -2407,14 +2461,33 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [hasUnsavedChanges, scheduleAutoSave])
 
-  // 组件卸载时清理定时器
+  // 组件卸载时清理定时器和diff节点
   useEffect(() => {
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current)
       }
+      // 组件卸载时清理所有diff节点
+      if (editor) {
+        clearAllDiffNodes(editor)
+      }
     }
-  }, [])
+  }, [clearAllDiffNodes, editor])
+
+  // 页面可见性变化监听，隐藏时清理diff节点
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && editor) {
+        clearAllDiffNodes(editor)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [clearAllDiffNodes, editor])
 
   // 键盘快捷键保存
   useEffect(() => {
