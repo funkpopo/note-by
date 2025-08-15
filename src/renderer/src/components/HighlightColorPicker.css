@@ -52,6 +52,29 @@
   flex: 1;
 }
 
+.preset-colors {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.preset-color-button {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--semi-color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  background: none;
+  padding: 0;
+}
+
+.preset-color-button:hover {
+  transform: scale(1.1);
+  border-color: var(--semi-color-primary);
+}
+
 .clear-highlight-section {
   border-top: 1px solid var(--semi-color-border);
   padding-top: 8px;

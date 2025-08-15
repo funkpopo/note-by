@@ -11,6 +11,22 @@ interface HighlightColorPickerProps {
 const HighlightColorPicker: React.FC<HighlightColorPickerProps> = ({ editor, isActive }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [customColor, setCustomColor] = useState('#d4f2d4')
+  
+  const presetColors = [
+    '#ffeb3b', // 黄色
+    '#4caf50', // 绿色
+    '#2196f3', // 蓝色
+    '#ff9800', // 橙色
+    '#f44336', // 红色
+    '#9c27b0'  // 紫色
+  ]
+
+  const handlePresetColorClick = (color: string) => {
+    editor.chain().focus().setHighlight({ color }).run()
+    // Set CSS custom property for dynamic styling
+    document.documentElement.style.setProperty('--highlight-color', color)
+    setIsOpen(false)
+  }
 
   const handleColorSelect = (isClear?: boolean) => {
     if (isClear) {
@@ -29,11 +45,18 @@ const HighlightColorPicker: React.FC<HighlightColorPickerProps> = ({ editor, isA
     document.documentElement.style.setProperty('--highlight-color', color)
   }
 
+  const handleCustomColorClick = () => {
+    editor.chain().focus().setHighlight({ color: customColor }).run()
+    // Set CSS custom property for dynamic styling
+    document.documentElement.style.setProperty('--highlight-color', customColor)
+    setIsOpen(false)
+  }
+
   const colorMenu = (
     <div className="highlight-color-picker">
       <div className="custom-color-section">
         <div className="custom-color-label">选择高亮颜色</div>
-        <div className="custom-color-input">
+        <div className="custom-color-input" onClick={handleCustomColorClick}>
           <input
             type="color"
             value={customColor}
@@ -41,6 +64,18 @@ const HighlightColorPicker: React.FC<HighlightColorPickerProps> = ({ editor, isA
             className="color-input"
           />
           <span className="custom-color-value">{customColor}</span>
+        </div>
+        
+        <div className="preset-colors">
+          {presetColors.map((color, index) => (
+            <button
+              key={index}
+              className="preset-color-button"
+              style={{ backgroundColor: color }}
+              onClick={() => handlePresetColorClick(color)}
+              title={color}
+            />
+          ))}
         </div>
       </div>
 
