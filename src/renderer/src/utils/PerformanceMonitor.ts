@@ -40,7 +40,7 @@ export interface PerformanceMetrics {
 
 export interface PerformanceEvent {
   type: 'memory' | 'editor' | 'user' | 'network' | 'error'
-  data: any
+  data: Record<string, unknown>
   timestamp: number
   source: string
 }
@@ -158,12 +158,20 @@ class PerformanceMonitor {
     try {
       // 使用Performance API获取内存信息（如果可用）
       if ('memory' in performance) {
-        const memory = (performance as any).memory
-        this.metrics.memoryUsage = {
-          used: memory.usedJSHeapSize,
-          total: memory.totalJSHeapSize,
-          percentage: (memory.usedJSHeapSize / memory.totalJSHeapSize) * 100,
-          timestamp: Date.now()
+        const memory = (performance as Performance & { 
+          memory?: { 
+            usedJSHeapSize: number
+            totalJSHeapSize: number
+            jsHeapSizeLimit: number
+          } 
+        }).memory
+        if (memory) {
+          this.metrics.memoryUsage = {
+            used: memory.usedJSHeapSize,
+            total: memory.totalJSHeapSize,
+            percentage: (memory.usedJSHeapSize / memory.totalJSHeapSize) * 100,
+            timestamp: Date.now()
+          }
         }
       } else {
         // 备用方案：估算内存使用

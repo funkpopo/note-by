@@ -6,10 +6,10 @@
 import { performanceMonitor } from './PerformanceMonitor'
 
 // 渲染任务接口
-export interface RenderTask {
+export interface RenderTask<T = unknown> {
   id: string
   priority: 'high' | 'medium' | 'low'
-  callback: () => Promise<any> | any
+  callback: () => Promise<T> | T
   timeout?: number
   dependencies?: string[]
 }
@@ -30,7 +30,7 @@ export interface BatchConfig {
 
 class RenderOptimizer {
   private static instance: RenderOptimizer | null = null
-  private taskQueue: Map<string, RenderTask> = new Map()
+  private taskQueue: Map<string, RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> = new Map()
   private runningTasks: Set<string> = new Set()
   private completedTasks: Set<string> = new Set()
 
@@ -60,8 +60,8 @@ class RenderOptimizer {
   /**
    * 添加渲染任务
    */
-  addTask(task: RenderTask): Promise<any> {
-    return new Promise((resolve, reject) => {
+  addTask<T>(task: RenderTask<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
       // 检查依赖是否满足
       if (task.dependencies && !this.areDependenciesMet(task.dependencies)) {
         // 延迟添加任务直到依赖满足
@@ -74,10 +74,10 @@ class RenderOptimizer {
     })
   }
 
-  private addTaskInternal(
-    task: RenderTask,
-    resolve: (value: any) => void,
-    reject: (reason?: any) => void
+  private addTaskInternal<T>(
+    task: RenderTask<T>,
+    resolve: (value: T) => void,
+    reject: (reason?: unknown) => void
   ): void {
     const enhancedTask = {
       ...task,
@@ -135,7 +135,7 @@ class RenderOptimizer {
   /**
    * 获取指定优先级的任务
    */
-  private getTasksByPriority(priority: keyof RenderPriorityConfig): RenderTask[] {
+  private getTasksByPriority(priority: keyof RenderPriorityConfig): Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> {
     return Array.from(this.taskQueue.values()).filter((task) => task.priority === priority)
   }
 
@@ -143,7 +143,7 @@ class RenderOptimizer {
    * 执行任务
    */
   private async executeTasks(
-    tasks: RenderTask[],
+    tasks: Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>,
     priority: keyof RenderPriorityConfig
   ): Promise<void> {
     const config = this.priorityConfig[priority]
@@ -169,7 +169,7 @@ class RenderOptimizer {
   /**
    * 在空闲时间执行任务
    */
-  private async executeTasksInIdleTime(tasks: RenderTask[], timeout: number): Promise<void> {
+  private async executeTasksInIdleTime(tasks: Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>, timeout: number): Promise<void> {
     return new Promise((resolve) => {
       this.requestIdleCallback(
         async () => {
@@ -184,7 +184,7 @@ class RenderOptimizer {
   /**
    * 立即执行任务
    */
-  private async executeTasksImmediately(tasks: RenderTask[], timeout: number): Promise<void> {
+  private async executeTasksImmediately(tasks: Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>, timeout: number): Promise<void> {
     const startTime = performance.now()
 
     const promises = tasks.map(async (task) => {
@@ -203,11 +203,11 @@ class RenderOptimizer {
 
         this.completedTasks.add(task.id)
         this.taskQueue.delete(task.id)
-        ;(task as any).resolve(result)
+        task.resolve(result)
       } catch (error) {
         console.error(`任务 ${task.id} 执行失败:`, error)
         this.taskQueue.delete(task.id)
-        ;(task as any).reject(error)
+        task.reject(error)
       } finally {
         this.runningTasks.delete(task.id)
       }
@@ -308,7 +308,7 @@ class RenderOptimizer {
 
     // 拒绝所有未完成的任务
     for (const task of this.taskQueue.values()) {
-      ;(task as any).reject(new Error('任务被取消'))
+      task.reject(new Error('任务被取消'))
     }
 
     this.taskQueue.clear()
@@ -357,7 +357,7 @@ class RenderOptimizer {
 export const renderOptimizer = RenderOptimizer.getInstance()
 
 // 导出便捷函数
-export const scheduleRenderTask = (task: RenderTask) => renderOptimizer.addTask(task)
+export const scheduleRenderTask = <T>(task: RenderTask<T>) => renderOptimizer.addTask(task)
 
 export const processBatch = <T, R>(
   items: T[],

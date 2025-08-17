@@ -1719,7 +1719,7 @@ export async function checkDatabaseStatus(): Promise<{
     markdownPath: string
     pathConsistency: boolean
     tables: string[]
-    tableInfo: Record<string, any>
+    tableInfo: Record<string, { columns: string[]; type: string }>
     recommendations: string[]
   }
 }> {
@@ -1747,7 +1747,7 @@ export async function checkDatabaseStatus(): Promise<{
       markdownPath: markdownPath,
       pathConsistency: false,
       tables: [] as string[],
-      tableInfo: {} as Record<string, any>,
+      tableInfo: {} as Record<string, { columns: string[]; type: string }>,
       recommendations: [] as string[]
     }
   }
@@ -1815,8 +1815,11 @@ export async function checkDatabaseStatus(): Promise<{
 
         // 获取表结构信息
         const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
-        const tableInfo = tableInfoStmt.all()
-        result.details.tableInfo.note_history = tableInfo
+        const tableInfoRaw = tableInfoStmt.all() as Array<{ name: string; type: string }>
+        result.details.tableInfo.note_history = {
+          columns: tableInfoRaw.map(col => col.name),
+          type: 'note_history'
+        }
 
         if (result.recordCount === 0) {
           result.details.recommendations.push(
@@ -1833,9 +1836,12 @@ export async function checkDatabaseStatus(): Promise<{
 
       // 检查其他表
       if (result.details.tables.includes('webdav_sync_cache')) {
-        const webdavCountStmt = database.prepare('SELECT COUNT(*) as count FROM webdav_sync_cache')
-        const webdavCount = webdavCountStmt.get() as { count: number }
-        result.details.tableInfo.webdav_sync_cache = { recordCount: webdavCount.count }
+        const webdavTableInfoStmt = database.prepare("PRAGMA table_info('webdav_sync_cache')")
+        const webdavTableInfoRaw = webdavTableInfoStmt.all() as Array<{ name: string; type: string }>
+        result.details.tableInfo.webdav_sync_cache = {
+          columns: webdavTableInfoRaw.map(col => col.name),
+          type: 'webdav_sync_cache'
+        }
       }
 
       return true
