@@ -137,7 +137,12 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
   addCommands() {
     return {
       setInlineDiff:
-        (options: { originalText: string; newText: string; diffResult: DiffResult; feature: DiffFeature }) =>
+        (options: {
+          originalText: string
+          newText: string
+          diffResult: DiffResult
+          feature: DiffFeature
+        }) =>
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,

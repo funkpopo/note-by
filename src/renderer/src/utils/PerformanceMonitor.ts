@@ -158,13 +158,15 @@ class PerformanceMonitor {
     try {
       // 使用Performance API获取内存信息（如果可用）
       if ('memory' in performance) {
-        const memory = (performance as Performance & { 
-          memory?: { 
-            usedJSHeapSize: number
-            totalJSHeapSize: number
-            jsHeapSizeLimit: number
-          } 
-        }).memory
+        const memory = (
+          performance as Performance & {
+            memory?: {
+              usedJSHeapSize: number
+              totalJSHeapSize: number
+              jsHeapSizeLimit: number
+            }
+          }
+        ).memory
         if (memory) {
           this.metrics.memoryUsage = {
             used: memory.usedJSHeapSize,

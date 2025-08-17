@@ -30,7 +30,10 @@ export interface BatchConfig {
 
 class RenderOptimizer {
   private static instance: RenderOptimizer | null = null
-  private taskQueue: Map<string, RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> = new Map()
+  private taskQueue: Map<
+    string,
+    RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
+  > = new Map()
   private runningTasks: Set<string> = new Set()
   private completedTasks: Set<string> = new Set()
 
@@ -135,7 +138,9 @@ class RenderOptimizer {
   /**
    * 获取指定优先级的任务
    */
-  private getTasksByPriority(priority: keyof RenderPriorityConfig): Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> {
+  private getTasksByPriority(
+    priority: keyof RenderPriorityConfig
+  ): Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> {
     return Array.from(this.taskQueue.values()).filter((task) => task.priority === priority)
   }
 
@@ -143,7 +148,9 @@ class RenderOptimizer {
    * 执行任务
    */
   private async executeTasks(
-    tasks: Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>,
+    tasks: Array<
+      RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
+    >,
     priority: keyof RenderPriorityConfig
   ): Promise<void> {
     const config = this.priorityConfig[priority]
@@ -169,7 +176,12 @@ class RenderOptimizer {
   /**
    * 在空闲时间执行任务
    */
-  private async executeTasksInIdleTime(tasks: Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>, timeout: number): Promise<void> {
+  private async executeTasksInIdleTime(
+    tasks: Array<
+      RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
+    >,
+    timeout: number
+  ): Promise<void> {
     return new Promise((resolve) => {
       this.requestIdleCallback(
         async () => {
@@ -184,7 +196,12 @@ class RenderOptimizer {
   /**
    * 立即执行任务
    */
-  private async executeTasksImmediately(tasks: Array<RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>, timeout: number): Promise<void> {
+  private async executeTasksImmediately(
+    tasks: Array<
+      RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
+    >,
+    timeout: number
+  ): Promise<void> {
     const startTime = performance.now()
 
     const promises = tasks.map(async (task) => {

@@ -733,7 +733,10 @@ app.whenReady().then(() => {
   })
 
   // 流式请求管理Map
-  const activeStreams = new Map<string, { emitter: EventEmitter & { stop?: () => void }; cleanup: () => void }>()
+  const activeStreams = new Map<
+    string,
+    { emitter: EventEmitter & { stop?: () => void }; cleanup: () => void }
+  >()
 
   // 流式内容生成
   ipcMain.handle(IPC_CHANNELS.STREAM_GENERATE_CONTENT, async (event, request) => {

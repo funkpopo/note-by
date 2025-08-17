@@ -1817,7 +1817,7 @@ export async function checkDatabaseStatus(): Promise<{
         const tableInfoStmt = database.prepare("PRAGMA table_info('note_history')")
         const tableInfoRaw = tableInfoStmt.all() as Array<{ name: string; type: string }>
         result.details.tableInfo.note_history = {
-          columns: tableInfoRaw.map(col => col.name),
+          columns: tableInfoRaw.map((col) => col.name),
           type: 'note_history'
         }
 
@@ -1837,9 +1837,12 @@ export async function checkDatabaseStatus(): Promise<{
       // 检查其他表
       if (result.details.tables.includes('webdav_sync_cache')) {
         const webdavTableInfoStmt = database.prepare("PRAGMA table_info('webdav_sync_cache')")
-        const webdavTableInfoRaw = webdavTableInfoStmt.all() as Array<{ name: string; type: string }>
+        const webdavTableInfoRaw = webdavTableInfoStmt.all() as Array<{
+          name: string
+          type: string
+        }>
         result.details.tableInfo.webdav_sync_cache = {
-          columns: webdavTableInfoRaw.map(col => col.name),
+          columns: webdavTableInfoRaw.map((col) => col.name),
           type: 'webdav_sync_cache'
         }
       }
