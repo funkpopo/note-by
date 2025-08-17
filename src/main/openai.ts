@@ -404,7 +404,7 @@ export async function streamGenerateContent(
                 // 进度记录（可选）
               }
             }
-          } catch (streamError) {
+          } catch (_streamError) {
             // 继续处理下一个块，不中断整个流
           }
         }

@@ -113,7 +113,7 @@ export function readSettings(): Record<string, unknown> {
 
       return settings
     }
-  } catch (error) {}
+  } catch (_error) {}
 
   // 如果文件不存在或读取失败，返回默认设置
 
@@ -150,7 +150,7 @@ export function writeSettings(settings: Record<string, unknown>): void {
     }
 
     fs.writeFileSync(settingsPath, JSON.stringify(settingsToSave, null, 2), 'utf8')
-  } catch (error) {}
+  } catch (_error) {}
 }
 
 // 更新单个设置项

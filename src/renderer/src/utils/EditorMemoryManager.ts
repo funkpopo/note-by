@@ -309,8 +309,8 @@ export class EditorMemoryManager {
         try {
           const result = await strategy.action()
           if (result.success) {
-            strategiesUsed.push(strategy.name)
-            totalMemoryFreed += result.memoryFreed
+            // strategiesUsed.push(strategy.name)
+            // totalMemoryFreed += result.memoryFreed
             console.log(`Memory cleanup strategy "${strategy.name}": ${result.description}`)
           }
         } catch (error) {
@@ -747,7 +747,7 @@ export class EditorMemoryManager {
                 memoryFreed: 0, // 无法准确测量
                 description: 'Forced garbage collection'
               }
-            } catch (error) {
+            } catch {
               return {
                 success: false,
                 memoryFreed: 0,

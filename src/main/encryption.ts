@@ -20,7 +20,7 @@ export function encrypt(text: string): string {
     encrypted += cipher.final('hex')
 
     return encrypted
-  } catch (error) {
+  } catch {
     return ''
   }
 }
@@ -40,7 +40,7 @@ export function decrypt(encryptedText: string): string {
     decrypted += decipher.final('utf8')
 
     return decrypted
-  } catch (error) {
+  } catch {
     return ''
   }
 }
@@ -61,7 +61,7 @@ export function encryptWithPassword(text: string, password: string): string {
     encrypted += cipher.final('hex')
 
     return encrypted
-  } catch (error) {
+  } catch {
     return ''
   }
 }
@@ -82,7 +82,7 @@ export function decryptWithPassword(encryptedText: string, password: string): st
     decrypted += decipher.final('utf8')
 
     return decrypted
-  } catch (error) {
+  } catch {
     return ''
   }
 }
@@ -101,7 +101,7 @@ export function verifyPassword(
   try {
     const decrypted = decryptWithPassword(encryptedTest, password)
     return decrypted === originalText
-  } catch (error) {
+  } catch {
     return false
   }
 }

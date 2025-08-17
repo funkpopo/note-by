@@ -1179,7 +1179,7 @@ const DataAnalysis: React.FC = () => {
     if (currentAnalyzingToastRef.current) {
       try {
         currentAnalyzingToastRef.current.destroy()
-      } catch (e) {
+      } catch (_e) {
         // Toast清理失败，继续执行
       } finally {
         currentAnalyzingToastRef.current = null
@@ -1192,7 +1192,7 @@ const DataAnalysis: React.FC = () => {
     if (currentCachedToastRef.current) {
       try {
         Toast.close(currentCachedToastRef.current)
-      } catch (e) {
+      } catch (_e) {
         // Toast清理失败，继续执行
       } finally {
         currentCachedToastRef.current = null
@@ -1461,7 +1461,7 @@ const DataAnalysis: React.FC = () => {
       }
 
       // Toast显示由useEffect自动处理，不需要手动管理
-    } catch (err) {
+    } catch (_err) {
       // 错误Toast也由useEffect自动处理
     }
   }

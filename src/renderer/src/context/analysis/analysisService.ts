@@ -575,7 +575,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         setTimeout(async () => {
           try {
             await get().retryAnalysis()
-          } catch (retryError) {}
+          } catch (_retryError) {}
         }, 2000) // 2秒后重试
       }
     }

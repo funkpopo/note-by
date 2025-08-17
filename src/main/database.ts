@@ -859,7 +859,7 @@ export function closeDatabase(): void {
   if (db) {
     try {
       db.close()
-    } catch (error) {
+    } catch {
       // 关闭失败，继续执行
     } finally {
       db = null
@@ -1186,7 +1186,7 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
 
       // 分析标签数据
       tagData = await getDocumentTagsData(markdownPath)
-    } catch (error) {
+    } catch {
       // 继续执行，即使标签分析失败
     }
 
@@ -1463,7 +1463,7 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
           Date.now(),
           data.date
         )
-      } catch (error) {
+      } catch {
         return false
       }
     } else {
@@ -1483,7 +1483,7 @@ export async function saveAnalysisCache(data: AnalysisCacheItem): Promise<boolea
           data.modelId,
           Date.now()
         )
-      } catch (error) {
+      } catch {
         return false
       }
     }
@@ -1629,7 +1629,7 @@ export async function getDocumentTagsData(markdownPath: string): Promise<{
             })
           })
         }
-      } catch (error) {
+      } catch {
         // 继续处理其他文件
         continue
       }
@@ -1672,7 +1672,7 @@ export async function getDocumentTagsData(markdownPath: string): Promise<{
       tagRelations: tagRelations.slice(0, 50), // 只返回前50个最强的关联关系
       documentTags
     }
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -1780,7 +1780,7 @@ export async function checkDatabaseStatus(): Promise<{
         result.details.hasWritePermission = true
         result.details.recommendations.push('已自动创建数据库目录')
       }
-    } catch (permError) {
+    } catch {
       result.details.hasWritePermission = false
       result.details.recommendations.push(`权限问题：无法写入目录 ${dbDir}`)
       result.details.recommendations.push('请检查应用程序是否有足够的文件系统权限')

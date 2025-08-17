@@ -97,7 +97,7 @@ class RendererErrorHandler {
       try {
         // 发送到主进程（如果需要）
         // window.api?.log?.error?.(message)
-      } catch (err) {
+      } catch {
         // 静默处理
       }
     }

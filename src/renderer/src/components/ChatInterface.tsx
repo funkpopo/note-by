@@ -503,7 +503,7 @@ const ChatInterface: React.FC = () => {
           setMessages([])
           setUnsavedMessages(new Set())
         }
-      } catch (e) {
+      } catch (_e) {
         setCurrentSessionId(null)
         setMessages([])
         setUnsavedMessages(new Set())

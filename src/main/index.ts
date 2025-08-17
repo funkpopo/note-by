@@ -131,7 +131,7 @@ if (!gotTheLock) {
   app.quit()
 } else {
   // 监听第二个实例的启动
-  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
+  app.on('second-instance', () => {
     // 如果用户尝试打开第二个实例，我们应该聚焦到主窗口
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
@@ -677,7 +677,7 @@ app.whenReady().then(() => {
         return callback({ error: -2 }) // 文件不存在或无权限
       }
       callback({ path: normalizedPath })
-    } catch (error) {
+    } catch {
       callback({ error: -2 })
     }
   })
@@ -756,7 +756,7 @@ app.whenReady().then(() => {
         if (listeners.data) {
           try {
             emitter.removeListener('data', listeners.data)
-          } catch (err) {
+          } catch {
             // 移除监听器失败，继续执行
           }
         }
@@ -764,7 +764,7 @@ app.whenReady().then(() => {
         if (listeners.done) {
           try {
             emitter.removeListener('done', listeners.done)
-          } catch (err) {
+          } catch {
             // 移除监听器失败，继续执行
           }
         }
@@ -772,7 +772,7 @@ app.whenReady().then(() => {
         if (listeners.error) {
           try {
             emitter.removeListener('error', listeners.error)
-          } catch (err) {
+          } catch {
             // 移除监听器失败，继续执行
           }
         }
@@ -1781,7 +1781,7 @@ ${htmlContent}
               const decodedPath = decodeURI(cleanPath)
               cleanPath = decodedPath
             }
-          } catch (decodeError) {
+          } catch {
             // 继续使用原始路径
           }
 
@@ -1797,10 +1797,10 @@ ${htmlContent}
             // 转换为base64
             const base64Data = `data:image/${path.extname(cleanPath).substring(1)};base64,${fileBuffer.toString('base64')}`
             fileData = base64Data
-          } catch (readError) {
+          } catch {
             // 如果读取失败，保持原始数据
           }
-        } catch (error) {
+        } catch {
           // 错误处理，继续使用原始fileData
         }
       }
@@ -1876,7 +1876,7 @@ ${htmlContent}
           // 非Windows路径，直接转换斜杠
           fileUrl = `file:///${assetsPath.replace(/\\/g, '/')}`
         }
-      } catch (error) {
+      } catch {
         // 使用备用方法生成URL
         fileUrl = `file:///${markdownImagePath.replace(/\\/g, '/')}`
       }
@@ -2015,7 +2015,7 @@ ${htmlContent}
       }
       const result = await dialog.showSaveDialog(mainWindow, options)
       return result.canceled ? undefined : result.filePath
-    } catch (error) {
+    } catch {
       return undefined
     }
   })
@@ -2028,7 +2028,7 @@ ${htmlContent}
       }
       const result = await dialog.showOpenDialog(mainWindow, options)
       return result.canceled ? undefined : result.filePaths[0]
-    } catch (error) {
+    } catch {
       return undefined
     }
   })
