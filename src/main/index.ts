@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, Notification } from 'electron'
 import path, { join, resolve } from 'path'
 import fsSync from 'fs' // 添加同步fs模块
+import { EventEmitter } from 'events'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import {
@@ -732,7 +733,7 @@ app.whenReady().then(() => {
   })
 
   // 流式请求管理Map
-  const activeStreams = new Map<string, { emitter: any; cleanup: () => void }>()
+  const activeStreams = new Map<string, { emitter: EventEmitter & { stop?: () => void }; cleanup: () => void }>()
 
   // 流式内容生成
   ipcMain.handle(IPC_CHANNELS.STREAM_GENERATE_CONTENT, async (event, request) => {

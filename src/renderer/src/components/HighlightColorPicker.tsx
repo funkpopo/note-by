@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { Button, Dropdown } from '@douyinfe/semi-ui'
 import { IconChevronDown } from '@douyinfe/semi-icons'
+import { Editor } from '@tiptap/react'
 import './HighlightColorPicker.css'
 
 interface HighlightColorPickerProps {
-  editor: any
+  editor: Editor
   isActive?: boolean
 }
 

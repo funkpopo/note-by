@@ -1,3 +1,5 @@
+import type { ChatSession, ChatMessage } from '../../main/database'
+
 // 历史记录项接口
 interface HistoryItem {
   id: number
@@ -20,9 +22,9 @@ interface AiApiConfig {
 
 interface ChatAPI {
   createSession: (title?: string) => Promise<string | null>
-  saveMessage: (message: any) => Promise<boolean>
-  getSessions: () => Promise<any[]>
-  getSessionMessages: (sessionId: string) => Promise<any[]>
+  saveMessage: (message: Omit<ChatMessage, 'id'>) => Promise<boolean>
+  getSessions: () => Promise<ChatSession[]>
+  getSessionMessages: (sessionId: string) => Promise<ChatMessage[]>
   updateSessionTitle: (sessionId: string, title: string) => Promise<boolean>
   deleteSession: (sessionId: string) => Promise<boolean>
   deleteMessage: (messageId: string) => Promise<boolean>

@@ -2,7 +2,9 @@ import React, { useEffect } from 'react'
 import { Button, Space } from '@douyinfe/semi-ui'
 import { IconClose } from '@douyinfe/semi-icons'
 import { NodeViewWrapper } from '@tiptap/react'
+import { Editor } from '@tiptap/react'
 import { DiffItem } from '../utils/diffUtils'
+import { DiffResult, DiffFeature } from '../extensions/InlineDiffExtension'
 import './InlineDiff.css'
 
 // 自定义Check图标
@@ -12,12 +14,21 @@ const IconCheck = () => (
   </svg>
 )
 
+interface InlineDiffNode {
+  attrs: {
+    originalText: string
+    newText: string
+    diffResult: DiffResult
+    feature: DiffFeature
+  }
+}
+
 interface InlineDiffProps {
-  node: any
-  updateAttributes: (attrs: any) => void
+  node: InlineDiffNode
+  updateAttributes: (attrs: Partial<InlineDiffNode['attrs']>) => void
   deleteNode: () => void
   getPos: () => number
-  editor: any
+  editor: Editor
 }
 
 const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {

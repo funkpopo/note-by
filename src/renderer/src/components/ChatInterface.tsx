@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { ChatMessage, ChatSession } from '../../../main/database'
 import {
   Typography,
   Button,
@@ -368,16 +369,6 @@ const MessageBubbleCustom: React.FC<{
       `}</style>
     </div>
   )
-}
-
-// 消息类型定义
-interface ChatMessage {
-  id: string | number
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  createdAt: number
-  status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
-  parentId?: string
 }
 
 const ChatInterface: React.FC = () => {

@@ -7,7 +7,7 @@ import fsPromises from 'fs/promises'
 import { resolve } from 'path'
 
 // 导入类型定义，即使初始化失败也能使用类型
-import type Database from 'better-sqlite3'
+import Database from 'better-sqlite3'
 
 // WebDAV同步记录类型定义
 export interface WebDAVSyncRecord {
@@ -58,7 +58,7 @@ class EnhancedDatabasePool {
   private readonly maxRetries: number = 3
   private readonly reconnectDelay: number = 1000 // 1秒
 
-  private SqliteDatabase: any = null
+  private SqliteDatabase: typeof Database | null = null
   private dbPath: string = ''
   private isInitialized: boolean = false
   private healthCheckTimer?: NodeJS.Timeout
@@ -152,6 +152,9 @@ class EnhancedDatabasePool {
   private async createConnection(): Promise<ConnectionItem | null> {
     try {
       const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      if (!this.SqliteDatabase) {
+        throw new Error('SQLite database not initialized')
+      }
       const connection = new this.SqliteDatabase(this.dbPath)
 
       // 设置SQLite优化参数
@@ -446,6 +449,9 @@ class EnhancedDatabasePool {
       }
 
       // Create new connection
+      if (!this.SqliteDatabase) {
+        throw new Error('SQLite database not initialized')
+      }
       const newConnection = new this.SqliteDatabase(this.dbPath)
       this.configureSQLiteConnection(newConnection)
 
