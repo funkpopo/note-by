@@ -32,7 +32,7 @@ class RenderOptimizer {
   private static instance: RenderOptimizer | null = null
   private taskQueue: Map<
     string,
-    RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
+    RenderTask & { resolve: (value: any) => void; reject: (reason?: unknown) => void }
   > = new Map()
   private runningTasks: Set<string> = new Set()
   private completedTasks: Set<string> = new Set()

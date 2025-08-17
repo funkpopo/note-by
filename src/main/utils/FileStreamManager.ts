@@ -417,7 +417,7 @@ class FileStreamManager {
       }),
       {
         maxConcurrency: 5,
-        onError: (error, filePath) => {
+        onError: () => {
           // 清理文件失败
         }
       }

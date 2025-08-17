@@ -2501,7 +2501,7 @@ ${htmlContent}
   memoryMonitor.on('memoryCleanup', async (event) => {
     try {
       // 清理数据库连接池
-      const dbCleanup = performDatabaseMemoryCleanup()
+      performDatabaseMemoryCleanup()
 
       // 通知渲染进程清理缓存
       if (mainWindow) {

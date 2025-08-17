@@ -342,8 +342,8 @@ export class DatabaseErrorHandler {
       backoffMultiplier: 2,
       maxDelay: 30000,
       shouldRetry: (_error, attempt) => attempt < 5,
-      onRecovery: async (_error, attempt) => {
-        // Attempting database connection recovery, attempt ${attempt}
+      onRecovery: async (_error) => {
+        // Attempting database connection recovery
         // 这里可以添加重新初始化连接池的逻辑
       }
     })

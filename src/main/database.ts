@@ -194,7 +194,7 @@ class EnhancedDatabasePool {
       connection.pragma('temp_store = memory')
       connection.pragma('mmap_size = 268435456') // 256MB
       connection.pragma('foreign_keys = ON')
-    } catch (error) {
+    } catch {
       // Failed to configure SQLite connection
     }
   }
@@ -476,7 +476,7 @@ class EnhancedDatabasePool {
         if (item.connection && typeof item.connection.close === 'function') {
           item.connection.close()
         }
-      } catch (error) {
+      } catch {
         // Failed to close connection ${connectionId}
       }
 
@@ -640,7 +640,7 @@ class EnhancedDatabasePool {
           item.connection.pragma('cache_size = 100') // 临时减少缓存
           item.connection.pragma('cache_size = 2000') // 恢复缓存大小
           cacheCleared = true
-        } catch (error) {
+        } catch {
           // 清理数据库缓存失败
         }
       }
@@ -653,7 +653,7 @@ class EnhancedDatabasePool {
         try {
           item.connection.pragma('optimize')
           maintenancePerformed = true
-        } catch (error) {
+        } catch {
           // 执行数据库优化失败
         }
       }
