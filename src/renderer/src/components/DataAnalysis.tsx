@@ -2490,58 +2490,58 @@ const DataAnalysis: React.FC = () => {
               padding: '12px 0'
             }}
           >
-          <Space>
-            <Select
-              placeholder="选择AI模型"
-              value={selectedModelId || undefined}
-              onChange={async (value) => {
-                const modelId = value as string
-                setSelectedModelId(modelId)
-                try {
-                  await modelSelectionService.setSelectedModelId(modelId)
-                } catch (error) {
-                  console.error('保存选中模型失败:', error)
-                  Toast.error({
-                    content: '保存模型选择失败'
-                  })
-                }
-              }}
-              style={{ width: 200 }}
-            >
-              {availableModels.map((model) => (
-                <Select.Option key={model.id} value={model.id}>
-                  {model.name}
-                </Select.Option>
-              ))}
-            </Select>
-            <Button
-              theme="solid"
-              type="primary"
-              onClick={() => handlePerformAnalysis(true)}
-              loading={isAnalyzing}
-              disabled={!selectedModelId || availableModels.length === 0}
-            >
-              {isAnalyzing ? '分析中...' : '执行分析'}
-            </Button>
-            {process.env.NODE_ENV !== 'production' && (
-              <Button
-                type="warning"
-                onClick={async () => {
+            <Space>
+              <Select
+                placeholder="选择AI模型"
+                value={selectedModelId || undefined}
+                onChange={async (value) => {
+                  const modelId = value as string
+                  setSelectedModelId(modelId)
                   try {
-                    await (window.api.analytics as AnalyticsAPI).resetAnalysisCache?.()
-                    Toast.success({
-                      content: '分析缓存已重置'
-                    })
+                    await modelSelectionService.setSelectedModelId(modelId)
                   } catch (error) {
+                    console.error('保存选中模型失败:', error)
                     Toast.error({
-                      content: '重置缓存失败'
+                      content: '保存模型选择失败'
                     })
                   }
                 }}
+                style={{ width: 200 }}
               >
-                重置缓存
+                {availableModels.map((model) => (
+                  <Select.Option key={model.id} value={model.id}>
+                    {model.name}
+                  </Select.Option>
+                ))}
+              </Select>
+              <Button
+                theme="solid"
+                type="primary"
+                onClick={() => handlePerformAnalysis(true)}
+                loading={isAnalyzing}
+                disabled={!selectedModelId || availableModels.length === 0}
+              >
+                {isAnalyzing ? '分析中...' : '执行分析'}
               </Button>
-            )}
+              {process.env.NODE_ENV !== 'production' && (
+                <Button
+                  type="warning"
+                  onClick={async () => {
+                    try {
+                      await (window.api.analytics as AnalyticsAPI).resetAnalysisCache?.()
+                      Toast.success({
+                        content: '分析缓存已重置'
+                      })
+                    } catch (error) {
+                      Toast.error({
+                        content: '重置缓存失败'
+                      })
+                    }
+                  }}
+                >
+                  重置缓存
+                </Button>
+              )}
             </Space>
           </div>
 
@@ -2605,17 +2605,17 @@ const DataAnalysis: React.FC = () => {
                     borderRadius: '4px'
                   }}
                 >
-                <Text>
-                  <Space>
-                    <span>当前显示的是缓存的分析结果，日期: {formatDate(cacheDate)}</span>
-                    <Button
-                      size="small"
-                      type="tertiary"
-                      onClick={() => handlePerformAnalysis(true)}
-                      disabled={isAnalyzing}
-                    >
-                      重新分析
-                    </Button>
+                  <Text>
+                    <Space>
+                      <span>当前显示的是缓存的分析结果，日期: {formatDate(cacheDate)}</span>
+                      <Button
+                        size="small"
+                        type="tertiary"
+                        onClick={() => handlePerformAnalysis(true)}
+                        disabled={isAnalyzing}
+                      >
+                        重新分析
+                      </Button>
                     </Space>
                   </Text>
                 </div>
@@ -2623,7 +2623,9 @@ const DataAnalysis: React.FC = () => {
 
               {isAnalyzing && (
                 <div style={{ marginBottom: 16 }}>
-                  <Text type="secondary">分析正在背景中继续进行，您可以安全地切换到其它界面...</Text>
+                  <Text type="secondary">
+                    分析正在背景中继续进行，您可以安全地切换到其它界面...
+                  </Text>
                   <div style={{ maxWidth: '500px', margin: '20px auto' }}>
                     <Progress percent={progress} showInfo />
                   </div>
@@ -2631,355 +2633,361 @@ const DataAnalysis: React.FC = () => {
               )}
 
               <Card style={{ padding: '16px 20px', marginBottom: '16px' }}>
-              <Title heading={4} style={{ margin: '16px 24px', color: 'var(--semi-color-text-0)' }}>
-                {analysisResult.summary}
-              </Title>
+                <Title
+                  heading={4}
+                  style={{ margin: '16px 24px', color: 'var(--semi-color-text-0)' }}
+                >
+                  {analysisResult.summary}
+                </Title>
 
-              <Tabs type="line" style={{ marginTop: 16 }}>
-                <TabPane tab="写作习惯" itemKey="habits">
-                  <div style={{ padding: '12px 16px' }}>
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.writingHabits.title}
-                    </Title>
-                    <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                      {analysisResult.writingHabits.content}
-                    </Paragraph>
-
-                    <Divider margin="24px" />
-
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.writingRhythm.title}
-                    </Title>
-                    <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                      {analysisResult.writingRhythm.content}
-                    </Paragraph>
-                  </div>
-                </TabPane>
-
-                <TabPane tab="内容分析" itemKey="content">
-                  <div style={{ padding: '12px 16px' }}>
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.topics.title}
-                    </Title>
-                    <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                      {analysisResult.topics.content}
-                    </Paragraph>
-
-                    <Divider margin="24px" />
-
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.writingBehavior.title}
-                    </Title>
-                    <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                      {analysisResult.writingBehavior.content}
-                    </Paragraph>
-
-                    {/* 添加标签分析描述 */}
-                    {analysisResult.tagAnalysis && (
-                      <>
-                        <Divider margin="24px" />
-
-                        <Title
-                          heading={5}
-                          style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                        >
-                          {analysisResult.tagAnalysis.title}
-                        </Title>
-                        <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                          {analysisResult.tagAnalysis.content}
-                        </Paragraph>
-                      </>
-                    )}
-
-                    {/* 添加标签关系描述 */}
-                    {analysisResult.tagRelationships && (
-                      <>
-                        <Divider margin="24px" />
-
-                        <Title
-                          heading={5}
-                          style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                        >
-                          {analysisResult.tagRelationships.title}
-                        </Title>
-                        <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                          {analysisResult.tagRelationships.content}
-                        </Paragraph>
-                      </>
-                    )}
-                  </div>
-                </TabPane>
-
-                <TabPane tab="改进建议" itemKey="suggestions">
-                  <div style={{ padding: '12px 16px' }}>
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.recommendations.title}
-                    </Title>
-                    <div style={{ margin: '16px 0' }}>
-                      <VirtualTextList
-                        items={analysisResult.recommendations.items}
-                        height={Math.min(300, analysisResult.recommendations.items.length * 60)}
-                        itemHeight={60}
-                        renderItem={(item) => (
-                          <div
-                            style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
-                          >
-                            <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
-                            <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
-                          </div>
-                        )}
-                      />
-                    </div>
-
-                    <Divider margin="24px" />
-
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.efficiencyTips.title}
-                    </Title>
-                    <div style={{ margin: '16px 0' }}>
-                      <VirtualTextList
-                        items={analysisResult.efficiencyTips.items}
-                        height={Math.min(300, analysisResult.efficiencyTips.items.length * 60)}
-                        itemHeight={60}
-                        renderItem={(item) => (
-                          <div
-                            style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
-                          >
-                            <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
-                            <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
-                          </div>
-                        )}
-                      />
-                    </div>
-
-                    <Divider margin="24px" />
-
-                    <Title
-                      heading={5}
-                      style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
-                    >
-                      {analysisResult.suggestedGoals.title}
-                    </Title>
-                    <div style={{ margin: '16px 0' }}>
-                      <VirtualTextList
-                        items={analysisResult.suggestedGoals.items}
-                        height={Math.min(300, analysisResult.suggestedGoals.items.length * 60)}
-                        itemHeight={60}
-                        renderItem={(item) => (
-                          <div
-                            style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
-                          >
-                            <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
-                            <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
-                          </div>
-                        )}
-                      />
-                    </div>
-                  </div>
-                </TabPane>
-
-                <TabPane tab="数据可视化" itemKey="visualization">
-                  {statsData && activityData && (
+                <Tabs type="line" style={{ marginTop: 16 }}>
+                  <TabPane tab="写作习惯" itemKey="habits">
                     <div style={{ padding: '12px 16px' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          justifyContent: 'space-between',
-                          gap: '24px',
-                          marginBottom: '24px'
-                        }}
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
                       >
-                        <div
-                          style={{
-                            width: 'calc(50% - 24px)',
-                            marginRight: '0'
-                          }}
-                        >
-                          {prepareChartData?.hourlyDistribution &&
-                            renderBarChart(prepareChartData.hourlyDistribution, '每日时段编辑分布')}
-                        </div>
-                        <div
-                          style={{
-                            width: 'calc(50% - 24px)',
-                            marginRight: '0'
-                          }}
-                        >
-                          {prepareChartData?.topNotes &&
-                            renderPieChart(prepareChartData.topNotes, '最常编辑的笔记')}
-                        </div>
-                      </div>
+                        {analysisResult.writingHabits.title}
+                      </Title>
+                      <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                        {analysisResult.writingHabits.content}
+                      </Paragraph>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          justifyContent: 'space-between',
-                          gap: '24px',
-                          marginBottom: '24px'
-                        }}
+                      <Divider margin="24px" />
+
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
                       >
-                        <div
-                          style={{
-                            width: 'calc(50% - 24px)',
-                            marginRight: '0'
-                          }}
-                        >
-                          {prepareChartData?.editTrend &&
-                            renderLineChart(prepareChartData.editTrend, '每日编辑次数趋势')}
-                        </div>
-                        <div
-                          style={{
-                            width: 'calc(50% - 24px)',
-                            marginRight: '0'
-                          }}
-                        >
-                          {prepareChartData?.noteTrend &&
-                            renderLineChart(prepareChartData.noteTrend, '每日活跃笔记数趋势')}
-                        </div>
-                      </div>
+                        {analysisResult.writingRhythm.title}
+                      </Title>
+                      <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                        {analysisResult.writingRhythm.content}
+                      </Paragraph>
+                    </div>
+                  </TabPane>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          justifyContent: 'space-between',
-                          gap: '24px',
-                          marginBottom: '24px'
-                        }}
+                  <TabPane tab="内容分析" itemKey="content">
+                    <div style={{ padding: '12px 16px' }}>
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
                       >
-                        <div
-                          style={{
-                            width: 'calc(50% - 24px)',
-                            marginRight: '0'
-                          }}
-                        >
-                          {prepareChartData?.activeHours &&
-                            renderBarChart(
-                              prepareChartData.activeHours,
-                              '日内活跃时段分布 (占比%)',
-                              true,
-                              prepareChartData.activeHours.datasets[0].data.indexOf(
-                                Math.max(...prepareChartData.activeHours.datasets[0].data)
-                              )
-                            )}
-                        </div>
-                        <div
-                          style={{
-                            width: 'calc(50% - 24px)',
-                            marginRight: '0'
-                          }}
-                        >
-                          {prepareChartData?.topFolders &&
-                            renderBarChart(prepareChartData.topFolders, '最常用的文件夹', false)}
-                        </div>
-                      </div>
+                        {analysisResult.topics.title}
+                      </Title>
+                      <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                        {analysisResult.topics.content}
+                      </Paragraph>
 
-                      {/* 添加写作效率趋势分析 */}
-                      <div style={{ width: '100%', marginBottom: '24px' }}>
-                        <WritingEfficiencyTrend
-                          statsData={statsData}
-                          activityData={activityData}
-                          isDarkMode={isDarkMode}
-                        />
-                      </div>
+                      <Divider margin="24px" />
 
-                      {/* 添加内容质量评分 */}
-                      <div style={{ width: '100%', marginBottom: '24px' }}>
-                        <ContentQualityScore statsData={statsData} isDarkMode={isDarkMode} />
-                      </div>
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
+                      >
+                        {analysisResult.writingBehavior.title}
+                      </Title>
+                      <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                        {analysisResult.writingBehavior.content}
+                      </Paragraph>
 
-                      {/* 添加标签分析相关的可视化 */}
-                      {statsData.topTags && statsData.topTags.length > 0 && (
+                      {/* 添加标签分析描述 */}
+                      {analysisResult.tagAnalysis && (
                         <>
-                          <Divider margin="24px">标签分析</Divider>
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              justifyContent: 'space-between',
-                              gap: '24px',
-                              marginBottom: '24px'
-                            }}
+                          <Divider margin="24px" />
+
+                          <Title
+                            heading={5}
+                            style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
                           >
-                            <div style={{ width: '100%', marginRight: '0' }}>
-                              {prepareChartData?.topTags &&
-                                renderTagCloud(prepareChartData.topTags, '最常用的标签')}
-                            </div>
-                          </div>
+                            {analysisResult.tagAnalysis.title}
+                          </Title>
+                          <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                            {analysisResult.tagAnalysis.content}
+                          </Paragraph>
                         </>
                       )}
 
-                      {/* 添加标签关系图 */}
-                      {statsData.tagRelations && statsData.tagRelations.length > 0 && (
-                        <div style={{ width: '100%', marginBottom: '24px' }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '16px'
-                            }}
+                      {/* 添加标签关系描述 */}
+                      {analysisResult.tagRelationships && (
+                        <>
+                          <Divider margin="24px" />
+
+                          <Title
+                            heading={5}
+                            style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
                           >
-                            <Title
-                              heading={6}
-                              style={{ margin: 0, color: 'var(--semi-color-text-0)' }}
-                            >
-                              标签关联分析
-                            </Title>
-                            <Button
-                              size="small"
-                              type="tertiary"
-                              onClick={() => setUseKnowledgeGraph(!useKnowledgeGraph)}
-                            >
-                              {useKnowledgeGraph ? '切换为饼图展示' : '切换为知识图谱'}
-                            </Button>
-                          </div>
-                          <div style={{ width: '100%', marginRight: '0' }}>
-                            {useKnowledgeGraph
-                              ? renderKnowledgeGraph(
-                                  statsData.tagRelations.slice(
-                                    0,
-                                    Math.min(50, statsData.tagRelations.length)
-                                  ),
-                                  '标签关联知识图谱',
-                                  statsData.topTags
-                                )
-                              : renderTagRelations(
-                                  statsData.tagRelations.slice(
-                                    0,
-                                    Math.min(50, statsData.tagRelations.length)
-                                  ),
-                                  '标签关联饼图'
-                                )}
-                          </div>
-                        </div>
+                            {analysisResult.tagRelationships.title}
+                          </Title>
+                          <Paragraph style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                            {analysisResult.tagRelationships.content}
+                          </Paragraph>
+                        </>
                       )}
                     </div>
-                  )}
-                </TabPane>
-                  </Tabs>
-                </Card>
-              </div>
-            )}
+                  </TabPane>
+
+                  <TabPane tab="改进建议" itemKey="suggestions">
+                    <div style={{ padding: '12px 16px' }}>
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
+                      >
+                        {analysisResult.recommendations.title}
+                      </Title>
+                      <div style={{ margin: '16px 0' }}>
+                        <VirtualTextList
+                          items={analysisResult.recommendations.items}
+                          height={Math.min(300, analysisResult.recommendations.items.length * 60)}
+                          itemHeight={60}
+                          renderItem={(item) => (
+                            <div
+                              style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
+                            >
+                              <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
+                              <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
+                            </div>
+                          )}
+                        />
+                      </div>
+
+                      <Divider margin="24px" />
+
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
+                      >
+                        {analysisResult.efficiencyTips.title}
+                      </Title>
+                      <div style={{ margin: '16px 0' }}>
+                        <VirtualTextList
+                          items={analysisResult.efficiencyTips.items}
+                          height={Math.min(300, analysisResult.efficiencyTips.items.length * 60)}
+                          itemHeight={60}
+                          renderItem={(item) => (
+                            <div
+                              style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
+                            >
+                              <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
+                              <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
+                            </div>
+                          )}
+                        />
+                      </div>
+
+                      <Divider margin="24px" />
+
+                      <Title
+                        heading={5}
+                        style={{ color: 'var(--semi-color-text-0)', marginBottom: 16 }}
+                      >
+                        {analysisResult.suggestedGoals.title}
+                      </Title>
+                      <div style={{ margin: '16px 0' }}>
+                        <VirtualTextList
+                          items={analysisResult.suggestedGoals.items}
+                          height={Math.min(300, analysisResult.suggestedGoals.items.length * 60)}
+                          itemHeight={60}
+                          renderItem={(item) => (
+                            <div
+                              style={{ paddingLeft: 20, display: 'flex', alignItems: 'flex-start' }}
+                            >
+                              <span style={{ marginRight: 8, marginTop: 4 }}>•</span>
+                              <Paragraph style={{ lineHeight: 1.6, margin: 0 }}>{item}</Paragraph>
+                            </div>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </TabPane>
+
+                  <TabPane tab="数据可视化" itemKey="visualization">
+                    {statsData && activityData && (
+                      <div style={{ padding: '12px 16px' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: '24px',
+                            marginBottom: '24px'
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 'calc(50% - 24px)',
+                              marginRight: '0'
+                            }}
+                          >
+                            {prepareChartData?.hourlyDistribution &&
+                              renderBarChart(
+                                prepareChartData.hourlyDistribution,
+                                '每日时段编辑分布'
+                              )}
+                          </div>
+                          <div
+                            style={{
+                              width: 'calc(50% - 24px)',
+                              marginRight: '0'
+                            }}
+                          >
+                            {prepareChartData?.topNotes &&
+                              renderPieChart(prepareChartData.topNotes, '最常编辑的笔记')}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: '24px',
+                            marginBottom: '24px'
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 'calc(50% - 24px)',
+                              marginRight: '0'
+                            }}
+                          >
+                            {prepareChartData?.editTrend &&
+                              renderLineChart(prepareChartData.editTrend, '每日编辑次数趋势')}
+                          </div>
+                          <div
+                            style={{
+                              width: 'calc(50% - 24px)',
+                              marginRight: '0'
+                            }}
+                          >
+                            {prepareChartData?.noteTrend &&
+                              renderLineChart(prepareChartData.noteTrend, '每日活跃笔记数趋势')}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: '24px',
+                            marginBottom: '24px'
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 'calc(50% - 24px)',
+                              marginRight: '0'
+                            }}
+                          >
+                            {prepareChartData?.activeHours &&
+                              renderBarChart(
+                                prepareChartData.activeHours,
+                                '日内活跃时段分布 (占比%)',
+                                true,
+                                prepareChartData.activeHours.datasets[0].data.indexOf(
+                                  Math.max(...prepareChartData.activeHours.datasets[0].data)
+                                )
+                              )}
+                          </div>
+                          <div
+                            style={{
+                              width: 'calc(50% - 24px)',
+                              marginRight: '0'
+                            }}
+                          >
+                            {prepareChartData?.topFolders &&
+                              renderBarChart(prepareChartData.topFolders, '最常用的文件夹', false)}
+                          </div>
+                        </div>
+
+                        {/* 添加写作效率趋势分析 */}
+                        <div style={{ width: '100%', marginBottom: '24px' }}>
+                          <WritingEfficiencyTrend
+                            statsData={statsData}
+                            activityData={activityData}
+                            isDarkMode={isDarkMode}
+                          />
+                        </div>
+
+                        {/* 添加内容质量评分 */}
+                        <div style={{ width: '100%', marginBottom: '24px' }}>
+                          <ContentQualityScore statsData={statsData} isDarkMode={isDarkMode} />
+                        </div>
+
+                        {/* 添加标签分析相关的可视化 */}
+                        {statsData.topTags && statsData.topTags.length > 0 && (
+                          <>
+                            <Divider margin="24px">标签分析</Divider>
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                justifyContent: 'space-between',
+                                gap: '24px',
+                                marginBottom: '24px'
+                              }}
+                            >
+                              <div style={{ width: '100%', marginRight: '0' }}>
+                                {prepareChartData?.topTags &&
+                                  renderTagCloud(prepareChartData.topTags, '最常用的标签')}
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* 添加标签关系图 */}
+                        {statsData.tagRelations && statsData.tagRelations.length > 0 && (
+                          <div style={{ width: '100%', marginBottom: '24px' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: '16px'
+                              }}
+                            >
+                              <Title
+                                heading={6}
+                                style={{ margin: 0, color: 'var(--semi-color-text-0)' }}
+                              >
+                                标签关联分析
+                              </Title>
+                              <Button
+                                size="small"
+                                type="tertiary"
+                                onClick={() => setUseKnowledgeGraph(!useKnowledgeGraph)}
+                              >
+                                {useKnowledgeGraph ? '切换为饼图展示' : '切换为知识图谱'}
+                              </Button>
+                            </div>
+                            <div style={{ width: '100%', marginRight: '0' }}>
+                              {useKnowledgeGraph
+                                ? renderKnowledgeGraph(
+                                    statsData.tagRelations.slice(
+                                      0,
+                                      Math.min(50, statsData.tagRelations.length)
+                                    ),
+                                    '标签关联知识图谱',
+                                    statsData.topTags
+                                  )
+                                : renderTagRelations(
+                                    statsData.tagRelations.slice(
+                                      0,
+                                      Math.min(50, statsData.tagRelations.length)
+                                    ),
+                                    '标签关联饼图'
+                                  )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </TabPane>
+                </Tabs>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -232,16 +232,14 @@ const api = {
       request: ContentGenerationRequest
     ): Promise<{ success: boolean; content?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.GENERATE_CONTENT, request),
-    
+
     // AI生成（支持消息格式）
-    generate: (
-      request: { 
-        config: AiApiConfig; 
-        messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>; 
-        maxTokens?: number; 
-        temperature?: number 
-      }
-    ): Promise<{ success: boolean; content?: string; error?: string }> =>
+    generate: (request: {
+      config: AiApiConfig
+      messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
+      maxTokens?: number
+      temperature?: number
+    }): Promise<{ success: boolean; content?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.GENERATE_WITH_MESSAGES, request),
 
     // 流式生成内容

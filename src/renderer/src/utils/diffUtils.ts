@@ -21,8 +21,10 @@ export interface DiffResult {
 function longestCommonSubsequence(text1: string, text2: string): number[][] {
   const m = text1.length
   const n = text2.length
-  const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0))
-  
+  const dp: number[][] = Array(m + 1)
+    .fill(0)
+    .map(() => Array(n + 1).fill(0))
+
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       if (text1[i - 1] === text2[j - 1]) {
@@ -32,7 +34,7 @@ function longestCommonSubsequence(text1: string, text2: string): number[][] {
       }
     }
   }
-  
+
   return dp
 }
 
@@ -42,19 +44,21 @@ function longestCommonSubsequence(text1: string, text2: string): number[][] {
 export function computeTextDiff(originalText: string, newText: string): DiffResult {
   if (originalText === newText) {
     return {
-      diffs: [{
-        type: 'equal',
-        originalText,
-        newText,
-        index: 0
-      }],
+      diffs: [
+        {
+          type: 'equal',
+          originalText,
+          newText,
+          index: 0
+        }
+      ],
       hasChanges: false
     }
   }
 
   const diffs: DiffItem[] = []
   const dp = longestCommonSubsequence(originalText, newText)
-  
+
   let i = originalText.length
   let j = newText.length
   let index = 0
@@ -88,13 +92,13 @@ export function computeTextDiff(originalText: string, newText: string): DiffResu
 
   // 合并相邻的相同类型操作
   const mergedDiffs = mergeSimilarDiffs(diffs)
-  
+
   // 添加相等的部分
   const finalDiffs = addEqualParts(originalText, newText, mergedDiffs)
 
   return {
     diffs: finalDiffs,
-    hasChanges: mergedDiffs.some(diff => diff.type !== 'equal')
+    hasChanges: mergedDiffs.some((diff) => diff.type !== 'equal')
   }
 }
 
@@ -109,7 +113,7 @@ function mergeSimilarDiffs(diffs: DiffItem[]): DiffItem[] {
 
   for (let i = 1; i < diffs.length; i++) {
     const next = diffs[i]
-    
+
     if (current.type === next.type) {
       // 合并相同类型的diff
       current.originalText += next.originalText
@@ -119,7 +123,7 @@ function mergeSimilarDiffs(diffs: DiffItem[]): DiffItem[] {
       current = { ...next }
     }
   }
-  
+
   merged.push(current)
   return merged
 }
@@ -175,10 +179,11 @@ function addEqualParts(originalText: string, _newText: string, diffs: DiffItem[]
 export function computeLineDiff(originalText: string, newText: string): DiffResult {
   const originalLines = originalText.split('\n')
   const newLines = newText.split('\n')
-  
+
   const diffs: DiffItem[] = []
-  
-  let i = 0, j = 0
+
+  let i = 0,
+    j = 0
   let index = 0
 
   while (i < originalLines.length || j < newLines.length) {
@@ -225,7 +230,7 @@ export function computeLineDiff(originalText: string, newText: string): DiffResu
 
   return {
     diffs,
-    hasChanges: diffs.some(diff => diff.type !== 'equal')
+    hasChanges: diffs.some((diff) => diff.type !== 'equal')
   }
 }
 
@@ -234,7 +239,7 @@ export function computeLineDiff(originalText: string, newText: string): DiffResu
  */
 export function applyDiff(_originalText: string, diffs: DiffItem[]): string {
   let result = ''
-  
+
   for (const diff of diffs) {
     switch (diff.type) {
       case 'equal':
@@ -247,7 +252,7 @@ export function applyDiff(_originalText: string, diffs: DiffItem[]): string {
         break
     }
   }
-  
+
   return result
 }
 
@@ -257,12 +262,12 @@ export function applyDiff(_originalText: string, diffs: DiffItem[]): string {
 export function smartDiff(originalText: string, newText: string): DiffResult {
   const originalLines = originalText.split('\n').length
   const newLines = newText.split('\n').length
-  
+
   // 如果是多行文本且行数差异较大，使用行级diff
   if (originalLines > 3 || newLines > 3 || Math.abs(originalLines - newLines) > 1) {
     return computeLineDiff(originalText, newText)
   }
-  
+
   // 否则使用字符级diff
   return computeTextDiff(originalText, newText)
 }

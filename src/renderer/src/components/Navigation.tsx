@@ -281,7 +281,11 @@ const Navigation: React.FC<NavigationProps> = ({
               Toast.error(t('messages.error.syncFailed', { message: result.message }))
             }
           } catch (error) {
-            Toast.error(t('messages.error.syncFailed', { message: error instanceof Error ? error.message : String(error) }))
+            Toast.error(
+              t('messages.error.syncFailed', {
+                message: error instanceof Error ? error.message : String(error)
+              })
+            )
           }
         },
         style: { paddingBlock: '8px' }
@@ -495,7 +499,9 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(t('messages.error.deleteFailed', { message: result.error || 'Unknown error' }))
+            Toast.error(
+              t('messages.error.deleteFailed', { message: result.error || 'Unknown error' })
+            )
           }
         }
       } else {
@@ -516,7 +522,9 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(t('messages.error.deleteFailed', { message: result.error || 'Unknown error' }))
+            Toast.error(
+              t('messages.error.deleteFailed', { message: result.error || 'Unknown error' })
+            )
           }
         }
       }
@@ -574,7 +582,9 @@ const Navigation: React.FC<NavigationProps> = ({
             // 刷新列表
             fetchFileList()
           } else {
-            Toast.error(t('messages.error.renameFailed', { message: result.error || 'Unknown error' }))
+            Toast.error(
+              t('messages.error.renameFailed', { message: result.error || 'Unknown error' })
+            )
           }
         }
       } else {
@@ -595,7 +605,9 @@ const Navigation: React.FC<NavigationProps> = ({
               // 刷新列表
               fetchFileList()
             } else {
-              Toast.error(t('messages.error.renameFailed', { message: result.error || 'Unknown error' }))
+              Toast.error(
+                t('messages.error.renameFailed', { message: result.error || 'Unknown error' })
+              )
             }
           }
         }
@@ -730,7 +742,9 @@ const Navigation: React.FC<NavigationProps> = ({
           // 刷新列表
           fetchFileList()
         } else {
-          Toast.error(t('messages.error.createFailed', { message: result.error || 'Unknown error' }))
+          Toast.error(
+            t('messages.error.createFailed', { message: result.error || 'Unknown error' })
+          )
         }
       } else {
         // 创建笔记
@@ -756,7 +770,9 @@ const Navigation: React.FC<NavigationProps> = ({
             onFileSelect(finalFolder, `${name}.md`)
           }
         } else {
-          Toast.error(t('messages.error.createFailed', { message: result.error || 'Unknown error' }))
+          Toast.error(
+            t('messages.error.createFailed', { message: result.error || 'Unknown error' })
+          )
         }
       }
     } catch (error) {
@@ -1403,7 +1419,11 @@ const Navigation: React.FC<NavigationProps> = ({
         folders={getAllFolderPaths(navItems)}
         onConfirm={handleCreateConfirm}
         onCancel={closeCreateDialog}
-        placeholder={createDialogConfig.type === 'folder' ? t('placeholder.folderName') : t('placeholder.noteName')}
+        placeholder={
+          createDialogConfig.type === 'folder'
+            ? t('placeholder.folderName')
+            : t('placeholder.noteName')
+        }
         defaultFolder={createDialogConfig.defaultFolder}
       />
     </div>

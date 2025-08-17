@@ -6,16 +6,16 @@ interface IconProps {
   className?: string
 }
 
-export const IconChevronDown: React.FC<IconProps> = ({ 
-  size = 16, 
-  color = 'currentColor', 
-  className = '' 
+export const IconChevronDown: React.FC<IconProps> = ({
+  size = 16,
+  color = 'currentColor',
+  className = ''
 }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
     stroke={color}
     strokeWidth="2"
     strokeLinecap="round"
@@ -26,16 +26,16 @@ export const IconChevronDown: React.FC<IconProps> = ({
   </svg>
 )
 
-export const IconSettings: React.FC<IconProps> = ({ 
-  size = 16, 
-  color = 'currentColor', 
-  className = '' 
+export const IconSettings: React.FC<IconProps> = ({
+  size = 16,
+  color = 'currentColor',
+  className = ''
 }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
     stroke={color}
     strokeWidth="2"
     strokeLinecap="round"
@@ -47,16 +47,16 @@ export const IconSettings: React.FC<IconProps> = ({
   </svg>
 )
 
-export const IconMoreHorizontal: React.FC<IconProps> = ({ 
-  size = 16, 
-  color = 'currentColor', 
-  className = '' 
+export const IconMoreHorizontal: React.FC<IconProps> = ({
+  size = 16,
+  color = 'currentColor',
+  className = ''
 }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
     stroke={color}
     strokeWidth="2"
     strokeLinecap="round"

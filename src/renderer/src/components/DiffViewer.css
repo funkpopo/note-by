@@ -239,15 +239,15 @@
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .diff-stats {
     margin-left: 0;
   }
-  
+
   .diff-footer {
     padding: 8px 12px;
   }
-  
+
   .diff-controls {
     justify-content: center;
   }
@@ -286,27 +286,27 @@
 }
 
 /* 暗色主题适配 */
-[theme-mode="dark"] .diff-viewer {
+[theme-mode='dark'] .diff-viewer {
   border-color: var(--semi-color-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-[theme-mode="dark"] .diff-line.diff-insert {
+[theme-mode='dark'] .diff-line.diff-insert {
   background: rgba(34, 197, 94, 0.15);
 }
 
-[theme-mode="dark"] .diff-line.diff-delete {
+[theme-mode='dark'] .diff-line.diff-delete {
   background: rgba(239, 68, 68, 0.15);
 }
 
-[theme-mode="dark"] .diff-line.diff-replace {
+[theme-mode='dark'] .diff-line.diff-replace {
   background: rgba(245, 158, 11, 0.15);
 }
 
-[theme-mode="dark"] .diff-replace-content .diff-original {
+[theme-mode='dark'] .diff-replace-content .diff-original {
   background: rgba(239, 68, 68, 0.15);
 }
 
-[theme-mode="dark"] .diff-replace-content .diff-new {
+[theme-mode='dark'] .diff-replace-content .diff-new {
   background: rgba(34, 197, 94, 0.15);
 }

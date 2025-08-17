@@ -37,7 +37,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   const triggerRef = useRef<HTMLDivElement>(null)
 
   // 获取可点击的菜单项
-  const clickableItems = menu.filter(item => item.node === 'item' && !item.disabled)
+  const clickableItems = menu.filter((item) => item.node === 'item' && !item.disabled)
 
   // 处理触发器点击
   const handleTriggerClick = () => {
@@ -87,14 +87,14 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         break
       case 'ArrowDown':
         e.preventDefault()
-        setFocusedIndex(prev => {
+        setFocusedIndex((prev) => {
           const nextIndex = prev + 1
           return nextIndex >= clickableItems.length ? 0 : nextIndex
         })
         break
       case 'ArrowUp':
         e.preventDefault()
-        setFocusedIndex(prev => {
+        setFocusedIndex((prev) => {
           const nextIndex = prev - 1
           return nextIndex < 0 ? clickableItems.length - 1 : nextIndex
         })
@@ -139,18 +139,18 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   const renderMenuItem = (item: DropdownMenuItem, index: number) => {
     const originalIndex = menu.indexOf(item)
     const clickableIndex = clickableItems.indexOf(item)
-    
+
     switch (item.node) {
       case 'divider':
         return <div key={`divider-${originalIndex}`} className="dropdown-menu-divider" />
-      
+
       case 'title':
         return (
           <div key={`title-${originalIndex}`} className="dropdown-menu-title">
             {item.name}
           </div>
         )
-      
+
       case 'item':
         return (
           <button
@@ -166,15 +166,15 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             <span className="dropdown-menu-item-text">{item.name}</span>
           </button>
         )
-      
+
       default:
         return null
     }
   }
 
   return (
-    <div 
-      ref={dropdownRef} 
+    <div
+      ref={dropdownRef}
       className={`custom-dropdown ${className}`}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -188,7 +188,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       >
         {children}
       </div>
-      
+
       {isOpen && (
         <div
           ref={menuRef}

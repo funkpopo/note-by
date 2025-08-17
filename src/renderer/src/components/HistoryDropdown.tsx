@@ -62,38 +62,38 @@ const ReadOnlyImageExtension = Node.create({
   name: 'image',
   group: 'block',
   atom: true,
-  
+
   addAttributes() {
     return {
       src: {
-        default: null,
+        default: null
       },
       alt: {
-        default: null,
+        default: null
       },
       title: {
-        default: null,
+        default: null
       },
       width: {
-        default: null,
+        default: null
       },
       height: {
-        default: null,
-      },
+        default: null
+      }
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'img[src]',
-      },
+        tag: 'img[src]'
+      }
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
     return ['img', HTMLAttributes]
-  },
+  }
 })
 
 // 简化的嵌入内容扩展（只读）
@@ -105,28 +105,28 @@ const ReadOnlyIframeExtension = Node.create({
   addAttributes() {
     return {
       src: {
-        default: null,
+        default: null
       },
       width: {
-        default: '100%',
+        default: '100%'
       },
       height: {
-        default: '315',
-      },
+        default: '315'
+      }
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'iframe[src]',
-      },
+        tag: 'iframe[src]'
+      }
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
     return ['iframe', HTMLAttributes]
-  },
+  }
 })
 
 // 历史记录项接口
@@ -176,20 +176,22 @@ const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
       ReadOnlyIframeExtension
     ],
     content: content,
-    editable: false,
+    editable: false
   })
 
   return (
-    <div style={{ 
-      border: '1px solid var(--semi-color-border)',
-      borderRadius: '4px',
-      padding: '16px',
-      marginTop: '16px',
-      backgroundColor: 'var(--semi-color-fill-0)',
-      minHeight: '300px',
-      maxHeight: 'calc(100vh - 200px)',
-      overflow: 'auto'
-    }}>
+    <div
+      style={{
+        border: '1px solid var(--semi-color-border)',
+        borderRadius: '4px',
+        padding: '16px',
+        marginTop: '16px',
+        backgroundColor: 'var(--semi-color-fill-0)',
+        minHeight: '300px',
+        maxHeight: 'calc(100vh - 200px)',
+        overflow: 'auto'
+      }}
+    >
       <EditorContent editor={editor} />
     </div>
   )

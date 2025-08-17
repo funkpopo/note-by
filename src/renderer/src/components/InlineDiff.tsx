@@ -8,7 +8,7 @@ import './InlineDiff.css'
 // 自定义Check图标
 const IconCheck = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
   </svg>
 )
 
@@ -26,7 +26,7 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   // 组件挂载时记录节点，卸载时清理
   useEffect(() => {
     console.log('InlineDiff组件挂载')
-    
+
     return () => {
       // 组件卸载时的清理逻辑
       console.log('InlineDiff组件卸载')
@@ -36,11 +36,11 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   const handleAccept = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     // 获取当前节点的位置
     const pos = getPos()
     const nodeSize = node.nodeSize
-    
+
     // 替换整个节点为新文本
     editor.view.dispatch(
       editor.state.tr.replaceWith(pos, pos + nodeSize, editor.schema.text(newText))
@@ -50,11 +50,11 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   const handleReject = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     // 获取当前节点的位置
     const pos = getPos()
     const nodeSize = node.nodeSize
-    
+
     // 替换整个节点为原文本
     editor.view.dispatch(
       editor.state.tr.replaceWith(pos, pos + nodeSize, editor.schema.text(originalText))
@@ -101,12 +101,8 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   }
 
   return (
-    <NodeViewWrapper 
-      className="inline-diff-wrapper"
-      contentEditable={false}
-      draggable={false}
-    >
-      <div 
+    <NodeViewWrapper className="inline-diff-wrapper" contentEditable={false} draggable={false}>
+      <div
         className="inline-diff"
         onMouseDown={(e) => {
           e.preventDefault()
@@ -120,26 +116,14 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
         <div className="inline-diff-header">
           <span className="inline-diff-label">AI{feature?.label || '处理'}结果</span>
         </div>
-        
+
         <div className="inline-diff-content">
-          <div className="inline-diff-text">
-            {renderDiffText()}
-          </div>
-          
+          <div className="inline-diff-text">{renderDiffText()}</div>
+
           <div className="inline-diff-actions">
             <Space>
-              <Button
-                icon={<IconClose />}
-                size="small"
-                type="tertiary"
-                onClick={handleReject}
-              />
-              <Button
-                icon={<IconCheck />}
-                size="small"
-                type="primary"
-                onClick={handleAccept}
-              />
+              <Button icon={<IconClose />} size="small" type="tertiary" onClick={handleReject} />
+              <Button icon={<IconCheck />} size="small" type="primary" onClick={handleAccept} />
             </Space>
           </div>
         </div>

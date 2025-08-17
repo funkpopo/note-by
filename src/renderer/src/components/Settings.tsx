@@ -364,28 +364,38 @@ const Settings: React.FC = () => {
                 </Tooltip>
               </div>
             </div>
-            
+
             <div className="api-card-content">
               <div className="config-info">
                 <div className="info-item">
-                  <Text type="tertiary" size="small">API URL</Text>
+                  <Text type="tertiary" size="small">
+                    API URL
+                  </Text>
                   <Text className="info-value">{config.apiUrl || '未设置'}</Text>
                 </div>
                 <div className="info-item">
-                  <Text type="tertiary" size="small">API Key</Text>
+                  <Text type="tertiary" size="small">
+                    API Key
+                  </Text>
                   <Text className="info-value">{config.apiKey ? '••••••••' : '未设置'}</Text>
                 </div>
                 <div className="info-item">
-                  <Text type="tertiary" size="small">模型</Text>
+                  <Text type="tertiary" size="small">
+                    模型
+                  </Text>
                   <Text className="info-value">{config.modelName || '未设置'}</Text>
                 </div>
                 <div className="info-row">
                   <div className="info-item-inline">
-                    <Text type="tertiary" size="small">温度</Text>
+                    <Text type="tertiary" size="small">
+                      温度
+                    </Text>
                     <Tag size="small">{config.temperature || '0.7'}</Tag>
                   </div>
                   <div className="info-item-inline">
-                    <Text type="tertiary" size="small">Max Token</Text>
+                    <Text type="tertiary" size="small">
+                      Max Token
+                    </Text>
                     <Tag size="small">{config.maxTokens || '2000'}</Tag>
                   </div>
                 </div>
@@ -393,7 +403,9 @@ const Settings: React.FC = () => {
 
               {/* 测试结果显示区域 */}
               {testResults[config.id] && (
-                <div className={`test-result ${testResults[config.id].success ? 'success' : 'error'}`}>
+                <div
+                  className={`test-result ${testResults[config.id].success ? 'success' : 'error'}`}
+                >
                   <div className="test-result-header">
                     {testResults[config.id].success ? (
                       <IconCheckCircleStroked className="result-icon success" />
@@ -588,10 +600,7 @@ const Settings: React.FC = () => {
   return (
     <div className="settings-container">
       <div className="settings-body">
-        <Tabs
-          className="settings-tabs"
-          type="card"
-        >
+        <Tabs className="settings-tabs" type="card">
           {/* 通用设置标签 */}
           <Tabs.TabPane
             tab={
@@ -638,7 +647,7 @@ const Settings: React.FC = () => {
                   </div>
                 </div>
               </Card>
-        
+
               {/* 更新检查设置卡片 */}
               <Card className="settings-card animated-card">
                 <div className="update-settings">
@@ -664,7 +673,9 @@ const Settings: React.FC = () => {
                   </div>
 
                   {updateResult && (
-                    <div className={`update-result ${updateResult.error ? 'error' : updateResult.hasUpdate ? 'available' : 'latest'}`}>
+                    <div
+                      className={`update-result ${updateResult.error ? 'error' : updateResult.hasUpdate ? 'available' : 'latest'}`}
+                    >
                       <div className="update-result-header">
                         {updateResult.error ? (
                           <IconAlertCircle className="update-icon error" />
@@ -705,7 +716,6 @@ const Settings: React.FC = () => {
                       )}
                     </div>
                   )}
-
                 </div>
                 <div className="card-footer">
                   <Text type="tertiary" size="small">
@@ -726,9 +736,9 @@ const Settings: React.FC = () => {
                       配置历史记录的保留策略
                     </Text>
                   </div>
-                  <Button 
-                    type="primary" 
-                    theme="solid" 
+                  <Button
+                    type="primary"
+                    theme="solid"
                     onClick={saveHistoryManagement}
                     className="save-btn"
                   >
@@ -748,10 +758,14 @@ const Settings: React.FC = () => {
                       <Radio value="count" className="radio-option">
                         <Space>
                           <span>按数量保留</span>
-                          <Tag size="small" color="blue">推荐</Tag>
+                          <Tag size="small" color="blue">
+                            推荐
+                          </Tag>
                         </Space>
                       </Radio>
-                      <Radio value="time" className="radio-option">按时间保留</Radio>
+                      <Radio value="time" className="radio-option">
+                        按时间保留
+                      </Radio>
                     </Form.RadioGroup>
 
                     <div className="form-input-section">
@@ -834,9 +848,7 @@ const Settings: React.FC = () => {
                   <Text type="tertiary">加载配置中...</Text>
                 </div>
               ) : (
-                <div className="api-configs-container">
-                  {renderApiConfigCards()}
-                </div>
+                <div className="api-configs-container">{renderApiConfigCards()}</div>
               )}
             </div>
           </Tabs.TabPane>
@@ -871,14 +883,7 @@ const Settings: React.FC = () => {
           </Tabs.TabPane>
 
           {/* 性能监控标签 */}
-          <Tabs.TabPane
-            tab={
-              <span className="tab-label">
-                性能监控
-              </span>
-            }
-            itemKey="performance"
-          >
+          <Tabs.TabPane tab={<span className="tab-label">性能监控</span>} itemKey="performance">
             <div className="tab-content">
               <Card className="settings-card animated-card">
                 <div className="card-header">
@@ -956,10 +961,16 @@ const Settings: React.FC = () => {
                           </div>
                           <div className="metric-item">
                             <Text type="tertiary">使用率</Text>
-                            <Text strong className={`metric-value ${
-                              performanceMetrics.memoryUsage.percentage > 90 ? 'danger' :
-                              performanceMetrics.memoryUsage.percentage > 75 ? 'warning' : 'success'
-                            }`}>
+                            <Text
+                              strong
+                              className={`metric-value ${
+                                performanceMetrics.memoryUsage.percentage > 90
+                                  ? 'danger'
+                                  : performanceMetrics.memoryUsage.percentage > 75
+                                    ? 'warning'
+                                    : 'success'
+                              }`}
+                            >
                               {performanceMetrics.memoryUsage.percentage.toFixed(1)}%
                             </Text>
                           </div>
@@ -970,20 +981,28 @@ const Settings: React.FC = () => {
                       <div className="metric-card">
                         <div className="metric-header">
                           <Title heading={6}>编辑器性能</Title>
-                          <Tag color="blue" size="small">实时</Tag>
+                          <Tag color="blue" size="small">
+                            实时
+                          </Tag>
                         </div>
                         <div className="metric-content">
                           <div className="metric-item">
                             <Text type="tertiary">加载时间</Text>
-                            <Text strong>{formatTime(performanceMetrics.editorPerformance.loadTime)}</Text>
+                            <Text strong>
+                              {formatTime(performanceMetrics.editorPerformance.loadTime)}
+                            </Text>
                           </div>
                           <div className="metric-item">
                             <Text type="tertiary">保存时间</Text>
-                            <Text strong>{formatTime(performanceMetrics.editorPerformance.saveTime)}</Text>
+                            <Text strong>
+                              {formatTime(performanceMetrics.editorPerformance.saveTime)}
+                            </Text>
                           </div>
                           <div className="metric-item">
                             <Text type="tertiary">渲染时间</Text>
-                            <Text strong>{formatTime(performanceMetrics.editorPerformance.renderTime)}</Text>
+                            <Text strong>
+                              {formatTime(performanceMetrics.editorPerformance.renderTime)}
+                            </Text>
                           </div>
                         </div>
                       </div>
@@ -992,7 +1011,15 @@ const Settings: React.FC = () => {
                       <div className="metric-card">
                         <div className="metric-header">
                           <Title heading={6}>操作统计</Title>
-                          <Badge count={performanceMetrics.userActions.editorChanges + performanceMetrics.userActions.saves + performanceMetrics.userActions.loads + performanceMetrics.userActions.searches} type="tertiary" />
+                          <Badge
+                            count={
+                              performanceMetrics.userActions.editorChanges +
+                              performanceMetrics.userActions.saves +
+                              performanceMetrics.userActions.loads +
+                              performanceMetrics.userActions.searches
+                            }
+                            type="tertiary"
+                          />
                         </div>
                         <div className="metric-content">
                           <div className="metric-item">
@@ -1019,12 +1046,21 @@ const Settings: React.FC = () => {
                         <div className="metric-header">
                           <Title heading={6}>网络性能</Title>
                           {performanceMetrics.networkPerformance.latency > 0 && (
-                            <Tag color={
-                              performanceMetrics.networkPerformance.latency < 100 ? 'green' :
-                              performanceMetrics.networkPerformance.latency < 300 ? 'orange' : 'red'
-                            } size="small">
-                              {performanceMetrics.networkPerformance.latency < 100 ? '良好' :
-                               performanceMetrics.networkPerformance.latency < 300 ? '一般' : '较差'}
+                            <Tag
+                              color={
+                                performanceMetrics.networkPerformance.latency < 100
+                                  ? 'green'
+                                  : performanceMetrics.networkPerformance.latency < 300
+                                    ? 'orange'
+                                    : 'red'
+                              }
+                              size="small"
+                            >
+                              {performanceMetrics.networkPerformance.latency < 100
+                                ? '良好'
+                                : performanceMetrics.networkPerformance.latency < 300
+                                  ? '一般'
+                                  : '较差'}
                             </Tag>
                           )}
                         </div>
@@ -1102,22 +1138,38 @@ const Settings: React.FC = () => {
                             <div className="trends-container">
                               <div className="trend-item">
                                 <Text type="tertiary">内存趋势</Text>
-                                <Tag color={
-                                  report.trends.memoryTrend === 'increasing' ? 'orange' :
-                                  report.trends.memoryTrend === 'decreasing' ? 'green' : 'cyan'
-                                }>
-                                  {report.trends.memoryTrend === 'increasing' ? '↑ 上升' :
-                                   report.trends.memoryTrend === 'decreasing' ? '↓ 下降' : '→ 稳定'}
+                                <Tag
+                                  color={
+                                    report.trends.memoryTrend === 'increasing'
+                                      ? 'orange'
+                                      : report.trends.memoryTrend === 'decreasing'
+                                        ? 'green'
+                                        : 'cyan'
+                                  }
+                                >
+                                  {report.trends.memoryTrend === 'increasing'
+                                    ? '↑ 上升'
+                                    : report.trends.memoryTrend === 'decreasing'
+                                      ? '↓ 下降'
+                                      : '→ 稳定'}
                                 </Tag>
                               </div>
                               <div className="trend-item">
                                 <Text type="tertiary">性能趋势</Text>
-                                <Tag color={
-                                  report.trends.performanceTrend === 'improving' ? 'green' :
-                                  report.trends.performanceTrend === 'declining' ? 'orange' : 'cyan'
-                                }>
-                                  {report.trends.performanceTrend === 'improving' ? '↑ 提升' :
-                                   report.trends.performanceTrend === 'declining' ? '↓ 下降' : '→ 稳定'}
+                                <Tag
+                                  color={
+                                    report.trends.performanceTrend === 'improving'
+                                      ? 'green'
+                                      : report.trends.performanceTrend === 'declining'
+                                        ? 'orange'
+                                        : 'cyan'
+                                  }
+                                >
+                                  {report.trends.performanceTrend === 'improving'
+                                    ? '↑ 提升'
+                                    : report.trends.performanceTrend === 'declining'
+                                      ? '↓ 下降'
+                                      : '→ 稳定'}
                                 </Tag>
                               </div>
                             </div>
@@ -1142,7 +1194,8 @@ const Settings: React.FC = () => {
 
                 <div className="card-footer">
                   <Text type="tertiary" size="small">
-                    <IconInfoCircle size="small" /> 性能数据每1分钟自动更新，导出数据包含详细历史记录
+                    <IconInfoCircle size="small" />{' '}
+                    性能数据每1分钟自动更新，导出数据包含详细历史记录
                   </Text>
                 </div>
               </Card>

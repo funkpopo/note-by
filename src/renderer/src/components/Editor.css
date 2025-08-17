@@ -224,7 +224,8 @@
   color: var(--semi-color-text-0);
 }
 
-.ProseMirror ul, .ProseMirror ol {
+.ProseMirror ul,
+.ProseMirror ol {
   padding-left: 1.5em;
   margin: 0.5em 0;
   color: var(--semi-color-text-0);
@@ -486,7 +487,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.ProseMirror th, .ProseMirror td {
+.ProseMirror th,
+.ProseMirror td {
   border: 1px solid var(--semi-color-border);
   padding: 10px 14px;
   text-align: left;
@@ -562,14 +564,14 @@
 }
 
 /* Dark theme specific AI bubble menu */
-[theme-mode="dark"] .bubble-menu.ai-bubble-menu {
+[theme-mode='dark'] .bubble-menu.ai-bubble-menu {
   background: var(--semi-color-bg-0);
   border-color: var(--semi-color-border);
   box-shadow: var(--semi-shadow-elevated);
 }
 
 /* Light theme specific AI bubble menu */
-[theme-mode="light"] .bubble-menu.ai-bubble-menu {
+[theme-mode='light'] .bubble-menu.ai-bubble-menu {
   background: var(--semi-color-bg-0);
   border-color: var(--semi-color-border);
   box-shadow: var(--semi-shadow-elevated);
@@ -583,10 +585,12 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(var(--semi-color-primary), 0.05), 
-    transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--semi-color-primary), 0.05),
+    transparent
+  );
   animation: aiShimmer 2s infinite;
   z-index: 0;
 }
@@ -630,12 +634,12 @@
 }
 
 /* Dark theme loading text enhancement */
-[theme-mode="dark"] .ai-loading-text {
+[theme-mode='dark'] .ai-loading-text {
   color: var(--semi-color-text-0);
 }
 
 /* Light theme loading text enhancement */
-[theme-mode="light"] .ai-loading-text {
+[theme-mode='light'] .ai-loading-text {
   color: var(--semi-color-text-0);
 }
 
@@ -693,7 +697,9 @@
 }
 
 @keyframes aiDotPulse {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -704,10 +710,16 @@
 }
 
 /* Enhanced AI Assistant Button in Text Bubble Menu */
-.text-bubble-menu .semi-button[type="primary"] {
-  background: linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-hover) 100%);
+.text-bubble-menu .semi-button[type='primary'] {
+  background: linear-gradient(
+    135deg,
+    var(--semi-color-primary) 0%,
+    var(--semi-color-primary-light-hover) 100%
+  );
   border: 2px solid var(--semi-color-primary-light-active);
-  box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3), 0 0 0 1px rgba(var(--semi-color-primary), 0.1);
+  box-shadow:
+    0 2px 8px rgba(var(--semi-blue-5), 0.3),
+    0 0 0 1px rgba(var(--semi-color-primary), 0.1);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-weight: 600;
   color: var(--semi-color-white);
@@ -715,58 +727,68 @@
   overflow: hidden;
 }
 
-.text-bubble-menu .semi-button[type="primary"]::before {
+.text-bubble-menu .semi-button[type='primary']::before {
   content: '';
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.2), 
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.5s;
 }
 
-.text-bubble-menu .semi-button[type="primary"]:hover::before {
+.text-bubble-menu .semi-button[type='primary']:hover::before {
   left: 100%;
 }
 
-.text-bubble-menu .semi-button[type="primary"]:hover {
+.text-bubble-menu .semi-button[type='primary']:hover {
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(var(--semi-blue-5), 0.4), 0 0 0 2px rgba(var(--semi-color-primary), 0.2);
-  background: linear-gradient(135deg, var(--semi-color-primary-hover) 0%, var(--semi-color-primary) 100%);
+  box-shadow:
+    0 6px 20px rgba(var(--semi-blue-5), 0.4),
+    0 0 0 2px rgba(var(--semi-color-primary), 0.2);
+  background: linear-gradient(
+    135deg,
+    var(--semi-color-primary-hover) 0%,
+    var(--semi-color-primary) 100%
+  );
   border-color: var(--semi-color-primary);
 }
 
-.text-bubble-menu .semi-button[type="primary"]:active {
+.text-bubble-menu .semi-button[type='primary']:active {
   transform: translateY(0) scale(0.98);
   box-shadow: 0 2px 8px rgba(var(--semi-blue-5), 0.3);
 }
 
 /* Dark theme specific enhancements */
-[theme-mode="dark"] .text-bubble-menu .semi-button[type="primary"] {
+[theme-mode='dark'] .text-bubble-menu .semi-button[type='primary'] {
   background: linear-gradient(135deg, var(--semi-color-primary) 0%, #4dabf7 100%);
   border-color: var(--semi-color-primary-light-default);
-  box-shadow: 0 2px 12px rgba(77, 171, 247, 0.4), 0 0 0 1px rgba(var(--semi-color-primary), 0.2);
+  box-shadow:
+    0 2px 12px rgba(77, 171, 247, 0.4),
+    0 0 0 1px rgba(var(--semi-color-primary), 0.2);
 }
 
-[theme-mode="dark"] .text-bubble-menu .semi-button[type="primary"]:hover {
-  box-shadow: 0 6px 24px rgba(77, 171, 247, 0.5), 0 0 0 2px rgba(var(--semi-color-primary), 0.3);
+[theme-mode='dark'] .text-bubble-menu .semi-button[type='primary']:hover {
+  box-shadow:
+    0 6px 24px rgba(77, 171, 247, 0.5),
+    0 0 0 2px rgba(var(--semi-color-primary), 0.3);
   background: linear-gradient(135deg, #4dabf7 0%, var(--semi-color-primary-hover) 100%);
 }
 
 /* Light theme specific enhancements */
-[theme-mode="light"] .text-bubble-menu .semi-button[type="primary"] {
+[theme-mode='light'] .text-bubble-menu .semi-button[type='primary'] {
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
   border-color: #1890ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3), 0 0 0 1px rgba(24, 144, 255, 0.1);
+  box-shadow:
+    0 2px 8px rgba(24, 144, 255, 0.3),
+    0 0 0 1px rgba(24, 144, 255, 0.1);
 }
 
-[theme-mode="light"] .text-bubble-menu .semi-button[type="primary"]:hover {
-  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4), 0 0 0 2px rgba(24, 144, 255, 0.2);
+[theme-mode='light'] .text-bubble-menu .semi-button[type='primary']:hover {
+  box-shadow:
+    0 6px 20px rgba(24, 144, 255, 0.4),
+    0 0 0 2px rgba(24, 144, 255, 0.2);
   background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
 }
 
@@ -814,27 +836,36 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
 }
 
 /* Dark theme specific selection enhancements */
-[theme-mode="dark"] .tiptap-editor.ai-processing .ProseMirror ::selection,
-[theme-mode="dark"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::selection {
+[theme-mode='dark'] .tiptap-editor.ai-processing .ProseMirror ::selection,
+[theme-mode='dark'] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::selection {
   background: rgba(77, 171, 247, 0.5) !important;
   color: var(--semi-color-text-0) !important;
 }
 
-[theme-mode="dark"] .tiptap-editor.ai-processing .ProseMirror ::-moz-selection,
-[theme-mode="dark"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-selection {
+[theme-mode='dark'] .tiptap-editor.ai-processing .ProseMirror ::-moz-selection,
+[theme-mode='dark']
+  body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu)
+  .ProseMirror
+  ::-moz-selection {
   background: rgba(77, 171, 247, 0.5) !important;
   color: var(--semi-color-text-0) !important;
 }
 
 /* Light theme specific selection enhancements */
-[theme-mode="light"] .tiptap-editor.ai-processing .ProseMirror ::selection,
-[theme-mode="light"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::selection {
+[theme-mode='light'] .tiptap-editor.ai-processing .ProseMirror ::selection,
+[theme-mode='light']
+  body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu)
+  .ProseMirror
+  ::selection {
   background: rgba(24, 144, 255, 0.3) !important;
   color: var(--semi-color-text-0) !important;
 }
 
-[theme-mode="light"] .tiptap-editor.ai-processing .ProseMirror ::-moz-selection,
-[theme-mode="light"] body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-selection {
+[theme-mode='light'] .tiptap-editor.ai-processing .ProseMirror ::-moz-selection,
+[theme-mode='light']
+  body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu)
+  .ProseMirror
+  ::-moz-selection {
   background: rgba(24, 144, 255, 0.3) !important;
   color: var(--semi-color-text-0) !important;
 }
@@ -950,7 +981,11 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
 
 .ai-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--semi-color-primary), var(--semi-color-primary-light-hover));
+  background: linear-gradient(
+    90deg,
+    var(--semi-color-primary),
+    var(--semi-color-primary-light-hover)
+  );
   border-radius: 2px;
   width: 0%;
   animation: aiProgressFill 3s ease-in-out infinite;
@@ -992,7 +1027,8 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   min-height: 40px;
 }
 
-.character-count, .word-count {
+.character-count,
+.word-count {
   font-weight: 500;
 }
 
@@ -1007,19 +1043,19 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
 }
 
 /* Text alignment */
-.ProseMirror [data-text-align="left"] {
+.ProseMirror [data-text-align='left'] {
   text-align: left;
 }
 
-.ProseMirror [data-text-align="center"] {
+.ProseMirror [data-text-align='center'] {
   text-align: center;
 }
 
-.ProseMirror [data-text-align="right"] {
+.ProseMirror [data-text-align='right'] {
   text-align: right;
 }
 
-.ProseMirror [data-text-align="justify"] {
+.ProseMirror [data-text-align='justify'] {
   text-align: justify;
 }
 
@@ -1028,18 +1064,18 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   .editor-toolbar {
     padding: 6px 8px;
   }
-  
+
   .editor-toolbar button {
     width: 28px;
     height: 28px;
     font-size: 12px;
   }
-  
+
   .ProseMirror {
     padding: 12px;
     font-size: 15px;
   }
-  
+
   .editor-footer {
     padding: 6px 8px;
     font-size: 11px;
@@ -1116,15 +1152,15 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   .welcome-title {
     font-size: 28px;
   }
-  
+
   .welcome-description {
     font-size: 14px;
   }
-  
+
   .welcome-features {
     gap: 20px;
   }
-  
+
   .feature-item {
     min-width: 80px;
     padding: 12px;
@@ -1252,15 +1288,15 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   .image-wrapper {
     margin: 12px 0;
   }
-  
+
   .image-controls {
     padding: 6px 8px;
   }
-  
+
   .image-info {
     max-width: 200px;
   }
-  
+
   .image-edit-form {
     padding: 12px;
   }
@@ -1382,15 +1418,15 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   .iframe-wrapper {
     margin: 12px 0;
   }
-  
+
   .iframe-controls {
     padding: 6px 8px;
   }
-  
+
   .iframe-url {
     max-width: 200px;
   }
-  
+
   .iframe-edit-form {
     padding: 12px;
   }

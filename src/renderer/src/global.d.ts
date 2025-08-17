@@ -85,11 +85,11 @@ interface Window {
       }) => Promise<{ success: boolean; message: string }>
 
       // AI生成（支持消息格式）
-      generate: (request: { 
-        config: AiApiConfig; 
-        messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>; 
-        maxTokens?: number; 
-        temperature?: number 
+      generate: (request: {
+        config: AiApiConfig
+        messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
+        maxTokens?: number
+        temperature?: number
       }) => Promise<{ success: boolean; content?: string; error?: string }>
 
       // 流式生成内容

@@ -7,7 +7,7 @@ import './DiffViewer.css'
 // 使用自定义的Check图标
 const IconCheck = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
   </svg>
 )
 
@@ -83,19 +83,13 @@ const DiffLine: React.FC<DiffLineProps> = ({ diff, showLineNumbers, lineNumber }
     return (
       <div className="diff-single-content">
         <span className="diff-prefix">{getPrefix()}</span>
-        {showLineNumbers && (
-          <span className="diff-line-number">{lineNumber}</span>
-        )}
+        {showLineNumbers && <span className="diff-line-number">{lineNumber}</span>}
         <span className="diff-text">{text}</span>
       </div>
     )
   }
 
-  return (
-    <div className={getClassName()}>
-      {renderContent()}
-    </div>
-  )
+  return <div className={getClassName()}>{renderContent()}</div>
 }
 
 /**
@@ -120,10 +114,10 @@ const DiffViewer: React.FC<DiffViewerProps> = ({
 
   // 统计变更信息
   const stats = React.useMemo(() => {
-    const insertions = diffResult.diffs.filter(d => d.type === 'insert').length
-    const deletions = diffResult.diffs.filter(d => d.type === 'delete').length
-    const replacements = diffResult.diffs.filter(d => d.type === 'replace').length
-    
+    const insertions = diffResult.diffs.filter((d) => d.type === 'insert').length
+    const deletions = diffResult.diffs.filter((d) => d.type === 'delete').length
+    const replacements = diffResult.diffs.filter((d) => d.type === 'replace').length
+
     return { insertions, deletions, replacements }
   }, [diffResult.diffs])
 
@@ -185,23 +179,17 @@ const DiffViewer: React.FC<DiffViewerProps> = ({
           <span>{title}</span>
           <div className="diff-stats">
             {stats.insertions > 0 && (
-              <span className="diff-stat diff-stat-insert">
-                +{stats.insertions}
-              </span>
+              <span className="diff-stat diff-stat-insert">+{stats.insertions}</span>
             )}
             {stats.deletions > 0 && (
-              <span className="diff-stat diff-stat-delete">
-                -{stats.deletions}
-              </span>
+              <span className="diff-stat diff-stat-delete">-{stats.deletions}</span>
             )}
             {stats.replacements > 0 && (
-              <span className="diff-stat diff-stat-replace">
-                ~{stats.replacements}
-              </span>
+              <span className="diff-stat diff-stat-replace">~{stats.replacements}</span>
             )}
           </div>
         </div>
-        
+
         <div className="diff-actions">
           <Space>
             {isMultiLine && (
@@ -213,12 +201,8 @@ const DiffViewer: React.FC<DiffViewerProps> = ({
                 {showLineNumbers ? '隐藏行号' : '显示行号'}
               </Button>
             )}
-            
-            <Button
-              size="small"
-              type="tertiary"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
+
+            <Button size="small" type="tertiary" onClick={() => setIsExpanded(!isExpanded)}>
               {isExpanded ? '收起' : '展开'}
             </Button>
           </Space>
@@ -247,7 +231,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({
                 {applyDiff(originalText, diffResult.diffs)}
               </div>
             </div>
-            
+
             <div className="diff-controls">
               <Space>
                 {onReject && (
@@ -260,23 +244,15 @@ const DiffViewer: React.FC<DiffViewerProps> = ({
                     拒绝
                   </Button>
                 )}
-                
+
                 {onEdit && (
-                  <Button
-                    icon={<IconEdit />}
-                    onClick={handleEdit}
-                    type="secondary"
-                  >
+                  <Button icon={<IconEdit />} onClick={handleEdit} type="secondary">
                     编辑
                   </Button>
                 )}
-                
+
                 {onAccept && (
-                  <Button
-                    icon={<IconCheck />}
-                    onClick={handleAccept}
-                    type="primary"
-                  >
+                  <Button icon={<IconCheck />} onClick={handleAccept} type="primary">
                     接受更改
                   </Button>
                 )}

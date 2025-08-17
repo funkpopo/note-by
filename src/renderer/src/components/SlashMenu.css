@@ -2,7 +2,9 @@
   position: relative;
   background: var(--semi-color-bg-2);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--semi-color-border);
   overflow: hidden;
   padding: 8px;
@@ -164,20 +166,20 @@
     max-width: 320px;
     max-height: 280px;
   }
-  
+
   .slash-menu-item {
     padding: 10px 12px;
     gap: 10px;
   }
-  
+
   .slash-menu-item-title {
     font-size: 13px;
   }
-  
+
   .slash-menu-item-description {
     font-size: 11px;
   }
-  
+
   .slash-menu-item .slash-menu-item-icon {
     width: 18px;
     height: 18px;
@@ -187,7 +189,9 @@
 /* 深色模式适配 */
 [theme-mode='dark'] .slash-menu {
   background: var(--semi-color-bg-3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.16);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.24),
+    0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 [theme-mode='dark'] .slash-menu-item::before {

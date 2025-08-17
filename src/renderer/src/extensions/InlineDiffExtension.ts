@@ -34,7 +34,7 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
 
   addOptions() {
     return {
-      HTMLAttributes: {},
+      HTMLAttributes: {}
     }
   },
 
@@ -42,67 +42,67 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
     return {
       originalText: {
         default: '',
-        parseHTML: element => element.getAttribute('data-original-text'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-original-text'),
+        renderHTML: (attributes) => {
           if (!attributes.originalText) {
             return {}
           }
           return {
-            'data-original-text': attributes.originalText,
+            'data-original-text': attributes.originalText
           }
-        },
+        }
       },
       newText: {
         default: '',
-        parseHTML: element => element.getAttribute('data-new-text'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-new-text'),
+        renderHTML: (attributes) => {
           if (!attributes.newText) {
             return {}
           }
           return {
-            'data-new-text': attributes.newText,
+            'data-new-text': attributes.newText
           }
-        },
+        }
       },
       diffResult: {
         default: null,
-        parseHTML: element => {
+        parseHTML: (element) => {
           const data = element.getAttribute('data-diff-result')
           return data ? JSON.parse(data) : null
         },
-        renderHTML: attributes => {
+        renderHTML: (attributes) => {
           if (!attributes.diffResult) {
             return {}
           }
           return {
-            'data-diff-result': JSON.stringify(attributes.diffResult),
+            'data-diff-result': JSON.stringify(attributes.diffResult)
           }
-        },
+        }
       },
       feature: {
         default: null,
-        parseHTML: element => {
+        parseHTML: (element) => {
           const data = element.getAttribute('data-feature')
           return data ? JSON.parse(data) : null
         },
-        renderHTML: attributes => {
+        renderHTML: (attributes) => {
           if (!attributes.feature) {
             return {}
           }
           return {
-            'data-feature': JSON.stringify(attributes.feature),
+            'data-feature': JSON.stringify(attributes.feature)
           }
-        },
+        }
       },
       accepted: {
         default: false,
-        parseHTML: element => element.getAttribute('data-accepted') === 'true',
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-accepted') === 'true',
+        renderHTML: (attributes) => {
           return {
-            'data-accepted': attributes.accepted ? 'true' : 'false',
+            'data-accepted': attributes.accepted ? 'true' : 'false'
           }
-        },
-      },
+        }
+      }
     }
   },
 
@@ -123,20 +123,15 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
   addCommands() {
     return {
       setInlineDiff:
-        (options: {
-          originalText: string
-          newText: string
-          diffResult: any
-          feature: any
-        }) =>
+        (options: { originalText: string; newText: string; diffResult: any; feature: any }) =>
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
-            attrs: options,
+            attrs: options
           })
-        },
+        }
     }
-  },
+  }
 })
 
 export default InlineDiffExtension

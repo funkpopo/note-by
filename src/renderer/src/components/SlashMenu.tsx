@@ -348,7 +348,7 @@ export const getSuggestionItems = ({
       icon: <IconPlay />,
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run()
-        
+
         // 显示输入对话框
         showInputDialog('请输入嵌入地址', 'https://www.youtube.com/embed/dQw4w9WgXcQ')
           .then((url) => {

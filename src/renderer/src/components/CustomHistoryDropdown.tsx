@@ -54,38 +54,38 @@ const ReadOnlyImageExtension = Node.create({
   name: 'image',
   group: 'block',
   atom: true,
-  
+
   addAttributes() {
     return {
       src: {
-        default: null,
+        default: null
       },
       alt: {
-        default: null,
+        default: null
       },
       title: {
-        default: null,
+        default: null
       },
       width: {
-        default: null,
+        default: null
       },
       height: {
-        default: null,
-      },
+        default: null
+      }
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'img[src]',
-      },
+        tag: 'img[src]'
+      }
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
     return ['img', HTMLAttributes]
-  },
+  }
 })
 
 // 简化的嵌入内容扩展（只读）
@@ -97,28 +97,28 @@ const ReadOnlyIframeExtension = Node.create({
   addAttributes() {
     return {
       src: {
-        default: null,
+        default: null
       },
       width: {
-        default: '100%',
+        default: '100%'
       },
       height: {
-        default: '315',
-      },
+        default: '315'
+      }
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'iframe[src]',
-      },
+        tag: 'iframe[src]'
+      }
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
     return ['iframe', HTMLAttributes]
-  },
+  }
 })
 
 // 历史记录项接口
@@ -168,7 +168,7 @@ const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
       ReadOnlyIframeExtension
     ],
     content: content,
-    editable: false,
+    editable: false
   })
 
   return <EditorContent editor={editor} />
@@ -191,7 +191,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   const [selectedHistory, setSelectedHistory] = useState<HistoryItem | null>(null)
   const [previewVisible, setPreviewVisible] = useState<boolean>(false)
   const [isRestoring, setIsRestoring] = useState<boolean>(false)
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLDivElement>(null)
 
@@ -217,10 +217,10 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   // 处理下拉菜单显示/隐藏
   const toggleDropdown = useCallback(() => {
     if (disabled) return
-    
+
     const newVisible = !dropdownVisible
     setDropdownVisible(newVisible)
-    
+
     if (newVisible && filePath) {
       loadHistory()
     }
@@ -230,7 +230,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target as HTMLElement) &&
         buttonRef.current &&
         !buttonRef.current.contains(event.target as HTMLElement)
@@ -263,7 +263,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   // 恢复历史版本
   const handleRestore = (item: HistoryItem): void => {
     if (isRestoring || !onRestore) return
-    
+
     setIsRestoring(true)
     try {
       onRestore(item.content)
@@ -291,7 +291,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   return (
     <div className="custom-history-dropdown">
       <div ref={buttonRef}>
-        <Button 
+        <Button
           icon={<IconHistory />}
           disabled={disabled}
           onClick={toggleDropdown}
@@ -301,12 +301,9 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
           历史
         </Button>
       </div>
-      
+
       {dropdownVisible && (
-        <div 
-          ref={dropdownRef}
-          className="custom-history-dropdown-content"
-        >
+        <div ref={dropdownRef} className="custom-history-dropdown-content">
           {loading ? (
             <div className="history-loading">
               <Spin size="small" />
@@ -322,13 +319,8 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
                 <span>历史版本</span>
               </div>
               {historyList.map((item) => (
-                <div 
-                  key={item.id} 
-                  className="history-item"
-                >
-                  <div className="history-item-time">
-                    {formatTimestamp(item.timestamp)}
-                  </div>
+                <div key={item.id} className="history-item">
+                  <div className="history-item-time">{formatTimestamp(item.timestamp)}</div>
                   <div className="history-item-actions">
                     <button
                       className="history-action-btn preview-btn"
@@ -365,12 +357,10 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit'
-                })} - 版本历史记录
+                })}{' '}
+                - 版本历史记录
               </div>
-              <button 
-                className="history-preview-close"
-                onClick={() => setPreviewVisible(false)}
-              >
+              <button className="history-preview-close" onClick={() => setPreviewVisible(false)}>
                 ×
               </button>
             </div>
@@ -378,13 +368,13 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
               <HistoryPreview content={selectedHistory.content} />
             </div>
             <div className="history-preview-footer">
-              <button 
+              <button
                 className="history-preview-btn cancel-btn"
                 onClick={() => setPreviewVisible(false)}
               >
                 关闭
               </button>
-              <button 
+              <button
                 className="history-preview-btn restore-btn"
                 onClick={() => handleRestore(selectedHistory)}
                 disabled={isRestoring}

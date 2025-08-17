@@ -38,7 +38,17 @@ import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
-import { Toast, Button, Space, Spin, Breadcrumb, Select, Dropdown, List, Typography as SemiTypography } from '@douyinfe/semi-ui'
+import {
+  Toast,
+  Button,
+  Space,
+  Spin,
+  Breadcrumb,
+  Select,
+  Dropdown,
+  List,
+  Typography as SemiTypography
+} from '@douyinfe/semi-ui'
 import CustomDropdown from './CustomDropdown'
 import CustomHistoryDropdown from './CustomHistoryDropdown'
 import { smartDiff } from '../utils/diffUtils'
@@ -63,7 +73,7 @@ import {
   IconDelete,
   IconImage,
   IconPlay,
-  IconChevronDown as IconChevronDownSemi,
+  IconChevronDown as IconChevronDownSemi
 } from '@douyinfe/semi-icons'
 import { IconChevronDown } from './Icons'
 import {
@@ -223,9 +233,9 @@ const MarkdownShortcuts = Extension.create({
       'Mod-Shift-s': () => this.editor.commands.toggleStrike(),
       'Mod-e': () => this.editor.commands.toggleCode(),
       'Mod-Shift-h': () => this.editor.commands.toggleHighlight(),
-      'Mod-k': () => {        
+      'Mod-k': () => {
         // Create a simple input dialog
-        const modalContent = document.createElement('div');
+        const modalContent = document.createElement('div')
         modalContent.innerHTML = `
           <div style="padding: 16px;">
             <div style="margin-bottom: 12px;">
@@ -242,9 +252,9 @@ const MarkdownShortcuts = Extension.create({
               <button id="link-ok-btn" style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: white; border-radius: 4px; cursor: pointer;">确定</button>
             </div>
           </div>
-        `;
-        
-        const overlay = document.createElement('div');
+        `
+
+        const overlay = document.createElement('div')
         overlay.style.cssText = `
           position: fixed;
           top: 0;
@@ -256,57 +266,57 @@ const MarkdownShortcuts = Extension.create({
           align-items: center;
           justify-content: center;
           z-index: 10000;
-        `;
-        
-        const modal = document.createElement('div');
+        `
+
+        const modal = document.createElement('div')
         modal.style.cssText = `
           background: var(--semi-color-bg-0);
           border-radius: 8px;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
           min-width: 400px;
           max-width: 500px;
-        `;
-        
-        modal.appendChild(modalContent);
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-        
-        const input = modal.querySelector('#link-url-input') as HTMLInputElement;
-        const okBtn = modal.querySelector('#link-ok-btn') as HTMLButtonElement;
-        const cancelBtn = modal.querySelector('#link-cancel-btn') as HTMLButtonElement;
-        
+        `
+
+        modal.appendChild(modalContent)
+        overlay.appendChild(modal)
+        document.body.appendChild(overlay)
+
+        const input = modal.querySelector('#link-url-input') as HTMLInputElement
+        const okBtn = modal.querySelector('#link-ok-btn') as HTMLButtonElement
+        const cancelBtn = modal.querySelector('#link-cancel-btn') as HTMLButtonElement
+
         setTimeout(() => {
-          input.focus();
-        }, 100);
-        
+          input.focus()
+        }, 100)
+
         const cleanup = () => {
-          document.body.removeChild(overlay);
-        };
-        
+          document.body.removeChild(overlay)
+        }
+
         const handleOk = () => {
-          const url = input.value.trim();
+          const url = input.value.trim()
           if (url) {
-            this.editor.commands.setLink({ href: url });
+            this.editor.commands.setLink({ href: url })
           }
-          cleanup();
-        };
-        
-        okBtn.addEventListener('click', handleOk);
-        cancelBtn.addEventListener('click', cleanup);
+          cleanup()
+        }
+
+        okBtn.addEventListener('click', handleOk)
+        cancelBtn.addEventListener('click', cleanup)
         overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) cleanup();
-        });
-        
+          if (e.target === overlay) cleanup()
+        })
+
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
-            e.preventDefault();
-            handleOk();
+            e.preventDefault()
+            handleOk()
           } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cleanup();
+            e.preventDefault()
+            cleanup()
           }
-        });
-        
+        })
+
         return true
       }
     }
@@ -384,7 +394,12 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     image: {
-      setImage: (options: { src: string; alt?: string; width?: string; height?: string }) => ReturnType
+      setImage: (options: {
+        src: string
+        alt?: string
+        width?: string
+        height?: string
+      }) => ReturnType
     }
   }
 }
@@ -478,12 +493,7 @@ const IframeComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) 
               <Button onClick={handleCancel} size="small">
                 取消
               </Button>
-              <Button 
-                onClick={handleSave} 
-                type="primary" 
-                size="small"
-                disabled={!src.trim()}
-              >
+              <Button onClick={handleSave} type="primary" size="small" disabled={!src.trim()}>
                 保存
               </Button>
             </Space>
@@ -525,7 +535,7 @@ const IframeComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) 
             title="嵌入内容"
             style={{
               borderRadius: '4px',
-              border: '1px solid var(--semi-color-border)',
+              border: '1px solid var(--semi-color-border)'
             }}
           />
         </div>
@@ -550,54 +560,54 @@ const CustomImageExtension = Node.create({
     return {
       src: {
         default: null,
-        parseHTML: element => element.getAttribute('src'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('src'),
+        renderHTML: (attributes) => {
           if (!attributes.src) {
             return {}
           }
           return {
-            src: attributes.src,
+            src: attributes.src
           }
-        },
+        }
       },
       alt: {
         default: null,
-        parseHTML: element => element.getAttribute('alt'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('alt'),
+        renderHTML: (attributes) => {
           if (!attributes.alt) {
             return {}
           }
           return {
-            alt: attributes.alt,
+            alt: attributes.alt
           }
-        },
+        }
       },
       width: {
         default: '100%',
-        parseHTML: element => element.getAttribute('width') || element.style.width,
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('width') || element.style.width,
+        renderHTML: (attributes) => {
           return {
-            width: attributes.width,
+            width: attributes.width
           }
-        },
+        }
       },
       height: {
         default: 'auto',
-        parseHTML: element => element.getAttribute('height') || element.style.height,
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('height') || element.style.height,
+        renderHTML: (attributes) => {
           return {
-            height: attributes.height,
+            height: attributes.height
           }
-        },
-      },
+        }
+      }
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'img',
-      },
+        tag: 'img'
+      }
     ]
   },
 
@@ -616,11 +626,11 @@ const CustomImageExtension = Node.create({
         ({ commands }: { commands: any }) => {
           return commands.insertContent({
             type: this.name,
-            attrs: options,
+            attrs: options
           })
-        },
+        }
     }
-  },
+  }
 })
 
 // Iframe 扩展定义
@@ -639,42 +649,42 @@ const IframeExtension = Node.create({
     return {
       src: {
         default: null,
-        parseHTML: element => element.getAttribute('src'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('src'),
+        renderHTML: (attributes) => {
           if (!attributes.src) {
             return {}
           }
           return {
-            src: attributes.src,
+            src: attributes.src
           }
-        },
+        }
       },
       width: {
         default: '100%',
-        parseHTML: element => element.getAttribute('width'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('width'),
+        renderHTML: (attributes) => {
           return {
-            width: attributes.width,
+            width: attributes.width
           }
-        },
+        }
       },
       height: {
         default: '300px',
-        parseHTML: element => element.getAttribute('height'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('height'),
+        renderHTML: (attributes) => {
           return {
-            height: attributes.height,
+            height: attributes.height
           }
-        },
-      },
+        }
+      }
     }
   },
 
   parseHTML() {
     return [
       {
-        tag: 'iframe',
-      },
+        tag: 'iframe'
+      }
     ]
   },
 
@@ -688,14 +698,16 @@ const IframeExtension = Node.create({
 
   addCommands() {
     return {
-      setIframe: options => ({ commands }) => {
-        return commands.insertContent({
-          type: this.name,
-          attrs: options,
-        })
-      },
+      setIframe:
+        (options) =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: options
+          })
+        }
     }
-  },
+  }
 })
 
 // 自定义图片组件
@@ -740,8 +752,8 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
                   value={src}
                   onChange={(e) => setSrc(e.target.value)}
                   placeholder="输入图片地址"
-                  style={{ 
-                    marginTop: '4px', 
+                  style={{
+                    marginTop: '4px',
                     width: '100%',
                     padding: '8px 12px',
                     border: '1px solid var(--semi-color-border)',
@@ -758,8 +770,8 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
                   value={alt}
                   onChange={(e) => setAlt(e.target.value)}
                   placeholder="图片的替代文本"
-                  style={{ 
-                    marginTop: '4px', 
+                  style={{
+                    marginTop: '4px',
                     width: '100%',
                     padding: '8px 12px',
                     border: '1px solid var(--semi-color-border)',
@@ -811,12 +823,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
               <Button onClick={handleCancel} size="small">
                 取消
               </Button>
-              <Button 
-                onClick={handleSave} 
-                type="primary" 
-                size="small"
-                disabled={!src.trim()}
-              >
+              <Button onClick={handleSave} type="primary" size="small" disabled={!src.trim()}>
                 保存
               </Button>
             </Space>
@@ -828,7 +835,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
 
   return (
     <NodeViewWrapper className="image-wrapper">
-      <div 
+      <div
         className="image-container"
         style={{
           width: node.attrs.width || '100%',
@@ -1003,7 +1010,7 @@ const AIModelDropdown: React.FC = () => {
     loadModels()
   }, [loadModels])
 
-  const selectedModel = availableModels.find(model => model.id === selectedModelId)
+  const selectedModel = availableModels.find((model) => model.id === selectedModelId)
 
   return (
     <Dropdown
@@ -1019,7 +1026,9 @@ const AIModelDropdown: React.FC = () => {
             <div style={{ padding: '12px', textAlign: 'center' }}>
               <SemiTypography.Text type="tertiary">暂无可用模型</SemiTypography.Text>
               <div style={{ marginTop: '8px' }}>
-                <SemiTypography.Text type="tertiary" size="small">请在设置中配置AI API</SemiTypography.Text>
+                <SemiTypography.Text type="tertiary" size="small">
+                  请在设置中配置AI API
+                </SemiTypography.Text>
               </div>
             </div>
           ) : (
@@ -1027,25 +1036,22 @@ const AIModelDropdown: React.FC = () => {
               dataSource={availableModels}
               renderItem={(item) => (
                 <List.Item
-                  style={{ 
+                  style={{
                     padding: '8px 12px',
                     cursor: 'pointer',
-                    backgroundColor: item.id === selectedModelId ? 'var(--semi-color-fill-0)' : 'transparent'
+                    backgroundColor:
+                      item.id === selectedModelId ? 'var(--semi-color-fill-0)' : 'transparent'
                   }}
                   onClick={() => handleModelSelect(item.id)}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                    <SemiTypography.Text 
+                    <SemiTypography.Text
                       strong={item.id === selectedModelId}
                       style={{ fontSize: '14px' }}
                     >
                       {item.name}
                     </SemiTypography.Text>
-                    <SemiTypography.Text 
-                      type="tertiary" 
-                      size="small"
-                      style={{ marginTop: '2px' }}
-                    >
+                    <SemiTypography.Text type="tertiary" size="small" style={{ marginTop: '2px' }}>
                       {item.modelName}
                     </SemiTypography.Text>
                   </div>
@@ -1056,8 +1062,8 @@ const AIModelDropdown: React.FC = () => {
         </div>
       }
     >
-      <Button 
-        icon={<IconChevronDownSemi />} 
+      <Button
+        icon={<IconChevronDownSemi />}
         iconPosition="right"
         type="tertiary"
         size="default"
@@ -1091,7 +1097,7 @@ const EditorHeader: React.FC<{
   onContentRestore?: (content: string) => void
 }> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, onSave, onContentRestore }) => {
   if (!currentFolder || !currentFile) return null
-  
+
   const filePath = `${currentFolder}/${currentFile}`
 
   return (
@@ -1115,7 +1121,7 @@ const EditorHeader: React.FC<{
 
       <div className="editor-header-right">
         <Space>
-          <CustomHistoryDropdown 
+          <CustomHistoryDropdown
             filePath={filePath}
             onRestore={onContentRestore}
             disabled={hasUnsavedChanges}
@@ -1197,7 +1203,7 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
             type={editor.isActive('link') ? 'primary' : 'tertiary'}
             onClick={() => {
               // Create a simple input dialog
-              const modalContent = document.createElement('div');
+              const modalContent = document.createElement('div')
               modalContent.innerHTML = `
                 <div style="padding: 16px;">
                   <div style="margin-bottom: 12px;">
@@ -1214,9 +1220,9 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
                     <button id="table-link-ok-btn" style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: white; border-radius: 4px; cursor: pointer;">确定</button>
                   </div>
                 </div>
-              `;
-              
-              const overlay = document.createElement('div');
+              `
+
+              const overlay = document.createElement('div')
               overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -1228,56 +1234,56 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
                 align-items: center;
                 justify-content: center;
                 z-index: 10000;
-              `;
-              
-              const modal = document.createElement('div');
+              `
+
+              const modal = document.createElement('div')
               modal.style.cssText = `
                 background: var(--semi-color-bg-0);
                 border-radius: 8px;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
                 min-width: 400px;
                 max-width: 500px;
-              `;
-              
-              modal.appendChild(modalContent);
-              overlay.appendChild(modal);
-              document.body.appendChild(overlay);
-              
-              const input = modal.querySelector('#table-link-url-input') as HTMLInputElement;
-              const okBtn = modal.querySelector('#table-link-ok-btn') as HTMLButtonElement;
-              const cancelBtn = modal.querySelector('#table-link-cancel-btn') as HTMLButtonElement;
-              
+              `
+
+              modal.appendChild(modalContent)
+              overlay.appendChild(modal)
+              document.body.appendChild(overlay)
+
+              const input = modal.querySelector('#table-link-url-input') as HTMLInputElement
+              const okBtn = modal.querySelector('#table-link-ok-btn') as HTMLButtonElement
+              const cancelBtn = modal.querySelector('#table-link-cancel-btn') as HTMLButtonElement
+
               setTimeout(() => {
-                input.focus();
-              }, 100);
-              
+                input.focus()
+              }, 100)
+
               const cleanup = () => {
-                document.body.removeChild(overlay);
-              };
-              
+                document.body.removeChild(overlay)
+              }
+
               const handleOk = () => {
-                const url = input.value.trim();
+                const url = input.value.trim()
                 if (url) {
-                  editor.chain().focus().setLink({ href: url }).run();
+                  editor.chain().focus().setLink({ href: url }).run()
                 }
-                cleanup();
-              };
-              
-              okBtn.addEventListener('click', handleOk);
-              cancelBtn.addEventListener('click', cleanup);
+                cleanup()
+              }
+
+              okBtn.addEventListener('click', handleOk)
+              cancelBtn.addEventListener('click', cleanup)
               overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) cleanup();
-              });
-              
+                if (e.target === overlay) cleanup()
+              })
+
               input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleOk();
+                  e.preventDefault()
+                  handleOk()
                 } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  cleanup();
+                  e.preventDefault()
+                  cleanup()
                 }
-              });
+              })
             }}
             title="链接"
           />
@@ -1362,8 +1368,13 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
   const [loadingFeature, setLoadingFeature] = useState<string | null>(null)
   const [apiConfigs, setApiConfigs] = useState<any[]>([])
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null)
-  const [bubbleMenuPosition, setBubbleMenuPosition] = useState<{ top: number; left: number } | null>(null)
-  const [preservedSelection, setPreservedSelection] = useState<{ from: number; to: number } | null>(null)
+  const [bubbleMenuPosition, setBubbleMenuPosition] = useState<{
+    top: number
+    left: number
+  } | null>(null)
+  const [preservedSelection, setPreservedSelection] = useState<{ from: number; to: number } | null>(
+    null
+  )
 
   // 加载API配置
   const loadApiConfigs = useCallback(async () => {
@@ -1396,7 +1407,11 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
         if (preservedSelection) {
           try {
             const selection = editor.state.selection
-            if (selection.empty || selection.from !== preservedSelection.from || selection.to !== preservedSelection.to) {
+            if (
+              selection.empty ||
+              selection.from !== preservedSelection.from ||
+              selection.to !== preservedSelection.to
+            ) {
               editor.commands.setTextSelection(preservedSelection)
             }
           } catch (error) {
@@ -1407,7 +1422,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
         editorElement.classList.remove('ai-processing')
       }
     }
-    
+
     // 清理函数
     return () => {
       if (editorElement) {
@@ -1424,64 +1439,71 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
 
   // 获取当前选中的API配置
   const getCurrentConfig = useCallback(() => {
-    return apiConfigs.find(config => config.id === selectedConfigId) || null
+    return apiConfigs.find((config) => config.id === selectedConfigId) || null
   }, [apiConfigs, selectedConfigId])
 
   // 调用AI API
-  const callAI = useCallback(async (prompt: string, selectedText: string): Promise<string> => {
-    const config = getCurrentConfig()
-    if (!config) {
-      throw new Error('请先在设置中配置AI API')
-    }
-
-    if (!config.apiKey || !config.apiUrl || !config.modelName) {
-      throw new Error('API配置不完整，请检查设置')
-    }
-
-    try {
-      const result = await window.api.openai.generate({
-        config,
-        messages: [
-          {
-            role: 'user',
-            content: `${prompt}\n\n${selectedText}`
-          }
-        ],
-        maxTokens: parseInt(config.maxTokens || '2000'),
-        temperature: parseFloat(config.temperature || '0.7')
-      })
-
-      if (!result.success) {
-        throw new Error(result.error || '生成失败')
+  const callAI = useCallback(
+    async (prompt: string, selectedText: string): Promise<string> => {
+      const config = getCurrentConfig()
+      if (!config) {
+        throw new Error('请先在设置中配置AI API')
       }
 
-      return result.content || ''
-    } catch (error) {
-      throw error
-    }
-  }, [getCurrentConfig])
+      if (!config.apiKey || !config.apiUrl || !config.modelName) {
+        throw new Error('API配置不完整，请检查设置')
+      }
+
+      try {
+        const result = await window.api.openai.generate({
+          config,
+          messages: [
+            {
+              role: 'user',
+              content: `${prompt}\n\n${selectedText}`
+            }
+          ],
+          maxTokens: parseInt(config.maxTokens || '2000'),
+          temperature: parseFloat(config.temperature || '0.7')
+        })
+
+        if (!result.success) {
+          throw new Error(result.error || '生成失败')
+        }
+
+        return result.content || ''
+      } catch (error) {
+        throw error
+      }
+    },
+    [getCurrentConfig]
+  )
 
   // AI功能
   const AI_FEATURES = [
     {
       key: 'summarize',
       label: '总结',
-      prompt: '请总结以下内容的主要要点，用简洁的语言概括核心信息。\n\n重要要求：\n- 直接输出总结内容，不要任何前缀、后缀或说明\n- 不要包含"总结如下"、"主要内容包括"等引导语\n- 不要添加任何解释、介绍或额外文字\n- 输出格式应该直接是总结的正文内容\n\n需要总结的内容：'
+      prompt:
+        '请总结以下内容的主要要点，用简洁的语言概括核心信息。\n\n重要要求：\n- 直接输出总结内容，不要任何前缀、后缀或说明\n- 不要包含"总结如下"、"主要内容包括"等引导语\n- 不要添加任何解释、介绍或额外文字\n- 输出格式应该直接是总结的正文内容\n\n需要总结的内容：'
     },
     {
       key: 'expand',
       label: '扩写',
-      prompt: '请对以下内容进行扩写，增加更多细节、例子或解释，使其更加丰富和详细。\n\n重要要求：\n- 直接输出扩写后的完整内容，替换原文\n- 不要包含"扩写如下"、"详细内容为"等引导语\n- 不要添加任何解释、介绍或额外说明\n- 输出格式应该直接是扩写后的正文内容\n\n需要扩写的内容：'
+      prompt:
+        '请对以下内容进行扩写，增加更多细节、例子或解释，使其更加丰富和详细。\n\n重要要求：\n- 直接输出扩写后的完整内容，替换原文\n- 不要包含"扩写如下"、"详细内容为"等引导语\n- 不要添加任何解释、介绍或额外说明\n- 输出格式应该直接是扩写后的正文内容\n\n需要扩写的内容：'
     },
     {
       key: 'continue',
       label: '续写',
-      prompt: '请根据以下内容的语境和风格，自然地续写后续内容。\n\n重要要求：\n- 直接输出续写的部分，无缝衔接原文\n- 不要包含"续写如下"、"后续内容为"等引导语\n- 不要添加任何解释、介绍或额外说明\n- 输出格式应该直接是续写的正文内容\n\n需要续写的内容：'
+      prompt:
+        '请根据以下内容的语境和风格，自然地续写后续内容。\n\n重要要求：\n- 直接输出续写的部分，无缝衔接原文\n- 不要包含"续写如下"、"后续内容为"等引导语\n- 不要添加任何解释、介绍或额外说明\n- 输出格式应该直接是续写的正文内容\n\n需要续写的内容：'
     },
     {
       key: 'check',
       label: '检查',
-      prompt: '请检查以下文本的语法、拼写、标点和表达错误，并直接输出修改后的正确版本。\n\n重要要求：\n- 直接输出修正后的完整内容，替换原文\n- 不要包含"修正如下"、"正确版本为"等引导语\n- 不要添加任何修改说明、错误列表或解释\n- 输出格式应该直接是修正后的正文内容\n\n需要检查的内容：'
+      prompt:
+        '请检查以下文本的语法、拼写、标点和表达错误，并直接输出修改后的正确版本。\n\n重要要求：\n- 直接输出修正后的完整内容，替换原文\n- 不要包含"修正如下"、"正确版本为"等引导语\n- 不要添加任何修改说明、错误列表或解释\n- 输出格式应该直接是修正后的正文内容\n\n需要检查的内容：'
     }
   ]
 
@@ -1492,7 +1514,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
     { key: 'translate_ja', label: '翻译为日文', targetLang: '日文' },
     { key: 'translate_ko', label: '翻译为韩文', targetLang: '韩文' },
     { key: 'translate_fr', label: '翻译为法文', targetLang: '法文' },
-    { key: 'translate_ru', label: '翻译为俄文', targetLang: '俄文' },
+    { key: 'translate_ru', label: '翻译为俄文', targetLang: '俄文' }
   ]
 
   // 捕获bubble menu位置
@@ -1502,42 +1524,42 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       const bubbleMenuElement = document.querySelector('.text-bubble-menu')
       if (bubbleMenuElement) {
         const rect = bubbleMenuElement.getBoundingClientRect()
-        
+
         // 确保位置在视口范围内
         const viewportWidth = window.innerWidth
         const viewportHeight = window.innerHeight
         const menuWidth = 200 // AI加载菜单的最大宽度
         const menuHeight = 50 // AI加载菜单的大概高度
-        
+
         let adjustedTop = rect.top
         let adjustedLeft = rect.left
-        
+
         // 防止菜单超出右边界
         if (adjustedLeft + menuWidth > viewportWidth) {
           adjustedLeft = viewportWidth - menuWidth - 10
         }
-        
+
         // 防止菜单超出左边界
         if (adjustedLeft < 10) {
           adjustedLeft = 10
         }
-        
+
         // 防止菜单超出上边界
         if (adjustedTop < 10) {
           adjustedTop = rect.bottom + 5
         }
-        
+
         // 防止菜单超出下边界
         if (adjustedTop + menuHeight > viewportHeight) {
           adjustedTop = Math.max(10, rect.top - menuHeight - 5)
         }
-        
+
         setBubbleMenuPosition({
           top: adjustedTop,
           left: adjustedLeft
         })
-        
-        console.log('Captured bubble menu position:', { 
+
+        console.log('Captured bubble menu position:', {
           original: { top: rect.top, left: rect.left },
           adjusted: { top: adjustedTop, left: adjustedLeft }
         })
@@ -1551,25 +1573,26 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
   }, [])
 
   // 处理翻译功能
-  const handleTranslation = useCallback(async (targetLanguage: string) => {
-    const selectedText = getSelectedText()
-    if (!selectedText.trim()) {
-      Toast.error('请先选择要处理的文本')
-      return
-    }
+  const handleTranslation = useCallback(
+    async (targetLanguage: string) => {
+      const selectedText = getSelectedText()
+      if (!selectedText.trim()) {
+        Toast.error('请先选择要处理的文本')
+        return
+      }
 
-    if (apiConfigs.length === 0) {
-      Toast.error('请先在设置中配置AI API')
-      return
-    }
+      if (apiConfigs.length === 0) {
+        Toast.error('请先在设置中配置AI API')
+        return
+      }
 
-    const config = getCurrentConfig()
-    if (!config) {
-      Toast.error('请先选择一个API配置')
-      return
-    }
+      const config = getCurrentConfig()
+      if (!config) {
+        Toast.error('请先选择一个API配置')
+        return
+      }
 
-    const finalPrompt = `请将以下内容翻译成${targetLanguage}。
+      const finalPrompt = `请将以下内容翻译成${targetLanguage}。
 
 重要要求：
 - 直接输出翻译后的内容，不要任何前缀、后缀或说明
@@ -1580,117 +1603,127 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
 
 需要翻译的内容：`
 
-    // 在开始处理前保存当前bubble menu的位置和选中状态
-    captureBubbleMenuPosition()
-    const { from, to } = editor.state.selection
-    setPreservedSelection({ from, to })
-    setIsLoading(true)
-    setLoadingFeature('translate')
+      // 在开始处理前保存当前bubble menu的位置和选中状态
+      captureBubbleMenuPosition()
+      const { from, to } = editor.state.selection
+      setPreservedSelection({ from, to })
+      setIsLoading(true)
+      setLoadingFeature('translate')
 
-    try {
-      const result = await callAI(finalPrompt, selectedText)
-      
-      if (result.trim()) {
-        // 计算diff
-        const diffResult = smartDiff(selectedText, result.trim())
-        
-        // 在选中位置插入内联diff节点
-        const { from, to } = editor.state.selection
-        editor.chain().focus()
-          .setTextSelection({ from, to })
-          .deleteSelection()
-          .setInlineDiff({
-            originalText: selectedText,
-            newText: result.trim(),
-            diffResult,
-            feature: { key: 'translate', label: '翻译' }
-          })
-          .run()
-        
-        Toast.success('翻译完成')
-      } else {
-        Toast.error('AI返回了空结果')
+      try {
+        const result = await callAI(finalPrompt, selectedText)
+
+        if (result.trim()) {
+          // 计算diff
+          const diffResult = smartDiff(selectedText, result.trim())
+
+          // 在选中位置插入内联diff节点
+          const { from, to } = editor.state.selection
+          editor
+            .chain()
+            .focus()
+            .setTextSelection({ from, to })
+            .deleteSelection()
+            .setInlineDiff({
+              originalText: selectedText,
+              newText: result.trim(),
+              diffResult,
+              feature: { key: 'translate', label: '翻译' }
+            })
+            .run()
+
+          Toast.success('翻译完成')
+        } else {
+          Toast.error('AI返回了空结果')
+        }
+      } catch (error) {
+        console.error('AI 翻译失败:', error)
+        Toast.error(`翻译失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      } finally {
+        setIsLoading(false)
+        setLoadingFeature(null)
+        setBubbleMenuPosition(null)
+        setPreservedSelection(null)
       }
-    } catch (error) {
-      console.error('AI 翻译失败:', error)
-      Toast.error(`翻译失败: ${error instanceof Error ? error.message : '未知错误'}`)
-    } finally {
-      setIsLoading(false)
-      setLoadingFeature(null)
-      setBubbleMenuPosition(null)
-      setPreservedSelection(null)
-    }
-  }, [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition])
+    },
+    [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition]
+  )
 
   // 处理AI功能
-  const handleAIFeature = useCallback(async (feature: any) => {
-    const selectedText = getSelectedText()
-    if (!selectedText.trim()) {
-      Toast.error('请先选择要处理的文本')
-      return
-    }
-
-    if (apiConfigs.length === 0) {
-      Toast.error('请先在设置中配置AI API')
-      return
-    }
-
-    const config = getCurrentConfig()
-    if (!config) {
-      Toast.error('请先选择一个API配置')
-      return
-    }
-
-    // 在开始处理前保存当前bubble menu的位置和选中状态
-    captureBubbleMenuPosition()
-    const { from, to } = editor.state.selection
-    setPreservedSelection({ from, to })
-    setIsLoading(true)
-    setLoadingFeature(feature.key)
-
-    try {
-      const result = await callAI(feature.prompt, selectedText)
-      
-      if (result.trim()) {
-        // 计算diff
-        const diffResult = smartDiff(selectedText, result.trim())
-        
-        // 在选中位置插入内联diff节点
-        const { from, to } = editor.state.selection
-        editor.chain().focus()
-          .setTextSelection({ from, to })
-          .deleteSelection()
-          .setInlineDiff({
-            originalText: selectedText,
-            newText: result.trim(),
-            diffResult,
-            feature
-          })
-          .run()
-        
-        Toast.success(`${feature.label}完成`)
-      } else {
-        Toast.error('AI返回了空结果')
+  const handleAIFeature = useCallback(
+    async (feature: any) => {
+      const selectedText = getSelectedText()
+      if (!selectedText.trim()) {
+        Toast.error('请先选择要处理的文本')
+        return
       }
-    } catch (error) {
-      console.error(`AI ${feature.label} failed:`, error)
-      Toast.error(`${feature.label}失败: ${error instanceof Error ? error.message : '未知错误'}`)
-    } finally {
-      setIsLoading(false)
-      setLoadingFeature(null)
-      setBubbleMenuPosition(null)
-      setPreservedSelection(null)
-    }
-  }, [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition])
+
+      if (apiConfigs.length === 0) {
+        Toast.error('请先在设置中配置AI API')
+        return
+      }
+
+      const config = getCurrentConfig()
+      if (!config) {
+        Toast.error('请先选择一个API配置')
+        return
+      }
+
+      // 在开始处理前保存当前bubble menu的位置和选中状态
+      captureBubbleMenuPosition()
+      const { from, to } = editor.state.selection
+      setPreservedSelection({ from, to })
+      setIsLoading(true)
+      setLoadingFeature(feature.key)
+
+      try {
+        const result = await callAI(feature.prompt, selectedText)
+
+        if (result.trim()) {
+          // 计算diff
+          const diffResult = smartDiff(selectedText, result.trim())
+
+          // 在选中位置插入内联diff节点
+          const { from, to } = editor.state.selection
+          editor
+            .chain()
+            .focus()
+            .setTextSelection({ from, to })
+            .deleteSelection()
+            .setInlineDiff({
+              originalText: selectedText,
+              newText: result.trim(),
+              diffResult,
+              feature
+            })
+            .run()
+
+          Toast.success(`${feature.label}完成`)
+        } else {
+          Toast.error('AI返回了空结果')
+        }
+      } catch (error) {
+        console.error(`AI ${feature.label} failed:`, error)
+        Toast.error(`${feature.label}失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      } finally {
+        setIsLoading(false)
+        setLoadingFeature(null)
+        setBubbleMenuPosition(null)
+        setPreservedSelection(null)
+      }
+    },
+    [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition]
+  )
 
   if (!editor) return null
 
   // 如果正在加载AI功能，显示加载状态
   if (isLoading && loadingFeature) {
-    const currentFeature = AI_FEATURES.find(f => f.key === loadingFeature) || 
-                          TRANSLATION_LANGUAGES.find(() => loadingFeature === 'translate')
+    const currentFeature =
+      AI_FEATURES.find((f) => f.key === loadingFeature) ||
+      TRANSLATION_LANGUAGES.find(() => loadingFeature === 'translate')
     const featureLabel = loadingFeature === 'translate' ? '翻译' : currentFeature?.label
-    
+
     return (
       <BubbleMenu
         editor={editor}
@@ -1711,22 +1744,26 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
         }}
         updateDelay={0}
       >
-        <div 
+        <div
           className="bubble-menu ai-bubble-menu ai-loading-menu"
-          style={bubbleMenuPosition ? {
-            position: 'fixed',
-            top: bubbleMenuPosition.top,
-            left: bubbleMenuPosition.left,
-            zIndex: 10000
-          } : undefined}
+          style={
+            bubbleMenuPosition
+              ? {
+                  position: 'fixed',
+                  top: bubbleMenuPosition.top,
+                  left: bubbleMenuPosition.left,
+                  zIndex: 10000
+                }
+              : undefined
+          }
         >
           <div className="ai-loading-content">
             <div className="ai-loading-text">
               <Spin size="small" />
               AI正在{featureLabel}中
             </div>
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               type="danger"
               theme="borderless"
               onClick={() => {
@@ -1774,7 +1811,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             trigger="click"
             position="bottomLeft"
             menu={[
-              ...AI_FEATURES.map(feature => ({
+              ...AI_FEATURES.map((feature) => ({
                 node: 'item' as const,
                 name: feature.label,
                 onClick: () => handleAIFeature(feature),
@@ -1787,7 +1824,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 node: 'title' as const,
                 name: '翻译功能'
               },
-              ...TRANSLATION_LANGUAGES.map(lang => ({
+              ...TRANSLATION_LANGUAGES.map((lang) => ({
                 node: 'item' as const,
                 name: lang.label,
                 onClick: () => handleTranslation(lang.targetLang),
@@ -1795,7 +1832,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               }))
             ]}
             disabled={isLoading}
-            dropdownStyle={{ 
+            dropdownStyle={{
               maxHeight: '300px',
               overflowY: 'auto',
               zIndex: 9999
@@ -1812,7 +1849,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               AI助手
             </Button>
           </CustomDropdown>
-          
+
           {/* API配置选择（如果有多个配置） */}
           {apiConfigs.length > 1 && (
             <Select
@@ -1822,16 +1859,16 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               style={{ width: 120, marginRight: '8px' }}
               placeholder="选择API"
             >
-              {apiConfigs.map(config => (
+              {apiConfigs.map((config) => (
                 <Select.Option key={config.id} value={config.id}>
                   {config.name}
                 </Select.Option>
               ))}
             </Select>
           )}
-          
+
           <div className="bubble-menu-divider" />
-          
+
           <Button
             icon={<IconBold />}
             size="small"
@@ -1867,7 +1904,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             type={editor.isActive('link') ? 'primary' : 'tertiary'}
             onClick={() => {
               // Create a simple input dialog
-              const modalContent = document.createElement('div');
+              const modalContent = document.createElement('div')
               modalContent.innerHTML = `
                 <div style="padding: 16px;">
                   <div style="margin-bottom: 12px;">
@@ -1884,9 +1921,9 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                     <button id="text-link-ok-btn" style="padding: 8px 16px; border: none; background: var(--semi-color-primary); color: white; border-radius: 4px; cursor: pointer;">确定</button>
                   </div>
                 </div>
-              `;
-              
-              const overlay = document.createElement('div');
+              `
+
+              const overlay = document.createElement('div')
               overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -1898,56 +1935,56 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 align-items: center;
                 justify-content: center;
                 z-index: 10000;
-              `;
-              
-              const modal = document.createElement('div');
+              `
+
+              const modal = document.createElement('div')
               modal.style.cssText = `
                 background: var(--semi-color-bg-0);
                 border-radius: 8px;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
                 min-width: 400px;
                 max-width: 500px;
-              `;
-              
-              modal.appendChild(modalContent);
-              overlay.appendChild(modal);
-              document.body.appendChild(overlay);
-              
-              const input = modal.querySelector('#text-link-url-input') as HTMLInputElement;
-              const okBtn = modal.querySelector('#text-link-ok-btn') as HTMLButtonElement;
-              const cancelBtn = modal.querySelector('#text-link-cancel-btn') as HTMLButtonElement;
-              
+              `
+
+              modal.appendChild(modalContent)
+              overlay.appendChild(modal)
+              document.body.appendChild(overlay)
+
+              const input = modal.querySelector('#text-link-url-input') as HTMLInputElement
+              const okBtn = modal.querySelector('#text-link-ok-btn') as HTMLButtonElement
+              const cancelBtn = modal.querySelector('#text-link-cancel-btn') as HTMLButtonElement
+
               setTimeout(() => {
-                input.focus();
-              }, 100);
-              
+                input.focus()
+              }, 100)
+
               const cleanup = () => {
-                document.body.removeChild(overlay);
-              };
-              
+                document.body.removeChild(overlay)
+              }
+
               const handleOk = () => {
-                const url = input.value.trim();
+                const url = input.value.trim()
                 if (url) {
-                  editor.chain().focus().setLink({ href: url }).run();
+                  editor.chain().focus().setLink({ href: url }).run()
                 }
-                cleanup();
-              };
-              
-              okBtn.addEventListener('click', handleOk);
-              cancelBtn.addEventListener('click', cleanup);
+                cleanup()
+              }
+
+              okBtn.addEventListener('click', handleOk)
+              cancelBtn.addEventListener('click', cleanup)
               overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) cleanup();
-              });
-              
+                if (e.target === overlay) cleanup()
+              })
+
               input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleOk();
+                  e.preventDefault()
+                  handleOk()
                 } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  cleanup();
+                  e.preventDefault()
+                  cleanup()
                 }
-              });
+              })
             }}
             title="链接"
           />
@@ -2034,11 +2071,11 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             type="tertiary"
             onClick={() => {
               // Get selected text from editor
-              const { from, to } = editor.state.selection;
-              const selectedText = editor.state.doc.textBetween(from, to, ' ').trim();
-              
+              const { from, to } = editor.state.selection
+              const selectedText = editor.state.doc.textBetween(from, to, ' ').trim()
+
               // Create a more sophisticated modal dialog with Semi Design theme styling
-              const modalContent = document.createElement('div');
+              const modalContent = document.createElement('div')
               modalContent.innerHTML = `
                 <div class="iframe-edit-form">
                   <div class="iframe-edit-header">
@@ -2099,10 +2136,10 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                     </div>
                   </div>
                 </div>
-              `;
-              
+              `
+
               // Create modal overlay with consistent styling
-              const overlay = document.createElement('div');
+              const overlay = document.createElement('div')
               overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -2116,9 +2153,9 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 z-index: 10000;
                 backdrop-filter: blur(4px);
                 animation: fadeIn 0.2s ease;
-              `;
-              
-              const modal = document.createElement('div');
+              `
+
+              const modal = document.createElement('div')
               modal.style.cssText = `
                 background: var(--semi-color-bg-0);
                 border: 1px solid var(--semi-color-border);
@@ -2129,10 +2166,10 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 max-height: 80vh;
                 overflow: hidden;
                 animation: slideIn 0.2s ease-out;
-              `;
-              
+              `
+
               // Add animation styles
-              const style = document.createElement('style');
+              const style = document.createElement('style')
               style.textContent = `
                 @keyframes fadeIn {
                   from { opacity: 0; }
@@ -2148,91 +2185,95 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                     transform: translateY(0) scale(1); 
                   }
                 }
-              `;
-              document.head.appendChild(style);
-              
-              modal.appendChild(modalContent);
-              overlay.appendChild(modal);
-              document.body.appendChild(overlay);
-              
-              const input = modal.querySelector('#iframe-url-input') as HTMLInputElement;
-              const widthSelect = modal.querySelector('#iframe-width-select') as HTMLSelectElement;
-              const heightSelect = modal.querySelector('#iframe-height-select') as HTMLSelectElement;
-              const okBtn = modal.querySelector('#iframe-ok-btn') as HTMLButtonElement;
-              const cancelBtn = modal.querySelector('#iframe-cancel-btn') as HTMLButtonElement;
-              
+              `
+              document.head.appendChild(style)
+
+              modal.appendChild(modalContent)
+              overlay.appendChild(modal)
+              document.body.appendChild(overlay)
+
+              const input = modal.querySelector('#iframe-url-input') as HTMLInputElement
+              const widthSelect = modal.querySelector('#iframe-width-select') as HTMLSelectElement
+              const heightSelect = modal.querySelector('#iframe-height-select') as HTMLSelectElement
+              const okBtn = modal.querySelector('#iframe-ok-btn') as HTMLButtonElement
+              const cancelBtn = modal.querySelector('#iframe-cancel-btn') as HTMLButtonElement
+
               // Add hover effects
               okBtn.addEventListener('mouseenter', () => {
-                okBtn.style.background = 'var(--semi-color-primary-hover)';
-                okBtn.style.transform = 'translateY(-1px)';
-                okBtn.style.boxShadow = '0 2px 8px rgba(var(--semi-blue-5), 0.3)';
-              });
-              
+                okBtn.style.background = 'var(--semi-color-primary-hover)'
+                okBtn.style.transform = 'translateY(-1px)'
+                okBtn.style.boxShadow = '0 2px 8px rgba(var(--semi-blue-5), 0.3)'
+              })
+
               okBtn.addEventListener('mouseleave', () => {
-                okBtn.style.background = 'var(--semi-color-primary)';
-                okBtn.style.transform = 'translateY(0)';
-                okBtn.style.boxShadow = 'none';
-              });
-              
+                okBtn.style.background = 'var(--semi-color-primary)'
+                okBtn.style.transform = 'translateY(0)'
+                okBtn.style.boxShadow = 'none'
+              })
+
               cancelBtn.addEventListener('mouseenter', () => {
-                cancelBtn.style.background = 'var(--semi-color-fill-0)';
-                cancelBtn.style.borderColor = 'var(--semi-color-primary-light-default)';
-              });
-              
+                cancelBtn.style.background = 'var(--semi-color-fill-0)'
+                cancelBtn.style.borderColor = 'var(--semi-color-primary-light-default)'
+              })
+
               cancelBtn.addEventListener('mouseleave', () => {
-                cancelBtn.style.background = 'var(--semi-color-bg-0)';
-                cancelBtn.style.borderColor = 'var(--semi-color-border)';
-              });
-              
+                cancelBtn.style.background = 'var(--semi-color-bg-0)'
+                cancelBtn.style.borderColor = 'var(--semi-color-border)'
+              })
+
               // Focus the input and select text if pre-filled
               setTimeout(() => {
-                input.focus();
+                input.focus()
                 if (selectedText) {
-                  input.select(); // Select all text if there was selected content
+                  input.select() // Select all text if there was selected content
                 }
-              }, 100);
-              
+              }, 100)
+
               const cleanup = () => {
-                document.body.removeChild(overlay);
-                document.head.removeChild(style);
-              };
-              
+                document.body.removeChild(overlay)
+                document.head.removeChild(style)
+              }
+
               const handleOk = () => {
-                const url = input.value.trim();
-                
+                const url = input.value.trim()
+
                 if (url) {
-                  const width = widthSelect.value;
-                  const height = heightSelect.value;
-                  
-                  editor.chain().focus().setIframe({ 
-                    src: url,
-                    width: width,
-                    height: height
-                  }).run();
-                  Toast.success('嵌入内容插入成功');
+                  const width = widthSelect.value
+                  const height = heightSelect.value
+
+                  editor
+                    .chain()
+                    .focus()
+                    .setIframe({
+                      src: url,
+                      width: width,
+                      height: height
+                    })
+                    .run()
+                  Toast.success('嵌入内容插入成功')
                 } else {
-                  Toast.error('请输入有效的嵌入地址');
-                  return;
+                  Toast.error('请输入有效的嵌入地址')
+                  return
                 }
-                cleanup();
-              };
-              
-              okBtn.addEventListener('click', handleOk);
-              cancelBtn.addEventListener('click', cleanup);
+                cleanup()
+              }
+
+              okBtn.addEventListener('click', handleOk)
+              cancelBtn.addEventListener('click', cleanup)
               overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) cleanup();
-              });
-              
+                if (e.target === overlay) cleanup()
+              })
+
               // Handle Enter key
               input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleOk();
+                  e.preventDefault()
+                  handleOk()
                 } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  cleanup();
+                  e.preventDefault()
+                  cleanup()
                 }
-              });
+              })
             }}
             title="插入嵌入内容"
           />
@@ -2262,11 +2303,11 @@ const Editor: React.FC<EditorProps> = ({
   // 清理所有未处理的diff节点
   const clearAllDiffNodes = useCallback((editorInstance: any) => {
     if (!editorInstance) return
-    
+
     const { state } = editorInstance
     const { tr } = state
     let hasChanges = false
-    
+
     // 从后往前遍历，避免位置偏移问题
     state.doc.descendants((node: any, pos: number) => {
       if (node.type.name === 'inlineDiff') {
@@ -2278,7 +2319,7 @@ const Editor: React.FC<EditorProps> = ({
       }
       return true // 继续遍历
     })
-    
+
     if (hasChanges) {
       editorInstance.view.dispatch(tr)
     }
@@ -2526,7 +2567,7 @@ const Editor: React.FC<EditorProps> = ({
       // 检查是否有AI处理正在进行，如果有则跳过自动保存
       const editorElement = editor?.view?.dom?.closest('.tiptap-editor')
       const isAIProcessing = editorElement?.classList.contains('ai-processing')
-      
+
       // 检查是否有AI结果小窗正在显示 - 扩展检查多个可能的AI相关元素
       const aiLoadingMenu = document.querySelector('.ai-loading-menu')
       const aiBubbleMenu = document.querySelector('.ai-bubble-menu')
@@ -2534,9 +2575,16 @@ const Editor: React.FC<EditorProps> = ({
       const textBubbleMenuWithAI = document.querySelector('.text-bubble-menu .ai-features-dropdown')
       const inlineDiffWrapper = document.querySelector('.inline-diff-wrapper')
       const inlineDiff = document.querySelector('.inline-diff')
-      
-      const isAIResultWindowVisible = !!(aiLoadingMenu || aiBubbleMenu || aiLoadingContent || textBubbleMenuWithAI || inlineDiffWrapper || inlineDiff)
-      
+
+      const isAIResultWindowVisible = !!(
+        aiLoadingMenu ||
+        aiBubbleMenu ||
+        aiLoadingContent ||
+        textBubbleMenuWithAI ||
+        inlineDiffWrapper ||
+        inlineDiff
+      )
+
       // 输出调试信息
       if (isAIResultWindowVisible) {
         console.log('AI窗口检测到，跳过自动保存:', {
@@ -2548,8 +2596,15 @@ const Editor: React.FC<EditorProps> = ({
           inlineDiff: !!inlineDiff
         })
       }
-      
-      if (hasUnsavedChanges && currentFolder && currentFile && editor && !isAIProcessing && !isAIResultWindowVisible) {
+
+      if (
+        hasUnsavedChanges &&
+        currentFolder &&
+        currentFile &&
+        editor &&
+        !isAIProcessing &&
+        !isAIResultWindowVisible
+      ) {
         saveDocument()
       }
     }, 3000) // 3秒后自动保存
@@ -2561,10 +2616,7 @@ const Editor: React.FC<EditorProps> = ({
     currentFileRef.current = { folder: currentFolder, file: currentFile }
 
     // 如果文件切换，清理所有diff节点
-    if (
-      prevFile.folder !== currentFolder || 
-      prevFile.file !== currentFile
-    ) {
+    if (prevFile.folder !== currentFolder || prevFile.file !== currentFile) {
       if (editor) {
         clearAllDiffNodes(editor)
       }
@@ -2623,7 +2675,7 @@ const Editor: React.FC<EditorProps> = ({
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }

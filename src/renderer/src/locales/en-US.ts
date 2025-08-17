@@ -263,7 +263,8 @@ export const enUS: ExtendedDictionary = {
     emptyNotes: 'No notes yet',
     folderName: 'Enter folder name',
     noteName: 'Enter note name',
-    confirmDeleteFolder: 'Are you sure you want to delete folder "{name}"? All notes in the folder will be deleted.',
+    confirmDeleteFolder:
+      'Are you sure you want to delete folder "{name}"? All notes in the folder will be deleted.',
     confirmDeleteNote: 'Are you sure you want to delete note "{name}"?'
   },
   // Settings page
@@ -384,7 +385,8 @@ export const enUS: ExtendedDictionary = {
   // Mind map
   mindmap: {
     title: 'Mind Map',
-    helpText: 'Double-click node to edit | Drag to connect nodes | Supports multi-select and shortcuts',
+    helpText:
+      'Double-click node to edit | Drag to connect nodes | Supports multi-select and shortcuts',
     centerTopic: 'Center Topic',
     newNode: 'New Node',
     addNode: 'Add Node',
