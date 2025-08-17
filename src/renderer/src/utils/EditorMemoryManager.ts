@@ -185,7 +185,7 @@ export class EditorMemoryManager {
       await this.performMemoryCheck()
     }, this.monitorInterval)
 
-    console.log('Editor memory monitoring started')
+    // Editor memory monitoring started
   }
 
   /**
@@ -206,7 +206,7 @@ export class EditorMemoryManager {
       this.cleanupTimer = undefined
     }
 
-    console.log('Editor memory monitoring stopped')
+    // Editor memory monitoring stopped
   }
 
   /**
@@ -311,7 +311,7 @@ export class EditorMemoryManager {
           if (result.success) {
             // strategiesUsed.push(strategy.name)
             // totalMemoryFreed += result.memoryFreed
-            console.log(`Memory cleanup strategy "${strategy.name}": ${result.description}`)
+            // Memory cleanup strategy executed
           }
         } catch (error) {
           console.error(`Memory cleanup strategy "${strategy.name}" failed:`, error)

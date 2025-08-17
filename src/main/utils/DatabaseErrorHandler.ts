@@ -323,7 +323,7 @@ export class DatabaseErrorHandler {
         await strategy.onRecovery(error, retryCount + 1)
       }
 
-      console.log(`Database error recovery attempted for ${error.type}, attempt ${retryCount + 1}`)
+      // Database error recovery attempted for ${error.type}, attempt ${retryCount + 1}
       return true
     } catch (recoveryError) {
       console.error(`Database error recovery failed for ${error.type}:`, recoveryError)
@@ -343,7 +343,7 @@ export class DatabaseErrorHandler {
       maxDelay: 30000,
       shouldRetry: (_error, attempt) => attempt < 5,
       onRecovery: async (_error, attempt) => {
-        console.log(`Attempting database connection recovery, attempt ${attempt}`)
+        // Attempting database connection recovery, attempt ${attempt}
         // 这里可以添加重新初始化连接池的逻辑
       }
     })

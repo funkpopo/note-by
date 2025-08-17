@@ -36,11 +36,11 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
 
   // 组件挂载时记录节点，卸载时清理
   useEffect(() => {
-    console.log('InlineDiff组件挂载')
+    // InlineDiff组件挂载
 
     return () => {
       // 组件卸载时的清理逻辑
-      console.log('InlineDiff组件卸载')
+      // InlineDiff组件卸载
     }
   }, [getPos])
 

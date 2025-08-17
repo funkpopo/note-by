@@ -1559,10 +1559,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
           left: adjustedLeft
         })
 
-        console.log('Captured bubble menu position:', {
-          original: { top: rect.top, left: rect.left },
-          adjusted: { top: adjustedTop, left: adjustedLeft }
-        })
+        // Captured bubble menu position
       } else {
         console.warn('Text bubble menu element not found')
       }
@@ -2587,14 +2584,7 @@ const Editor: React.FC<EditorProps> = ({
 
       // 输出调试信息
       if (isAIResultWindowVisible) {
-        console.log('AI窗口检测到，跳过自动保存:', {
-          aiLoadingMenu: !!aiLoadingMenu,
-          aiBubbleMenu: !!aiBubbleMenu,
-          aiLoadingContent: !!aiLoadingContent,
-          textBubbleMenuWithAI: !!textBubbleMenuWithAI,
-          inlineDiffWrapper: !!inlineDiffWrapper,
-          inlineDiff: !!inlineDiff
-        })
+        // AI窗口检测到，跳过自动保存
       }
 
       if (

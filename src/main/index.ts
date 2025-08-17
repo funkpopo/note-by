@@ -127,7 +127,7 @@ function convertMarkdownToHtml(content: string): string {
 const gotTheLock = app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
-  console.log('应用已经在运行中，退出当前实例')
+  // 应用已经在运行中，退出当前实例
   app.quit()
 } else {
   // 监听第二个实例的启动
@@ -1372,9 +1372,9 @@ ${htmlContent}
 
         // 检测并转换 Markdown 内容
         if (isMarkdownContent(content)) {
-          console.log('检测到 Markdown 格式，正在转换为 HTML...')
+          // 检测到 Markdown 格式，正在转换为 HTML...
           content = convertMarkdownToHtml(content)
-          console.log('Markdown 转换完成')
+          // Markdown 转换完成
         }
 
         return { success: true, content }
@@ -2508,10 +2508,7 @@ ${htmlContent}
         })
       }
 
-      console.log('协调内存清理完成:', {
-        database: dbCleanup,
-        timestamp: event.timestamp
-      })
+      // 协调内存清理完成
     } catch (error) {
       console.error('协调内存清理失败:', error)
     }

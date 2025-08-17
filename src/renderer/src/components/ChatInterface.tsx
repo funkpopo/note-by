@@ -422,7 +422,7 @@ const ChatInterface: React.FC = () => {
     async (sessionId: string) => {
       try {
         const sessionMessages = await window.api.chat.getSessionMessages(sessionId)
-        console.log('加载会话消息:', sessionId, sessionMessages) // 添加调试日志
+        // 加载会话消息: sessionId, sessionMessages
         setMessages(sessionMessages)
         setCurrentSessionId(sessionId)
         setUnsavedMessages(new Set())

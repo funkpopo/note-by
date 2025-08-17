@@ -87,7 +87,7 @@ class EnhancedDatabasePool {
       // 启动健康检查定时器
       this.startHealthCheck()
 
-      console.log('Enhanced database pool initialized successfully')
+      // Enhanced database pool initialized successfully
       return true
     } catch (error) {
       console.error('Failed to initialize enhanced database pool:', error)
@@ -177,7 +177,7 @@ class EnhancedDatabasePool {
       }
 
       this.connections.set(connectionId, connectionItem)
-      console.log(`Created new database connection: ${connectionId}`)
+      // Created new database connection: ${connectionId}
       return connectionItem
     } catch (error) {
       console.error('Failed to create database connection:', error)
@@ -195,7 +195,7 @@ class EnhancedDatabasePool {
       connection.pragma('mmap_size = 268435456') // 256MB
       connection.pragma('foreign_keys = ON')
     } catch (error) {
-      console.warn('Failed to configure SQLite connection:', error)
+      // Failed to configure SQLite connection
     }
   }
 
@@ -394,7 +394,7 @@ class EnhancedDatabasePool {
         item.health.lastError = error as Error
         item.status = ConnectionStatus.ERROR
 
-        console.warn(`Connection ${id} failed health check:`, error)
+        // Connection ${id} failed health check
 
         if (item.health.errorCount >= this.maxRetries) {
           unhealthyConnections.push(id)
@@ -462,7 +462,7 @@ class EnhancedDatabasePool {
       item.health.errorCount = 0
       item.lastUsed = Date.now()
 
-      console.log(`Successfully reconnected database connection: ${connectionId}`)
+      // Successfully reconnected database connection: ${connectionId}
     } catch (error) {
       console.error(`Failed to reconnect database connection ${connectionId}:`, error)
       await this.removeConnection(connectionId)
@@ -477,11 +477,11 @@ class EnhancedDatabasePool {
           item.connection.close()
         }
       } catch (error) {
-        console.warn(`Failed to close connection ${connectionId}:`, error)
+        // Failed to close connection ${connectionId}
       }
 
       this.connections.delete(connectionId)
-      console.log(`Removed database connection: ${connectionId}`)
+      // Removed database connection: ${connectionId}
     }
   }
 
@@ -499,7 +499,7 @@ class EnhancedDatabasePool {
     this.connections.clear()
     this.isInitialized = false
 
-    console.log('Enhanced database pool shut down successfully')
+    // Enhanced database pool shut down successfully
   }
 
   getStats(): {
@@ -641,7 +641,7 @@ class EnhancedDatabasePool {
           item.connection.pragma('cache_size = 2000') // 恢复缓存大小
           cacheCleared = true
         } catch (error) {
-          console.warn('清理数据库缓存失败:', error)
+          // 清理数据库缓存失败
         }
       }
     }
@@ -654,7 +654,7 @@ class EnhancedDatabasePool {
           item.connection.pragma('optimize')
           maintenancePerformed = true
         } catch (error) {
-          console.warn('执行数据库优化失败:', error)
+          // 执行数据库优化失败
         }
       }
     }
