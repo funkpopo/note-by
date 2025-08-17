@@ -418,7 +418,7 @@ class FileStreamManager {
       {
         maxConcurrency: 5,
         onError: (error, filePath) => {
-          console.warn(`清理文件失败 ${filePath}:`, error)
+          // 清理文件失败
         }
       }
     )

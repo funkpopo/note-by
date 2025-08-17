@@ -1351,7 +1351,7 @@ const DataAnalysis: React.FC = () => {
       }
     } catch (error) {
       // 初始化时的缓存加载失败不显示错误Toast，避免干扰用户
-      console.warn('初始化时加载缓存失败，将等待用户手动触发分析')
+      // 初始化时加载缓存失败，将等待用户手动触发分析
     } finally {
       // 无论成功失败，都结束加载状态
       setIsLoading(false)

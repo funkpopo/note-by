@@ -36,7 +36,7 @@ class ModelSelectionService {
       const selectedModelId = await window.api.settings.get('selectedModelId')
       return (selectedModelId as string) || ''
     } catch (error) {
-      console.error('获取选中模型ID失败:', error)
+      // 获取选中模型ID失败
       return ''
     }
   }
@@ -48,7 +48,7 @@ class ModelSelectionService {
       // 通知所有监听器
       this.listeners.forEach((listener) => listener(modelId))
     } catch (error) {
-      console.error('设置选中模型ID失败:', error)
+      // 设置选中模型ID失败
       throw error
     }
   }
@@ -59,7 +59,7 @@ class ModelSelectionService {
       const settings = await window.api.settings.getAll()
       return (settings.AiApiConfigs as AiApiConfig[]) || []
     } catch (error) {
-      console.error('获取可用模型失败:', error)
+      // 获取可用模型失败
       return []
     }
   }
@@ -73,7 +73,7 @@ class ModelSelectionService {
       const availableModels = await this.getAvailableModels()
       return availableModels.find((model) => model.id === selectedModelId) || null
     } catch (error) {
-      console.error('获取选中模型配置失败:', error)
+      // 获取选中模型配置失败
       return null
     }
   }
@@ -112,7 +112,7 @@ class ModelSelectionService {
       const availableModels = await this.getAvailableModels()
       return availableModels.some((model) => model.id === modelId)
     } catch (error) {
-      console.error('验证模型ID失败:', error)
+      // 验证模型ID失败
       return false
     }
   }
@@ -130,7 +130,7 @@ class ModelSelectionService {
         await this.initializeDefaultModel()
       }
     } catch (error) {
-      console.error('清理无效模型选择失败:', error)
+      // 清理无效模型选择失败
     }
   }
 }

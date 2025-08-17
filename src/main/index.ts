@@ -542,7 +542,7 @@ async function checkForUpdates(): Promise<{
       // 首先尝试使用系统代理（如果有）
       response = await axios.get(GITHUB_RELEASES_URL, requestConfig)
     } catch (proxyError) {
-      console.warn('使用系统代理检查更新失败，尝试直接连接:', proxyError)
+      // 使用系统代理检查更新失败，尝试直接连接
 
       // 临时修改环境变量，以便proxy-from-env不使用系统代理
       const originalHttpProxy = process.env.HTTP_PROXY

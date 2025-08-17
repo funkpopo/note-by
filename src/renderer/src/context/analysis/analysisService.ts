@@ -218,7 +218,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       try {
         activityResult = await window.api.analytics.getUserActivityData(30)
       } catch (error) {
-        console.warn('获取活动数据失败:', error)
+        // 获取活动数据失败
         // 活动数据失败不阻止分析继续进行
         activityResult = { success: false, activityData: null }
       }
@@ -281,7 +281,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
             }
           }
         } catch (error) {
-          console.warn('缓存检查失败:', error)
+          // 缓存检查失败
           // 缓存失败不阻止分析继续进行
         }
       }
@@ -531,7 +531,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
             await analysisCacheManager.setCachedAnalysis(cacheItem, statsData, activityData)
           } catch (cacheError) {
             // 缓存保存失败不影响分析结果的显示
-            console.warn('缓存保存失败:', cacheError)
+            // 缓存保存失败
           }
         }
       } catch (jsonError) {
@@ -646,7 +646,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     try {
       await analysisCacheManager.preloadCache()
     } catch (error) {
-      console.warn('缓存预热失败:', error)
+      // 缓存预热失败
     }
   }
 }))

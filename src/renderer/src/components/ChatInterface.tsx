@@ -438,7 +438,7 @@ const ChatInterface: React.FC = () => {
   const saveMessageToDatabase = useCallback(
     async (message: ChatMessage) => {
       if (!currentSessionId) {
-        console.warn('无法保存消息：当前会话ID为空')
+        // 无法保存消息：当前会话ID为空
         return
       }
 

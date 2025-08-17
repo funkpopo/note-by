@@ -1415,7 +1415,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               editor.commands.setTextSelection(preservedSelection)
             }
           } catch (error) {
-            console.warn('Failed to maintain selection during processing:', error)
+            // Failed to maintain selection during processing
           }
         }
       } else {
@@ -1561,7 +1561,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
 
         // Captured bubble menu position
       } else {
-        console.warn('Text bubble menu element not found')
+        // Text bubble menu element not found
       }
     } catch (error) {
       console.error('Error capturing bubble menu position:', error)
@@ -1734,7 +1734,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                 editor.commands.setTextSelection({ from, to })
               }
             } catch (error) {
-              console.warn('Failed to restore selection:', error)
+              // Failed to restore selection
             }
           }
           return true

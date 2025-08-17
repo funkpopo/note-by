@@ -502,7 +502,7 @@ class PerformanceMonitor {
       try {
         listener(event)
       } catch (error) {
-        console.error('Performance monitor listener error:', error)
+        // Performance monitor listener error
       }
     })
   }

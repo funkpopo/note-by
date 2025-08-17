@@ -112,7 +112,7 @@ const App: React.FC = () => {
   // 监听来自主进程的导航事件
   useEffect(() => {
     const removeListener = window.api.navigation.onNavigate((viewKey: string) => {
-      console.log('收到导航事件:', viewKey)
+      // 收到导航事件: viewKey
       handleNavChange(viewKey)
     })
 

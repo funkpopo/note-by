@@ -110,7 +110,7 @@ class RenderOptimizer {
         await this.processTasksByPriority()
       }
     } catch (error) {
-      console.error('任务处理错误:', error)
+      // 任务处理错误
     } finally {
       this.isProcessing = false
       this.processingController = undefined
@@ -205,7 +205,7 @@ class RenderOptimizer {
         this.taskQueue.delete(task.id)
         task.resolve(result)
       } catch (error) {
-        console.error(`任务 ${task.id} 执行失败:`, error)
+        // 任务执行失败
         this.taskQueue.delete(task.id)
         task.reject(error)
       } finally {

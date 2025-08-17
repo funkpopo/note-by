@@ -59,7 +59,7 @@ class AnalysisCacheManager {
       },
       maxSize: 10 * 1024 * 1024, // 最大10MB缓存
       dispose: (_value, key, reason) => {
-        console.debug(`分析缓存项被移除: ${key}, 原因: ${reason}`)
+        // 分析缓存项被移除: ${key}, 原因: ${reason}
       }
     })
 
@@ -224,7 +224,7 @@ class AnalysisCacheManager {
         }
       }
     } catch (error) {
-      console.warn('预热分析缓存失败:', error)
+      // 预热分析缓存失败
     }
   }
 
@@ -260,7 +260,7 @@ class AnalysisCacheManager {
         }
       }
     } catch (error) {
-      console.warn('加载持久化分析缓存失败:', error)
+      // 加载持久化分析缓存失败
     }
   }
 
@@ -284,7 +284,7 @@ class AnalysisCacheManager {
 
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data))
     } catch (error) {
-      console.warn('保存持久化分析缓存失败:', error)
+      // 保存持久化分析缓存失败
     }
   }
 }

@@ -78,7 +78,7 @@ export const SmartPreloadContainer: React.FC<{
           }
         })
       } catch (error) {
-        console.warn(`Failed to preload component ${componentKey}:`, error)
+        // Failed to preload component
       }
     }
 

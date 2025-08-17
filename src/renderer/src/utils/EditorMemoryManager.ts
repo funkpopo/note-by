@@ -231,7 +231,7 @@ export class EditorMemoryManager {
       // 根据压力级别采取行动
       await this.handleMemoryPressure(usage, newPressureLevel)
     } catch (error) {
-      console.error('Memory check failed:', error)
+      // Memory check failed
     }
   }
 
@@ -314,7 +314,7 @@ export class EditorMemoryManager {
             // Memory cleanup strategy executed
           }
         } catch (error) {
-          console.error(`Memory cleanup strategy "${strategy.name}" failed:`, error)
+          // Memory cleanup strategy failed
         }
       }
     }
@@ -325,7 +325,7 @@ export class EditorMemoryManager {
         ;(window as any).gc()
         strategiesUsed.push('Garbage Collection')
       } catch (error) {
-        console.warn('Manual garbage collection failed:', error)
+        // Manual garbage collection failed
       }
     }
 
@@ -366,7 +366,7 @@ export class EditorMemoryManager {
     // 强制执行清理
     await this.performMemoryCleanup(true)
 
-    console.warn('Emergency memory cleanup performed')
+    // Emergency memory cleanup performed
   }
 
   /**
@@ -581,7 +581,7 @@ export class EditorMemoryManager {
 
       return optimizedBlob
     } catch (error) {
-      console.error('Image optimization failed:', error)
+      // Image optimization failed
       return blob
     }
   }

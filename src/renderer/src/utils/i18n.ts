@@ -12,7 +12,7 @@ export function t(key: string): string {
     if (value && typeof value === 'object' && k in value) {
       value = value[k]
     } else {
-      console.warn(`Translation key not found: ${key}`)
+      // Translation key not found: ${key}
       return key
     }
   }

@@ -414,11 +414,7 @@ export class DatabaseErrorHandler {
     // 检查错误率是否过高
     if (recentErrors.length > 50) {
       // 5分钟内超过50个错误
-      console.warn('Database error rate is high:', {
-        recentErrors: recentErrors.length,
-        errorRate: this.errorStats.errorRate,
-        timestamp: new Date().toISOString()
-      })
+      // Database error rate is high
     }
 
     // 检查严重错误
@@ -496,7 +492,7 @@ export class DatabaseErrorHandler {
     return async (): Promise<T | null> => {
       // 检查是否应该阻止操作
       if (this.shouldBlockOperation()) {
-        console.warn('Database operation blocked due to high error rate')
+        // Database operation blocked due to high error rate
         return null
       }
 

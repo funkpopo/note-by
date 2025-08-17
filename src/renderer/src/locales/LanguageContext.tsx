@@ -47,7 +47,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         // 如果找不到，尝试英文
         value = keys.reduce((acc: any, k) => acc?.[k], locales['en-US'])
         if (!value) {
-          console.warn(`Translation key not found: ${key}`)
+          // Translation key not found: ${key}
           return key
         }
         break
@@ -55,7 +55,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
 
     if (typeof value !== 'string') {
-      console.warn(`Translation value is not a string: ${key}`)
+      // Translation value is not a string: ${key}
       return key
     }
 

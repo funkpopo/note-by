@@ -438,7 +438,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
     // 确保itemKey存在
     if (!itemKey) {
-      console.warn('右键菜单: itemKey为空')
+      // 右键菜单: itemKey为空
       return
     }
 
