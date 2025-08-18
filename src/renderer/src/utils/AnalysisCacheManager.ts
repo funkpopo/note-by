@@ -14,14 +14,29 @@ interface CacheEntry {
 
 // 数据指纹计算函数
 const calculateFingerprint = (stats: unknown, activityData: unknown): string => {
+  interface StatsData {
+    totalNotes?: number
+    totalEdits?: number
+    editsByDate?: Array<{ date: string }>
+  }
+  
+  interface ActivityData {
+    dailyActivity?: Record<string, unknown>
+  }
+
+  const statsTyped = stats as StatsData
+  const activityTyped = activityData as ActivityData
+  
   const data = {
-    totalNotes: (stats as any)?.totalNotes || 0,
-    totalEdits: (stats as any)?.totalEdits || 0,
+    totalNotes: statsTyped?.totalNotes || 0,
+    totalEdits: statsTyped?.totalEdits || 0,
     lastEditTime: Math.max(
-      ...((stats as any)?.editsByDate || []).map((item: unknown) => new Date((item as { date: string }).date).getTime()),
+      ...(statsTyped?.editsByDate || []).map((item: { date: string }) => 
+        new Date(item.date).getTime()
+      ),
       0
     ),
-    dailyActivityKeys: Object.keys((activityData as any)?.dailyActivity || {}).sort()
+    dailyActivityKeys: Object.keys(activityTyped?.dailyActivity || {}).sort()
   }
 
   return JSON.stringify(data)

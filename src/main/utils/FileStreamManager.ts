@@ -217,7 +217,7 @@ class FileStreamManager {
         completedCount,
         totalCount
       }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         results,
@@ -298,7 +298,7 @@ class FileStreamManager {
         isDirectory: stats.isDirectory(),
         lastModified: stats.mtime
       }
-    } catch (error) {
+    } catch {
       return {
         path: filePath,
         size: 0,

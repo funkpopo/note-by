@@ -31,12 +31,12 @@ import { enUS } from '../locales/en-US'
 const { Text } = Typography
 
 // 获取当前语言设置
-const getCurrentLanguage = () => {
+const getCurrentLanguage = (): 'zh-CN' | 'en-US' => {
   return (localStorage.getItem('app-language') as 'zh-CN' | 'en-US') || 'zh-CN'
 }
 
 // 获取翻译文本
-const getTranslations = () => {
+const getTranslations = (): typeof zhCN => {
   const lang = getCurrentLanguage()
   return lang === 'zh-CN' ? zhCN : enUS
 }

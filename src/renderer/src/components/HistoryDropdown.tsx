@@ -228,7 +228,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
       } else {
         setHistoryList([])
       }
-    } catch (error) {
+    } catch {
       setHistoryList([])
     } finally {
       setLoading(false)

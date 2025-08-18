@@ -7,12 +7,12 @@ import { enUS } from '../locales/en-US'
 const { Text } = Typography
 
 // 获取当前语言设置
-const getCurrentLanguage = () => {
+const getCurrentLanguage = (): 'zh-CN' | 'en-US' => {
   return (localStorage.getItem('app-language') as 'zh-CN' | 'en-US') || 'zh-CN'
 }
 
 // 获取翻译文本
-const getTranslations = () => {
+const getTranslations = (): typeof zhCN => {
   const lang = getCurrentLanguage()
   return lang === 'zh-CN' ? zhCN : enUS
 }
@@ -47,7 +47,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   const [lastUserMessages, setLastUserMessages] = useState<Record<string, string>>({})
 
   // 加载聊天会话列表
-  const loadSessions = async () => {
+  const loadSessions = async (): Promise<void> => {
     setLoading(true)
     try {
       const sessionList = await window.api.chat.getSessions()
@@ -97,7 +97,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   }, [isOpen, currentSessionId]) // Add currentSessionId as dependency to refresh when it changes
 
   // 格式化时间显示
-  const formatDate = (timestamp: number) => {
+  const formatDate = (timestamp: number): string => {
     const date = new Date(timestamp)
     const now = new Date()
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
@@ -116,7 +116,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   }
 
   // 删除会话
-  const deleteSession = async (sessionId: string) => {
+  const deleteSession = async (sessionId: string): Promise<void> => {
     try {
       await window.api.chat.deleteSession(sessionId)
       await loadSessions()
@@ -132,7 +132,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   }
 
   // 生成会话显示标题（用户最后一条消息）
-  const getSessionDisplayTitle = (session: ChatSession) => {
+  const getSessionDisplayTitle = (session: ChatSession): string => {
     return (
       lastUserMessages[session.id] ||
       session.title ||

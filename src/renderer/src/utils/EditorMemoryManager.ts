@@ -137,13 +137,29 @@ export class EditorMemoryManager {
     const performance = window.performance
 
     // 获取基本内存信息
-    let memoryInfo: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number } = {}
+    let memoryInfo: { 
+      usedJSHeapSize?: number 
+      totalJSHeapSize?: number 
+      jsHeapSizeLimit?: number 
+    } = {}
 
-    if ((performance as any)?.memory) {
-      memoryInfo = (performance as any).memory
-    } else if ((navigator as unknown as { deviceMemory?: number }).deviceMemory) {
+    interface PerformanceWithMemory extends Performance {
+      memory?: {
+        usedJSHeapSize: number
+        totalJSHeapSize: number
+        jsHeapSizeLimit: number
+      }
+    }
+
+    interface NavigatorWithDeviceMemory extends Navigator {
+      deviceMemory?: number
+    }
+
+    if ((performance as PerformanceWithMemory)?.memory) {
+      memoryInfo = (performance as PerformanceWithMemory).memory!
+    } else if ((navigator as NavigatorWithDeviceMemory).deviceMemory) {
       // 使用设备内存信息作为估算
-      const deviceMemory = (navigator as unknown as { deviceMemory?: number }).deviceMemory! * 1024 * 1024 * 1024 // GB to bytes
+      const deviceMemory = (navigator as NavigatorWithDeviceMemory).deviceMemory! * 1024 * 1024 * 1024 // GB to bytes
       memoryInfo = {
         usedJSHeapSize: 0,
         totalJSHeapSize: deviceMemory * 0.1, // 估算JS堆为设备内存的10%

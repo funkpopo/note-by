@@ -1265,7 +1265,7 @@ const DataAnalysis: React.FC = () => {
           analysisContainerRef.current.scrollTop = 0
         }
       }
-    } catch (error) {
+    } catch {
       // 初始化时的缓存加载失败不显示错误Toast，避免干扰用户
       // 初始化时加载缓存失败，将等待用户手动触发分析
     } finally {
@@ -2448,7 +2448,7 @@ const DataAnalysis: React.FC = () => {
                       Toast.success({
                         content: '分析缓存已重置'
                       })
-                    } catch (error) {
+                    } catch {
                       Toast.error({
                         content: '重置缓存失败'
                       })

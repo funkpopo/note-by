@@ -112,7 +112,7 @@ const Settings: React.FC = () => {
       if (settings.historyManagement) {
         setHistoryManagement(settings.historyManagement as HistoryManagementSettings)
       }
-    } catch (error) {
+    } catch {
       Toast.error('加载设置失败')
     } finally {
       setIsLoading(false)
@@ -186,7 +186,7 @@ const Settings: React.FC = () => {
       } else {
         Toast.error('保存配置失败: ' + (result.error || '未知错误'))
       }
-    } catch (error) {
+    } catch {
       Toast.error('保存配置失败')
     }
   }
@@ -212,7 +212,7 @@ const Settings: React.FC = () => {
       } else {
         Toast.error('删除配置失败: ' + (result.error || '未知错误'))
       }
-    } catch (error) {
+    } catch {
       Toast.error('删除配置失败')
     }
   }
@@ -280,7 +280,7 @@ const Settings: React.FC = () => {
         })
         delete testResultTimersRef.current[config.id]
       }, 5000)
-    } catch (error) {
+    } catch {
       // 错误情况下也使用函数式更新
       setTestResults((prev) => ({
         ...prev,
@@ -491,7 +491,7 @@ const Settings: React.FC = () => {
 
       await window.api.settings.set('historyManagement', settingsToSave)
       Toast.success('历史记录管理设置已保存')
-    } catch (error) {
+    } catch {
       Toast.error('保存历史记录管理设置失败')
     }
   }
@@ -560,7 +560,7 @@ const Settings: React.FC = () => {
       URL.revokeObjectURL(url)
 
       Toast.success('性能数据导出成功')
-    } catch (error) {
+    } catch {
       Toast.error('导出性能数据失败')
     } finally {
       setIsExportingPerformance(false)

@@ -27,8 +27,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   position = 'bottomLeft',
   disabled = false,
   className = '',
-  dropdownStyle = {},
-  getPopupContainer
+  dropdownStyle = {}
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(-1)
@@ -122,6 +121,8 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
+    
+    return undefined
   }, [isOpen])
 
   // 计算菜单位置
@@ -136,7 +137,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   }
 
   // 渲染菜单项
-  const renderMenuItem = (item: DropdownMenuItem, index: number) => {
+  const renderMenuItem = (item: DropdownMenuItem, _index: number) => {
     const originalIndex = menu.indexOf(item)
     const clickableIndex = clickableItems.indexOf(item)
 

@@ -1403,9 +1403,9 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
 // 分析缓存项接口
 export interface AnalysisCacheItem {
   date: string // 分析日期，格式：YYYY-MM-DD
-  stats: any
-  activityData: any
-  result: any
+  stats: Record<string, unknown>
+  activityData: Record<string, unknown>
+  result: Record<string, unknown>
   modelId: string
   dataFingerprint?: {
     totalNotes: number

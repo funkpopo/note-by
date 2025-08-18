@@ -207,7 +207,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
       } else {
         setHistoryList([])
       }
-    } catch (error) {
+    } catch {
       setHistoryList([])
     } finally {
       setLoading(false)
@@ -255,7 +255,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
         setPreviewVisible(true)
         setDropdownVisible(false)
       }
-    } catch (error) {
+    } catch {
       Toast.error('加载历史记录失败')
     }
   }
