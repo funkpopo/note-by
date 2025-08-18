@@ -254,7 +254,7 @@ const Navigation: React.FC<NavigationProps> = ({
                           }
                         ).cancelSync()
                         Toast.info(t('messages.info.cancellingSyncRequest'))
-                      } catch (_error) {}
+                      } catch {}
                     }}
                   >
                     {t('common.cancel')}

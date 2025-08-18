@@ -59,6 +59,11 @@ interface OpenAIAPI {
       onError: (error: string) => void
     }
   ) => Promise<{ success: boolean; streamId?: string; error?: string }>
+
+  stopStreamGenerate: (streamId: string) => Promise<{
+    success: boolean
+    error?: string
+  }>
 }
 
 // API配置管理接口定义
@@ -147,6 +152,13 @@ interface AnalysisCacheItem {
     }
   }
   modelId: string
+  dataFingerprint?: {
+    totalNotes: number
+    totalEdits: number
+    lastEditTimestamp: number
+    contentHash: string
+    notesCountHash: string
+  }
 }
 
 // 数据分析API接口定义
@@ -273,8 +285,9 @@ interface ChatAPI {
     sessionId: string
     role: 'user' | 'assistant' | 'system'
     content: string
-    status?: string
+    status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
     parentId?: string
+    createdAt: number
     modelId?: string
   }) => Promise<boolean>
 
@@ -297,7 +310,7 @@ interface ChatAPI {
       sessionId: string
       role: 'user' | 'assistant' | 'system'
       content: string
-      status?: string
+      status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
       parentId?: string
       createdAt: number
       modelId?: string
@@ -322,6 +335,116 @@ interface ChatAPI {
 
   // 清理旧的会话
   cleanupOldSessions: (keepCount?: number) => Promise<number>
+}
+
+// WebDAV同步API接口定义
+interface WebDAVAPI {
+  // 测试WebDAV连接
+  testConnection: (config: {
+    url: string
+    username: string
+    password: string
+    remotePath: string
+  }) => Promise<{ success: boolean; message: string }>
+
+  // 同步本地到远程
+  syncLocalToRemote: (config: {
+    url: string
+    username: string
+    password: string
+    remotePath: string
+    localPath?: string
+  }) => Promise<{
+    success: boolean
+    message: string
+    uploaded: number
+    failed: number
+    skipped: number
+  }>
+
+  // 同步远程到本地
+  syncRemoteToLocal: (config: {
+    url: string
+    username: string
+    password: string
+    remotePath: string
+    localPath?: string
+  }) => Promise<{
+    success: boolean
+    message: string
+    downloaded: number
+    failed: number
+    skipped: number
+  }>
+
+  // 双向同步
+  syncBidirectional: (config: {
+    url: string
+    username: string
+    password: string
+    remotePath: string
+    localPath?: string
+  }) => Promise<{
+    success: boolean
+    message: string
+    uploaded: number
+    downloaded: number
+    failed: number
+    cancelled?: boolean
+    skippedUpload: number
+    skippedDownload: number
+  }>
+
+  // 取消同步
+  cancelSync: () => Promise<{
+    success: boolean
+    message: string
+  }>
+
+  // 清除同步缓存
+  clearSyncCache: () => Promise<{
+    success: boolean
+    message?: string
+    error?: string
+  }>
+
+  // 验证主密码
+  verifyMasterPassword: (password: string) => Promise<{
+    success: boolean
+    message?: string
+    error?: string
+  }>
+
+  // 设置主密码
+  setMasterPassword: (config: {
+    password: string
+    webdavConfig: Record<string, unknown>
+  }) => Promise<{
+    success: boolean
+    message?: string
+    error?: string
+  }>
+
+  // 通知WebDAV配置已变更
+  notifyConfigChanged: () => Promise<{
+    success: boolean
+    message?: string
+    error?: string
+  }>
+
+  // 监听同步进度
+  onSyncProgress: (
+    callback: (progress: {
+      total: number
+      processed: number
+      action: 'upload' | 'download' | 'compare'
+    }) => void
+  ) => () => void
+}
+
+// 窗口API接口定义
+interface WindowAPI {
+  setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
 }
 
 // 全局API接口定义
@@ -352,6 +475,36 @@ interface API {
       folderName: string
     ) => Promise<{ success: boolean; files?: string[]; error?: string }>
     readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
+
+    // 创建新文件夹
+    createFolder: (
+      folderName: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
+
+    // 删除文件夹
+    deleteFolder: (folderName: string) => Promise<{ success: boolean; error?: string }>
+
+    // 重命名文件夹
+    renameFolder: (
+      oldFolderName: string,
+      newFolderName: string
+    ) => Promise<{ success: boolean; error?: string }>
+
+    // 创建新笔记
+    createNote: (
+      folderName: string,
+      fileName: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
+
+    // 删除笔记文件
+    deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
+
+    // 重命名笔记文件
+    renameFile: (
+      oldFilePath: string,
+      newFilePath: string
+    ) => Promise<{ success: boolean; error?: string }>
 
     /**
      * 获取文档历史记录
@@ -405,10 +558,12 @@ interface API {
       fileName: string
     ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
   }
+  webdav: WebDAVAPI
   analytics: AnalyticsAPI
   tags: TagsAPI
   navigation: NavigationAPI
   chat: ChatAPI
+  window: WindowAPI
 }
 
 declare global {

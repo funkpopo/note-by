@@ -251,7 +251,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
         setPreviewVisible(true)
         setDropdownVisible(false) // 关闭下拉菜单
       }
-    } catch (_error) {}
+    } catch {}
   }
 
   // 恢复历史版本

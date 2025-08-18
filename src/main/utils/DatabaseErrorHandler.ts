@@ -200,13 +200,6 @@ export class DatabaseErrorHandler {
       recoverable = true
       autoRetry = true
     }
-    // 锁超时
-    else if (message.includes('lock') && message.includes('timeout')) {
-      type = DatabaseErrorType.LOCK_TIMEOUT
-      severity = ErrorSeverity.MEDIUM
-      recoverable = true
-      autoRetry = true
-    }
 
     return {
       type,
@@ -342,7 +335,7 @@ export class DatabaseErrorHandler {
       backoffMultiplier: 2,
       maxDelay: 30000,
       shouldRetry: (_error, attempt) => attempt < 5,
-      onRecovery: async (_error) => {
+      onRecovery: async () => {
         // Attempting database connection recovery, attempt ${attempt}
         // 这里可以添加重新初始化连接池的逻辑
       }

@@ -49,7 +49,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
             )
           })
         }
-      } catch (_error) {
+      } catch {
         // 出错时使用系统主题
         setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches)
       } finally {

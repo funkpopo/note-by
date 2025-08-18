@@ -91,7 +91,7 @@ export class EditorMemoryManager {
   private currentCacheSize = 0
 
   // 渲染结果缓存
-  private renderCache: Map<string, { result: any; size: number; lastAccess: number }> = new Map()
+  private renderCache: Map<string, { result: unknown; size: number; lastAccess: number }> = new Map()
   private maxRenderCacheSize = 20 * 1024 * 1024 // 20MB
   private currentRenderCacheSize = 0
 
@@ -134,16 +134,16 @@ export class EditorMemoryManager {
    * 获取当前内存使用情况
    */
   async getCurrentMemoryUsage(): Promise<MemoryUsage> {
-    const performance = (window as any).performance
+    const performance = window.performance
 
     // 获取基本内存信息
-    let memoryInfo: any = {}
+    let memoryInfo: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number } = {}
 
-    if (performance?.memory) {
-      memoryInfo = performance.memory
-    } else if ((navigator as any).deviceMemory) {
+    if ((performance as any)?.memory) {
+      memoryInfo = (performance as any).memory
+    } else if ((navigator as unknown as { deviceMemory?: number }).deviceMemory) {
       // 使用设备内存信息作为估算
-      const deviceMemory = (navigator as any).deviceMemory * 1024 * 1024 * 1024 // GB to bytes
+      const deviceMemory = (navigator as unknown as { deviceMemory?: number }).deviceMemory! * 1024 * 1024 * 1024 // GB to bytes
       memoryInfo = {
         usedJSHeapSize: 0,
         totalJSHeapSize: deviceMemory * 0.1, // 估算JS堆为设备内存的10%
@@ -230,7 +230,7 @@ export class EditorMemoryManager {
 
       // 根据压力级别采取行动
       await this.handleMemoryPressure(usage, newPressureLevel)
-    } catch (error) {
+    } catch {
       // Memory check failed
     }
   }
@@ -299,7 +299,6 @@ export class EditorMemoryManager {
 
     const startUsage = await this.getCurrentMemoryUsage()
     const strategiesUsed: string[] = []
-    let totalMemoryFreed = 0
 
     // 按优先级执行清理策略
     const sortedStrategies = [...this.cleanupStrategies].sort((a, b) => a.priority - b.priority)
@@ -313,18 +312,18 @@ export class EditorMemoryManager {
             // totalMemoryFreed += result.memoryFreed
             // Memory cleanup strategy executed
           }
-        } catch (error) {
+        } catch {
           // Memory cleanup strategy failed
         }
       }
     }
 
     // 执行垃圾回收（如果可用）
-    if ((window as any).gc) {
+    if ((window as unknown as { gc?: () => void }).gc) {
       try {
-        ;(window as any).gc()
+        ;(window as unknown as { gc?: () => void }).gc!()
         strategiesUsed.push('Garbage Collection')
-      } catch (error) {
+      } catch {
         // Manual garbage collection failed
       }
     }
@@ -436,7 +435,7 @@ export class EditorMemoryManager {
   /**
    * 缓存渲染结果
    */
-  cacheRenderResult(id: string, result: any): void {
+  cacheRenderResult(id: string, result: unknown): void {
     const size = new Blob([JSON.stringify(result)]).size
 
     // 检查缓存大小限制
@@ -462,7 +461,7 @@ export class EditorMemoryManager {
   /**
    * 获取缓存的渲染结果
    */
-  getCachedRenderResult(id: string): any | null {
+  getCachedRenderResult(id: string): unknown | null {
     const item = this.renderCache.get(id)
     if (item) {
       item.lastAccess = Date.now()
@@ -488,7 +487,7 @@ export class EditorMemoryManager {
    * 淘汰渲染缓存项
    */
   private evictRenderCache(requiredSpace: number): void {
-    const itemsToEvict: Array<{ id: string; item: any }> = []
+    const itemsToEvict: Array<{ id: string; item: { result: unknown; size: number; lastAccess: number } }> = []
     let spaceToFree = requiredSpace
 
     // 按最后访问时间排序（旧的先淘汰）
@@ -580,7 +579,7 @@ export class EditorMemoryManager {
       this.currentImageCacheSize += size
 
       return optimizedBlob
-    } catch (error) {
+    } catch {
       // Image optimization failed
       return blob
     }
@@ -739,9 +738,9 @@ export class EditorMemoryManager {
         priority: 3,
         condition: (usage) => usage.percentage > 0.8,
         action: async () => {
-          if ((window as any).gc) {
+          if ((window as unknown as { gc?: () => void }).gc) {
             try {
-              ;(window as any).gc()
+              ;(window as unknown as { gc?: () => void }).gc!()
               return {
                 success: true,
                 memoryFreed: 0, // 无法准确测量
@@ -788,7 +787,12 @@ export class EditorMemoryManager {
   /**
    * 触发事件
    */
-  private emitEvent(eventType: MemoryEventType, data: any): void {
+  private emitEvent(eventType: MemoryEventType, data: {
+    level: MemoryPressureLevel
+    usage: MemoryUsage
+    message: string
+    timestamp: number
+  }): void {
     const listeners = this.eventListeners.get(eventType)
     if (listeners) {
       for (const listener of listeners) {
@@ -851,16 +855,16 @@ export class EditorMemoryManager {
     }>
   ): void {
     if (config.warningThreshold !== undefined) {
-      ;(this as any).warningThreshold = config.warningThreshold
+      ;(this as unknown as { warningThreshold: number }).warningThreshold = config.warningThreshold
     }
     if (config.criticalThreshold !== undefined) {
-      ;(this as any).criticalThreshold = config.criticalThreshold
+      ;(this as unknown as { criticalThreshold: number }).criticalThreshold = config.criticalThreshold
     }
     if (config.cleanupThreshold !== undefined) {
-      ;(this as any).cleanupThreshold = config.cleanupThreshold
+      ;(this as unknown as { cleanupThreshold: number }).cleanupThreshold = config.cleanupThreshold
     }
     if (config.monitorInterval !== undefined) {
-      ;(this as any).monitorInterval = config.monitorInterval
+      ;(this as unknown as { monitorInterval: number }).monitorInterval = config.monitorInterval
       // 重启监控以应用新间隔
       if (this.isMonitoring) {
         this.stopMonitoring()

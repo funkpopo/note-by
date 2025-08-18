@@ -279,11 +279,7 @@ function getMarkdownFolderPath(): string {
 
 // 确保markdown文件夹和子文件夹存在
 async function ensureMarkdownFolders(folderPath: string): Promise<void> {
-  try {
-    await fsPromises.mkdir(folderPath, { recursive: true })
-  } catch (error) {
-    throw error
-  }
+  await fsPromises.mkdir(folderPath, { recursive: true })
 }
 
 function createTray(): void {
@@ -541,7 +537,7 @@ async function checkForUpdates(): Promise<{
     try {
       // 首先尝试使用系统代理（如果有）
       response = await axios.get(GITHUB_RELEASES_URL, requestConfig)
-    } catch (proxyError) {
+    } catch {
       // 使用系统代理检查更新失败，尝试直接连接
 
       // 临时修改环境变量，以便proxy-from-env不使用系统代理
@@ -1423,7 +1419,9 @@ ${htmlContent}
         } else {
           return { success: false, error: '该名称已被文件占用' }
         }
-      } catch {}
+      } catch {
+        // 忽略检查错误
+      }
 
       // 创建文件夹
       await fsPromises.mkdir(fullPath, { recursive: true })
@@ -2277,7 +2275,7 @@ ${htmlContent}
       const cleanupResults = {
         memoryMonitor: await memoryMonitor.cleanupMemory(),
         database: performDatabaseMemoryCleanup(),
-        fileStreamManager: null as any,
+        fileStreamManager: null as { cleanedTempFiles: number } | { error: string } | null,
         globalStats: {
           totalCleanedItems: 0,
           totalFreedMemory: 0

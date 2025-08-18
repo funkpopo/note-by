@@ -1403,40 +1403,17 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
 // 分析缓存项接口
 export interface AnalysisCacheItem {
   date: string // 分析日期，格式：YYYY-MM-DD
-  stats: NoteHistoryStats
-  activityData: UserActivityData
-  result: {
-    summary: string
-    writingHabits: {
-      title: string
-      content: string
-    }
-    writingRhythm: {
-      title: string
-      content: string
-    }
-    topics: {
-      title: string
-      content: string
-    }
-    writingBehavior: {
-      title: string
-      content: string
-    }
-    recommendations: {
-      title: string
-      items: string[]
-    }
-    efficiencyTips: {
-      title: string
-      items: string[]
-    }
-    suggestedGoals: {
-      title: string
-      items: string[]
-    }
-  }
+  stats: any
+  activityData: any
+  result: any
   modelId: string
+  dataFingerprint?: {
+    totalNotes: number
+    totalEdits: number
+    lastEditTimestamp: number
+    contentHash: string
+    notesCountHash: string
+  }
 }
 
 // 保存分析缓存（使用连接池）

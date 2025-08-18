@@ -199,7 +199,7 @@ class PerformanceMonitor {
     } catch (error) {
       this.emitEvent({
         type: 'error',
-        data: { message: 'Failed to update memory metrics', error },
+        data: { message: 'Failed to update memory metrics', error: String(error) },
         timestamp: Date.now(),
         source: 'PerformanceMonitor'
       })
@@ -503,7 +503,7 @@ class PerformanceMonitor {
     this.listeners.forEach((listener) => {
       try {
         listener(event)
-      } catch (error) {
+      } catch {
         // Performance monitor listener error
       }
     })

@@ -74,7 +74,7 @@ export async function testOpenAIConnection(
           content = '已收到响应 (非标准格式)'
         }
       }
-    } catch (err) {
+    } catch {
       content = '解析响应内容时出错'
     }
 
@@ -176,7 +176,7 @@ export async function generateWithMessages(
           }
         }
       }
-    } catch (err) {
+    } catch {
       return { success: false, error: '解析响应内容时出错' }
     }
 
@@ -278,7 +278,7 @@ export async function generateContent(
           }
         }
       }
-    } catch (err) {
+    } catch {
       return { success: false, error: '解析响应内容时出错' }
     }
 
@@ -326,7 +326,7 @@ export async function streamGenerateContent(
   const abortController = new AbortController()
 
   // 添加停止方法到EventEmitter
-  ;(eventEmitter as any).stop = () => {
+  ;(eventEmitter as EventEmitter & { stop: () => void }).stop = () => {
     abortController.abort()
   }
 
@@ -404,7 +404,7 @@ export async function streamGenerateContent(
                 // 进度记录（可选）
               }
             }
-          } catch (_streamError) {
+          } catch {
             // 继续处理下一个块，不中断整个流
           }
         }

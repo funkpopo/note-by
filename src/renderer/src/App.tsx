@@ -61,7 +61,7 @@ const App: React.FC = () => {
 
     // 基于用户行为的智能预加载
     if (useSmartPreloading) {
-      const preloadComponents = async () => {
+      const preloadComponents = async (): Promise<void> => {
         // 延迟预加载常用组件
         await scheduleRenderTask({
           id: 'smart-preload-strategy',

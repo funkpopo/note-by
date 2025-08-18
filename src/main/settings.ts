@@ -97,7 +97,7 @@ export function readSettings(): Record<string, unknown> {
           if (ENCRYPTED_KEYS.includes('apiKey') && config.apiKey && config.apiKey !== '') {
             try {
               config.apiKey = decrypt(config.apiKey)
-            } catch (decryptError) {
+            } catch {
               // 保留原始加密值，以免解密失败导致键被删除
             }
           }
@@ -113,9 +113,9 @@ export function readSettings(): Record<string, unknown> {
 
       return settings
     }
-  } catch (_error) {}
-
-  // 如果文件不存在或读取失败，返回默认设置
+  } catch {
+    // 忽略读取错误，使用默认设置
+  }
 
   return { ...defaultSettings }
 }
@@ -150,7 +150,9 @@ export function writeSettings(settings: Record<string, unknown>): void {
     }
 
     fs.writeFileSync(settingsPath, JSON.stringify(settingsToSave, null, 2), 'utf8')
-  } catch (_error) {}
+  } catch {
+    // 忽略写入错误
+  }
 }
 
 // 更新单个设置项
@@ -213,7 +215,7 @@ export function verifyMasterPassword(config: WebDAVConfig, masterPassword: strin
     // 使用主密码解密测试字符串，并与原始值比较
     const decrypted = decryptWithPassword(config.encryptionTest, masterPassword)
     return decrypted === config.encryptionTestPlain
-  } catch (error) {
+  } catch {
     return false
   }
 }
@@ -230,7 +232,7 @@ export function decryptWebDAVWithMasterPassword(
     try {
       // 使用主密码解密WebDAV密码
       newConfig.password = decryptWithPassword(newConfig.password, masterPassword)
-    } catch (error) {
+    } catch {
       // 解密失败时保留原值
     }
   }

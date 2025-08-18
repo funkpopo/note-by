@@ -20,7 +20,9 @@ class ModelSelectionService {
   private static instance: ModelSelectionService
   private listeners: Array<(modelId: string) => void> = []
 
-  private constructor() {}
+  private constructor() {
+    // 模型选择服务初始化
+  }
 
   // 获取单例实例
   static getInstance(): ModelSelectionService {
@@ -35,7 +37,7 @@ class ModelSelectionService {
     try {
       const selectedModelId = await window.api.settings.get('selectedModelId')
       return (selectedModelId as string) || ''
-    } catch (error) {
+    } catch {
       // 获取选中模型ID失败
       return ''
     }

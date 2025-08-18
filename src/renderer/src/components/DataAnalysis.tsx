@@ -246,48 +246,6 @@ interface EChartsOption {
   animationEasing?: string
 }
 
-// 可视化分析结果接口
-interface AnalysisResult {
-  summary: string
-  writingHabits: {
-    title: string
-    content: string
-  }
-  writingRhythm: {
-    title: string
-    content: string
-  }
-  topics: {
-    title: string
-    content: string
-  }
-  writingBehavior: {
-    title: string
-    content: string
-  }
-  recommendations: {
-    title: string
-    items: string[]
-  }
-  efficiencyTips: {
-    title: string
-    items: string[]
-  }
-  suggestedGoals: {
-    title: string
-    items: string[]
-  }
-  // 标签分析相关字段
-  tagAnalysis?: {
-    title: string
-    content: string
-  }
-  tagRelationships?: {
-    title: string
-    content: string
-  }
-}
-
 // 统计数据接口
 interface StatsData {
   totalNotes: number
@@ -295,8 +253,8 @@ interface StatsData {
   averageEditLength: number
   mostEditedNotes: Array<{
     filePath: string
-    editCount: number
-    count?: number // 兼容mostEditedNotes.map(note => note.count)的用法
+    count: number
+    lastEditTime: number
   }>
   notesByDate: Array<{
     date: string
@@ -343,49 +301,7 @@ interface ActivityData {
 }
 
 // 分析缓存项接口
-interface AnalysisCacheItem {
-  date: string // 分析日期，格式：YYYY-MM-DD
-  stats: StatsData // 统计数据
-  activityData: ActivityData // 活动数据
-  result: AnalysisResult // 分析结果
-  modelId: string // 使用的模型ID
-  dataFingerprint?: DataFingerprint // 数据指纹，用于智能缓存检测
-}
 
-// 数据指纹接口（与analysisService.ts保持一致）
-interface DataFingerprint {
-  totalNotes: number
-  totalEdits: number
-  lastEditTimestamp: number
-  contentHash: string
-  notesCountHash: string
-}
-
-interface AnalyticsAPI {
-  getNoteHistoryStats: () => Promise<{
-    success: boolean
-    stats: StatsData
-    error?: string
-  }>
-  getUserActivityData: (days: number) => Promise<{
-    success: boolean
-    activityData: ActivityData
-    error?: string
-  }>
-  getAnalysisCache: () => Promise<{
-    success: boolean
-    cache?: AnalysisCacheItem
-    error?: string
-  }>
-  saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<{
-    success: boolean
-    error?: string
-  }>
-  resetAnalysisCache?: () => Promise<{
-    success: boolean
-    error?: string
-  }>
-}
 
 const { Title, Paragraph, Text } = Typography
 
@@ -1179,7 +1095,7 @@ const DataAnalysis: React.FC = () => {
     if (currentAnalyzingToastRef.current) {
       try {
         currentAnalyzingToastRef.current.destroy()
-      } catch (_e) {
+      } catch {
         // Toast清理失败，继续执行
       } finally {
         currentAnalyzingToastRef.current = null
@@ -1192,7 +1108,7 @@ const DataAnalysis: React.FC = () => {
     if (currentCachedToastRef.current) {
       try {
         Toast.close(currentCachedToastRef.current)
-      } catch (_e) {
+      } catch {
         // Toast清理失败，继续执行
       } finally {
         currentCachedToastRef.current = null
@@ -1402,7 +1318,7 @@ const DataAnalysis: React.FC = () => {
         setIsLoading(false)
         return
       }
-      setStatsData(statsResult.stats)
+      setStatsData(statsResult.stats || null)
 
       // 获取用户活动数据
       const activityResult = await window.api.analytics.getUserActivityData(30) // 获取30天的数据
@@ -1413,7 +1329,7 @@ const DataAnalysis: React.FC = () => {
         setIsLoading(false)
         return
       }
-      setActivityData(activityResult.activityData)
+      setActivityData(activityResult.activityData || null)
     } catch (error) {
       Toast.error({
         content: `加载数据失败: ${error instanceof Error ? error.message : String(error)}`
@@ -1461,7 +1377,7 @@ const DataAnalysis: React.FC = () => {
       }
 
       // Toast显示由useEffect自动处理，不需要手动管理
-    } catch (_err) {
+    } catch {
       // 错误Toast也由useEffect自动处理
     }
   }
@@ -2234,7 +2150,7 @@ const DataAnalysis: React.FC = () => {
         {
           label: '编辑次数',
           data: statsData.mostEditedNotes.map((note) => {
-            return (note.editCount !== undefined ? note.editCount : note.count) || 0
+            return note.count || 0
           }),
           backgroundColor: generateColors(statsData.mostEditedNotes.length),
           borderColor: generateColors(statsData.mostEditedNotes.length, 1),
@@ -2528,7 +2444,7 @@ const DataAnalysis: React.FC = () => {
                   type="warning"
                   onClick={async () => {
                     try {
-                      await (window.api.analytics as AnalyticsAPI).resetAnalysisCache?.()
+                      await window.api.analytics.resetAnalysisCache?.()
                       Toast.success({
                         content: '分析缓存已重置'
                       })

@@ -128,8 +128,8 @@ interface AnalysisCacheItem {
     averageEditLength: number
     mostEditedNotes: Array<{
       filePath: string
-      editCount: number
-      count?: number
+      count: number
+      lastEditTime: number
     }>
     notesByDate: Array<{
       date: string
@@ -892,8 +892,9 @@ const api = {
       sessionId: string
       role: 'user' | 'assistant' | 'system'
       content: string
-      status?: string
+      status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
       parentId?: string
+      createdAt: number
       modelId?: string
     }): Promise<boolean> => ipcRenderer.invoke(IPC_CHANNELS.CHAT_SAVE_MESSAGE, message),
 
@@ -918,7 +919,7 @@ const api = {
         sessionId: string
         role: 'user' | 'assistant' | 'system'
         content: string
-        status?: string
+        status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
         parentId?: string
         createdAt: number
         modelId?: string

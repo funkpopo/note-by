@@ -1,4 +1,4 @@
-import type { ChatSession, ChatMessage } from '../../main/database'
+import type { ChatSession, ChatMessage, AnalysisCacheItem } from '../../main/database'
 
 // 历史记录项接口
 interface HistoryItem {

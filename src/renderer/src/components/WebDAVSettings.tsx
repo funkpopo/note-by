@@ -95,7 +95,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
         // 同步enabled状态
         setEnabledState((settings.webdav as WebDAVConfig).enabled || false)
       }
-    } catch (_error) {}
+    } catch {}
   }, [formApi])
 
   // 从设置加载WebDAV配置
@@ -657,7 +657,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           setEnabledState(currentValues.enabled || false)
         }
         await saveConfig(currentValues)
-      } catch (_error) {}
+      } catch {}
     }
   }
 

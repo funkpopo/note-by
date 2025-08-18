@@ -32,7 +32,7 @@ class RenderOptimizer {
   private static instance: RenderOptimizer | null = null
   private taskQueue: Map<
     string,
-    RenderTask & { resolve: (value: any) => void; reject: (reason?: unknown) => void }
+    RenderTask & { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
   > = new Map()
   private runningTasks: Set<string> = new Set()
   private completedTasks: Set<string> = new Set()
@@ -84,7 +84,7 @@ class RenderOptimizer {
   ): void {
     const enhancedTask = {
       ...task,
-      resolve,
+      resolve: resolve as (value: unknown) => void,
       reject
     }
 
@@ -112,7 +112,7 @@ class RenderOptimizer {
       while (this.taskQueue.size > 0 && !this.processingController.signal.aborted) {
         await this.processTasksByPriority()
       }
-    } catch (error) {
+    } catch {
       // 任务处理错误
     } finally {
       this.isProcessing = false
@@ -221,10 +221,10 @@ class RenderOptimizer {
         this.completedTasks.add(task.id)
         this.taskQueue.delete(task.id)
         task.resolve(result)
-      } catch (error) {
+      } catch {
         // 任务执行失败
         this.taskQueue.delete(task.id)
-        task.reject(error)
+        task.reject(new Error('任务执行失败'))
       } finally {
         this.runningTasks.delete(task.id)
       }
@@ -374,10 +374,10 @@ class RenderOptimizer {
 export const renderOptimizer = RenderOptimizer.getInstance()
 
 // 导出便捷函数
-export const scheduleRenderTask = <T>(task: RenderTask<T>) => renderOptimizer.addTask(task)
+export const scheduleRenderTask = <T>(task: RenderTask<T>): Promise<T> => renderOptimizer.addTask(task)
 
 export const processBatch = <T, R>(
   items: T[],
   processor: (item: T, index: number) => Promise<R> | R,
   options?: Partial<BatchConfig>
-) => renderOptimizer.processBatch(items, processor, options)
+): Promise<R[]> => renderOptimizer.processBatch(items, processor, options)

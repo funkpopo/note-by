@@ -197,8 +197,8 @@ class MemoryMonitor extends EventEmitter {
           console.warn('global.gc 不可用，无法执行垃圾回收')
         }
       }
-    } catch (error) {
-      this.emit('error', error)
+    } catch {
+      this.emit('error', Error)
     }
   }
 
@@ -309,7 +309,7 @@ class MemoryMonitor extends EventEmitter {
         actions,
         freedMemory
       }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         actions

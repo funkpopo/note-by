@@ -101,7 +101,7 @@ export function verifyPassword(
   try {
     const decrypted = decryptWithPassword(encryptedTest, password)
     return decrypted === originalText
-  } catch (_error) {
+  } catch {
     return false
   }
 }

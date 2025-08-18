@@ -3,15 +3,7 @@
  * 使用LRU缓存来管理数据分析结果的缓存
  */
 import { LRUCache } from 'lru-cache'
-
-// 分析缓存项接口
-export interface AnalysisCacheItem {
-  date: string
-  stats: any
-  activityData: any
-  result: any
-  modelId: string
-}
+import type { AnalysisCacheItem } from '../../../main/database'
 
 // 缓存项包装器
 interface CacheEntry {
@@ -21,15 +13,15 @@ interface CacheEntry {
 }
 
 // 数据指纹计算函数
-const calculateFingerprint = (stats: any, activityData: any): string => {
+const calculateFingerprint = (stats: unknown, activityData: unknown): string => {
   const data = {
-    totalNotes: stats?.totalNotes || 0,
-    totalEdits: stats?.totalEdits || 0,
+    totalNotes: (stats as any)?.totalNotes || 0,
+    totalEdits: (stats as any)?.totalEdits || 0,
     lastEditTime: Math.max(
-      ...(stats?.editsByDate || []).map((item: any) => new Date(item.date).getTime()),
+      ...((stats as any)?.editsByDate || []).map((item: unknown) => new Date((item as { date: string }).date).getTime()),
       0
     ),
-    dailyActivityKeys: Object.keys(activityData?.dailyActivity || {}).sort()
+    dailyActivityKeys: Object.keys((activityData as any)?.dailyActivity || {}).sort()
   }
 
   return JSON.stringify(data)
@@ -58,8 +50,8 @@ class AnalysisCacheManager {
         return JSON.stringify(entry.data).length + 200
       },
       maxSize: 10 * 1024 * 1024, // 最大10MB缓存
-      dispose: (_value, key, reason) => {
-        // 分析缓存项被移除: ${key}, 原因: ${reason}
+      dispose: () => {
+        // 分析缓存项被移除
       }
     })
 
@@ -101,8 +93,8 @@ class AnalysisCacheManager {
   async getCachedAnalysis(
     date: string,
     modelId: string,
-    stats?: any,
-    activityData?: any
+    stats?: unknown,
+    activityData?: unknown
   ): Promise<AnalysisCacheItem | null> {
     const lookupKey = this.generateLookupKey(date, modelId)
     const cacheKey = this.quickLookup.get(lookupKey)
@@ -135,7 +127,7 @@ class AnalysisCacheManager {
   /**
    * 保存分析结果到缓存
    */
-  async setCachedAnalysis(item: AnalysisCacheItem, stats: any, activityData: any): Promise<void> {
+  async setCachedAnalysis(item: AnalysisCacheItem, stats: unknown, activityData: unknown): Promise<void> {
     const cacheKey = this.generateCacheKey(item.date, item.modelId)
     const lookupKey = this.generateLookupKey(item.date, item.modelId)
 
@@ -223,7 +215,7 @@ class AnalysisCacheManager {
           await this.setCachedAnalysis(item, item.stats, item.activityData)
         }
       }
-    } catch (error) {
+    } catch {
       // 预热分析缓存失败
     }
   }
@@ -259,7 +251,7 @@ class AnalysisCacheManager {
           }
         }
       }
-    } catch (error) {
+    } catch {
       // 加载持久化分析缓存失败
     }
   }
@@ -283,7 +275,7 @@ class AnalysisCacheManager {
       }
 
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data))
-    } catch (error) {
+    } catch {
       // 保存持久化分析缓存失败
     }
   }

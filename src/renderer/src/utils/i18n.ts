@@ -6,7 +6,7 @@ const currentLocale = 'zh-CN'
 
 export function t(key: string): string {
   const keys = key.split('.')
-  let value: any = locales[currentLocale]
+  let value: unknown = locales[currentLocale]
 
   for (const k of keys) {
     if (value && typeof value === 'object' && k in value) {

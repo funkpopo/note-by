@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { ChatMessage, ChatSession } from '../../../main/database'
+import { ChatMessage } from '../../../main/database'
 import {
   Typography,
   Button,
@@ -503,7 +503,7 @@ const ChatInterface: React.FC = () => {
           setMessages([])
           setUnsavedMessages(new Set())
         }
-      } catch (_e) {
+      } catch {
         setCurrentSessionId(null)
         setMessages([])
         setUnsavedMessages(new Set())
@@ -583,12 +583,23 @@ const ChatInterface: React.FC = () => {
           throw new Error(t.chat?.notifications.selectModel || '请先配置AI API')
         }
 
+        // 确保有当前会话ID，如果没有则创建新会话
+        if (!currentSessionId) {
+          const newSessionId = await window.api.chat.createSession()
+          if (newSessionId) {
+            setCurrentSessionId(newSessionId)
+          } else {
+            throw new Error(t.chat?.notifications.saveFailed || '创建会话失败')
+          }
+        }
+
         // 构建带有上下文的提示
         const contextualPrompt = buildConversationContext(userContent)
 
         // 创建初始的流式消息
         const streamMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
+          sessionId: currentSessionId!,
           role: 'assistant',
           content: '',
           createdAt: Date.now(),
@@ -744,7 +755,7 @@ const ChatInterface: React.FC = () => {
   )
 
   // 发送消息
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading || !selectedAiConfig) return
 
     // 检查是否有选中的AI配置
@@ -753,8 +764,21 @@ const ChatInterface: React.FC = () => {
       return
     }
 
+    // 确保有当前会话ID，如果没有则创建新会话
+    let sessionId = currentSessionId
+    if (!sessionId) {
+      sessionId = await window.api.chat.createSession()
+      if (sessionId) {
+        setCurrentSessionId(sessionId)
+      } else {
+        Toast.error(t.chat?.notifications.saveFailed || '创建会话失败')
+        return
+      }
+    }
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
+      sessionId: sessionId,
       role: 'user',
       content: inputValue.trim(),
       createdAt: Date.now()
@@ -770,7 +794,7 @@ const ChatInterface: React.FC = () => {
 
     // 执行AI回复
     performAIResponse(userMessage.content, userMessage.id?.toString())
-  }, [inputValue, isLoading, selectedAiConfig, performAIResponse])
+  }, [inputValue, isLoading, selectedAiConfig, currentSessionId, performAIResponse, t])
 
   // 停止生成
   const handleStopGenerate = useCallback(() => {
