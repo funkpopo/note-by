@@ -53,6 +53,14 @@ body[theme-mode='dark'] ::-webkit-scrollbar-thumb:hover {
   padding-bottom: 30px; /* 增加底部内边距确保内容不被截断 */
 }
 
+/* 数据分析页面特殊处理 - 充分利用可用空间 */
+.settings-scroll-container.data-analysis {
+  height: 100%; /* 填满父容器 */
+  max-height: none; /* 移除最大高度限制 */
+  min-height: auto; /* 移除最小高度限制 */
+  flex: 1; /* 使用flex占满剩余空间 */
+}
+
 /* WebDAV设置特殊处理 */
 .settings-scroll-container.webdav-settings {
   /* 继承所有滚动容器样式，但移除右内边距 */
