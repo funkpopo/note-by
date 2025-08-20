@@ -30,6 +30,7 @@ interface ChatHistorySidebarProps {
   isOpen: boolean
   onClose: () => void
   onSelectSession: (sessionId: string) => void
+  onSessionDeleted?: (sessionId: string) => void
   currentSessionId?: string
 }
 
@@ -37,6 +38,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
   isOpen,
   onClose,
   onSelectSession,
+  onSessionDeleted,
   currentSessionId
 }) => {
   const t = getTranslations()
@@ -122,7 +124,8 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       await loadSessions()
       Toast.success(t.chat?.notifications.deleted || '对话已删除')
       if (currentSessionId === sessionId) {
-        // No new chat logic, just close sidebar
+        // 当前会话被删除，通知父组件清空界面
+        onSessionDeleted?.(sessionId)
         onClose()
       }
     } catch (error) {

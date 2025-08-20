@@ -826,6 +826,21 @@ const ChatInterface: React.FC = () => {
     Toast.info(t.chat?.notifications.stopped || '已停止生成')
   }, [currentStreamCleanup, streamingMessageId])
 
+  // 处理会话删除
+  const handleSessionDeleted = useCallback(
+    (deletedSessionId: string) => {
+      if (currentSessionId === deletedSessionId) {
+        // 当前会话被删除，清空界面并创建新会话
+        setCurrentSessionId(null)
+        setMessages([])
+        setLastUserMessage(null)
+        setUnsavedMessages(new Set())
+        localStorage.removeItem('lastSessionId')
+      }
+    },
+    [currentSessionId]
+  )
+
   // 创建新的聊天会话
   const createNewSession = useCallback(
     async (saveCurrentSession = true) => {
@@ -1164,6 +1179,7 @@ const ChatInterface: React.FC = () => {
           isOpen={isHistorySidebarOpen}
           onClose={() => setIsHistorySidebarOpen(false)}
           onSelectSession={loadSessionMessages}
+          onSessionDeleted={handleSessionDeleted}
           currentSessionId={currentSessionId || undefined}
         />
 
