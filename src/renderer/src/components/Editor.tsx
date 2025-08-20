@@ -54,6 +54,7 @@ import CustomHistoryDropdown from './CustomHistoryDropdown'
 import { smartDiff } from '../utils/diffUtils'
 import { InlineDiffExtension } from '../extensions/InlineDiffExtension'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
+import { editorMemoryManager } from '../utils/EditorMemoryManager'
 import {
   IconSave,
   IconBold,
@@ -710,15 +711,59 @@ const IframeExtension = Node.create({
   }
 })
 
-// 自定义图片组件
+// 自定义图片组件（内存优化版本）
 const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [src, setSrc] = useState(node.attrs.src)
   const [width, setWidth] = useState(node.attrs.width || '100%')
   const [height, setHeight] = useState(node.attrs.height || 'auto')
   const [alt, setAlt] = useState(node.attrs.alt || '')
+  const [, setIsLoaded] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const handleSave = () => {
+  // 懒加载和内存优化
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setIsVisible(true)
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { rootMargin: '50px' }
+    )
+
+    observer.observe(containerRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  // 图片加载完成后清理内存
+  const handleImageLoad = useCallback(() => {
+    setIsLoaded(true)
+    
+    // 使用 editorMemoryManager 优化图片
+    if (imgRef.current && editorMemoryManager) {
+      fetch(node.attrs.src)
+        .then(response => response.blob())
+        .then(blob => {
+          editorMemoryManager.optimizeAndCacheImage(node.attrs.src, blob)
+        })
+        .catch(() => {
+          // 图片优化失败，忽略错误
+        })
+    }
+  }, [node.attrs.src])
+
+  const handleSave = useCallback(() => {
     updateAttributes({
       src: src.trim(),
       width: width || '100%',
@@ -726,15 +771,15 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
       alt: alt.trim()
     })
     setIsEditing(false)
-  }
+  }, [src, width, height, alt, updateAttributes])
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setSrc(node.attrs.src)
     setWidth(node.attrs.width || '100%')
     setHeight(node.attrs.height || 'auto')
     setAlt(node.attrs.alt || '')
     setIsEditing(false)
-  }
+  }, [node.attrs])
 
   if (isEditing) {
     return (
@@ -834,7 +879,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
   }
 
   return (
-    <NodeViewWrapper className="image-wrapper">
+    <NodeViewWrapper className="image-wrapper" ref={containerRef}>
       <div
         className="image-container"
         style={{
@@ -866,35 +911,56 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
           </Space>
         </div>
         <div className="image-content">
-          <img
-            src={node.attrs.src}
-            alt={node.attrs.alt || ''}
-            style={{
-              width: '100%',
-              height: node.attrs.height || 'auto',
-              display: 'block'
-            }}
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              target.style.display = 'none'
-              const errorDiv = document.createElement('div')
-              errorDiv.style.cssText = `
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: var(--semi-color-fill-0);
-                color: var(--semi-color-text-2);
-                border: 1px dashed var(--semi-color-border);
-                border-radius: 4px;
-                padding: 40px;
-                font-size: 14px;
-                width: 100%;
-                box-sizing: border-box;
-              `
-              errorDiv.textContent = '图片加载失败'
-              target.parentNode?.insertBefore(errorDiv, target)
-            }}
-          />
+          {isVisible ? (
+            <img
+              ref={imgRef}
+              src={node.attrs.src}
+              alt={node.attrs.alt || ''}
+              loading="lazy"
+              decoding="async"
+              onLoad={handleImageLoad}
+              style={{
+                width: '100%',
+                height: node.attrs.height || 'auto',
+                display: 'block'
+              }}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+                const errorDiv = document.createElement('div')
+                errorDiv.style.cssText = `
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: var(--semi-color-fill-0);
+                  color: var(--semi-color-text-2);
+                  border: 1px dashed var(--semi-color-border);
+                  border-radius: 4px;
+                  padding: 40px;
+                  font-size: 14px;
+                  width: 100%;
+                  box-sizing: border-box;
+                `
+                errorDiv.textContent = '图片加载失败'
+                target.parentNode?.insertBefore(errorDiv, target)
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: node.attrs.height === 'auto' ? '200px' : node.attrs.height,
+                background: 'var(--semi-color-fill-0)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--semi-color-text-2)',
+                fontSize: '14px'
+              }}
+            >
+              图片加载中...
+            </div>
+          )}
         </div>
       </div>
     </NodeViewWrapper>
@@ -1358,7 +1424,7 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
   )
 }
 
-// 纯文本专用 BubbleMenu 组件
+// 纯文本专用 BubbleMenu 组件（内存优化版本）
 const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({
   editor,
   currentFolder,
@@ -1376,13 +1442,15 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
     null
   )
 
-  // 加载API配置
+  // 内存优化：使用 useCallback 防止不必要的重新渲染
+  const cleanupRef = useRef<() => void>()
+
+  // 加载API配置 - 优化版本
   const loadApiConfigs = useCallback(async () => {
     try {
       const settings = await window.api.settings.getAll()
       if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
         setApiConfigs(settings.AiApiConfigs)
-        // 如果没有选中的配置且有可用配置，选择第一个
         if (!selectedConfigId && settings.AiApiConfigs.length > 0) {
           setSelectedConfigId(settings.AiApiConfigs[0].id)
         }
@@ -1397,14 +1465,17 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
     loadApiConfigs()
   }, [loadApiConfigs])
 
-  // 管理AI处理时的编辑器样式类名
+  // 管理AI处理时的编辑器样式类名 - 内存优化
   useEffect(() => {
     const editorElement = editor?.view?.dom?.closest('.tiptap-editor')
-    if (editorElement) {
-      if (isLoading && loadingFeature) {
-        editorElement.classList.add('ai-processing')
-        // 强制维持选中状态
-        if (preservedSelection) {
+    if (!editorElement) return
+
+    if (isLoading && loadingFeature) {
+      editorElement.classList.add('ai-processing')
+      
+      // 防抖处理选中状态恢复
+      const debounceSelection = () => {
+        if (preservedSelection && editor) {
           try {
             const selection = editor.state.selection
             if (
@@ -1414,35 +1485,38 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
             ) {
               editor.commands.setTextSelection(preservedSelection)
             }
-          } catch (error) {
+          } catch {
             // Failed to maintain selection during processing
           }
         }
-      } else {
-        editorElement.classList.remove('ai-processing')
       }
+
+      const timeoutId = setTimeout(debounceSelection, 50)
+      cleanupRef.current = () => clearTimeout(timeoutId)
+    } else {
+      editorElement.classList.remove('ai-processing')
+      cleanupRef.current?.()
     }
 
-    // 清理函数
     return () => {
-      if (editorElement) {
-        editorElement.classList.remove('ai-processing')
-      }
+      editorElement.classList.remove('ai-processing')
+      cleanupRef.current?.()
     }
   }, [isLoading, loadingFeature, editor, preservedSelection])
 
-  // 获取选中的文本
+  // 获取选中的文本 - 优化版本
   const getSelectedText = useCallback((): string => {
+    if (!editor?.state) return ''
     const { from, to } = editor.state.selection
     return editor.state.doc.textBetween(from, to, ' ')
   }, [editor])
 
-  // 获取当前选中的API配置
+  // 获取当前选中的API配置 - 优化版本
   const getCurrentConfig = useCallback(() => {
     return apiConfigs.find((config) => config.id === selectedConfigId) || null
   }, [apiConfigs, selectedConfigId])
 
-  // 调用AI API
+  // 调用AI API - 内存优化版本
   const callAI = useCallback(
     async (prompt: string, selectedText: string): Promise<string> => {
       const config = getCurrentConfig()
@@ -2297,28 +2371,44 @@ const Editor: React.FC<EditorProps> = ({
   const currentFileRef = useRef<{ folder?: string; file?: string }>({})
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // 清理所有未处理的diff节点
+  // 清理所有未处理的diff节点（优化版本）
   const clearAllDiffNodes = useCallback((editorInstance: any) => {
     if (!editorInstance) return
 
     const { state } = editorInstance
     const { tr } = state
     let hasChanges = false
+    const diffNodes: { pos: number; size: number; originalText: string }[] = []
 
-    // 从后往前遍历，避免位置偏移问题
+    // 收集所有diff节点信息
     state.doc.descendants((node: any, pos: number) => {
       if (node.type.name === 'inlineDiff') {
-        const { originalText } = node.attrs
-        // 将diff节点替换为原文本
-        tr.replaceWith(pos, pos + node.nodeSize, editorInstance.schema.text(originalText || ''))
-        hasChanges = true
-        return false // 停止遍历子节点
+        diffNodes.push({
+          pos,
+          size: node.nodeSize,
+          originalText: node.attrs.originalText || ''
+        })
+        return false
       }
-      return true // 继续遍历
+      return true
+    })
+
+    // 从后往前处理，避免位置偏移
+    diffNodes.reverse().forEach(({ pos, size, originalText }) => {
+      tr.replaceWith(pos, pos + size, editorInstance.schema.text(originalText))
+      hasChanges = true
     })
 
     if (hasChanges) {
       editorInstance.view.dispatch(tr)
+      
+      // 释放内存
+      diffNodes.length = 0
+      
+      // 通知垃圾回收
+      if (typeof window !== 'undefined' && (window as any).gc) {
+        setTimeout(() => (window as any).gc(), 100)
+      }
     }
   }, [])
 
@@ -2554,50 +2644,48 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [currentFolder, currentFile, onFileChanged, editor, clearAllDiffNodes])
 
-  // 自动保存功能
+  // 自动保存功能（内存优化版本）
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
     }
 
     autoSaveTimeoutRef.current = setTimeout(() => {
-      // 检查是否有AI处理正在进行，如果有则跳过自动保存
+      // 检查内存压力
       const editorElement = editor?.view?.dom?.closest('.tiptap-editor')
       const isAIProcessing = editorElement?.classList.contains('ai-processing')
 
-      // 检查是否有AI结果小窗正在显示 - 扩展检查多个可能的AI相关元素
-      const aiLoadingMenu = document.querySelector('.ai-loading-menu')
-      const aiBubbleMenu = document.querySelector('.ai-bubble-menu')
-      const aiLoadingContent = document.querySelector('.ai-loading-content')
-      const textBubbleMenuWithAI = document.querySelector('.text-bubble-menu .ai-features-dropdown')
-      const inlineDiffWrapper = document.querySelector('.inline-diff-wrapper')
-      const inlineDiff = document.querySelector('.inline-diff')
-
-      const isAIResultWindowVisible = !!(
-        aiLoadingMenu ||
-        aiBubbleMenu ||
-        aiLoadingContent ||
-        textBubbleMenuWithAI ||
-        inlineDiffWrapper ||
-        inlineDiff
+      // 检查是否有AI相关窗口
+      const hasAIWindows = !!(
+        document.querySelector('.ai-loading-menu') ||
+        document.querySelector('.ai-bubble-menu') ||
+        document.querySelector('.inline-diff-wrapper')
       )
 
-      // 输出调试信息
-      if (isAIResultWindowVisible) {
-        // AI窗口检测到，跳过自动保存
-      }
+      // 检查内存使用情况
+      const memoryPressure = editorMemoryManager?.getCurrentMemoryUsage()
+        .then(usage => usage.percentage > 0.8)
+        .catch(() => false)
 
-      if (
-        hasUnsavedChanges &&
-        currentFolder &&
-        currentFile &&
-        editor &&
-        !isAIProcessing &&
-        !isAIResultWindowVisible
-      ) {
-        saveDocument()
-      }
-    }, 3000) // 3秒后自动保存
+      Promise.resolve(memoryPressure).then(highMemoryPressure => {
+        // 如果内存压力高，推迟自动保存
+        if (highMemoryPressure) {
+          setTimeout(() => scheduleAutoSave(), 5000)
+          return
+        }
+
+        if (
+          hasUnsavedChanges &&
+          currentFolder &&
+          currentFile &&
+          editor &&
+          !isAIProcessing &&
+          !hasAIWindows
+        ) {
+          saveDocument()
+        }
+      })
+    }, 3000)
   }, [hasUnsavedChanges, currentFolder, currentFile, editor, saveDocument])
 
   // 当选中的文件发生变化时，加载新文档
@@ -2643,16 +2731,41 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [hasUnsavedChanges, scheduleAutoSave])
 
-  // 组件卸载时清理定时器和diff节点
+  // 组件卸载时清理定时器和diff节点，启动内存监控
   useEffect(() => {
+    // 启动内存监控
+    editorMemoryManager.startMonitoring()
+
+    // 添加内存事件监听器
+    const memoryEventListener = (eventType: string, data: any) => {
+      if (eventType === 'critical') {
+        Toast.warning('内存使用率过高，建议保存并刷新页面')
+      } else if (eventType === 'warning') {
+        console.warn('内存警告:', data.message)
+      }
+    }
+
+    editorMemoryManager.addEventListener('critical', memoryEventListener)
+    editorMemoryManager.addEventListener('warning', memoryEventListener)
+
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current)
       }
-      // 组件卸载时清理所有diff节点
+      
+      // 清理所有diff节点
       if (editor) {
         clearAllDiffNodes(editor)
       }
+
+      // 移除事件监听器并停止监控
+      editorMemoryManager.removeEventListener('critical', memoryEventListener)
+      editorMemoryManager.removeEventListener('warning', memoryEventListener)
+      
+      // 执行最终清理
+      editorMemoryManager.performMemoryCleanup(true).finally(() => {
+        // 清理完成
+      })
     }
   }, [clearAllDiffNodes, editor])
 
