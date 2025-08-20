@@ -39,7 +39,7 @@ const VirtualScrollEditor: React.FC<VirtualScrollEditorProps> = ({
   const [scrollTop, setScrollTop] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
   const [virtualItems, setVirtualItems] = useState<VirtualItem[]>([])
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>()
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 将内容分割成行
   const lines = useMemo(() => {
