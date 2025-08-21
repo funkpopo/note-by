@@ -1,6 +1,5 @@
 import React, { lazy, Suspense } from 'react'
 import { Spin } from '@douyinfe/semi-ui'
-// 导入渲染优化器
 import { scheduleRenderTask } from '../utils/RenderOptimizer'
 
 // 懒加载组件定义
@@ -9,6 +8,17 @@ export const LazyMindMapPage = lazy(() => import('./MindMapPage'))
 export const LazyEditor = lazy(() => import('./Editor'))
 export const LazyChatInterface = lazy(() => import('./ChatInterface'))
 export const LazySettings = lazy(() => import('./Settings'))
+
+// 小型组件懒加载（按需加载）
+export const LazyDiffViewer = lazy(() => import('./DiffViewer'))
+export const LazyVirtualList = lazy(() => import('./VirtualList'))
+export const LazySlashMenu = lazy(() => import('./SlashMenu'))
+export const LazyHighlightColorPicker = lazy(() => import('./HighlightColorPicker'))
+export const LazyWebDAVSettings = lazy(() => import('./WebDAVSettings'))
+export const LazyCustomDropdown = lazy(() => import('./CustomDropdown'))
+export const LazyPasswordPrompt = lazy(() => import('./PasswordPrompt'))
+export const LazyMessageRenderer = lazy(() => import('./MessageRenderer'))
+export const LazyVirtualScrollEditor = lazy(() => import('./VirtualScrollEditor'))
 
 // 通用加载组件
 export const ComponentLoader: React.FC<{
@@ -155,3 +165,20 @@ export const SmartSettings: React.FC = () => (
     preloadDelay={1500}
   />
 )
+
+// 小型组件加载器
+export const SmallComponentLoader: React.FC<{ text?: string }> = ({ text = '组件加载中...' }) => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '40px', fontSize: '12px', color: 'var(--semi-color-text-2)' }}>
+    <Spin size="small" style={{ marginRight: '8px' }} />
+    {text}
+  </div>
+)
+
+// 对话框组件懒加载
+export const LazyConfirmDialog = lazy(() => import('./ConfirmDialog'))
+export const LazyRenameDialog = lazy(() => import('./RenameDialog'))
+export const LazyCreateDialog = lazy(() => import('./CreateDialog'))
+
+// 下拉菜单组件懒加载
+export const LazyHistoryDropdown = lazy(() => import('./HistoryDropdown'))
+export const LazyCustomHistoryDropdown = lazy(() => import('./CustomHistoryDropdown'))

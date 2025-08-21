@@ -18,7 +18,6 @@ import {
   SmartChat,
   SmartSettings
 } from './components/LazyComponents'
-// 导入渲染优化器
 import { scheduleRenderTask } from './utils/RenderOptimizer'
 
 const App: React.FC = () => {

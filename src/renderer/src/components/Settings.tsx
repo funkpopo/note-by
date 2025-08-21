@@ -39,9 +39,7 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import WebDAVSettings from './WebDAVSettings'
 import './Settings.css'
-// 导入性能监控器
 import { performanceMonitor, type PerformanceMetrics } from '../utils/PerformanceMonitor'
-// 导入多语言支持
 import { useLanguage } from '../locales'
 
 const { Title, Paragraph, Text } = Typography

@@ -18,9 +18,7 @@ import 'echarts-wordcloud'
 import { DataAnalysisSkeleton } from './Skeleton'
 import { modelSelectionService } from '../services/modelSelectionService'
 import { VirtualTextList } from './VirtualList'
-// 导入渲染优化器
 import { scheduleRenderTask, processBatch } from '../utils/RenderOptimizer'
-// 导入内存管理器
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
 
 // 图谱数据接口定义

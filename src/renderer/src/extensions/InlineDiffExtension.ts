@@ -1,20 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import InlineDiff from '../components/InlineDiff'
-
-export interface DiffResult {
-  added?: boolean
-  removed?: boolean
-  value: string
-  count?: number
-}
-
-export interface DiffFeature {
-  id: string
-  type: string
-  description?: string
-  [key: string]: unknown
-}
+import { DiffResult, DiffFeature } from '../types/diffTypes'
 
 export interface InlineDiffOptions {
   HTMLAttributes: Record<string, unknown>
@@ -131,7 +117,7 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(InlineDiff)
+    return ReactNodeViewRenderer(() => import('../components/InlineDiff'))
   },
 
   addCommands() {

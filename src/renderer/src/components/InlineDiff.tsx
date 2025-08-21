@@ -3,8 +3,7 @@ import { Button, Space } from '@douyinfe/semi-ui'
 import { IconClose } from '@douyinfe/semi-icons'
 import { NodeViewWrapper } from '@tiptap/react'
 import { Editor } from '@tiptap/react'
-import { DiffItem } from '../utils/diffUtils'
-import { DiffResult, DiffFeature } from '../extensions/InlineDiffExtension'
+import { DiffResult, DiffFeature, DiffItem } from '../types/diffTypes'
 import './InlineDiff.css'
 
 // 自定义Check图标
@@ -50,7 +49,8 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
 
     // 获取当前节点的位置
     const pos = getPos()
-    const nodeSize = node.nodeSize
+    // 获取节点在编辑器中的实际大小
+    const nodeSize = editor.state.doc.nodeAt(pos)?.nodeSize || 1
 
     // 替换整个节点为新文本
     editor.view.dispatch(
@@ -64,7 +64,8 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
 
     // 获取当前节点的位置
     const pos = getPos()
-    const nodeSize = node.nodeSize
+    // 获取节点在编辑器中的实际大小
+    const nodeSize = editor.state.doc.nodeAt(pos)?.nodeSize || 1
 
     // 替换整个节点为原文本
     editor.view.dispatch(

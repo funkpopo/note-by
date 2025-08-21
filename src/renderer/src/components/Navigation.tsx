@@ -24,9 +24,7 @@ import RenameDialog from './RenameDialog'
 import CreateDialog from './CreateDialog'
 import { NavigationSkeleton } from './Skeleton'
 import { useTheme } from '../context/theme/useTheme'
-// 导入性能监控器
 import { performanceMonitor } from '../utils/PerformanceMonitor'
-// 导入多语言支持
 import { useLanguage } from '../locales'
 
 // 定义导航项类型
