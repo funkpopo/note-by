@@ -1443,7 +1443,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
   )
 
   // 内存优化：使用 useCallback 防止不必要的重新渲染
-  const cleanupRef = useRef<() => void>()
+  const cleanupRef = useRef<(() => void) | null>(null)
 
   // 加载API配置 - 优化版本
   const loadApiConfigs = useCallback(async () => {
@@ -1529,16 +1529,12 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       }
 
       try {
-        const result = await window.api.openai.generate({
-          config,
-          messages: [
-            {
-              role: 'user',
-              content: `${prompt}\n\n${selectedText}`
-            }
-          ],
-          maxTokens: parseInt(config.maxTokens || '2000'),
-          temperature: parseFloat(config.temperature || '0.7')
+        const result = await window.api.openai.generateContent({
+          apiKey: config.apiKey,
+          apiUrl: config.apiUrl,
+          modelName: config.modelName,
+          prompt: `${prompt}\n\n${selectedText}`,
+          maxTokens: parseInt(config.maxTokens || '2000')
         })
 
         if (!result.success) {
