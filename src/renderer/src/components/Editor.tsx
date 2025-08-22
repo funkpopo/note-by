@@ -2370,6 +2370,8 @@ const Editor: React.FC<EditorProps> = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const currentFileRef = useRef<{ folder?: string; file?: string }>({})
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastEditTimeRef = useRef<number>(0)
+  const isEditingRef = useRef<boolean>(false)
 
   // 清理所有未处理的diff节点（优化版本）
   const clearAllDiffNodes = useCallback((editorInstance: any) => {
@@ -2559,7 +2561,22 @@ const Editor: React.FC<EditorProps> = ({
       editable,
       onUpdate: ({ editor }) => {
         const html = editor.getHTML()
-        setHasUnsavedChanges(true)
+        
+        // 更新编辑时间，但延迟设置 hasUnsavedChanges 以减少频繁触发
+        lastEditTimeRef.current = Date.now()
+        isEditingRef.current = true
+        
+        // 使用防抖设置未保存状态，避免过于频繁的状态更新
+        if (autoSaveTimeoutRef.current) {
+          // 如果已有自动保存计划，直接设置状态
+          setHasUnsavedChanges(true)
+        } else {
+          // 延迟设置状态，给用户一些缓冲时间
+          setTimeout(() => {
+            setHasUnsavedChanges(true)
+          }, 500)
+        }
+        
         onUpdate?.(html)
       },
       editorProps: {
@@ -2617,7 +2634,7 @@ const Editor: React.FC<EditorProps> = ({
   )
 
   // 保存文档内容
-  const saveDocument = useCallback(async () => {
+  const saveDocument = useCallback(async (isAutoSave = false) => {
     if (!currentFolder || !currentFile || !editor) return
 
     // 保存前先清理所有未处理的diff节点
@@ -2631,7 +2648,10 @@ const Editor: React.FC<EditorProps> = ({
 
       if (result.success) {
         setHasUnsavedChanges(false)
-        Toast.success(`文档已保存`)
+        // 只有手动保存才显示Toast提示
+        if (!isAutoSave) {
+          Toast.success(`文档已保存`)
+        }
         onFileChanged?.()
       } else {
         Toast.error(`保存失败: ${result.error || '未知错误'}`)
@@ -2644,13 +2664,33 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [currentFolder, currentFile, onFileChanged, editor, clearAllDiffNodes])
 
-  // 自动保存功能（内存优化版本）
+  // 自动保存功能（优化版本 - 增强防抖机制）
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
     }
 
+    // 记录编辑状态和时间
+    const now = Date.now()
+    lastEditTimeRef.current = now
+    isEditingRef.current = true
+
+    // 停止编辑状态的检测定时器
+    setTimeout(() => {
+      // 如果 1 秒内没有新的编辑，认为用户停止了编辑
+      if (Date.now() - lastEditTimeRef.current >= 1000) {
+        isEditingRef.current = false
+      }
+    }, 1000)
+
     autoSaveTimeoutRef.current = setTimeout(() => {
+      // 检查用户是否仍在编辑
+      if (isEditingRef.current && Date.now() - lastEditTimeRef.current < 2000) {
+        // 用户仍在编辑，延迟自动保存
+        scheduleAutoSave()
+        return
+      }
+
       // 检查内存压力
       const editorElement = editor?.view?.dom?.closest('.tiptap-editor')
       const isAIProcessing = editorElement?.classList.contains('ai-processing')
@@ -2680,12 +2720,13 @@ const Editor: React.FC<EditorProps> = ({
           currentFile &&
           editor &&
           !isAIProcessing &&
-          !hasAIWindows
+          !hasAIWindows &&
+          !isEditingRef.current
         ) {
-          saveDocument()
+          saveDocument(true) // 传入 true 表示这是自动保存
         }
       })
-    }, 3000)
+    }, 10000) // 延长自动保存间隔到 10 秒
   }, [hasUnsavedChanges, currentFolder, currentFile, editor, saveDocument])
 
   // 当选中的文件发生变化时，加载新文档
