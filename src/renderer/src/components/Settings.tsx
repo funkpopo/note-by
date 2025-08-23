@@ -603,7 +603,6 @@ const Settings: React.FC = () => {
           <Tabs.TabPane
             tab={
               <span className="tab-label">
-                <IconSettingStroked className="tab-icon" />
                 通用设置
               </span>
             }
@@ -814,7 +813,6 @@ const Settings: React.FC = () => {
           <Tabs.TabPane
             tab={
               <span className="tab-label">
-                <IconCloud className="tab-icon" />
                 AI 配置
               </span>
             }
@@ -855,7 +853,6 @@ const Settings: React.FC = () => {
           <Tabs.TabPane
             tab={
               <span className="tab-label">
-                <IconCloud className="tab-icon" />
                 同步设置
               </span>
             }
