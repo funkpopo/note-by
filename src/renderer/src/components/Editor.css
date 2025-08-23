@@ -29,6 +29,47 @@
   min-height: 44px;
 }
 
+/* Editor Header 按钮样式 - 添加圆角 */
+.editor-header .semi-button {
+  border-radius: 8px;
+}
+
+/* Editor Header 下拉菜单样式 - 添加圆角 */
+.editor-header .semi-dropdown .semi-button {
+  border-radius: 8px;
+}
+
+/* Editor Header 下拉菜单内容样式 - 添加圆角 */
+.editor-header .semi-dropdown-menu {
+  border-radius: 12px;
+}
+
+/* Semi UI 下拉菜单全局样式覆盖 */
+.semi-dropdown-menu {
+  border-radius: 12px;
+}
+
+.semi-dropdown-menu .semi-dropdown-item {
+  border-radius: 6px;
+  margin: 2px 4px;
+}
+
+/* Semi UI List 组件圆角样式（用于模型选择下拉菜单） */
+.semi-list {
+  border-radius: 12px;
+}
+
+.semi-list-item {
+  border-radius: 6px;
+  margin: 2px 4px;
+}
+
+/* 覆盖可能的内联样式，确保圆角生效 */
+.editor-header .semi-dropdown-menu,
+.editor-header .semi-list {
+  border-radius: 12px !important;
+}
+
 .editor-header-left {
   display: flex;
   align-items: center;
@@ -71,7 +112,7 @@
 .bubble-menu {
   background: var(--semi-color-bg-0);
   border: 1px solid var(--semi-color-border);
-  border-radius: 6px;
+  border-radius: 12px;
   box-shadow: var(--semi-shadow-elevated);
   padding: 0;
   z-index: 1000;
@@ -111,6 +152,7 @@
 .bubble-menu .semi-button {
   position: relative;
   transition: all 0.2s ease;
+  border-radius: 8px;
 }
 
 .bubble-menu .semi-button:hover {
@@ -540,7 +582,7 @@
 .bubble-menu.ai-bubble-menu {
   background: var(--semi-color-bg-0);
   border: 1px solid var(--semi-color-border);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: var(--semi-shadow-elevated);
   padding: 0;
   min-width: 200px;
@@ -604,7 +646,7 @@
   position: relative;
   z-index: 1;
   min-height: 36px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .ai-loading-content::before {
@@ -663,7 +705,7 @@
   font-size: 12px;
   height: 24px;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: 8px;
   transition: all 0.2s ease;
   font-weight: 400;
 }

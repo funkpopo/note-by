@@ -691,6 +691,28 @@
 /* Modal Styles - 简洁设计 */
 .settings-modal .semi-modal-content {
   border-radius: var(--semi-border-radius-large);
+  max-height: 90vh;
+}
+
+.settings-modal .semi-modal-body {
+  padding: 0;
+}
+
+.settings-modal .semi-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-modal .semi-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-modal .semi-modal-body::-webkit-scrollbar-thumb {
+  background: var(--semi-color-text-3);
+  border-radius: 3px;
+}
+
+.settings-modal .semi-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--semi-color-text-2);
 }
 
 .modal-title {
@@ -792,6 +814,78 @@
 .semi-select:focus-visible {
   outline: 2px solid var(--semi-color-primary);
   outline-offset: 2px;
+}
+
+/* Rounded corners for buttons and dropdowns */
+.settings-container .semi-button {
+  border-radius: 8px;
+}
+
+.settings-container .semi-select .semi-select-selection {
+  border-radius: 8px;
+}
+
+.settings-container .semi-select .semi-select-option-list {
+  border-radius: 8px;
+}
+
+.settings-container .semi-radio-group .semi-radio {
+  border-radius: 6px;
+}
+
+.settings-container .semi-input {
+  border-radius: 8px;
+}
+
+.settings-container .semi-form-field .semi-form-field-main .semi-input {
+  border-radius: 8px;
+}
+
+/* Specific button classes with rounded corners */
+.add-config-btn,
+.check-update-btn,
+.save-btn,
+.download-btn,
+.icon-btn {
+  border-radius: 8px !important;
+}
+
+/* WebDAV Settings specific rounded corners */
+.webdav-settings .semi-button {
+  border-radius: 8px !important;
+}
+
+.webdav-settings .semi-card {
+  border-radius: 12px;
+}
+
+.webdav-settings .semi-input {
+  border-radius: 8px;
+}
+
+.webdav-settings .semi-form-field .semi-form-field-main .semi-input {
+  border-radius: 8px;
+}
+
+.webdav-settings .semi-switch {
+  border-radius: 16px;
+}
+
+.webdav-settings .semi-radio-group .semi-radio {
+  border-radius: 6px;
+}
+
+/* Modal rounded corners */
+.settings-container .semi-modal-content {
+  border-radius: 12px;
+}
+
+.settings-container .semi-modal-body .semi-button {
+  border-radius: 8px;
+}
+
+.settings-container .semi-modal-body .semi-input {
+  border-radius: 8px;
 }
 
 /* Remove all gradient backgrounds for simplicity */

@@ -332,34 +332,28 @@ const Settings: React.FC = () => {
                 )}
               </div>
               <div className="api-card-actions">
-                <Tooltip content="测试连接">
-                  <Button
-                    icon={<IconPulse />}
-                    onClick={() => handleTestConnection(config)}
-                    loading={testingId === config.id}
-                    theme="borderless"
-                    type="primary"
-                    className="icon-btn"
-                  />
-                </Tooltip>
-                <Tooltip content="编辑配置">
-                  <Button
-                    icon={<IconEdit />}
-                    onClick={() => handleEditConfig(config)}
-                    theme="borderless"
-                    type="tertiary"
-                    className="icon-btn"
-                  />
-                </Tooltip>
-                <Tooltip content="删除配置">
-                  <Button
-                    icon={<IconDelete />}
-                    theme="borderless"
-                    type="danger"
-                    className="icon-btn"
-                    onClick={() => handleDeleteConfig(config.id)}
-                  />
-                </Tooltip>
+                <Button
+                  icon={<IconPulse />}
+                  onClick={() => handleTestConnection(config)}
+                  loading={testingId === config.id}
+                  theme="borderless"
+                  type="primary"
+                  className="icon-btn"
+                />
+                <Button
+                  icon={<IconEdit />}
+                  onClick={() => handleEditConfig(config)}
+                  theme="borderless"
+                  type="tertiary"
+                  className="icon-btn"
+                />
+                <Button
+                  icon={<IconDelete />}
+                  theme="borderless"
+                  type="danger"
+                  className="icon-btn"
+                  onClick={() => handleDeleteConfig(config.id)}
+                />
               </div>
             </div>
 
@@ -892,7 +886,7 @@ const Settings: React.FC = () => {
                     </Text>
                   </div>
                   <Space>
-                    <Tooltip content="刷新数据">
+                    <Tooltip content="刷新数据" position="top">
                       <Button
                         icon={<IconRefresh />}
                         onClick={loadPerformanceMetrics}
@@ -1208,8 +1202,13 @@ const Settings: React.FC = () => {
         }
         visible={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        centered
         className="settings-modal"
+        width={560}
+        bodyStyle={{ 
+          maxHeight: 'calc(100vh - 200px)', 
+          overflowY: 'auto',
+          padding: '20px'
+        }}
         footer={
           <div className="modal-footer">
             <Button type="tertiary" onClick={() => setIsModalOpen(false)}>
