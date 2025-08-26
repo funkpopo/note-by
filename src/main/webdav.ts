@@ -45,10 +45,10 @@ export async function clearSyncCache(): Promise<{
       success: true,
       message: '同步缓存已清除'
     }
-  } catch {
+  } catch (error) {
     return {
       success: false,
-      error: String(Error)
+      error: String(error)
     }
   }
 }
@@ -151,8 +151,8 @@ export async function testWebDAVConnection(
         message: `连接成功但无法访问远程目录 ${config.remotePath}: ${remotePathError}`
       }
     }
-  } catch {
-    return { success: false, message: `连接失败: ${Error}` }
+  } catch (error) {
+    return { success: false, message: `连接失败: ${error}` }
   }
 }
 
@@ -603,10 +603,10 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
       failed,
       skipped
     }
-  } catch {
+  } catch (error) {
     return {
       success: false,
-      message: `同步失败: ${Error}`,
+      message: `同步失败: ${error}`,
       uploaded,
       failed,
       skipped
@@ -737,10 +737,10 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
       failed,
       skipped
     }
-  } catch {
+  } catch (error) {
     return {
       success: false,
-      message: `同步失败: ${Error}`,
+      message: `同步失败: ${error}`,
       downloaded,
       failed,
       skipped
@@ -1131,9 +1131,9 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
       skippedUpload,
       skippedDownload
     }
-  } catch {
+  } catch (error) {
     // 检查是否是因为用户取消而失败
-    if (String(Error).includes('用户取消了同步')) {
+    if (String(error).includes('用户取消了同步')) {
       return {
         success: false,
         message: '同步已被用户取消',
@@ -1148,7 +1148,7 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
 
     return {
       success: false,
-      message: `双向同步失败: ${Error}`,
+      message: `双向同步失败: ${error}`,
       uploaded,
       downloaded,
       failed,
@@ -1196,10 +1196,10 @@ export async function handleConfigChanged(): Promise<{ success: boolean; message
         message: 'WebDAV客户端重新初始化失败，请检查配置'
       }
     }
-  } catch {
+  } catch (error) {
     return {
       success: false,
-      message: `配置变更处理失败: ${Error}`
+      message: `配置变更处理失败: ${error}`
     }
   }
 }
