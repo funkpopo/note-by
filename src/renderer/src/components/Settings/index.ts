@@ -1,0 +1,5 @@
+export { default as LanguageSettings } from './LanguageSettings'
+export { default as UpdateSettings } from './UpdateSettings'
+export { default as HistoryManagementSettings } from './HistoryManagementSettings'
+export { default as ApiConfigSection } from './ApiConfigSection'
+export { default as PerformanceMonitorSection } from './PerformanceMonitorSection'
