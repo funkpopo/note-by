@@ -104,6 +104,17 @@
   background: var(--semi-color-bg-0);
 }
 
+.history-action-btn.compare-btn {
+  background: var(--semi-color-info-light-active);
+  color: var(--semi-color-info);
+  border: 1px solid var(--semi-color-info-light-default);
+}
+
+.history-action-btn.compare-btn:hover {
+  background: var(--semi-color-info-light-default);
+  transform: translateY(-1px);
+}
+
 .history-action-btn.preview-btn {
   color: var(--semi-color-primary);
   border-color: var(--semi-color-primary);

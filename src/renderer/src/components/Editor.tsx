@@ -1159,9 +1159,10 @@ const EditorHeader: React.FC<{
   hasUnsavedChanges: boolean
   isLoading: boolean
   isSaving: boolean
+  currentContent?: string
   onSave: () => void
   onContentRestore?: (content: string) => void
-}> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, onSave, onContentRestore }) => {
+}> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, currentContent = '', onSave, onContentRestore }) => {
   if (!currentFolder || !currentFile) return null
 
   const filePath = `${currentFolder}/${currentFile}`
@@ -1189,6 +1190,7 @@ const EditorHeader: React.FC<{
         <Space>
           <CustomHistoryDropdown
             filePath={filePath}
+            currentContent={currentContent}
             onRestore={onContentRestore}
             disabled={hasUnsavedChanges}
           />
@@ -2856,6 +2858,7 @@ const Editor: React.FC<EditorProps> = ({
           hasUnsavedChanges={hasUnsavedChanges}
           isLoading={isLoading}
           isSaving={isSaving}
+          currentContent={editor?.getHTML() || ''}
           onSave={saveDocument}
           onContentRestore={(content) => {
             editor.commands.setContent(content)

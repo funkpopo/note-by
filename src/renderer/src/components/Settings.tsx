@@ -29,7 +29,6 @@ import {
   IconLanguage,
   IconHistogram,
   IconCloud,
-  IconSettingStroked,
   IconCheckCircleStroked,
   IconAlertCircle,
   IconInfoCircle,

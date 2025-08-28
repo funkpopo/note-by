@@ -10,6 +10,7 @@ import {
   Space
 } from '@douyinfe/semi-ui'
 import { IconHistory, IconChevronRight } from '@douyinfe/semi-icons'
+import VersionComparison from './VersionComparison'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { Underline } from '@tiptap/extension-underline'
@@ -199,6 +200,7 @@ const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
 
 interface HistoryDropdownProps {
   filePath?: string
+  currentContent?: string
   onRestore?: (content: string) => void
   disabled?: boolean
   containerRef?: RefObject<HTMLElement>
@@ -206,6 +208,7 @@ interface HistoryDropdownProps {
 
 const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
   filePath,
+  currentContent = '',
   onRestore,
   disabled = false,
   containerRef
@@ -214,6 +217,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
   const [loading, setLoading] = useState<boolean>(false)
   const [selectedHistory, setSelectedHistory] = useState<HistoryItem | null>(null)
   const [previewVisible, setPreviewVisible] = useState<boolean>(false)
+  const [comparisonVisible, setComparisonVisible] = useState<boolean>(false)
   const [dropdownVisible, setDropdownVisible] = useState<boolean>(false)
 
   // 加载历史记录
@@ -241,6 +245,18 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
       loadHistory()
     }
   }, [dropdownVisible, filePath, loadHistory])
+
+  // 打开版本对比界面
+  const handleCompareHistory = async (historyId: number): Promise<void> => {
+    try {
+      const response = await window.api.markdown.getHistoryById(historyId)
+      if (response.success && response.history) {
+        setSelectedHistory(response.history)
+        setComparisonVisible(true)
+        setDropdownVisible(false)
+      }
+    } catch {}
+  }
 
   // 查看历史记录详情
   const handleViewHistory = async (historyId: number): Promise<void> => {
@@ -326,15 +342,25 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
                         <Typography.Text style={{ fontSize: '13px', flexGrow: 1 }}>
                           {formatTimestamp(item.timestamp)}
                         </Typography.Text>
-                        <Button
-                          type="tertiary"
-                          icon={<IconChevronRight />}
-                          onClick={() => handleViewHistory(item.id)}
-                          size="small"
-                          style={{ padding: '4px 8px', marginLeft: '8px' }}
-                        >
-                          查看
-                        </Button>
+                        <Space>
+                          <Button
+                            type="tertiary"
+                            onClick={() => handleCompareHistory(item.id)}
+                            size="small"
+                            style={{ padding: '4px 8px' }}
+                          >
+                            对比
+                          </Button>
+                          <Button
+                            type="tertiary"
+                            icon={<IconChevronRight />}
+                            onClick={() => handleViewHistory(item.id)}
+                            size="small"
+                            style={{ padding: '4px 8px' }}
+                          >
+                            查看
+                          </Button>
+                        </Space>
                       </div>
                     }
                   />
@@ -386,6 +412,31 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
           </div>
         )}
       </SideSheet>
+
+      {/* 版本对比界面 */}
+      {comparisonVisible && selectedHistory && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          zIndex: 1050,
+          background: 'var(--semi-color-bg-0)' 
+        }}>
+          <VersionComparison
+            currentContent={currentContent}
+            historyItem={selectedHistory}
+            onClose={() => setComparisonVisible(false)}
+            onRestore={(content) => {
+              if (onRestore) {
+                onRestore(content)
+                setComparisonVisible(false)
+              }
+            }}
+          />
+        </div>
+      )}
     </>
   )
 }

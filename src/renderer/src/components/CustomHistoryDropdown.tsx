@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Button, Spin, Toast } from '@douyinfe/semi-ui'
 import { IconHistory } from '@douyinfe/semi-icons'
+import VersionComparison from './VersionComparison'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { Underline } from '@tiptap/extension-underline'
@@ -176,12 +177,14 @@ const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
 
 interface CustomHistoryDropdownProps {
   filePath?: string
+  currentContent?: string
   onRestore?: (content: string) => void
   disabled?: boolean
 }
 
 const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   filePath,
+  currentContent = '',
   onRestore,
   disabled = false
 }) => {
@@ -190,6 +193,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
   const [dropdownVisible, setDropdownVisible] = useState<boolean>(false)
   const [selectedHistory, setSelectedHistory] = useState<HistoryItem | null>(null)
   const [previewVisible, setPreviewVisible] = useState<boolean>(false)
+  const [comparisonVisible, setComparisonVisible] = useState<boolean>(false)
   const [isRestoring, setIsRestoring] = useState<boolean>(false)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -245,6 +249,20 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
     }
     return undefined
   }, [dropdownVisible])
+
+  // 打开版本对比界面
+  const handleCompareHistory = async (historyId: number): Promise<void> => {
+    try {
+      const response = await window.api.markdown.getHistoryById(historyId)
+      if (response.success && response.history) {
+        setSelectedHistory(response.history)
+        setComparisonVisible(true)
+        setDropdownVisible(false)
+      }
+    } catch {
+      Toast.error('加载历史记录失败')
+    }
+  }
 
   // 查看历史记录详情
   const handleViewHistory = async (historyId: number): Promise<void> => {
@@ -323,6 +341,12 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
                   <div className="history-item-time">{formatTimestamp(item.timestamp)}</div>
                   <div className="history-item-actions">
                     <button
+                      className="history-action-btn compare-btn"
+                      onClick={() => handleCompareHistory(item.id)}
+                    >
+                      对比
+                    </button>
+                    <button
                       className="history-action-btn preview-btn"
                       onClick={() => handleViewHistory(item.id)}
                     >
@@ -383,6 +407,31 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 版本对比界面 */}
+      {comparisonVisible && selectedHistory && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          zIndex: 1050,
+          background: 'var(--semi-color-bg-0)' 
+        }}>
+          <VersionComparison
+            currentContent={currentContent}
+            historyItem={selectedHistory}
+            onClose={() => setComparisonVisible(false)}
+            onRestore={(content) => {
+              if (onRestore) {
+                onRestore(content)
+                setComparisonVisible(false)
+              }
+            }}
+          />
         </div>
       )}
     </div>
