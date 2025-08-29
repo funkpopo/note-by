@@ -1,194 +1,53 @@
-// 日志级别枚举
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3
-}
+import {
+  BaseErrorHandler,
+  EnvironmentAdapter,
+  LogLevel,
+  ErrorCategory,
+  ErrorInfo
+} from '../../../shared/utils/ErrorHandler'
 
-// 错误类型分类
-export enum ErrorCategory {
-  SYSTEM = 'system',
-  NETWORK = 'network',
-  UI = 'ui',
-  STORAGE = 'storage',
-  API = 'api',
-  VALIDATION = 'validation',
-  UNKNOWN = 'unknown'
-}
+// 重新导出共享的类型和枚举，以保持向后兼容性
+export { LogLevel, ErrorCategory }
+export type { ErrorInfo }
 
-// 错误信息接口
-export interface ErrorInfo {
-  level: LogLevel
-  category: ErrorCategory
-  message: string
-  details?: unknown
-  stack?: string
-  timestamp: string
-  context?: string
-  url?: string
-  userAgent?: string
-}
-
-class RendererErrorHandler {
-  private logLevel: LogLevel = import.meta.env.DEV ? LogLevel.DEBUG : LogLevel.INFO
-  private maxLogEntries = 1000
-  private logEntries: ErrorInfo[] = []
-
+class RendererErrorHandler extends BaseErrorHandler {
   constructor() {
-    this.setupGlobalHandlers()
-  }
+    const adapter: EnvironmentAdapter = {
+      isDev: import.meta.env.DEV,
+      log: async (info: ErrorInfo, message: string) => {
+        // 输出到控制台
+        switch (info.level) {
+          case LogLevel.DEBUG:
+            console.debug(message)
+            break
+          case LogLevel.INFO:
+            console.info(message)
+            break
+          case LogLevel.WARN:
+            console.warn(message)
+            break
+          case LogLevel.ERROR:
+            console.error(message)
+            break
+        }
 
-  private formatLogMessage(info: ErrorInfo): string {
-    const { timestamp, level, category, message, context, details, stack } = info
-    const levelStr = LogLevel[level]
-
-    let formatted = `[${timestamp}] [${levelStr}] [${category}]`
-    if (context) {
-      formatted += ` [${context}]`
-    }
-    formatted += ` ${message}`
-
-    if (details) {
-      formatted += `\nDetails: ${JSON.stringify(details, null, 2)}`
-    }
-
-    if (stack) {
-      formatted += `\nStack: ${stack}`
-    }
-
-    return formatted
-  }
-
-  private log(info: ErrorInfo): void {
-    // 检查日志级别
-    if (info.level < this.logLevel) {
-      return
-    }
-
-    // 添加到内存中的日志队列
-    this.logEntries.push(info)
-
-    // 保持日志队列大小
-    if (this.logEntries.length > this.maxLogEntries) {
-      this.logEntries.shift()
-    }
-
-    const message = this.formatLogMessage(info)
-
-    // 输出到控制台
-    switch (info.level) {
-      case LogLevel.DEBUG:
-        console.debug(message)
-        break
-      case LogLevel.INFO:
-        console.info(message)
-        break
-      case LogLevel.WARN:
-        console.warn(message)
-        break
-      case LogLevel.ERROR:
-        console.error(message)
-        break
-    }
-
-    // 在开发环境中，也可以发送到主进程进行持久化
-    if (import.meta.env.DEV && info.level >= LogLevel.ERROR) {
-      try {
-        // 发送到主进程（如果需要）
-        // window.api?.log?.error?.(message)
-      } catch {
-        // 静默处理
+        // 在开发环境中，也可以发送到主进程进行持久化
+        if (import.meta.env.DEV && info.level >= LogLevel.ERROR) {
+          try {
+            // 发送到主进程（如果需要）
+            // window.api?.log?.error?.(message)
+          } catch {
+            // 静默处理
+          }
+        }
+      },
+      setupGlobalHandlers: (handler) => {
+        // 延迟到super调用后执行
+        setTimeout(() => this.setupGlobalHandlers(handler), 0)
       }
     }
-  }
 
-  // 公共接口方法
-  public debug(
-    message: string,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string,
-    details?: unknown
-  ): void {
-    this.log({
-      level: LogLevel.DEBUG,
-      category,
-      message,
-      context,
-      details,
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent
-    })
-  }
-
-  public info(
-    message: string,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string,
-    details?: unknown
-  ): void {
-    this.log({
-      level: LogLevel.INFO,
-      category,
-      message,
-      context,
-      details,
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent
-    })
-  }
-
-  public warn(
-    message: string,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string,
-    details?: unknown
-  ): void {
-    this.log({
-      level: LogLevel.WARN,
-      category,
-      message,
-      context,
-      details,
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent
-    })
-  }
-
-  public error(
-    message: string,
-    error?: Error | unknown,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string
-  ): void {
-    let details: unknown
-    let stack: string | undefined
-
-    if (error instanceof Error) {
-      details = {
-        name: error.name,
-        message: error.message,
-        cause: error.cause
-      }
-      stack = error.stack
-    } else if (error) {
-      details = error
-    }
-
-    this.log({
-      level: LogLevel.ERROR,
-      category,
-      message,
-      details,
-      stack,
-      context,
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent
-    })
+    super(adapter)
   }
 
   // 处理React错误边界
@@ -204,7 +63,7 @@ class RendererErrorHandler {
   }
 
   // 处理Promise拒绝
-  public handlePromiseRejection(event: PromiseRejectionEvent): void {
+  private handlePromiseRejection(event: PromiseRejectionEvent): void {
     this.error(
       'Unhandled Promise Rejection',
       event.reason,
@@ -214,7 +73,7 @@ class RendererErrorHandler {
   }
 
   // 处理运行时错误
-  public handleRuntimeError(event: ErrorEvent): void {
+  private handleRuntimeError(event: ErrorEvent): void {
     this.error(
       'Runtime Error',
       {
@@ -230,7 +89,7 @@ class RendererErrorHandler {
   }
 
   // 设置全局错误处理器
-  private setupGlobalHandlers(): void {
+  private setupGlobalHandlers(handler: BaseErrorHandler): void {
     // 处理未捕获的Promise拒绝
     window.addEventListener('unhandledrejection', (event) => {
       this.handlePromiseRejection(event)
@@ -247,7 +106,7 @@ class RendererErrorHandler {
       (event) => {
         const target = event.target
         if (target && target instanceof HTMLElement) {
-          this.error(
+          handler.error(
             'Resource Load Error',
             {
               tagName: target.tagName,
@@ -263,57 +122,13 @@ class RendererErrorHandler {
     )
   }
 
-  // 设置日志级别
-  public setLogLevel(level: LogLevel): void {
-    this.logLevel = level
+  // 实现抽象方法
+  protected getUrl(): string | undefined {
+    return window?.location?.href
   }
 
-  // 获取最近的日志
-  public getRecentLogs(lines: number = 100): ErrorInfo[] {
-    return this.logEntries.slice(-lines)
-  }
-
-  // 清除日志
-  public clearLogs(): void {
-    this.logEntries = []
-  }
-
-  // 导出日志（用于调试）
-  public exportLogs(): string {
-    return this.logEntries.map((entry) => this.formatLogMessage(entry)).join('\n')
-  }
-
-  // 获取错误统计
-  public getErrorStats(): {
-    total: number
-    byLevel: Record<string, number>
-    byCategory: Record<string, number>
-    recent: number
-  } {
-    const now = Date.now()
-    const oneHourAgo = now - 60 * 60 * 1000
-
-    const byLevel: Record<string, number> = {}
-    const byCategory: Record<string, number> = {}
-    let recent = 0
-
-    for (const entry of this.logEntries) {
-      const levelStr = LogLevel[entry.level]
-      byLevel[levelStr] = (byLevel[levelStr] || 0) + 1
-      byCategory[entry.category] = (byCategory[entry.category] || 0) + 1
-
-      const entryTime = new Date(entry.timestamp).getTime()
-      if (entryTime > oneHourAgo) {
-        recent++
-      }
-    }
-
-    return {
-      total: this.logEntries.length,
-      byLevel,
-      byCategory,
-      recent
-    }
+  protected getUserAgent(): string | undefined {
+    return navigator?.userAgent
   }
 }
 

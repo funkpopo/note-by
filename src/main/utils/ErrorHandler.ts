@@ -2,45 +2,54 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { is } from '@electron-toolkit/utils'
+import {
+  BaseErrorHandler,
+  EnvironmentAdapter,
+  LogLevel,
+  ErrorCategory,
+  ErrorInfo
+} from '../../shared/utils/ErrorHandler'
 
-// 日志级别枚举
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3
-}
+// 重新导出共享的类型和枚举，以保持向后兼容性
+export { LogLevel, ErrorCategory }
+export type { ErrorInfo }
 
-// 错误类型分类
-export enum ErrorCategory {
-  SYSTEM = 'system',
-  NETWORK = 'network',
-  FILE_IO = 'file_io',
-  DATABASE = 'database',
-  WEBDAV = 'webdav',
-  AI_API = 'ai_api',
-  UPDATER = 'updater',
-  UNKNOWN = 'unknown'
-}
-
-// 错误信息接口
-export interface ErrorInfo {
-  level: LogLevel
-  category: ErrorCategory
-  message: string
-  details?: unknown
-  stack?: string
-  timestamp: string
-  context?: string
-}
-
-class MainErrorHandler {
-  private logLevel: LogLevel = is.dev ? LogLevel.DEBUG : LogLevel.INFO
+class MainErrorHandler extends BaseErrorHandler {
   private logFile: string
   private maxLogSize = 10 * 1024 * 1024 // 10MB
   private maxLogFiles = 5
 
   constructor() {
+    const adapter: EnvironmentAdapter = {
+      isDev: is.dev,
+      log: async (info: ErrorInfo, message: string) => {
+        await this.writeToFile(message + '\n')
+
+        // 输出到控制台（仅开发环境）
+        if (is.dev) {
+          switch (info.level) {
+            case LogLevel.DEBUG:
+              console.debug(message)
+              break
+            case LogLevel.INFO:
+              console.info(message)
+              break
+            case LogLevel.WARN:
+              console.warn(message)
+              break
+            case LogLevel.ERROR:
+              console.error(message)
+              break
+          }
+        }
+      },
+      setupGlobalHandlers: (handler) => {
+        // 延迟到super调用后执行
+        setTimeout(() => this.setupGlobalHandlers(handler), 0)
+      }
+    }
+
+    super(adapter)
     this.logFile = this.getLogFilePath()
     this.ensureLogDirectory()
   }
@@ -59,27 +68,6 @@ class MainErrorHandler {
     } catch (error) {
       console.error('Failed to create log directory:', error)
     }
-  }
-
-  private formatLogMessage(info: ErrorInfo): string {
-    const { timestamp, level, category, message, context, details, stack } = info
-    const levelStr = LogLevel[level]
-
-    let formatted = `[${timestamp}] [${levelStr}] [${category}]`
-    if (context) {
-      formatted += ` [${context}]`
-    }
-    formatted += ` ${message}`
-
-    if (details) {
-      formatted += `\nDetails: ${JSON.stringify(details, null, 2)}`
-    }
-
-    if (stack) {
-      formatted += `\nStack: ${stack}`
-    }
-
-    return formatted + '\n'
   }
 
   private async writeToFile(message: string): Promise<void> {
@@ -126,120 +114,15 @@ class MainErrorHandler {
     }
   }
 
-  private async log(info: ErrorInfo): Promise<void> {
-    // 检查日志级别
-    if (info.level < this.logLevel) {
-      return
-    }
-
-    const message = this.formatLogMessage(info)
-
-    // 输出到控制台
-    if (is.dev) {
-      switch (info.level) {
-        case LogLevel.DEBUG:
-          console.debug(message)
-          break
-        case LogLevel.INFO:
-          console.info(message)
-          break
-        case LogLevel.WARN:
-          console.warn(message)
-          break
-        case LogLevel.ERROR:
-          console.error(message)
-          break
-      }
-    }
-
-    // 写入文件
-    await this.writeToFile(message)
-  }
-
-  // 公共接口方法
-  public debug(
-    message: string,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string,
-    details?: unknown
-  ): void {
-    this.log({
-      level: LogLevel.DEBUG,
-      category,
-      message,
-      context,
-      details,
-      timestamp: new Date().toISOString()
-    }).catch(() => {}) // 静默处理日志记录错误
-  }
-
-  public info(
-    message: string,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string,
-    details?: unknown
-  ): void {
-    this.log({
-      level: LogLevel.INFO,
-      category,
-      message,
-      context,
-      details,
-      timestamp: new Date().toISOString()
-    }).catch(() => {})
-  }
-
-  public warn(
-    message: string,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string,
-    details?: unknown
-  ): void {
-    this.log({
-      level: LogLevel.WARN,
-      category,
-      message,
-      context,
-      details,
-      timestamp: new Date().toISOString()
-    }).catch(() => {})
-  }
-
-  public error(
-    message: string,
-    error?: Error | unknown,
-    category: ErrorCategory = ErrorCategory.UNKNOWN,
-    context?: string
-  ): void {
-    let details: unknown
-    let stack: string | undefined
-
-    if (error instanceof Error) {
-      details = {
-        name: error.name,
-        message: error.message,
-        cause: error.cause
-      }
-      stack = error.stack
-    } else if (error) {
-      details = error
-    }
-
-    this.log({
-      level: LogLevel.ERROR,
-      category,
-      message,
-      details,
-      stack,
-      context,
-      timestamp: new Date().toISOString()
-    }).catch(() => {})
-  }
-
   // 处理未捕获的异常和Promise拒绝
-  public setupGlobalHandlers(): void {
+  public setupMainGlobalHandlers(): void {
+    this.setupGlobalHandlers(this)
+  }
+
+  // 私有方法用于设置全局处理器
+  private setupGlobalHandlers(handler: BaseErrorHandler): void {
     process.on('uncaughtException', (error: Error) => {
-      this.error('Uncaught Exception', error, ErrorCategory.SYSTEM, 'global')
+      handler.error('Uncaught Exception', error, ErrorCategory.SYSTEM, 'global')
       // 在生产环境中，考虑重启应用
       if (!is.dev) {
         setTimeout(() => {
@@ -250,18 +133,13 @@ class MainErrorHandler {
     })
 
     process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-      this.error('Unhandled Promise Rejection', reason, ErrorCategory.SYSTEM, 'global')
+      handler.error('Unhandled Promise Rejection', reason, ErrorCategory.SYSTEM, 'global')
       console.error('Promise:', promise)
     })
   }
 
-  // 设置日志级别
-  public setLogLevel(level: LogLevel): void {
-    this.logLevel = level
-  }
-
-  // 获取最近的日志
-  public async getRecentLogs(lines: number = 100): Promise<string[]> {
+  // 获取最近的日志文件内容
+  public async getRecentFileLog(lines: number = 100): Promise<string[]> {
     try {
       if (!fs.existsSync(this.logFile)) {
         return []
@@ -276,8 +154,8 @@ class MainErrorHandler {
     }
   }
 
-  // 清除日志
-  public async clearLogs(): Promise<void> {
+  // 清除日志文件
+  public async clearFileLogs(): Promise<void> {
     try {
       const logDir = path.dirname(this.logFile)
       const files = await fs.promises.readdir(logDir)
@@ -290,6 +168,15 @@ class MainErrorHandler {
     } catch (error) {
       this.error('Failed to clear logs', error, ErrorCategory.SYSTEM, 'clearLogs')
     }
+  }
+
+  // 实现抽象方法
+  protected getUrl(): string | undefined {
+    return undefined
+  }
+
+  protected getUserAgent(): string | undefined {
+    return undefined
   }
 }
 
