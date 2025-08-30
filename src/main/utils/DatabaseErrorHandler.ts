@@ -490,7 +490,7 @@ export class DatabaseErrorHandler {
       }
 
       try {
-        return await operation()
+        return operation()
       } catch (error) {
         const dbError = await this.handleError(error as Error, context)
 

@@ -35,7 +35,7 @@ import './VersionComparison.css'
 // 使用自定义的Compare图标
 const IconCompare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M9 3L5 6.99h3V14h2V6.99h3L9 3zm7 14.01V10h-2v7.01h-3L15 21l4-3.99h-3z"/>
+    <path d="M9 3L5 6.99h3V14h2V6.99h3L9 3zm7 14.01V10h-2v7.01h-3L15 21l4-3.99h-3z" />
   </svg>
 )
 
@@ -145,10 +145,10 @@ interface VersionComparisonProps {
 }
 
 // 侧边并排预览组件
-const SideBySideEditor: React.FC<{ content: string; title: string; isChanged: boolean }> = ({ 
-  content, 
-  title, 
-  isChanged 
+const SideBySideEditor: React.FC<{ content: string; title: string; isChanged: boolean }> = ({
+  content,
+  title,
+  isChanged
 }) => {
   const editor = useEditor({
     extensions: [
@@ -209,10 +209,10 @@ const SideBySideEditor: React.FC<{ content: string; title: string; isChanged: bo
 }
 
 // Diff高亮行组件
-const DiffHighlightLine: React.FC<{ 
+const DiffHighlightLine: React.FC<{
   diff: any
-  lineNumber: number 
-  showLineNumbers: boolean 
+  lineNumber: number
+  showLineNumbers: boolean
 }> = ({ diff, lineNumber, showLineNumbers }) => {
   const getClassName = () => {
     switch (diff.type) {
@@ -283,7 +283,7 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
     const insertions = diffResult.diffs.filter((d) => d.type === 'insert').length
     const deletions = diffResult.diffs.filter((d) => d.type === 'delete').length
     const replacements = diffResult.diffs.filter((d) => d.type === 'replace').length
-    
+
     return { insertions, deletions, replacements }
   }, [diffResult.diffs])
 
@@ -313,9 +313,7 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
         <div className="header-left">
           <Typography.Title heading={4}>版本对比</Typography.Title>
           <div className="comparison-info">
-            <span className="history-time">
-              历史版本: {formatTimestamp(historyItem.timestamp)}
-            </span>
+            <span className="history-time">历史版本: {formatTimestamp(historyItem.timestamp)}</span>
             {diffResult.hasChanges && (
               <div className="diff-stats">
                 {stats.insertions > 0 && (
@@ -331,7 +329,7 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
             )}
           </div>
         </div>
-        
+
         <div className="header-actions">
           <Space>
             <Tooltip content={showDiff ? '显示并排视图' : '显示差异视图'}>
@@ -343,7 +341,7 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
                 {showDiff ? '并排视图' : '差异视图'}
               </Button>
             </Tooltip>
-            
+
             {showDiff && (
               <Button
                 size="small"
@@ -353,11 +351,11 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
                 {showLineNumbers ? '隐藏行号' : '显示行号'}
               </Button>
             )}
-            
+
             <Button icon={<IconRefresh />} onClick={handleRestore} type="primary">
               恢复此版本
             </Button>
-            
+
             <Button icon={<IconClose />} onClick={onClose} type="tertiary">
               关闭
             </Button>
@@ -373,9 +371,7 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
           <div className="no-changes-message">
             <IconCompare />
             <Typography.Title heading={5}>没有发现差异</Typography.Title>
-            <Typography.Text type="secondary">
-              当前内容与历史版本完全一致
-            </Typography.Text>
+            <Typography.Text type="secondary">当前内容与历史版本完全一致</Typography.Text>
           </div>
         ) : showDiff ? (
           // 差异视图

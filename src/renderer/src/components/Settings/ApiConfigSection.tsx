@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Typography, Card, Button, Toast, Form, Modal, Empty, Spin, Tag } from '@douyinfe/semi-ui'
-import { IconCloud, IconPlus, IconPulse, IconEdit, IconDelete, IconCheckCircleStroked, IconClose, IconTick } from '@douyinfe/semi-icons'
+import {
+  IconCloud,
+  IconPlus,
+  IconPulse,
+  IconEdit,
+  IconDelete,
+  IconCheckCircleStroked,
+  IconClose,
+  IconTick
+} from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
 
 const { Title, Text, Paragraph } = Typography
@@ -356,8 +365,8 @@ const ApiConfigSection: React.FC = () => {
         onCancel={() => setIsModalOpen(false)}
         className="settings-modal"
         width={560}
-        bodyStyle={{ 
-          maxHeight: 'calc(100vh - 200px)', 
+        bodyStyle={{
+          maxHeight: 'calc(100vh - 200px)',
           overflowY: 'auto',
           padding: '20px'
         }}

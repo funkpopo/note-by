@@ -129,22 +129,22 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-    
+
     return undefined
   }, [isOpen])
 
   // 计算菜单位置，包含边界检测和自动调整
   const calculateMenuPosition = () => {
     if (!triggerRef.current || !menuRef.current) return position
-    
+
     if (!autoAdjustOverflow) return position
-    
+
     const triggerRect = triggerRef.current.getBoundingClientRect()
     const menuRect = menuRef.current.getBoundingClientRect()
-    
+
     // 获取限制容器，默认为窗口
     let containerRect = { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight }
-    
+
     if (constrainToContainer && getPopupContainer) {
       const container = getPopupContainer()
       if (container) {
@@ -157,24 +157,24 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         }
       }
     }
-    
+
     // 检查各个方向的可用空间
     const spaceBelow = containerRect.bottom - triggerRect.bottom
     const spaceAbove = triggerRect.top - containerRect.top
     const spaceRight = containerRect.right - triggerRect.left
     const spaceLeft = triggerRect.right - containerRect.left
-    
+
     const menuHeight = menuRect.height || 200 // 预估高度
     const menuWidth = menuRect.width || 160 // 预估宽度
-    
+
     // 自动选择最适合的位置
     let bestPosition = position
-    
+
     // 优先考虑垂直方向（上/下）
     const preferBottom = position.includes('bottom')
     const canFitBelow = spaceBelow >= menuHeight + 8
     const canFitAbove = spaceAbove >= menuHeight + 8
-    
+
     if (preferBottom && canFitBelow) {
       bestPosition = position.includes('Left') ? 'bottomLeft' : 'bottomRight'
     } else if (canFitAbove) {
@@ -182,12 +182,12 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     } else if (canFitBelow) {
       bestPosition = position.includes('Left') ? 'bottomLeft' : 'bottomRight'
     }
-    
+
     // 检查水平方向（左/右）
     const preferLeft = bestPosition.includes('Left')
     const canFitRight = spaceRight >= menuWidth
     const canFitLeft = spaceLeft >= menuWidth
-    
+
     if (preferLeft && canFitRight) {
       // 保持Left
     } else if (canFitLeft) {
@@ -195,10 +195,10 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     } else if (canFitRight) {
       bestPosition = bestPosition.replace('Right', 'Left') as typeof position
     }
-    
+
     return bestPosition
   }
-  
+
   // 菜单打开时计算位置
   useEffect(() => {
     if (isOpen && menuRef.current) {

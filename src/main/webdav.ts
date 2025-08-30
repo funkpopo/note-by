@@ -329,7 +329,7 @@ async function needUpload(
 
     // 如果时间戳相近，通过内容比较判断
     if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
-      return await compareFileContent(localFilePath, remoteFilePath)
+      return compareFileContent(localFilePath, remoteFilePath)
     }
 
     // 如果本地文件更新，则需要上传

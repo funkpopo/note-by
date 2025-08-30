@@ -1,6 +1,23 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Typography, Card, Divider, Button, Spin, Badge, Progress, Tag, Tooltip, Space } from '@douyinfe/semi-ui'
-import { IconPieChartStroked, IconRefresh, IconDownload, IconCheckCircleStroked, IconInfoCircle } from '@douyinfe/semi-icons'
+import {
+  Typography,
+  Card,
+  Divider,
+  Button,
+  Spin,
+  Badge,
+  Progress,
+  Tag,
+  Tooltip,
+  Space
+} from '@douyinfe/semi-ui'
+import {
+  IconPieChartStroked,
+  IconRefresh,
+  IconDownload,
+  IconCheckCircleStroked,
+  IconInfoCircle
+} from '@douyinfe/semi-icons'
 import { performanceMonitor, type PerformanceMetrics } from '../../utils/PerformanceMonitor'
 
 const { Title, Text } = Typography
@@ -95,11 +112,7 @@ const PerformanceMonitorSection: React.FC = () => {
             >
               导出数据
             </Button>
-            <Button
-              onClick={handleResetPerformanceMetrics}
-              theme="borderless"
-              type="danger"
-            >
+            <Button onClick={handleResetPerformanceMetrics} theme="borderless" type="danger">
               重置
             </Button>
           </Space>
@@ -168,15 +181,11 @@ const PerformanceMonitorSection: React.FC = () => {
                 <div className="metric-content">
                   <div className="metric-item">
                     <Text type="tertiary">加载时间</Text>
-                    <Text strong>
-                      {formatTime(performanceMetrics.editorPerformance.loadTime)}
-                    </Text>
+                    <Text strong>{formatTime(performanceMetrics.editorPerformance.loadTime)}</Text>
                   </div>
                   <div className="metric-item">
                     <Text type="tertiary">保存时间</Text>
-                    <Text strong>
-                      {formatTime(performanceMetrics.editorPerformance.saveTime)}
-                    </Text>
+                    <Text strong>{formatTime(performanceMetrics.editorPerformance.saveTime)}</Text>
                   </div>
                   <div className="metric-item">
                     <Text type="tertiary">渲染时间</Text>
@@ -374,8 +383,7 @@ const PerformanceMonitorSection: React.FC = () => {
 
         <div className="card-footer">
           <Text type="tertiary" size="small">
-            <IconInfoCircle size="small" />{' '}
-            性能数据每1分钟自动更新，导出数据包含详细历史记录
+            <IconInfoCircle size="small" /> 性能数据每1分钟自动更新，导出数据包含详细历史记录
           </Text>
         </div>
       </Card>

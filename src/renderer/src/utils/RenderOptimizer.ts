@@ -374,7 +374,8 @@ class RenderOptimizer {
 export const renderOptimizer = RenderOptimizer.getInstance()
 
 // 导出便捷函数
-export const scheduleRenderTask = <T>(task: RenderTask<T>): Promise<T> => renderOptimizer.addTask(task)
+export const scheduleRenderTask = <T>(task: RenderTask<T>): Promise<T> =>
+  renderOptimizer.addTask(task)
 
 export const processBatch = <T, R>(
   items: T[],

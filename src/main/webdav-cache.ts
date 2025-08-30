@@ -131,7 +131,7 @@ export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<bo
     }
 
     // 保存更新后的缓存
-    return await saveCache(cache)
+    return saveCache(cache)
   } catch {
     return false
   }
@@ -145,7 +145,7 @@ export async function deleteWebDAVSyncRecord(filePath: string): Promise<boolean>
     // 如果记录存在，则删除
     if (cache.files[filePath]) {
       delete cache.files[filePath]
-      return await saveCache(cache)
+      return saveCache(cache)
     }
 
     return true // 记录不存在也视为成功
@@ -165,7 +165,7 @@ export async function clearWebDAVSyncCache(): Promise<boolean> {
     }
 
     // 保存空缓存
-    return await saveCache(cacheData)
+    return saveCache(cacheData)
   } catch {
     return false
   }
@@ -201,7 +201,7 @@ export async function updateLastGlobalSyncTime(): Promise<boolean> {
   try {
     const cache = await loadCache()
     cache.lastSync = Date.now()
-    return await saveCache(cache)
+    return saveCache(cache)
   } catch {
     return false
   }

@@ -300,7 +300,6 @@ interface ActivityData {
 
 // 分析缓存项接口
 
-
 const { Title, Paragraph, Text } = Typography
 
 // 异步图表配置生成器
@@ -314,7 +313,7 @@ const generateChartConfigAsync = async (
     isDarkMode?: boolean
   } = {}
 ): Promise<EChartsOption> => {
-  return await scheduleRenderTask({
+  return scheduleRenderTask({
     id: `chart-config-${chartType}-${Date.now()}`,
     priority: 'medium',
     callback: async () => {

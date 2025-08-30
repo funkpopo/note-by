@@ -40,7 +40,9 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
   } | null>(null)
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false)
   const [authCode, setAuthCode] = useState<string>('')
-  const [availableProviders, setAvailableProviders] = useState<Array<{ id: string; name: string; description: string }>>([])
+  const [availableProviders, setAvailableProviders] = useState<
+    Array<{ id: string; name: string; description: string }>
+  >([])
 
   useEffect(() => {
     loadProviders()
@@ -119,9 +121,9 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
     try {
       const values = formApi?.getValues() as CloudStorageConfig
       values.provider = selectedProvider as 'webdav' | 'googledrive' | 'dropbox'
-      
+
       const result = await window.api.cloudStorage.testConnection(values)
-      
+
       if (result.success) {
         Toast.success(result.message)
         setSyncStatus({
@@ -148,9 +150,9 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
     try {
       const values = formApi?.getValues() as CloudStorageConfig
       values.provider = selectedProvider as 'webdav' | 'googledrive' | 'dropbox'
-      
+
       const result = await window.api.cloudStorage.authenticate(values)
-      
+
       if (result.success && result.authUrl) {
         setShowAuthModal(true)
         window.open(result.authUrl, '_blank')
@@ -167,7 +169,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
       const values = formApi?.getValues() as CloudStorageConfig
       values.auth = values.auth || {}
       values.auth.accessToken = authCode
-      
+
       await saveConfig(values)
       setShowAuthModal(false)
       Toast.success('认证成功')
@@ -179,13 +181,13 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
   const handleSync = async (direction: 'upload' | 'download' | 'bidirectional'): Promise<void> => {
     setLoading(true)
     setSyncProgress(null)
-    
+
     try {
       const values = formApi?.getValues() as CloudStorageConfig
       values.provider = selectedProvider as 'webdav' | 'googledrive' | 'dropbox'
-      
+
       let result: CloudSyncResult
-      
+
       if (direction === 'upload') {
         result = await window.api.cloudStorage.syncLocalToRemote(values)
       } else if (direction === 'download') {
@@ -193,7 +195,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
       } else {
         result = await window.api.cloudStorage.syncBidirectional(values)
       }
-      
+
       if (result.success) {
         Toast.success(result.message)
         setSyncStatus({
@@ -209,7 +211,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
           message: result.message
         })
       }
-      
+
       onSyncComplete?.(result)
     } catch (error) {
       Toast.error('同步失败')
@@ -245,7 +247,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             />
           </>
         )
-      
+
       case 'googledrive':
         return (
           <>
@@ -279,7 +281,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             </Button>
           </>
         )
-      
+
       case 'dropbox':
         return (
           <>
@@ -313,7 +315,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             </Button>
           </>
         )
-      
+
       default:
         return null
     }
@@ -338,19 +340,15 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
           style={{ width: '100%' }}
           dropdownClassName="cloud-storage-dropdown"
           renderSelectedItem={() => {
-            const selected = availableProviders.find(p => p.id === selectedProvider)
+            const selected = availableProviders.find((p) => p.id === selectedProvider)
             return selected ? selected.name : '选择云存储服务'
           }}
         >
           {availableProviders.map((provider) => (
             <Select.Option key={provider.id} value={provider.id}>
               <div className="cloud-storage-option">
-                <div className="cloud-storage-option-title">
-                  {provider.name}
-                </div>
-                <div className="cloud-storage-option-desc">
-                  {provider.description}
-                </div>
+                <div className="cloud-storage-option-title">{provider.name}</div>
+                <div className="cloud-storage-option-desc">{provider.description}</div>
               </div>
             </Select.Option>
           ))}
@@ -374,12 +372,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
           initValue=""
         />
 
-        <Form.Switch
-          field="enabled"
-          label="启用同步"
-          checkedText="开"
-          uncheckedText="关"
-        />
+        <Form.Switch field="enabled" label="启用同步" checkedText="开" uncheckedText="关" />
 
         <Form.Switch
           field="syncOnStartup"
@@ -388,11 +381,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
           uncheckedText="关"
         />
 
-        <Form.RadioGroup
-          field="syncDirection"
-          label="同步方向"
-          initValue="bidirectional"
-        >
+        <Form.RadioGroup field="syncDirection" label="同步方向" initValue="bidirectional">
           <Radio value="localToRemote">仅上传</Radio>
           <Radio value="remoteToLocal">仅下载</Radio>
           <Radio value="bidirectional">双向同步</Radio>
@@ -408,11 +397,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             >
               测试连接
             </Button>
-            <Button
-              theme="solid"
-              type="primary"
-              htmlType="submit"
-            >
+            <Button theme="solid" type="primary" htmlType="submit">
               保存配置
             </Button>
           </Space>

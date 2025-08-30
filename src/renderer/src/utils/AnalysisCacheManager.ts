@@ -19,19 +19,19 @@ const calculateFingerprint = (stats: unknown, activityData: unknown): string => 
     totalEdits?: number
     editsByDate?: Array<{ date: string }>
   }
-  
+
   interface ActivityData {
     dailyActivity?: Record<string, unknown>
   }
 
   const statsTyped = stats as StatsData
   const activityTyped = activityData as ActivityData
-  
+
   const data = {
     totalNotes: statsTyped?.totalNotes || 0,
     totalEdits: statsTyped?.totalEdits || 0,
     lastEditTime: Math.max(
-      ...(statsTyped?.editsByDate || []).map((item: { date: string }) => 
+      ...(statsTyped?.editsByDate || []).map((item: { date: string }) =>
         new Date(item.date).getTime()
       ),
       0
@@ -142,7 +142,11 @@ class AnalysisCacheManager {
   /**
    * 保存分析结果到缓存
    */
-  async setCachedAnalysis(item: AnalysisCacheItem, stats: unknown, activityData: unknown): Promise<void> {
+  async setCachedAnalysis(
+    item: AnalysisCacheItem,
+    stats: unknown,
+    activityData: unknown
+  ): Promise<void> {
     const cacheKey = this.generateCacheKey(item.date, item.modelId)
     const lookupKey = this.generateLookupKey(item.date, item.modelId)
 

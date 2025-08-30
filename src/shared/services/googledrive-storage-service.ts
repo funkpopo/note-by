@@ -1,4 +1,9 @@
-import { ICloudStorageService, CloudStorageConfig, CloudFileInfo, CloudSyncResult } from '../types/cloud-storage'
+import {
+  ICloudStorageService,
+  CloudStorageConfig,
+  CloudFileInfo,
+  CloudSyncResult
+} from '../types/cloud-storage'
 import { google } from 'googleapis'
 import * as fs from 'fs/promises'
 import * as path from 'path'
@@ -8,7 +13,6 @@ export class GoogleDriveStorageService implements ICloudStorageService {
   private auth: any = null
 
   async initialize(config: CloudStorageConfig): Promise<boolean> {
-
     try {
       // 初始化Google Auth
       this.auth = new google.auth.OAuth2(
@@ -27,7 +31,7 @@ export class GoogleDriveStorageService implements ICloudStorageService {
 
       // 初始化Drive API
       this.drive = google.drive({ version: 'v3', auth: this.auth })
-      
+
       return true
     } catch (error) {
       console.error('Google Drive初始化失败:', error)
@@ -44,9 +48,9 @@ export class GoogleDriveStorageService implements ICloudStorageService {
       // 测试连接 - 获取用户信息
       const response = await this.drive.about.get({ fields: 'user' })
       if (response.data.user) {
-        return { 
-          success: true, 
-          message: `连接成功，用户: ${response.data.user.displayName || response.data.user.emailAddress}` 
+        return {
+          success: true,
+          message: `连接成功，用户: ${response.data.user.displayName || response.data.user.emailAddress}`
         }
       }
       return { success: false, message: '无法获取用户信息' }
@@ -56,7 +60,7 @@ export class GoogleDriveStorageService implements ICloudStorageService {
   }
 
   private async findOrCreateFolder(folderPath: string): Promise<string> {
-    const pathParts = folderPath.split('/').filter(part => part)
+    const pathParts = folderPath.split('/').filter((part) => part)
     let parentId = 'root'
 
     for (const folderName of pathParts) {
@@ -282,14 +286,21 @@ export class GoogleDriveStorageService implements ICloudStorageService {
     }
   }
 
-  private async syncDirectory(localDir: string, remoteDir: string, direction: 'upload' | 'download' | 'bidirectional'): Promise<{ uploaded: number; downloaded: number; failed: number; skipped: number }> {
-    let uploaded = 0, downloaded = 0, failed = 0, skipped = 0
+  private async syncDirectory(
+    localDir: string,
+    remoteDir: string,
+    direction: 'upload' | 'download' | 'bidirectional'
+  ): Promise<{ uploaded: number; downloaded: number; failed: number; skipped: number }> {
+    let uploaded = 0,
+      downloaded = 0,
+      failed = 0,
+      skipped = 0
 
     try {
       if (direction === 'upload' || direction === 'bidirectional') {
         // 上传本地文件到远程
         const localEntries = await fs.readdir(localDir, { withFileTypes: true })
-        
+
         for (const entry of localEntries) {
           const localPath = path.join(localDir, entry.name)
           const remotePath = path.join(remoteDir, entry.name).replace(/\\/g, '/')
@@ -318,10 +329,10 @@ export class GoogleDriveStorageService implements ICloudStorageService {
       if (direction === 'download' || direction === 'bidirectional') {
         // 从远程下载文件到本地
         const remoteFiles = await this.listFiles(remoteDir)
-        
+
         for (const remoteFile of remoteFiles) {
           const localPath = path.join(localDir, remoteFile.name)
-          
+
           if (remoteFile.isDirectory) {
             if (remoteFile.name === '.assets') {
               // 递归处理.assets目录

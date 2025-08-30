@@ -1,4 +1,9 @@
-import { ICloudStorageService, CloudStorageConfig, CloudFileInfo, CloudSyncResult } from '../types/cloud-storage'
+import {
+  ICloudStorageService,
+  CloudStorageConfig,
+  CloudFileInfo,
+  CloudSyncResult
+} from '../types/cloud-storage'
 import { Dropbox } from 'dropbox'
 import * as fs from 'fs/promises'
 import * as path from 'path'
@@ -35,9 +40,9 @@ export class DropboxStorageService implements ICloudStorageService {
       // 测试连接 - 获取用户信息
       const response = await this.dbx.usersGetCurrentAccount()
       if (response.result) {
-        return { 
-          success: true, 
-          message: `连接成功，用户: ${response.result.name.display_name || response.result.email}` 
+        return {
+          success: true,
+          message: `连接成功，用户: ${response.result.name.display_name || response.result.email}`
         }
       }
       return { success: false, message: '无法获取用户信息' }
@@ -89,7 +94,7 @@ export class DropboxStorageService implements ICloudStorageService {
 
       // 下载文件
       const response = await this.dbx.filesDownload({ path: normalizedRemotePath })
-      
+
       // 确保本地目录存在
       const localDir = path.dirname(localPath)
       await fs.mkdir(localDir, { recursive: true })
@@ -97,7 +102,7 @@ export class DropboxStorageService implements ICloudStorageService {
       // 保存文件
       const fileData = (response.result as any).fileBinary
       await fs.writeFile(localPath, fileData)
-      
+
       return true
     } catch (error) {
       console.error('Dropbox下载失败:', error)
@@ -123,15 +128,19 @@ export class DropboxStorageService implements ICloudStorageService {
 
     try {
       const normalizedRemotePath = this.normalizePath(remotePath)
-      await this.dbx.filesCreateFolderV2({ 
+      await this.dbx.filesCreateFolderV2({
         path: normalizedRemotePath,
         autorename: false
       })
       return true
     } catch (error: any) {
       // 如果文件夹已存在，也认为成功
-      if (error.error && error.error['.tag'] === 'path' && 
-          error.error.path && error.error.path['.tag'] === 'conflict') {
+      if (
+        error.error &&
+        error.error['.tag'] === 'path' &&
+        error.error.path &&
+        error.error.path['.tag'] === 'conflict'
+      ) {
         return true
       }
       console.error('Dropbox创建目录失败:', error)
@@ -155,9 +164,12 @@ export class DropboxStorageService implements ICloudStorageService {
               name: entry.name,
               path: entry.path_display || entry.path_lower || entry.name,
               size: entry['.tag'] === 'file' ? (entry as any).size : 0,
-              modifiedTime: entry['.tag'] === 'file' ? 
-                new Date((entry as any).client_modified || (entry as any).server_modified).getTime() : 
-                Date.now(),
+              modifiedTime:
+                entry['.tag'] === 'file'
+                  ? new Date(
+                      (entry as any).client_modified || (entry as any).server_modified
+                    ).getTime()
+                  : Date.now(),
               isDirectory: entry['.tag'] === 'folder'
             })
           }
@@ -177,7 +189,7 @@ export class DropboxStorageService implements ICloudStorageService {
     try {
       const normalizedRemotePath = this.normalizePath(remotePath)
       const response = await this.dbx.filesGetMetadata({ path: normalizedRemotePath })
-      
+
       const metadata = response.result
       if (metadata['.tag'] === 'file' || metadata['.tag'] === 'folder') {
         return {
@@ -185,9 +197,12 @@ export class DropboxStorageService implements ICloudStorageService {
           name: metadata.name,
           path: metadata.path_display || metadata.path_lower || metadata.name,
           size: metadata['.tag'] === 'file' ? (metadata as any).size : 0,
-          modifiedTime: metadata['.tag'] === 'file' ? 
-            new Date((metadata as any).client_modified || (metadata as any).server_modified).getTime() : 
-            Date.now(),
+          modifiedTime:
+            metadata['.tag'] === 'file'
+              ? new Date(
+                  (metadata as any).client_modified || (metadata as any).server_modified
+                ).getTime()
+              : Date.now(),
           isDirectory: metadata['.tag'] === 'folder'
         }
       }
@@ -199,8 +214,15 @@ export class DropboxStorageService implements ICloudStorageService {
     }
   }
 
-  private async syncDirectory(localDir: string, remoteDir: string, direction: 'upload' | 'download' | 'bidirectional'): Promise<{ uploaded: number; downloaded: number; failed: number; skipped: number }> {
-    let uploaded = 0, downloaded = 0, failed = 0, skipped = 0
+  private async syncDirectory(
+    localDir: string,
+    remoteDir: string,
+    direction: 'upload' | 'download' | 'bidirectional'
+  ): Promise<{ uploaded: number; downloaded: number; failed: number; skipped: number }> {
+    let uploaded = 0,
+      downloaded = 0,
+      failed = 0,
+      skipped = 0
 
     try {
       // 确保远程目录存在
@@ -212,7 +234,7 @@ export class DropboxStorageService implements ICloudStorageService {
         // 上传本地文件到远程
         try {
           const localEntries = await fs.readdir(localDir, { withFileTypes: true })
-          
+
           for (const entry of localEntries) {
             const localPath = path.join(localDir, entry.name)
             const remotePath = path.join(remoteDir, entry.name).replace(/\\/g, '/')
@@ -245,10 +267,10 @@ export class DropboxStorageService implements ICloudStorageService {
       if (direction === 'download' || direction === 'bidirectional') {
         // 从远程下载文件到本地
         const remoteFiles = await this.listFiles(remoteDir)
-        
+
         for (const remoteFile of remoteFiles) {
           const localPath = path.join(localDir, remoteFile.name)
-          
+
           if (remoteFile.isDirectory) {
             if (remoteFile.name === '.assets') {
               // 递归处理.assets目录
@@ -388,10 +410,10 @@ export class DropboxStorageService implements ICloudStorageService {
     try {
       // 创建临时的Dropbox实例用于认证
       const tempDbx = new Dropbox({ clientId: this.config.auth.clientId as string })
-      
+
       // Dropbox SDK v10 使用 auth.getAuthenticationUrl()
       const authUrl = await (tempDbx as any).auth.getAuthenticationUrl(
-        this.config.auth.redirectUri as string || 'http://localhost:3000/auth/callback'
+        (this.config.auth.redirectUri as string) || 'http://localhost:3000/auth/callback'
       )
 
       return {

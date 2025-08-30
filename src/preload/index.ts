@@ -217,7 +217,7 @@ interface AnalysisCacheItem {
 const api = {
   // 获取笔记文件夹路径
   getNotesPath: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.GET_NOTES_PATH),
-  
+
   // 设置相关API
   settings: {
     // 获取所有设置
@@ -728,19 +728,21 @@ const api = {
       }
     }
   },
-  
+
   // 云存储相关API
   cloudStorage: {
     // 测试连接
     testConnection: (config: any): Promise<{ success: boolean; message: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_TEST_CONNECTION, config),
-    
+
     // 认证服务
     authenticate: (config: any): Promise<{ success: boolean; message: string; authUrl?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_AUTHENTICATE, config),
-    
+
     // 同步本地到远程
-    syncLocalToRemote: (config: any): Promise<{
+    syncLocalToRemote: (
+      config: any
+    ): Promise<{
       success: boolean
       message: string
       uploaded: number
@@ -748,9 +750,11 @@ const api = {
       failed: number
       skipped: number
     }> => ipcRenderer.invoke(IPC_CHANNELS.CLOUD_SYNC_LOCAL_TO_REMOTE, config),
-    
+
     // 同步远程到本地
-    syncRemoteToLocal: (config: any): Promise<{
+    syncRemoteToLocal: (
+      config: any
+    ): Promise<{
       success: boolean
       message: string
       uploaded: number
@@ -758,9 +762,11 @@ const api = {
       failed: number
       skipped: number
     }> => ipcRenderer.invoke(IPC_CHANNELS.CLOUD_SYNC_REMOTE_TO_LOCAL, config),
-    
+
     // 双向同步
-    syncBidirectional: (config: any): Promise<{
+    syncBidirectional: (
+      config: any
+    ): Promise<{
       success: boolean
       message: string
       uploaded: number
@@ -768,19 +774,19 @@ const api = {
       failed: number
       skipped: number
     }> => ipcRenderer.invoke(IPC_CHANNELS.CLOUD_SYNC_BIDIRECTIONAL, config),
-    
+
     // 取消同步
     cancelSync: (): Promise<{ success: boolean; message: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_CANCEL_SYNC),
-    
+
     // 获取可用的云存储提供商
     getProviders: (): Promise<Array<{ id: string; name: string; description: string }>> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_GET_PROVIDERS),
-    
+
     // 通知配置已变更
     notifyConfigChanged: (): Promise<{ success: boolean; message: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_CONFIG_CHANGED),
-    
+
     // 监听同步进度
     onSyncProgress: (
       callback: (progress: {
@@ -805,7 +811,7 @@ const api = {
       }
     }
   },
-  
+
   // 数据分析相关API
   analytics: {
     // 获取笔记历史统计数据

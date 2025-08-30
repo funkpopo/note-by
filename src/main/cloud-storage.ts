@@ -24,17 +24,21 @@ function notifySyncProgress(config: {
   }
 }
 
-export async function testCloudConnection(config: CloudStorageConfig): Promise<{ success: boolean; message: string }> {
+export async function testCloudConnection(
+  config: CloudStorageConfig
+): Promise<{ success: boolean; message: string }> {
   try {
-    return await cloudStorageManager.testConnection(config)
+    return cloudStorageManager.testConnection(config)
   } catch (error) {
     return { success: false, message: `测试连接失败: ${error}` }
   }
 }
 
-export async function authenticateCloudService(config: CloudStorageConfig): Promise<{ success: boolean; message: string; authUrl?: string }> {
+export async function authenticateCloudService(
+  config: CloudStorageConfig
+): Promise<{ success: boolean; message: string; authUrl?: string }> {
   try {
-    return await cloudStorageManager.authenticate(config)
+    return cloudStorageManager.authenticate(config)
   } catch (error) {
     return { success: false, message: `认证失败: ${error}` }
   }
@@ -43,7 +47,7 @@ export async function authenticateCloudService(config: CloudStorageConfig): Prom
 export async function syncLocalToRemote(config: CloudStorageConfig): Promise<CloudSyncResult> {
   try {
     resetSyncCancellation()
-    
+
     notifySyncProgress({
       total: 100,
       processed: 0,
@@ -51,7 +55,7 @@ export async function syncLocalToRemote(config: CloudStorageConfig): Promise<Clo
     })
 
     const result = await cloudStorageManager.syncLocalToRemote(config)
-    
+
     notifySyncProgress({
       total: 100,
       processed: 100,
@@ -74,7 +78,7 @@ export async function syncLocalToRemote(config: CloudStorageConfig): Promise<Clo
 export async function syncRemoteToLocal(config: CloudStorageConfig): Promise<CloudSyncResult> {
   try {
     resetSyncCancellation()
-    
+
     notifySyncProgress({
       total: 100,
       processed: 0,
@@ -82,7 +86,7 @@ export async function syncRemoteToLocal(config: CloudStorageConfig): Promise<Clo
     })
 
     const result = await cloudStorageManager.syncRemoteToLocal(config)
-    
+
     notifySyncProgress({
       total: 100,
       processed: 100,
@@ -105,7 +109,7 @@ export async function syncRemoteToLocal(config: CloudStorageConfig): Promise<Clo
 export async function syncBidirectional(config: CloudStorageConfig): Promise<CloudSyncResult> {
   try {
     resetSyncCancellation()
-    
+
     notifySyncProgress({
       total: 100,
       processed: 0,
@@ -113,7 +117,7 @@ export async function syncBidirectional(config: CloudStorageConfig): Promise<Clo
     })
 
     const result = await cloudStorageManager.syncBidirectional(config)
-    
+
     notifySyncProgress({
       total: 100,
       processed: 100,
@@ -137,7 +141,10 @@ export function getAvailableProviders(): Array<{ id: string; name: string; descr
   return cloudStorageManager.getSupportedProviders()
 }
 
-export async function handleOAuthCallback(provider: string, code: string): Promise<{ success: boolean; message: string; tokens?: any }> {
+export async function handleOAuthCallback(
+  provider: string,
+  code: string
+): Promise<{ success: boolean; message: string; tokens?: any }> {
   try {
     const service = cloudStorageManager.getService(provider)
     if (!service) {

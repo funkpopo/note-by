@@ -737,17 +737,17 @@ app.whenReady().then(() => {
 
   // OpenAI连接测试
   ipcMain.handle(IPC_CHANNELS.TEST_OPENAI_CONNECTION, async (_, AiApiConfig) => {
-    return await testOpenAIConnection(AiApiConfig)
+    return testOpenAIConnection(AiApiConfig)
   })
 
   // 内容生成
   ipcMain.handle(IPC_CHANNELS.GENERATE_CONTENT, async (_, request) => {
-    return await generateContent(request)
+    return generateContent(request)
   })
 
   // AI生成（支持消息格式）
   ipcMain.handle(IPC_CHANNELS.GENERATE_WITH_MESSAGES, async (_, request) => {
-    return await generateWithMessages(request)
+    return generateWithMessages(request)
   })
 
   // 流式请求管理Map
@@ -1063,7 +1063,7 @@ app.whenReady().then(() => {
     })
 
     // 导出为Buffer
-    return await Packer.toBuffer(doc)
+    return Packer.toBuffer(doc)
   }
 
   // 导出DOCX文件
@@ -2110,7 +2110,7 @@ ${htmlContent}
 
   // 更新检查
   ipcMain.handle(IPC_CHANNELS.CHECK_FOR_UPDATES, async () => {
-    return await checkForUpdates()
+    return checkForUpdates()
   })
 
   // 获取笔记的历史记录

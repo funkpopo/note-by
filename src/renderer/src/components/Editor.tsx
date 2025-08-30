@@ -729,7 +729,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsVisible(true)
             observer.unobserve(entry.target)
@@ -749,12 +749,12 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
   // 图片加载完成后清理内存
   const handleImageLoad = useCallback(() => {
     setIsLoaded(true)
-    
+
     // 使用 editorMemoryManager 优化图片
     if (imgRef.current && editorMemoryManager) {
       fetch(node.attrs.src)
-        .then(response => response.blob())
-        .then(blob => {
+        .then((response) => response.blob())
+        .then((blob) => {
           editorMemoryManager.optimizeAndCacheImage(node.attrs.src, blob)
         })
         .catch(() => {
@@ -1169,9 +1169,17 @@ const EditorHeader: React.FC<{
   currentContent?: string
   onSave: () => void
   onContentRestore?: (content: string) => void
-}> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, currentContent = '', onSave, onContentRestore }) => {
+}> = ({
+  currentFolder,
+  currentFile,
+  hasUnsavedChanges,
+  isSaving,
+  currentContent = '',
+  onSave,
+  onContentRestore
+}) => {
   const [isExporting, setIsExporting] = useState(false)
-  
+
   if (!currentFolder || !currentFile) return null
 
   const filePath = `${currentFolder}/${currentFile}`
@@ -1206,48 +1214,51 @@ const EditorHeader: React.FC<{
   ]
 
   // 处理导出操作
-  const handleExport = useCallback(async (format: string) => {
-    if (!currentFolder || !currentFile || !currentContent) {
-      Toast.warning('没有可导出的内容')
-      return
-    }
-
-    setIsExporting(true)
-    try {
-      let result
-      switch (format) {
-        case 'pdf':
-          result = await window.api.markdown.exportToPdf(filePath, currentContent)
-          break
-        case 'docx':
-          result = await window.api.markdown.exportToDocx(filePath, currentContent)
-          break
-        case 'html':
-          result = await window.api.markdown.exportToHtml(filePath, currentContent)
-          break
-        case 'notion':
-          result = await window.api.markdown.exportToNotion(filePath, currentContent)
-          break
-        case 'obsidian':
-          result = await window.api.markdown.exportToObsidian(filePath, currentContent)
-          break
-        default:
-          Toast.error('不支持的导出格式')
-          return
+  const handleExport = useCallback(
+    async (format: string) => {
+      if (!currentFolder || !currentFile || !currentContent) {
+        Toast.warning('没有可导出的内容')
+        return
       }
 
-      if (result.success) {
-        Toast.success(`导出成功: ${result.path}`)
-      } else {
-        Toast.error(`导出失败: ${result.error}`)
+      setIsExporting(true)
+      try {
+        let result
+        switch (format) {
+          case 'pdf':
+            result = await window.api.markdown.exportToPdf(filePath, currentContent)
+            break
+          case 'docx':
+            result = await window.api.markdown.exportToDocx(filePath, currentContent)
+            break
+          case 'html':
+            result = await window.api.markdown.exportToHtml(filePath, currentContent)
+            break
+          case 'notion':
+            result = await window.api.markdown.exportToNotion(filePath, currentContent)
+            break
+          case 'obsidian':
+            result = await window.api.markdown.exportToObsidian(filePath, currentContent)
+            break
+          default:
+            Toast.error('不支持的导出格式')
+            return
+        }
+
+        if (result.success) {
+          Toast.success(`导出成功: ${result.path}`)
+        } else {
+          Toast.error(`导出失败: ${result.error}`)
+        }
+      } catch (error) {
+        Toast.error('导出失败，请重试')
+        console.error('导出错误:', error)
+      } finally {
+        setIsExporting(false)
       }
-    } catch (error) {
-      Toast.error('导出失败，请重试')
-      console.error('导出错误:', error)
-    } finally {
-      setIsExporting(false)
-    }
-  }, [currentFolder, currentFile, currentContent])
+    },
+    [currentFolder, currentFile, currentContent]
+  )
 
   return (
     <div className="editor-header">
@@ -1290,7 +1301,7 @@ const EditorHeader: React.FC<{
             getPopupContainer={() => {
               // 尝试找到最近的编辑器容器
               const container = document.querySelector('.tiptap-editor')
-              return container as HTMLElement || document.body
+              return (container as HTMLElement) || document.body
             }}
             className="export-dropdown"
           >
@@ -1584,7 +1595,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
 
     if (isLoading && loadingFeature) {
       editorElement.classList.add('ai-processing')
-      
+
       // 防抖处理选中状态恢复
       const debounceSelection = () => {
         if (preservedSelection && editor) {
@@ -2511,10 +2522,10 @@ const Editor: React.FC<EditorProps> = ({
 
     if (hasChanges) {
       editorInstance.view.dispatch(tr)
-      
+
       // 释放内存
       diffNodes.length = 0
-      
+
       // 通知垃圾回收
       if (typeof window !== 'undefined' && (window as any).gc) {
         setTimeout(() => (window as any).gc(), 100)
@@ -2669,11 +2680,11 @@ const Editor: React.FC<EditorProps> = ({
       editable,
       onUpdate: ({ editor }) => {
         const html = editor.getHTML()
-        
+
         // 更新编辑时间，但延迟设置 hasUnsavedChanges 以减少频繁触发
         lastEditTimeRef.current = Date.now()
         isEditingRef.current = true
-        
+
         // 使用防抖设置未保存状态，避免过于频繁的状态更新
         if (autoSaveTimeoutRef.current) {
           // 如果已有自动保存计划，直接设置状态
@@ -2684,7 +2695,7 @@ const Editor: React.FC<EditorProps> = ({
             setHasUnsavedChanges(true)
           }, 500)
         }
-        
+
         onUpdate?.(html)
       },
       editorProps: {
@@ -2742,35 +2753,38 @@ const Editor: React.FC<EditorProps> = ({
   )
 
   // 保存文档内容
-  const saveDocument = useCallback(async (isAutoSave = false) => {
-    if (!currentFolder || !currentFile || !editor) return
+  const saveDocument = useCallback(
+    async (isAutoSave = false) => {
+      if (!currentFolder || !currentFile || !editor) return
 
-    // 保存前先清理所有未处理的diff节点
-    clearAllDiffNodes(editor)
+      // 保存前先清理所有未处理的diff节点
+      clearAllDiffNodes(editor)
 
-    setIsSaving(true)
-    try {
-      const filePath = `${currentFolder}/${currentFile}`
-      const content = editor.getHTML()
-      const result = await window.api.markdown.save(filePath, content)
+      setIsSaving(true)
+      try {
+        const filePath = `${currentFolder}/${currentFile}`
+        const content = editor.getHTML()
+        const result = await window.api.markdown.save(filePath, content)
 
-      if (result.success) {
-        setHasUnsavedChanges(false)
-        // 只有手动保存才显示Toast提示
-        if (!isAutoSave) {
-          Toast.success(`文档已保存`)
+        if (result.success) {
+          setHasUnsavedChanges(false)
+          // 只有手动保存才显示Toast提示
+          if (!isAutoSave) {
+            Toast.success(`文档已保存`)
+          }
+          onFileChanged?.()
+        } else {
+          Toast.error(`保存失败: ${result.error || '未知错误'}`)
         }
-        onFileChanged?.()
-      } else {
-        Toast.error(`保存失败: ${result.error || '未知错误'}`)
+      } catch (error) {
+        console.error('Error saving document:', error)
+        Toast.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      } finally {
+        setIsSaving(false)
       }
-    } catch (error) {
-      console.error('Error saving document:', error)
-      Toast.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
-    } finally {
-      setIsSaving(false)
-    }
-  }, [currentFolder, currentFile, onFileChanged, editor, clearAllDiffNodes])
+    },
+    [currentFolder, currentFile, onFileChanged, editor, clearAllDiffNodes]
+  )
 
   // 自动保存功能（优化版本 - 增强防抖机制）
   const scheduleAutoSave = useCallback(() => {
@@ -2811,11 +2825,12 @@ const Editor: React.FC<EditorProps> = ({
       )
 
       // 检查内存使用情况
-      const memoryPressure = editorMemoryManager?.getCurrentMemoryUsage()
-        .then(usage => usage.percentage > 0.8)
+      const memoryPressure = editorMemoryManager
+        ?.getCurrentMemoryUsage()
+        .then((usage) => usage.percentage > 0.8)
         .catch(() => false)
 
-      Promise.resolve(memoryPressure).then(highMemoryPressure => {
+      Promise.resolve(memoryPressure).then((highMemoryPressure) => {
         // 如果内存压力高，推迟自动保存
         if (highMemoryPressure) {
           setTimeout(() => scheduleAutoSave(), 5000)
@@ -2901,7 +2916,7 @@ const Editor: React.FC<EditorProps> = ({
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current)
       }
-      
+
       // 清理所有diff节点
       if (editor) {
         clearAllDiffNodes(editor)
@@ -2910,7 +2925,7 @@ const Editor: React.FC<EditorProps> = ({
       // 移除事件监听器并停止监控
       editorMemoryManager.removeEventListener('critical', memoryEventListener)
       editorMemoryManager.removeEventListener('warning', memoryEventListener)
-      
+
       // 执行最终清理
       editorMemoryManager.performMemoryCleanup(true).finally(() => {
         // 清理完成

@@ -71,10 +71,10 @@ export interface ICloudStorageService {
   // 目录操作
   createDirectory(remotePath: string): Promise<boolean>
   listFiles(remotePath: string): Promise<CloudFileInfo[]>
-  
+
   // 文件信息
   getFileInfo(remotePath: string): Promise<CloudFileInfo | null>
-  
+
   // 同步操作
   syncLocalToRemote(config: CloudStorageConfig): Promise<CloudSyncResult>
   syncRemoteToLocal(config: CloudStorageConfig): Promise<CloudSyncResult>
@@ -83,7 +83,7 @@ export interface ICloudStorageService {
   // 认证相关
   authenticate(): Promise<{ success: boolean; message: string; authUrl?: string }>
   refreshAuth(): Promise<boolean>
-  
+
   // 服务名称
   getServiceName(): string
 }

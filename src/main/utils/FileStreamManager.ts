@@ -201,7 +201,10 @@ class FileStreamManager {
             completedCount++
 
             // 调用错误回调
-            config.onError?.(error instanceof Error ? error : new Error(String(error)), `operation-${i + index}`)
+            config.onError?.(
+              error instanceof Error ? error : new Error(String(error)),
+              `operation-${i + index}`
+            )
             config.onProgress?.(completedCount, totalCount)
 
             return failure

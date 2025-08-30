@@ -27,10 +27,12 @@ export class CloudStorageManager {
       throw new Error(`不支持的云存储提供商: ${config.provider}`)
     }
 
-    return await service.initialize(config)
+    return service.initialize(config)
   }
 
-  public async testConnection(config: CloudStorageConfig): Promise<{ success: boolean; message: string }> {
+  public async testConnection(
+    config: CloudStorageConfig
+  ): Promise<{ success: boolean; message: string }> {
     const service = this.getService(config.provider)
     if (!service) {
       return { success: false, message: `不支持的云存储提供商: ${config.provider}` }
@@ -38,7 +40,7 @@ export class CloudStorageManager {
 
     try {
       await service.initialize(config)
-      return await service.testConnection()
+      return service.testConnection()
     } catch (error) {
       return { success: false, message: `连接失败: ${error}` }
     }
@@ -59,7 +61,7 @@ export class CloudStorageManager {
 
     try {
       await service.initialize(config)
-      return await service.syncLocalToRemote(config)
+      return service.syncLocalToRemote(config)
     } catch (error) {
       return {
         success: false,
@@ -87,7 +89,7 @@ export class CloudStorageManager {
 
     try {
       await service.initialize(config)
-      return await service.syncRemoteToLocal(config)
+      return service.syncRemoteToLocal(config)
     } catch (error) {
       return {
         success: false,
@@ -115,7 +117,7 @@ export class CloudStorageManager {
 
     try {
       await service.initialize(config)
-      return await service.syncBidirectional(config)
+      return service.syncBidirectional(config)
     } catch (error) {
       return {
         success: false,
@@ -128,7 +130,9 @@ export class CloudStorageManager {
     }
   }
 
-  public async authenticate(config: CloudStorageConfig): Promise<{ success: boolean; message: string; authUrl?: string }> {
+  public async authenticate(
+    config: CloudStorageConfig
+  ): Promise<{ success: boolean; message: string; authUrl?: string }> {
     const service = this.getService(config.provider)
     if (!service) {
       return { success: false, message: `不支持的云存储提供商: ${config.provider}` }
@@ -136,7 +140,7 @@ export class CloudStorageManager {
 
     try {
       await service.initialize(config)
-      return await service.authenticate()
+      return service.authenticate()
     } catch (error) {
       return { success: false, message: `认证失败: ${error}` }
     }

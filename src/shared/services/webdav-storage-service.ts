@@ -1,4 +1,9 @@
-import { ICloudStorageService, CloudStorageConfig, CloudFileInfo, CloudSyncResult } from '../types/cloud-storage'
+import {
+  ICloudStorageService,
+  CloudStorageConfig,
+  CloudFileInfo,
+  CloudSyncResult
+} from '../types/cloud-storage'
 
 export class WebDAVStorageService implements ICloudStorageService {
   private config: CloudStorageConfig | null = null

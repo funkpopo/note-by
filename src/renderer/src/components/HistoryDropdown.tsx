@@ -415,15 +415,17 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
 
       {/* 版本对比界面 */}
       {comparisonVisible && selectedHistory && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          zIndex: 1050,
-          background: 'var(--semi-color-bg-0)' 
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+            background: 'var(--semi-color-bg-0)'
+          }}
+        >
           <VersionComparison
             currentContent={currentContent}
             historyItem={selectedHistory}

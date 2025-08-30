@@ -91,7 +91,8 @@ export class EditorMemoryManager {
   private currentCacheSize = 0
 
   // 渲染结果缓存
-  private renderCache: Map<string, { result: unknown; size: number; lastAccess: number }> = new Map()
+  private renderCache: Map<string, { result: unknown; size: number; lastAccess: number }> =
+    new Map()
   private maxRenderCacheSize = 20 * 1024 * 1024 // 20MB
   private currentRenderCacheSize = 0
 
@@ -137,10 +138,10 @@ export class EditorMemoryManager {
     const performance = window.performance
 
     // 获取基本内存信息
-    let memoryInfo: { 
-      usedJSHeapSize?: number 
-      totalJSHeapSize?: number 
-      jsHeapSizeLimit?: number 
+    let memoryInfo: {
+      usedJSHeapSize?: number
+      totalJSHeapSize?: number
+      jsHeapSizeLimit?: number
     } = {}
 
     interface PerformanceWithMemory extends Performance {
@@ -159,7 +160,8 @@ export class EditorMemoryManager {
       memoryInfo = (performance as PerformanceWithMemory).memory!
     } else if ((navigator as NavigatorWithDeviceMemory).deviceMemory) {
       // 使用设备内存信息作为估算
-      const deviceMemory = (navigator as NavigatorWithDeviceMemory).deviceMemory! * 1024 * 1024 * 1024 // GB to bytes
+      const deviceMemory =
+        (navigator as NavigatorWithDeviceMemory).deviceMemory! * 1024 * 1024 * 1024 // GB to bytes
       memoryInfo = {
         usedJSHeapSize: 0,
         totalJSHeapSize: deviceMemory * 0.1, // 估算JS堆为设备内存的10%
@@ -503,7 +505,10 @@ export class EditorMemoryManager {
    * 淘汰渲染缓存项
    */
   private evictRenderCache(requiredSpace: number): void {
-    const itemsToEvict: Array<{ id: string; item: { result: unknown; size: number; lastAccess: number } }> = []
+    const itemsToEvict: Array<{
+      id: string
+      item: { result: unknown; size: number; lastAccess: number }
+    }> = []
     let spaceToFree = requiredSpace
 
     // 按最后访问时间排序（旧的先淘汰）
@@ -803,12 +808,15 @@ export class EditorMemoryManager {
   /**
    * 触发事件
    */
-  private emitEvent(eventType: MemoryEventType, data: {
-    level: MemoryPressureLevel
-    usage: MemoryUsage
-    message: string
-    timestamp: number
-  }): void {
+  private emitEvent(
+    eventType: MemoryEventType,
+    data: {
+      level: MemoryPressureLevel
+      usage: MemoryUsage
+      message: string
+      timestamp: number
+    }
+  ): void {
     const listeners = this.eventListeners.get(eventType)
     if (listeners) {
       for (const listener of listeners) {
@@ -874,7 +882,8 @@ export class EditorMemoryManager {
       ;(this as unknown as { warningThreshold: number }).warningThreshold = config.warningThreshold
     }
     if (config.criticalThreshold !== undefined) {
-      ;(this as unknown as { criticalThreshold: number }).criticalThreshold = config.criticalThreshold
+      ;(this as unknown as { criticalThreshold: number }).criticalThreshold =
+        config.criticalThreshold
     }
     if (config.cleanupThreshold !== undefined) {
       ;(this as unknown as { cleanupThreshold: number }).cleanupThreshold = config.cleanupThreshold

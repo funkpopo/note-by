@@ -1,5 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Typography, Card, Divider, Button, Toast, Form, Radio, Space, Tag } from '@douyinfe/semi-ui'
+import {
+  Typography,
+  Card,
+  Divider,
+  Button,
+  Toast,
+  Form,
+  Radio,
+  Space,
+  Tag
+} from '@douyinfe/semi-ui'
 import { IconHistogram, IconInfoCircle } from '@douyinfe/semi-icons'
 import { useLanguage } from '../../locales'
 
@@ -91,12 +101,7 @@ const HistoryManagementSettings: React.FC = () => {
             配置历史记录的保留策略
           </Text>
         </div>
-        <Button
-          type="primary"
-          theme="solid"
-          onClick={saveHistoryManagement}
-          className="save-btn"
-        >
+        <Button type="primary" theme="solid" onClick={saveHistoryManagement} className="save-btn">
           保存设置
         </Button>
       </div>

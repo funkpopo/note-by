@@ -39,9 +39,8 @@ export function convertToNotionFormat(markdown: string): string {
 
     // 添加 Notion 导出标识
     const header = `<!-- 导出自 Note-by 应用 - Notion 格式 -->\n<!-- 导出时间: ${new Date().toLocaleString('zh-CN')} -->\n\n`
-    
-    return header + content
 
+    return header + content
   } catch (error) {
     console.error('Notion 格式转换错误:', error)
     return markdown // 转换失败时返回原始内容
@@ -84,16 +83,18 @@ export function convertToObsidianFormat(markdown: string): string {
       // 调整分隔线
       .replace(/^---+$/gm, '---')
       // 添加 Obsidian 特有的元数据区域
-      .replace(/^/, '---\ntags: [note-by-export]\ncreated: ' + new Date().toISOString() + '\n---\n\n')
+      .replace(
+        /^/,
+        '---\ntags: [note-by-export]\ncreated: ' + new Date().toISOString() + '\n---\n\n'
+      )
       // 清理多余的空行
       .replace(/\n{3,}/g, '\n\n')
       .trim()
 
     // 添加 Obsidian 导出说明
     const footer = `\n\n---\n> 📝 此文档由 Note-by 应用导出为 Obsidian 格式\n> 🕒 导出时间: ${new Date().toLocaleString('zh-CN')}`
-    
-    return content + footer
 
+    return content + footer
   } catch (error) {
     console.error('Obsidian 格式转换错误:', error)
     return markdown // 转换失败时返回原始内容
@@ -104,15 +105,17 @@ export function convertToObsidianFormat(markdown: string): string {
  * 清理和标准化 Markdown 内容
  */
 export function cleanMarkdown(markdown: string): string {
-  return markdown
-    // 标准化换行符
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    // 清理行尾空格
-    .replace(/ +$/gm, '')
-    // 标准化空行
-    .replace(/\n{4,}/g, '\n\n\n')
-    .trim()
+  return (
+    markdown
+      // 标准化换行符
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      // 清理行尾空格
+      .replace(/ +$/gm, '')
+      // 标准化空行
+      .replace(/\n{4,}/g, '\n\n\n')
+      .trim()
+  )
 }
 
 /**
@@ -121,7 +124,7 @@ export function cleanMarkdown(markdown: string): string {
 export function extractMetadata(markdown: string, filePath: string) {
   const lines = markdown.split('\n')
   let title = ''
-  
+
   // 尝试从第一个标题提取标题
   for (const line of lines) {
     const match = line.match(/^#+\s+(.+)$/)
@@ -130,17 +133,17 @@ export function extractMetadata(markdown: string, filePath: string) {
       break
     }
   }
-  
+
   // 如果没有找到标题，使用文件名
   if (!title) {
     title = filePath.split('/').pop()?.replace('.md', '') || 'Untitled'
   }
-  
+
   // 统计信息
   const wordCount = markdown.replace(/[^\u4e00-\u9fa5\w]/g, '').length
   const charCount = markdown.length
   const lineCount = lines.length
-  
+
   return {
     title,
     wordCount,

@@ -168,7 +168,16 @@ export const SmartSettings: React.FC = () => (
 
 // 小型组件加载器
 export const SmallComponentLoader: React.FC<{ text?: string }> = ({ text = '组件加载中...' }) => (
-  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '40px', fontSize: '12px', color: 'var(--semi-color-text-2)' }}>
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '40px',
+      fontSize: '12px',
+      color: 'var(--semi-color-text-2)'
+    }}
+  >
     <Spin size="small" style={{ marginRight: '8px' }} />
     {text}
   </div>

@@ -14,24 +14,15 @@ import {
 const { Title, Text } = Typography
 
 const Settings: React.FC = () => {
-
   // 添加WebDAV同步完成回调
   const handleSyncComplete = (): void => {}
-
 
   return (
     <div className="settings-container">
       <div className="settings-body">
         <Tabs className="settings-tabs" type="card">
           {/* 通用设置标签 */}
-          <Tabs.TabPane
-            tab={
-              <span className="tab-label">
-                通用设置
-              </span>
-            }
-            itemKey="general"
-          >
+          <Tabs.TabPane tab={<span className="tab-label">通用设置</span>} itemKey="general">
             <div className="tab-content">
               <LanguageSettings />
               <UpdateSettings />
@@ -40,26 +31,12 @@ const Settings: React.FC = () => {
           </Tabs.TabPane>
 
           {/* AI API配置标签 */}
-          <Tabs.TabPane
-            tab={
-              <span className="tab-label">
-                AI 配置
-              </span>
-            }
-            itemKey="api"
-          >
+          <Tabs.TabPane tab={<span className="tab-label">AI 配置</span>} itemKey="api">
             <ApiConfigSection />
           </Tabs.TabPane>
 
           {/* 同步设置标签 */}
-          <Tabs.TabPane
-            tab={
-              <span className="tab-label">
-                同步设置
-              </span>
-            }
-            itemKey="sync"
-          >
+          <Tabs.TabPane tab={<span className="tab-label">同步设置</span>} itemKey="sync">
             <div className="tab-content">
               <Card className="settings-card animated-card">
                 <div className="card-header">
@@ -85,7 +62,6 @@ const Settings: React.FC = () => {
           </Tabs.TabPane>
         </Tabs>
       </div>
-
     </div>
   )
 }

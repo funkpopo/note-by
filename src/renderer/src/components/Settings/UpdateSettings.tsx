@@ -1,6 +1,11 @@
 import React, { useState } from 'react'
 import { Typography, Card, Button, Toast } from '@douyinfe/semi-ui'
-import { IconRefresh, IconAlertCircle, IconInfoCircle, IconCheckCircleStroked } from '@douyinfe/semi-icons'
+import {
+  IconRefresh,
+  IconAlertCircle,
+  IconInfoCircle,
+  IconCheckCircleStroked
+} from '@douyinfe/semi-icons'
 import { useLanguage } from '../../locales'
 
 const { Title, Text } = Typography
