@@ -31,6 +31,15 @@ import {
   cancelSync,
   clearSyncCache
 } from './webdav'
+import {
+  testCloudConnection,
+  authenticateCloudService,
+  syncLocalToRemote as cloudSyncLocalToRemote,
+  syncRemoteToLocal as cloudSyncRemoteToLocal,
+  syncBidirectional as cloudSyncBidirectional,
+  cancelSync as cloudCancelSync,
+  getAvailableProviders
+} from './cloud-storage'
 import axios from 'axios'
 import http from 'http'
 import https from 'https'
@@ -183,6 +192,16 @@ const IPC_CHANNELS = {
   // 添加主密码验证相关IPC通道
   VERIFY_MASTER_PASSWORD: 'webdav:verify-master-password',
   SET_MASTER_PASSWORD: 'webdav:set-master-password',
+  // 云存储相关IPC通道
+  CLOUD_TEST_CONNECTION: 'cloud:test-connection',
+  CLOUD_AUTHENTICATE: 'cloud:authenticate',
+  CLOUD_SYNC_LOCAL_TO_REMOTE: 'cloud:sync-local-to-remote',
+  CLOUD_SYNC_REMOTE_TO_LOCAL: 'cloud:sync-remote-to-local',
+  CLOUD_SYNC_BIDIRECTIONAL: 'cloud:sync-bidirectional',
+  CLOUD_CANCEL_SYNC: 'cloud:cancel-sync',
+  CLOUD_GET_PROVIDERS: 'cloud:get-providers',
+  CLOUD_CONFIG_CHANGED: 'cloud:config-changed',
+  GET_NOTES_PATH: 'app:get-notes-path',
   CHECK_FOR_UPDATES: 'app:check-for-updates',
   // 添加历史记录相关IPC通道
   GET_NOTE_HISTORY: 'markdown:get-history',
@@ -1756,6 +1775,112 @@ ${htmlContent}
         error: String(error)
       }
     }
+  })
+
+  // 云存储相关IPC处理器
+  ipcMain.handle(IPC_CHANNELS.CLOUD_TEST_CONNECTION, async (_, config) => {
+    try {
+      const result = await testCloudConnection(config)
+      return result
+    } catch (error) {
+      return { success: false, message: `测试连接失败: ${error}` }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_AUTHENTICATE, async (_, config) => {
+    try {
+      const result = await authenticateCloudService(config)
+      return result
+    } catch (error) {
+      return { success: false, message: `认证失败: ${error}` }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_SYNC_LOCAL_TO_REMOTE, async (_, config) => {
+    try {
+      const result = await cloudSyncLocalToRemote(config)
+      return result
+    } catch (error) {
+      return {
+        success: false,
+        message: `同步失败: ${error}`,
+        uploaded: 0,
+        downloaded: 0,
+        failed: 0,
+        skipped: 0
+      }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_SYNC_REMOTE_TO_LOCAL, async (_, config) => {
+    try {
+      const result = await cloudSyncRemoteToLocal(config)
+      return result
+    } catch (error) {
+      return {
+        success: false,
+        message: `同步失败: ${error}`,
+        uploaded: 0,
+        downloaded: 0,
+        failed: 0,
+        skipped: 0
+      }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_SYNC_BIDIRECTIONAL, async (_, config) => {
+    try {
+      const result = await cloudSyncBidirectional(config)
+      return result
+    } catch (error) {
+      return {
+        success: false,
+        message: `同步失败: ${error}`,
+        uploaded: 0,
+        downloaded: 0,
+        failed: 0,
+        skipped: 0
+      }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_CANCEL_SYNC, async () => {
+    try {
+      cloudCancelSync()
+      return { success: true, message: '同步已取消' }
+    } catch (error) {
+      return { success: false, message: `取消同步失败: ${error}` }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_GET_PROVIDERS, async () => {
+    try {
+      const providers = getAvailableProviders()
+      return providers
+    } catch (error) {
+      return []
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLOUD_CONFIG_CHANGED, async () => {
+    try {
+      // 配置变更通知，可以在这里重新初始化服务
+      return {
+        success: true,
+        message: '云存储配置已更新'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: '配置更新失败',
+        error: String(error)
+      }
+    }
+  })
+
+  // 获取笔记文件夹路径
+  ipcMain.handle(IPC_CHANNELS.GET_NOTES_PATH, async () => {
+    return getMarkdownFolderPath()
   })
 
   // 处理文件上传

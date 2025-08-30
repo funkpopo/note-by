@@ -1,7 +1,7 @@
 import React from 'react'
 import { Typography, Card, Divider, Tabs } from '@douyinfe/semi-ui'
 import { IconCloud } from '@douyinfe/semi-icons'
-import WebDAVSettings from './WebDAVSettings'
+import CloudStorageSettings from './CloudStorageSettings'
 import './Settings.css'
 import {
   LanguageSettings,
@@ -67,14 +67,14 @@ const Settings: React.FC = () => {
                     <IconCloud size="large" />
                   </div>
                   <div className="card-content">
-                    <Title heading={6}>WebDAV 同步</Title>
+                    <Title heading={6}>云存储同步</Title>
                     <Text type="tertiary" className="card-description">
-                      配置WebDAV服务器实现数据同步
+                      配置多种云存储服务实现数据同步
                     </Text>
                   </div>
                 </div>
                 <Divider className="settings-divider" />
-                <WebDAVSettings onSyncComplete={handleSyncComplete} />
+                <CloudStorageSettings onSyncComplete={handleSyncComplete} />
               </Card>
             </div>
           </Tabs.TabPane>

@@ -442,6 +442,46 @@ interface WebDAVAPI {
   ) => () => void
 }
 
+// 云存储API接口定义
+interface CloudStorageAPI {
+  testConnection: (config: any) => Promise<{ success: boolean; message: string }>
+  authenticate: (config: any) => Promise<{ success: boolean; message: string; authUrl?: string }>
+  syncLocalToRemote: (config: any) => Promise<{
+    success: boolean
+    message: string
+    uploaded: number
+    downloaded: number
+    failed: number
+    skipped: number
+  }>
+  syncRemoteToLocal: (config: any) => Promise<{
+    success: boolean
+    message: string
+    uploaded: number
+    downloaded: number
+    failed: number
+    skipped: number
+  }>
+  syncBidirectional: (config: any) => Promise<{
+    success: boolean
+    message: string
+    uploaded: number
+    downloaded: number
+    failed: number
+    skipped: number
+  }>
+  cancelSync: () => Promise<{ success: boolean; message: string }>
+  getProviders: () => Promise<Array<{ id: string; name: string; description: string }>>
+  notifyConfigChanged: () => Promise<{ success: boolean; message: string }>
+  onSyncProgress: (
+    callback: (progress: {
+      total: number
+      processed: number
+      action: 'upload' | 'download' | 'compare'
+    }) => void
+  ) => () => void
+}
+
 // 窗口API接口定义
 interface WindowAPI {
   setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
@@ -449,6 +489,7 @@ interface WindowAPI {
 
 // 全局API接口定义
 interface API {
+  getNotesPath: () => Promise<string>
   settings: SettingsAPI
   openai: OpenAIAPI
   api: ApiConfigAPI
@@ -559,6 +600,7 @@ interface API {
     ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
   }
   webdav: WebDAVAPI
+  cloudStorage: CloudStorageAPI
   analytics: AnalyticsAPI
   tags: TagsAPI
   navigation: NavigationAPI
