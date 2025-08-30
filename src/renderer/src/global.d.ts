@@ -163,6 +163,31 @@ interface Window {
         filePath: string,
         content: string
       ) => Promise<{ success: boolean; path?: string; error?: string }>
+      // 导出PDF文件
+      exportToPdf: (
+        filePath: string,
+        content: string
+      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      // 导出DOCX文件
+      exportToDocx: (
+        filePath: string,
+        content: string
+      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      // 导出HTML文件
+      exportToHtml: (
+        filePath: string,
+        content: string
+      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      // 导出为Notion格式
+      exportToNotion: (
+        filePath: string,
+        content: string
+      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      // 导出为Obsidian格式
+      exportToObsidian: (
+        filePath: string,
+        content: string
+      ) => Promise<{ success: boolean; path?: string; error?: string }>
 
       // 检查文件是否存在
       checkFileExists: (

@@ -511,6 +511,14 @@ interface API {
       filePath: string,
       content: string
     ) => Promise<{ success: boolean; path?: string; error?: string }>
+    exportToNotion: (
+      filePath: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
+    exportToObsidian: (
+      filePath: string,
+      content: string
+    ) => Promise<{ success: boolean; path?: string; error?: string }>
     getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
     getFiles: (
       folderName: string

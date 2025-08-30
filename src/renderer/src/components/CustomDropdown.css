@@ -33,6 +33,9 @@
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
   overflow: hidden;
+  /* 确保菜单不会超出视窗 */
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
 
 .dropdown-menu-open {

@@ -42,6 +42,8 @@ const IPC_CHANNELS = {
   EXPORT_PDF: 'markdown:export-pdf',
   EXPORT_DOCX: 'markdown:export-docx',
   EXPORT_HTML: 'markdown:export-html',
+  EXPORT_NOTION: 'markdown:export-notion',
+  EXPORT_OBSIDIAN: 'markdown:export-obsidian',
   GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
   GET_MARKDOWN_FILES: 'markdown:get-files',
   READ_MARKDOWN_FILE: 'markdown:read-file',
@@ -502,6 +504,20 @@ const api = {
       content: string
     ): Promise<{ success: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.EXPORT_HTML, filePath, content),
+
+    // 导出为Notion格式
+    exportToNotion: (
+      filePath: string,
+      content: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_NOTION, filePath, content),
+
+    // 导出为Obsidian格式
+    exportToObsidian: (
+      filePath: string,
+      content: string
+    ): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXPORT_OBSIDIAN, filePath, content),
 
     // 检查文件是否存在
     checkFileExists: (

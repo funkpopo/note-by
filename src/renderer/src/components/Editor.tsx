@@ -1152,6 +1152,13 @@ interface EditorProps {
   onFileChanged?: () => void
 }
 
+// 导出相关接口定义
+interface ExportFormat {
+  key: string
+  label: string
+  icon: React.ReactNode
+}
+
 // 顶部标题栏组件
 const EditorHeader: React.FC<{
   currentFolder?: string
@@ -1163,9 +1170,84 @@ const EditorHeader: React.FC<{
   onSave: () => void
   onContentRestore?: (content: string) => void
 }> = ({ currentFolder, currentFile, hasUnsavedChanges, isSaving, currentContent = '', onSave, onContentRestore }) => {
+  const [isExporting, setIsExporting] = useState(false)
+  
   if (!currentFolder || !currentFile) return null
 
   const filePath = `${currentFolder}/${currentFile}`
+
+  // 导出格式配置
+  const exportFormats: ExportFormat[] = [
+    {
+      key: 'pdf',
+      label: '导出PDF',
+      icon: <IconFile />
+    },
+    {
+      key: 'docx',
+      label: '导出DOCX',
+      icon: <IconFile />
+    },
+    {
+      key: 'html',
+      label: '导出HTML',
+      icon: <IconFile />
+    },
+    {
+      key: 'notion',
+      label: '导出为Notion格式',
+      icon: <IconFile />
+    },
+    {
+      key: 'obsidian',
+      label: '导出为Obsidian格式',
+      icon: <IconFile />
+    }
+  ]
+
+  // 处理导出操作
+  const handleExport = useCallback(async (format: string) => {
+    if (!currentFolder || !currentFile || !currentContent) {
+      Toast.warning('没有可导出的内容')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      let result
+      switch (format) {
+        case 'pdf':
+          result = await window.api.markdown.exportToPdf(filePath, currentContent)
+          break
+        case 'docx':
+          result = await window.api.markdown.exportToDocx(filePath, currentContent)
+          break
+        case 'html':
+          result = await window.api.markdown.exportToHtml(filePath, currentContent)
+          break
+        case 'notion':
+          result = await window.api.markdown.exportToNotion(filePath, currentContent)
+          break
+        case 'obsidian':
+          result = await window.api.markdown.exportToObsidian(filePath, currentContent)
+          break
+        default:
+          Toast.error('不支持的导出格式')
+          return
+      }
+
+      if (result.success) {
+        Toast.success(`导出成功: ${result.path}`)
+      } else {
+        Toast.error(`导出失败: ${result.error}`)
+      }
+    } catch (error) {
+      Toast.error('导出失败，请重试')
+      console.error('导出错误:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [currentFolder, currentFile, currentContent])
 
   return (
     <div className="editor-header">
@@ -1194,6 +1276,34 @@ const EditorHeader: React.FC<{
             onRestore={onContentRestore}
             disabled={hasUnsavedChanges}
           />
+          <CustomDropdown
+            trigger="click"
+            position="bottomLeft"
+            autoAdjustOverflow={true}
+            constrainToContainer={true}
+            menu={exportFormats.map((format) => ({
+              node: 'item' as const,
+              name: format.label,
+              onClick: () => handleExport(format.key),
+              disabled: isExporting
+            }))}
+            getPopupContainer={() => {
+              // 尝试找到最近的编辑器容器
+              const container = document.querySelector('.tiptap-editor')
+              return container as HTMLElement || document.body
+            }}
+            className="export-dropdown"
+          >
+            <Button
+              icon={<IconFile />}
+              type="tertiary"
+              size="default"
+              loading={isExporting}
+              disabled={!currentContent || hasUnsavedChanges}
+            >
+              导出
+            </Button>
+          </CustomDropdown>
           <Button
             icon={<IconSave />}
             type="primary"

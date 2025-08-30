@@ -64,10 +64,89 @@
   margin: 2px 4px;
 }
 
-/* 覆盖可能的内联样式，确保圆角生效 */
-.editor-header .semi-dropdown-menu,
-.editor-header .semi-list {
-  border-radius: 12px !important;
+/* 导出下拉菜单样式 */
+.export-dropdown {
+  position: relative;
+}
+
+/* 确保导出下拉菜单始终在编辑器范围内显示 */
+.export-dropdown .semi-popover,
+.export-dropdown .semi-dropdown-menu {
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 100px);
+  overflow: auto;
+}
+
+/* 导出下拉菜单定位优化 */
+.tiptap-editor .export-dropdown .semi-popover {
+  position: absolute;
+  z-index: 1000;
+}
+
+/* 自定义下拉菜单样式优化 */
+.custom-dropdown-menu {
+  max-width: 200px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-0);
+  overflow: hidden;
+}
+
+.custom-dropdown-menu .custom-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-dropdown-menu .custom-dropdown-item:hover {
+  background-color: var(--semi-color-fill-0);
+}
+
+.custom-dropdown-menu .custom-dropdown-item:active {
+  background-color: var(--semi-color-fill-1);
+}
+
+.custom-dropdown-menu .custom-dropdown-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 导出按钮样式优化 */
+.export-button {
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.export-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 确保下拉菜单不会超出编辑器边界 */
+.tiptap-editor {
+  position: relative;
+  overflow: visible;
+}
+
+.tiptap-editor .semi-popover {
+  position: absolute !important;
+}
+
+/* 媒体查询 - 小屏幕优化 */
+@media (max-width: 768px) {
+  .export-dropdown .semi-popover,
+  .export-dropdown .semi-dropdown-menu,
+  .custom-dropdown-menu {
+    max-width: calc(100vw - 16px);
+    left: 8px !important;
+    right: 8px !important;
+  }
 }
 
 .editor-header-left {

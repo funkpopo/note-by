@@ -23,6 +23,7 @@ import {
 } from './openai'
 import { promises as fsPromises } from 'fs'
 import showdown from 'showdown'
+import { convertToNotionFormat, convertToObsidianFormat, extractMetadata } from './exporters'
 import {
   testWebDAVConnection,
   syncLocalToRemote,
@@ -217,6 +218,8 @@ const IPC_CHANNELS = {
   EXPORT_PDF: 'markdown:export-pdf',
   EXPORT_DOCX: 'markdown:export-docx',
   EXPORT_HTML: 'markdown:export-html',
+  EXPORT_NOTION: 'markdown:export-notion',
+  EXPORT_OBSIDIAN: 'markdown:export-obsidian',
   // 添加全局标签相关IPC通道
   GET_GLOBAL_TAGS: 'tags:get-global-tags',
   REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
@@ -1271,6 +1274,94 @@ ${htmlContent}
 
       return { success: true, path: savePath }
     } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 导出为Notion格式
+  ipcMain.handle(IPC_CHANNELS.EXPORT_NOTION, async (_, filePath, content) => {
+    try {
+      // 获取文件名（不含扩展名）
+      const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
+      const metadata = extractMetadata(content, filePath)
+
+      // 打开保存对话框，让用户选择保存位置
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+        title: '导出为Notion格式',
+        defaultPath: join(app.getPath('documents'), `${fileName}-notion.md`),
+        filters: [{ name: 'Markdown文件', extensions: ['md'] }]
+      })
+
+      if (canceled || !savePath) {
+        return { success: false, error: '用户取消了操作' }
+      }
+
+      // 使用专用的 Notion 格式转换器
+      const notionContent = convertToNotionFormat(content)
+
+      // 写入文件
+      await fileStreamManager.writeFileStream(savePath, notionContent, {
+        encoding: 'utf-8'
+      })
+
+      // 打开文件所在文件夹
+      shell.showItemInFolder(savePath)
+
+      return {
+        success: true,
+        path: savePath,
+        metadata: {
+          title: metadata.title,
+          wordCount: metadata.wordCount,
+          format: 'Notion Markdown'
+        }
+      }
+    } catch (error) {
+      console.error('导出Notion格式失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 导出为Obsidian格式
+  ipcMain.handle(IPC_CHANNELS.EXPORT_OBSIDIAN, async (_, filePath, content) => {
+    try {
+      // 获取文件名（不含扩展名）
+      const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
+      const metadata = extractMetadata(content, filePath)
+
+      // 打开保存对话框，让用户选择保存位置
+      const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+        title: '导出为Obsidian格式',
+        defaultPath: join(app.getPath('documents'), `${fileName}-obsidian.md`),
+        filters: [{ name: 'Markdown文件', extensions: ['md'] }]
+      })
+
+      if (canceled || !savePath) {
+        return { success: false, error: '用户取消了操作' }
+      }
+
+      // 使用专用的 Obsidian 格式转换器
+      const obsidianContent = convertToObsidianFormat(content)
+
+      // 写入文件
+      await fileStreamManager.writeFileStream(savePath, obsidianContent, {
+        encoding: 'utf-8'
+      })
+
+      // 打开文件所在文件夹
+      shell.showItemInFolder(savePath)
+
+      return {
+        success: true,
+        path: savePath,
+        metadata: {
+          title: metadata.title,
+          wordCount: metadata.wordCount,
+          format: 'Obsidian Markdown'
+        }
+      }
+    } catch (error) {
+      console.error('导出Obsidian格式失败:', error)
       return { success: false, error: String(error) }
     }
   })
