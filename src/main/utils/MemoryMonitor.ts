@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import { mainErrorHandler, ErrorCategory } from './ErrorHandler'
 
 interface MemoryStats {
   heapUsed: number // MB
@@ -62,7 +63,7 @@ class MemoryMonitor extends EventEmitter {
     this.checkMemory()
 
     if (this.config.enableLogging) {
-      console.log('内存监控已启动')
+      mainErrorHandler.info('内存监控已启动', ErrorCategory.SYSTEM, 'MemoryMonitor')
     }
   }
 
@@ -77,7 +78,7 @@ class MemoryMonitor extends EventEmitter {
     this.isRunning = false
 
     if (this.config.enableLogging) {
-      console.log('内存监控已停止')
+      mainErrorHandler.info('内存监控已停止', ErrorCategory.SYSTEM, 'MemoryMonitor')
     }
   }
 
@@ -104,7 +105,7 @@ class MemoryMonitor extends EventEmitter {
     this.emit('memoryUpdate', stats)
 
     if (this.config.enableLogging) {
-      console.log('内存使用情况:', {
+      mainErrorHandler.info('内存使用情况', ErrorCategory.SYSTEM, 'MemoryMonitor', {
         heapUsed: `${stats.heapUsed}MB`,
         heapTotal: `${stats.heapTotal}MB`,
         rss: `${stats.rss}MB`
@@ -190,11 +191,11 @@ class MemoryMonitor extends EventEmitter {
         })
 
         if (this.config.enableLogging) {
-          console.log(`垃圾回收完成，释放内存: ${freed}MB`)
+          mainErrorHandler.info(`垃圾回收完成，释放内存: ${freed}MB`, ErrorCategory.SYSTEM, 'MemoryMonitor')
         }
       } else {
         if (this.config.enableLogging) {
-          console.warn('global.gc 不可用，无法执行垃圾回收')
+          mainErrorHandler.warn('global.gc 不可用，无法执行垃圾回收', ErrorCategory.SYSTEM, 'MemoryMonitor')
         }
       }
     } catch {
