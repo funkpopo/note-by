@@ -25,6 +25,7 @@ import throttle from 'lodash.throttle'
 import { processThinkingContent } from '../utils/filterThinking'
 import MessageRenderer from './MessageRenderer'
 import ChatHistorySidebar from './ChatHistorySidebar'
+import { ChatSkeleton } from './Skeleton'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
 
@@ -376,6 +377,7 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
   const [aiApiConfigs, setAiApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedAiConfig, setSelectedAiConfig] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -507,6 +509,8 @@ const ChatInterface: React.FC = () => {
         setCurrentSessionId(null)
         setMessages([])
         setUnsavedMessages(new Set())
+      } finally {
+        setIsInitializing(false)
       }
     }
     initializeSession()
@@ -1028,6 +1032,11 @@ const ChatInterface: React.FC = () => {
   useEffect(() => {
     loadAiApiConfigs()
   }, [loadAiApiConfigs])
+
+  // 显示初始化骨架屏
+  if (isInitializing) {
+    return <ChatSkeleton />
+  }
 
   return (
     <div

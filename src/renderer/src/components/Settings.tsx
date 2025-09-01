@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Typography, Card, Divider, Tabs } from '@douyinfe/semi-ui'
 import { IconCloud } from '@douyinfe/semi-icons'
 import CloudStorageSettings from './CloudStorageSettings'
@@ -10,12 +10,29 @@ import {
   ApiConfigSection,
   PerformanceMonitorSection
 } from './Settings/index'
+import { SettingsSkeleton } from './Skeleton'
 
 const { Title, Text } = Typography
 
 const Settings: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true)
+  
   // 添加WebDAV同步完成回调
   const handleSyncComplete = (): void => {}
+
+  // 模拟设置页面加载
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // 显示骨架屏
+  if (isLoading) {
+    return <SettingsSkeleton />
+  }
 
   return (
     <div className="settings-container">

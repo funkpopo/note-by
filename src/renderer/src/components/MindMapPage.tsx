@@ -31,6 +31,7 @@ import {
 } from '@douyinfe/semi-icons'
 import '@xyflow/react/dist/style.css'
 import { toPng } from 'html-to-image'
+import { MindMapSkeleton } from './Skeleton'
 
 // 添加右键菜单样式
 const contextMenuStyles = `
@@ -120,6 +121,7 @@ const MindMapFlow: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [nodeId, setNodeId] = useState(2)
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
   const [editingNode, setEditingNode] = useState<{
     id: string
     label: string
@@ -643,6 +645,16 @@ const MindMapFlow: React.FC = () => {
     }
   }, [ctrlNPressed, addNode])
 
+  // 初始化组件
+  useEffect(() => {
+    // 模拟组件加载时间
+    const timer = setTimeout(() => {
+      setIsInitializing(false)
+    }, 800) // 模拟初始化时间
+
+    return () => clearTimeout(timer)
+  }, [])
+
   useEffect(() => {
     if (ctrlZPressed) {
       undo()
@@ -675,6 +687,11 @@ const MindMapFlow: React.FC = () => {
       setHistoryIndex(0)
     }
   }, [])
+
+  // 显示初始化骨架屏
+  if (isInitializing) {
+    return <MindMapSkeleton />
+  }
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>

@@ -258,7 +258,7 @@
 /* 骨架屏动画 */
 @keyframes skeleton-shimmer {
   0% {
-    opacity: 0.6;
+    opacity: 0.8;
     transform: translateX(-100%);
   }
   50% {
@@ -266,7 +266,7 @@
     transform: translateX(0%);
   }
   100% {
-    opacity: 0.6;
+    opacity: 0.8;
     transform: translateX(100%);
   }
 }
@@ -274,13 +274,185 @@
 @keyframes skeleton-pulse {
   0%,
   100% {
-    opacity: 0.6;
+    opacity: 0.8;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.05);
+    transform: scale(1.02);
   }
+}
+
+@keyframes skeleton-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skeleton-breathing {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes skeleton-wave {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 1;
+  }
+}
+
+/* 为骨架屏元素添加动画延迟 */
+.skeleton-item-delay-1 {
+  animation-delay: 0.1s;
+}
+
+.skeleton-item-delay-2 {
+  animation-delay: 0.2s;
+}
+
+.skeleton-item-delay-3 {
+  animation-delay: 0.3s;
+}
+
+.skeleton-item-delay-4 {
+  animation-delay: 0.4s;
+}
+
+/* 改进现有动画 */
+.mindmap-skeleton-node {
+  position: absolute;
+  z-index: 5;
+  animation: skeleton-pulse 2.5s infinite ease-in-out;
+}
+
+.mindmap-skeleton-node:nth-child(2n) {
+  animation-delay: 0.3s;
+}
+
+.mindmap-skeleton-node:nth-child(3n) {
+  animation-delay: 0.6s;
+}
+
+.mindmap-skeleton-edge {
+  position: absolute;
+  z-index: 1;
+  animation: skeleton-breathing 3s infinite ease-in-out;
+}
+
+.mindmap-skeleton-edge:nth-child(even) {
+  animation-delay: 0.5s;
+}
+
+.chart-skeleton-line-path {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--semi-color-primary) 0%,
+    var(--semi-color-primary-light-default) 50%,
+    var(--semi-color-primary) 100%
+  );
+  border-radius: 1px;
+  animation: skeleton-wave 2.5s infinite;
+}
+
+.chart-skeleton-bar-item {
+  width: 30px;
+  background: var(--semi-color-primary-light-default);
+  border-radius: 2px 2px 0 0;
+  animation: skeleton-breathing 2s infinite;
+}
+
+.chart-skeleton-bar-item:nth-child(2n) {
+  animation-delay: 0.2s;
+}
+
+.chart-skeleton-bar-item:nth-child(3n) {
+  animation-delay: 0.4s;
+}
+
+/* 通用骨架屏元素动画 */
+.semi-skeleton-title,
+.semi-skeleton-paragraph,
+.semi-skeleton-button,
+.semi-skeleton-avatar,
+.semi-skeleton-image {
+  animation: skeleton-pulse 2s infinite ease-in-out;
+}
+
+/* 为不同类型的元素添加不同的动画延迟 */
+.semi-skeleton-title:nth-child(2n) {
+  animation-delay: 0.2s;
+}
+
+.semi-skeleton-paragraph:nth-child(3n) {
+  animation-delay: 0.3s;
+}
+
+/* 添加平滑出现动画 */
+.skeleton-wrapper,
+.chat-skeleton,
+.settings-skeleton,
+.mindmap-skeleton,
+.list-skeleton,
+.editor-skeleton,
+.navigation-skeleton,
+.data-analysis-skeleton {
+  animation: skeleton-fade-in 0.5s ease-out;
+}
+
+/* 优化移动端动画性能 */
+@media (max-width: 768px) {
+  .mindmap-skeleton-node {
+    animation-duration: 3s;
+  }
+  
+  .chart-skeleton-line-path {
+    animation-duration: 3s;
+  }
+  
+  /* 减少移动设备上的动画强度 */
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-wrapper *,
+    .chat-skeleton *,
+    .settings-skeleton *,
+    .mindmap-skeleton *,
+    .list-skeleton *,
+    .editor-skeleton *,
+    .navigation-skeleton *,
+    .data-analysis-skeleton * {
+      animation-duration: 1s;
+      animation-iteration-count: 1;
+    }
+  }
+}
+
+/* 提升动画性能 */
+.skeleton-wrapper,
+.mindmap-skeleton-node,
+.mindmap-skeleton-edge,
+.chart-skeleton-line-path,
+.chart-skeleton-bar-item {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform3d: translateZ(0);
 }
 
 /* 暗色主题适配 */
@@ -303,4 +475,249 @@ body[theme-mode='dark'] .chart-skeleton-line-path {
 
 body[theme-mode='dark'] .chart-skeleton-bar-item {
   background: var(--semi-color-primary-light-active);
+}
+
+/* 聊天骨架屏样式 */
+.chat-skeleton {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.chat-skeleton-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-1);
+}
+
+.chat-skeleton-messages {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-skeleton-message {
+  width: 100%;
+}
+
+.chat-skeleton-message-content {
+  display: flex;
+  align-items: flex-start;
+}
+
+.chat-skeleton-message-user .chat-skeleton-message-content {
+  justify-content: flex-end;
+}
+
+.chat-skeleton-message-assistant .chat-skeleton-message-content {
+  justify-content: flex-start;
+}
+
+.chat-skeleton-message-bubble {
+  border: none;
+  box-shadow: var(--semi-shadow-small);
+}
+
+.chat-skeleton-input {
+  padding: 16px 20px;
+  border-top: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-1);
+}
+
+.chat-skeleton-input-container {
+  display: flex;
+  align-items: center;
+}
+
+/* 设置页面骨架屏样式 */
+.settings-skeleton {
+  width: 100%;
+  padding: 24px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.settings-skeleton-header {
+  margin-bottom: 24px;
+}
+
+.settings-skeleton-tabs {
+  margin-bottom: 24px;
+}
+
+.settings-skeleton-content {
+  width: 100%;
+}
+
+.settings-skeleton-section {
+  width: 100%;
+}
+
+.settings-skeleton-label {
+  display: flex;
+  flex-direction: column;
+  padding-right: 16px;
+}
+
+.settings-skeleton-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.settings-skeleton-actions {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--semi-color-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 思维导图骨架屏样式 */
+.mindmap-skeleton {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.mindmap-skeleton-toolbar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-1);
+}
+
+.mindmap-skeleton-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mindmap-skeleton-center-node {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.mindmap-skeleton-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+}
+
+.mindmap-skeleton-grid-line {
+  animation: skeleton-pulse 6s infinite;
+}
+
+/* 通用列表骨架屏样式 */
+.list-skeleton {
+  width: 100%;
+}
+
+.list-skeleton-header {
+  padding: 8px 0;
+}
+
+.list-skeleton-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-skeleton-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+.list-skeleton-item:last-child {
+  border-bottom: none;
+}
+
+/* 默认列表项样式 */
+.list-skeleton-item-default {
+  min-height: 40px;
+}
+
+.list-skeleton-item-default .list-skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 紧凑列表项样式 */
+.list-skeleton-item-compact {
+  min-height: 28px;
+  padding: 4px 0;
+}
+
+/* 详细列表项样式 */
+.list-skeleton-item-detailed {
+  min-height: 80px;
+  padding: 12px 0;
+  align-items: flex-start;
+}
+
+.list-skeleton-item-detailed .list-skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-skeleton-item-detailed .list-skeleton-meta {
+  display: flex;
+  align-items: center;
+}
+
+.list-skeleton-item-detailed .list-skeleton-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .settings-skeleton {
+    padding: 16px 20px;
+  }
+  
+  .chat-skeleton-header,
+  .chat-skeleton-messages,
+  .chat-skeleton-input {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  .mindmap-skeleton-toolbar {
+    padding: 12px 16px;
+  }
+  
+  .list-skeleton-item-detailed {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .list-skeleton-item-detailed .list-skeleton-actions {
+    flex-direction: row;
+    margin-top: 8px;
+  }
+}
+
+/* 暗色主题适配 */
+body[theme-mode='dark'] .chat-skeleton-message-bubble,
+body[theme-mode='dark'] .settings-skeleton-section,
+body[theme-mode='dark'] .mindmap-skeleton-canvas {
+  background: var(--semi-color-bg-2);
 }

@@ -51,6 +51,7 @@ import {
 } from '@douyinfe/semi-ui'
 import CustomDropdown from './CustomDropdown'
 import CustomHistoryDropdown from './CustomHistoryDropdown'
+import { EditorSkeleton } from './Skeleton'
 import { smartDiff } from '../utils/diffUtils'
 import { InlineDiffExtension } from '../extensions/InlineDiffExtension'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
@@ -2994,19 +2995,7 @@ const Editor: React.FC<EditorProps> = ({
       )}
 
       {isLoading ? (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '200px',
-            flexDirection: 'column',
-            gap: '12px'
-          }}
-        >
-          <Spin size="large" />
-          <span style={{ color: 'var(--semi-color-text-2)' }}>加载文档中...</span>
-        </div>
+        <EditorSkeleton />
       ) : (
         <div className="editor-wrapper">
           <EditorContent editor={editor} />
