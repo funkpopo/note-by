@@ -10,10 +10,15 @@ import {
   updateSetting,
   getSetting,
   AiApiConfig,
+  EmbeddingApiConfig,
   getWebDAVConfig,
   updateWebDAVConfig,
   verifyMasterPassword,
-  encryptWebDAVWithMasterPassword
+  encryptWebDAVWithMasterPassword,
+  getEmbeddingApiConfigs,
+  updateEmbeddingApiConfigs,
+  deleteEmbeddingApiConfig,
+  setEmbeddingApiConfigEnabled
 } from './settings'
 import {
   testOpenAIConnection,
@@ -69,6 +74,15 @@ import {
   getChatSessionStats,
   cleanupOldChatSessions
 } from './database'
+import {
+  initVectorDatabase,
+  addDocumentToVector,
+  searchSimilarDocuments,
+  deleteDocumentFromVector,
+  getVectorDatabaseStats,
+  clearVectorDatabase,
+  type SearchOptions
+} from './vectordb'
 
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
@@ -168,6 +182,11 @@ const IPC_CHANNELS = {
   STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
+  GET_EMBEDDING_CONFIGS: 'embedding:get-configs',
+  SAVE_EMBEDDING_CONFIG: 'embedding:save-config',
+  DELETE_EMBEDDING_CONFIG: 'embedding:delete-config',
+  SET_EMBEDDING_CONFIG_ENABLED: 'embedding:set-enabled',
+  TEST_EMBEDDING_CONNECTION: 'embedding:test-connection',
   SAVE_MARKDOWN: 'markdown:save',
   GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
   GET_MARKDOWN_FILES: 'markdown:get-files',
@@ -251,7 +270,15 @@ const IPC_CHANNELS = {
   CHAT_DELETE_SESSION: 'chat:delete-session',
   CHAT_DELETE_MESSAGE: 'chat:delete-message',
   CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
-  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
+  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions',
+  // 添加向量数据库相关IPC通道
+  VECTOR_INIT_DATABASE: 'vector:init-database',
+  VECTOR_ADD_DOCUMENT: 'vector:add-document',
+  VECTOR_SEARCH_DOCUMENTS: 'vector:search-documents',
+  VECTOR_DELETE_DOCUMENT: 'vector:delete-document',
+  VECTOR_GET_STATS: 'vector:get-stats',
+  VECTOR_CLEAR_DATABASE: 'vector:clear-database',
+  VECTOR_BATCH_ADD_DOCUMENTS: 'vector:batch-add-documents'
 }
 
 // 禁用硬件加速以解决GPU缓存问题
@@ -939,6 +966,91 @@ app.whenReady().then(() => {
       return { success: true }
     } catch (error) {
       return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取Embedding配置列表
+  ipcMain.handle(IPC_CHANNELS.GET_EMBEDDING_CONFIGS, () => {
+    try {
+      const configs = getEmbeddingApiConfigs()
+      return { success: true, configs }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 保存Embedding配置
+  ipcMain.handle(IPC_CHANNELS.SAVE_EMBEDDING_CONFIG, (_, embeddingConfig: EmbeddingApiConfig) => {
+    try {
+      const configs = getEmbeddingApiConfigs()
+      const index = configs.findIndex((config) => config.id === embeddingConfig.id)
+      if (index >= 0) {
+        // 更新已存在的配置
+        configs[index] = embeddingConfig
+      } else {
+        // 添加新配置
+        configs.push(embeddingConfig)
+      }
+      updateEmbeddingApiConfigs(configs)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 删除Embedding配置
+  ipcMain.handle(IPC_CHANNELS.DELETE_EMBEDDING_CONFIG, (_, configId: string) => {
+    try {
+      deleteEmbeddingApiConfig(configId)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 设置Embedding配置启用状态
+  ipcMain.handle(IPC_CHANNELS.SET_EMBEDDING_CONFIG_ENABLED, (_, configId: string, enabled: boolean) => {
+    try {
+      setEmbeddingApiConfigEnabled(configId, enabled)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 测试Embedding连接
+  ipcMain.handle(IPC_CHANNELS.TEST_EMBEDDING_CONNECTION, async (_, config: EmbeddingApiConfig) => {
+    try {
+      // 测试embedding API连接
+      const response = await fetch(`${config.apiUrl}/v1/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          input: 'test',
+          model: config.modelName
+        })
+      })
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: `连接失败: ${response.status} ${response.statusText}`
+        }
+      }
+
+      const data = await response.json()
+      return {
+        success: true,
+        message: `连接成功，向量维度: ${data.data?.[0]?.embedding?.length || 'unknown'}`
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `连接错误: ${error instanceof Error ? error.message : String(error)}`
+      }
     }
   })
 
@@ -2666,6 +2778,97 @@ ${htmlContent}
     } catch (error) {
       console.error('清理旧会话失败:', error)
       return 0
+    }
+  })
+
+  // 向量数据库相关处理器
+  // 初始化向量数据库
+  ipcMain.handle(IPC_CHANNELS.VECTOR_INIT_DATABASE, async () => {
+    try {
+      const success = await initVectorDatabase()
+      return { success }
+    } catch (error) {
+      console.error('初始化向量数据库失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 添加文档到向量数据库
+  ipcMain.handle(IPC_CHANNELS.VECTOR_ADD_DOCUMENT, async (_, filePath: string, content: string) => {
+    try {
+      const success = await addDocumentToVector(filePath, content)
+      return { success }
+    } catch (error) {
+      console.error('添加文档到向量数据库失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 批量添加文档到向量数据库
+  ipcMain.handle(IPC_CHANNELS.VECTOR_BATCH_ADD_DOCUMENTS, async (_, documents: Array<{ filePath: string; content: string }>) => {
+    try {
+      const results: Array<{ filePath: string; success: boolean }> = []
+      for (const doc of documents) {
+        const success = await addDocumentToVector(doc.filePath, doc.content)
+        results.push({ filePath: doc.filePath, success })
+      }
+      
+      const successCount = results.filter(r => r.success).length
+      const failedCount = results.length - successCount
+      
+      return { 
+        success: failedCount === 0, 
+        successCount, 
+        failedCount, 
+        results 
+      }
+    } catch (error) {
+      console.error('批量添加文档失败:', error)
+      return { success: false, error: String(error), successCount: 0, failedCount: documents.length, results: [] }
+    }
+  })
+
+  // 搜索相似文档
+  ipcMain.handle(IPC_CHANNELS.VECTOR_SEARCH_DOCUMENTS, async (_, query: string, options?: SearchOptions) => {
+    try {
+      const results = await searchSimilarDocuments(query, options)
+      return { success: true, results }
+    } catch (error) {
+      console.error('搜索向量文档失败:', error)
+      return { success: false, error: String(error), results: [] }
+    }
+  })
+
+  // 删除文档
+  ipcMain.handle(IPC_CHANNELS.VECTOR_DELETE_DOCUMENT, async (_, filePath: string) => {
+    try {
+      const success = await deleteDocumentFromVector(filePath)
+      return { success }
+    } catch (error) {
+      console.error('删除向量文档失败:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 获取向量数据库统计信息
+  ipcMain.handle(IPC_CHANNELS.VECTOR_GET_STATS, async () => {
+    try {
+      const stats = await getVectorDatabaseStats()
+      return { success: true, stats }
+    } catch (error) {
+      console.error('获取向量数据库统计失败:', error)
+      return { success: false, error: String(error), stats: null }
+    }
+  })
+
+  // 清空向量数据库
+  ipcMain.handle(IPC_CHANNELS.VECTOR_CLEAR_DATABASE, async () => {
+    try {
+      const success = await clearVectorDatabase()
+      return { success }
+    } catch (error) {
+      console.error('清空向量数据库失败:', error)
+      return { success: false, error: String(error) }
     }
   })
 

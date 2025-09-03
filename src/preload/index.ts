@@ -25,6 +25,17 @@ interface AiApiConfig {
   isThinkingModel?: boolean // 是否为思维模型
 }
 
+// Embedding配置接口
+interface EmbeddingApiConfig {
+  id: string
+  name: string
+  apiKey: string
+  apiUrl: string
+  modelName: string
+  dimensions?: number
+  enabled: boolean
+}
+
 // 设置的IPC通信频道
 const IPC_CHANNELS = {
   GET_SETTINGS: 'setting:get-all',
@@ -38,6 +49,11 @@ const IPC_CHANNELS = {
   STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
   SAVE_API_CONFIG: 'api:save-config',
   DELETE_API_CONFIG: 'api:delete-config',
+  GET_EMBEDDING_CONFIGS: 'embedding:get-configs',
+  SAVE_EMBEDDING_CONFIG: 'embedding:save-config',
+  DELETE_EMBEDDING_CONFIG: 'embedding:delete-config',
+  SET_EMBEDDING_CONFIG_ENABLED: 'embedding:set-enabled',
+  TEST_EMBEDDING_CONNECTION: 'embedding:test-connection',
   SAVE_MARKDOWN: 'markdown:save',
   EXPORT_PDF: 'markdown:export-pdf',
   EXPORT_DOCX: 'markdown:export-docx',
@@ -111,7 +127,15 @@ const IPC_CHANNELS = {
   CHAT_DELETE_SESSION: 'chat:delete-session',
   CHAT_DELETE_MESSAGE: 'chat:delete-message',
   CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
-  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
+  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions',
+  // 添加向量数据库相关IPC通道
+  VECTOR_INIT_DATABASE: 'vector:init-database',
+  VECTOR_ADD_DOCUMENT: 'vector:add-document',
+  VECTOR_SEARCH_DOCUMENTS: 'vector:search-documents',
+  VECTOR_DELETE_DOCUMENT: 'vector:delete-document',
+  VECTOR_GET_STATS: 'vector:get-stats',
+  VECTOR_CLEAR_DATABASE: 'vector:clear-database',
+  VECTOR_BATCH_ADD_DOCUMENTS: 'vector:batch-add-documents'
 }
 
 // 内容生成请求接口
@@ -454,6 +478,24 @@ const api = {
     // 删除配置
     deleteConfig: (configId: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.DELETE_API_CONFIG, configId)
+  },
+  // Embedding配置管理
+  embedding: {
+    // 获取配置列表
+    getConfigs: (): Promise<{ success: boolean; configs?: EmbeddingApiConfig[]; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.GET_EMBEDDING_CONFIGS),
+    // 保存配置
+    saveConfig: (config: EmbeddingApiConfig): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAVE_EMBEDDING_CONFIG, config),
+    // 删除配置
+    deleteConfig: (configId: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.DELETE_EMBEDDING_CONFIG, configId),
+    // 设置启用状态
+    setConfigEnabled: (configId: string, enabled: boolean): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SET_EMBEDDING_CONFIG_ENABLED, configId, enabled),
+    // 测试连接
+    testConnection: (config: EmbeddingApiConfig): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_EMBEDDING_CONNECTION, config)
   },
   // 更新检查相关API
   updates: {
@@ -1061,6 +1103,68 @@ const api = {
     // 清理旧的会话
     cleanupOldSessions: (keepCount?: number): Promise<number> =>
       ipcRenderer.invoke(IPC_CHANNELS.CHAT_CLEANUP_OLD_SESSIONS, keepCount)
+  },
+
+  // 向量数据库相关API
+  vector: {
+    // 初始化向量数据库
+    initDatabase: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VECTOR_INIT_DATABASE),
+
+    // 添加文档到向量数据库
+    addDocument: (filePath: string, content: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VECTOR_ADD_DOCUMENT, filePath, content),
+
+    // 批量添加文档到向量数据库
+    batchAddDocuments: (documents: Array<{ filePath: string; content: string }>): Promise<{
+      success: boolean
+      successCount: number
+      failedCount: number
+      results: Array<{ filePath: string; success: boolean }>
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VECTOR_BATCH_ADD_DOCUMENTS, documents),
+
+    // 搜索相似文档
+    searchDocuments: (query: string, options?: { limit?: number; threshold?: number; filter?: string }): Promise<{
+      success: boolean
+      results: Array<{
+        document: {
+          id: string
+          filePath: string
+          fileName: string
+          content: string
+          summary: string
+          embedding: number[]
+          fileSize: number
+          modifiedTime: number
+          createdTime: number
+          tags?: string[]
+          folder?: string
+        }
+        score: number
+        snippet: string
+      }>
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VECTOR_SEARCH_DOCUMENTS, query, options),
+
+    // 删除文档
+    deleteDocument: (filePath: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VECTOR_DELETE_DOCUMENT, filePath),
+
+    // 获取向量数据库统计信息
+    getStats: (): Promise<{
+      success: boolean
+      stats: {
+        totalDocuments: number
+        dbSize: number
+        lastUpdated: number
+      } | null
+      error?: string
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VECTOR_GET_STATS),
+
+    // 清空向量数据库
+    clearDatabase: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VECTOR_CLEAR_DATABASE)
   }
 }
 

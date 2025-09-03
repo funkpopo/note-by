@@ -66,10 +66,30 @@ interface OpenAIAPI {
   }>
 }
 
+// Embedding配置接口
+interface EmbeddingApiConfig {
+  id: string
+  name: string
+  apiKey: string
+  apiUrl: string
+  modelName: string
+  dimensions?: number
+  enabled: boolean
+}
+
 // API配置管理接口定义
 interface ApiConfigAPI {
   saveConfig: (config: AiApiConfig) => Promise<{ success: boolean; error?: string }>
   deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
+}
+
+// Embedding配置管理接口定义
+interface EmbeddingConfigAPI {
+  getConfigs: () => Promise<{ success: boolean; configs?: EmbeddingApiConfig[]; error?: string }>
+  saveConfig: (config: EmbeddingApiConfig) => Promise<{ success: boolean; error?: string }>
+  deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
+  setConfigEnabled: (configId: string, enabled: boolean) => Promise<{ success: boolean; error?: string }>
+  testConnection: (config: EmbeddingApiConfig) => Promise<{ success: boolean; message: string }>
 }
 
 // 分析缓存项接口
@@ -337,6 +357,64 @@ interface ChatAPI {
   cleanupOldSessions: (keepCount?: number) => Promise<number>
 }
 
+// 向量数据库API接口定义
+interface VectorAPI {
+  // 初始化向量数据库
+  initDatabase: () => Promise<{ success: boolean; error?: string }>
+
+  // 添加文档到向量数据库
+  addDocument: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>
+
+  // 批量添加文档到向量数据库
+  batchAddDocuments: (documents: Array<{ filePath: string; content: string }>) => Promise<{
+    success: boolean
+    successCount: number
+    failedCount: number
+    results: Array<{ filePath: string; success: boolean }>
+    error?: string
+  }>
+
+  // 搜索相似文档
+  searchDocuments: (query: string, options?: { limit?: number; threshold?: number; filter?: string }) => Promise<{
+    success: boolean
+    results: Array<{
+      document: {
+        id: string
+        filePath: string
+        fileName: string
+        content: string
+        summary: string
+        embedding: number[]
+        fileSize: number
+        modifiedTime: number
+        createdTime: number
+        tags?: string[]
+        folder?: string
+      }
+      score: number
+      snippet: string
+    }>
+    error?: string
+  }>
+
+  // 删除文档
+  deleteDocument: (filePath: string) => Promise<{ success: boolean; error?: string }>
+
+  // 获取向量数据库统计信息
+  getStats: () => Promise<{
+    success: boolean
+    stats: {
+      totalDocuments: number
+      dbSize: number
+      lastUpdated: number
+    } | null
+    error?: string
+  }>
+
+  // 清空向量数据库
+  clearDatabase: () => Promise<{ success: boolean; error?: string }>
+}
+
 // WebDAV同步API接口定义
 interface WebDAVAPI {
   // 测试WebDAV连接
@@ -493,6 +571,7 @@ interface API {
   settings: SettingsAPI
   openai: OpenAIAPI
   api: ApiConfigAPI
+  embedding: EmbeddingConfigAPI
   updates: UpdatesAPI
   markdown: {
     save: (
@@ -613,6 +692,7 @@ interface API {
   tags: TagsAPI
   navigation: NavigationAPI
   chat: ChatAPI
+  vector: VectorAPI
   window: WindowAPI
 }
 

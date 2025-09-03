@@ -321,8 +321,22 @@ export async function updateLastGlobalSyncTime(): Promise<boolean> {
 // 设置缓存配置
 export async function setCacheConfig(config: Partial<SyncCacheData['cacheConfig']>): Promise<boolean> {
   try {
+    if (!config) return false
+    
     const cache = await loadCache()
-    cache.cacheConfig = { ...cache.cacheConfig, ...config }
+    if (!cache.cacheConfig) return false
+    
+    // 只更新提供的配置项
+    if (config.defaultTTL !== undefined) {
+      cache.cacheConfig.defaultTTL = config.defaultTTL
+    }
+    if (config.maxEntries !== undefined) {
+      cache.cacheConfig.maxEntries = config.maxEntries
+    }
+    if (config.enableExpiration !== undefined) {
+      cache.cacheConfig.enableExpiration = config.enableExpiration
+    }
+    
     return saveCache(cache)
   } catch {
     return false
@@ -371,7 +385,6 @@ export async function getCacheStats(): Promise<{
   try {
     const cache = await loadCache()
     const entries = Object.values(cache.files)
-    const now = Date.now()
     
     let expiredCount = 0
     let oldestSync = Infinity

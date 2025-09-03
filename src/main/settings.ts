@@ -38,6 +38,17 @@ export interface AiApiConfig {
   isThinkingModel?: boolean // 是否为思维模型
 }
 
+// Embedding模型配置接口
+export interface EmbeddingApiConfig {
+  id: string
+  name: string
+  apiKey: string
+  apiUrl: string
+  modelName: string
+  dimensions?: number // 向量维度
+  enabled: boolean // 是否启用
+}
+
 // WebDAV配置接口
 export interface WebDAVConfig {
   url: string
@@ -59,6 +70,8 @@ const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
   AiApiConfigs: [] as AiApiConfig[],
+  // 默认Embedding API配置
+  embeddingApiConfigs: [] as EmbeddingApiConfig[],
   // 默认WebDAV配置
   webdav: {
     url: '',
@@ -106,6 +119,21 @@ export function readSettings(): Record<string, unknown> {
         settings.AiApiConfigs = []
       }
 
+      // 解密Embedding配置中的API Keys
+      if (settings.embeddingApiConfigs && Array.isArray(settings.embeddingApiConfigs)) {
+        ;(settings.embeddingApiConfigs as EmbeddingApiConfig[]).forEach((config) => {
+          if (ENCRYPTED_KEYS.includes('apiKey') && config.apiKey && config.apiKey !== '') {
+            try {
+              config.apiKey = decrypt(config.apiKey)
+            } catch {
+              // 保留原始加密值，以免解密失败导致键被删除
+            }
+          }
+        })
+      } else {
+        settings.embeddingApiConfigs = []
+      }
+
       // 解密WebDAV密码
       if (settings.webdav && settings.webdav.password) {
         settings.webdav.password = decrypt(settings.webdav.password)
@@ -136,6 +164,18 @@ export function writeSettings(settings: Record<string, unknown>): void {
         JSON.stringify(settingsToSave.AiApiConfigs)
       )
       ;(settingsToSave.AiApiConfigs as AiApiConfig[]).forEach((config) => {
+        if (config.apiKey && config.apiKey !== '') {
+          config.apiKey = encrypt(config.apiKey)
+        }
+      })
+    }
+
+    // 加密Embedding配置中的API Keys
+    if (settingsToSave.embeddingApiConfigs && Array.isArray(settingsToSave.embeddingApiConfigs)) {
+      ;(settingsToSave.embeddingApiConfigs as EmbeddingApiConfig[]) = JSON.parse(
+        JSON.stringify(settingsToSave.embeddingApiConfigs)
+      )
+      ;(settingsToSave.embeddingApiConfigs as EmbeddingApiConfig[]).forEach((config) => {
         if (config.apiKey && config.apiKey !== '') {
           config.apiKey = encrypt(config.apiKey)
         }
@@ -238,4 +278,53 @@ export function decryptWebDAVWithMasterPassword(
   }
 
   return newConfig
+}
+
+// 获取Embedding API配置
+export function getEmbeddingApiConfigs(): EmbeddingApiConfig[] {
+  const settings = readSettings()
+  return (settings.embeddingApiConfigs as EmbeddingApiConfig[]) || []
+}
+
+// 更新Embedding API配置
+export function updateEmbeddingApiConfigs(configs: EmbeddingApiConfig[]): void {
+  const settings = readSettings()
+  settings.embeddingApiConfigs = configs
+  writeSettings(settings)
+}
+
+// 添加Embedding API配置
+export function addEmbeddingApiConfig(config: EmbeddingApiConfig): void {
+  const configs = getEmbeddingApiConfigs()
+  configs.push(config)
+  updateEmbeddingApiConfigs(configs)
+}
+
+// 删除Embedding API配置
+export function deleteEmbeddingApiConfig(configId: string): void {
+  const configs = getEmbeddingApiConfigs()
+  const updatedConfigs = configs.filter(config => config.id !== configId)
+  updateEmbeddingApiConfigs(updatedConfigs)
+}
+
+// 获取启用的Embedding API配置
+export function getEnabledEmbeddingApiConfig(): EmbeddingApiConfig | null {
+  const configs = getEmbeddingApiConfigs()
+  return configs.find(config => config.enabled) || null
+}
+
+// 设置Embedding API配置启用状态
+export function setEmbeddingApiConfigEnabled(configId: string, enabled: boolean): void {
+  const configs = getEmbeddingApiConfigs()
+  const updatedConfigs = configs.map(config => {
+    if (config.id === configId) {
+      return { ...config, enabled }
+    }
+    // 如果启用当前配置，禁用其他配置
+    if (enabled && config.enabled) {
+      return { ...config, enabled: false }
+    }
+    return config
+  })
+  updateEmbeddingApiConfigs(updatedConfigs)
 }

@@ -18,13 +18,15 @@ import {
   IconMore,
   IconCopy,
   IconDelete,
-  IconHistory
+  IconHistory,
+  IconSearch
 } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
 import { processThinkingContent } from '../utils/filterThinking'
 import MessageRenderer from './MessageRenderer'
 import ChatHistorySidebar from './ChatHistorySidebar'
+import VectorSearchPanel from './VectorSearchPanel'
 import { ChatSkeleton } from './Skeleton'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
@@ -386,6 +388,7 @@ const ChatInterface: React.FC = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false)
   const [unsavedMessages, setUnsavedMessages] = useState<Set<string>>(new Set())
+  const [isVectorSearchOpen, setIsVectorSearchOpen] = useState(false)
 
   // 流式响应状态管理
   const [currentStreamCleanup, setCurrentStreamCleanup] = useState<(() => void) | null>(null)
@@ -757,6 +760,11 @@ const ChatInterface: React.FC = () => {
     },
     [aiApiConfigs, selectedAiConfig, buildConversationContext]
   )
+
+  // 处理向量搜索文本插入
+  const handleInsertVectorText = useCallback((text: string) => {
+    setInputValue(prev => prev + text)
+  }, [])
 
   // 发送消息
   const handleSendMessage = useCallback(async () => {
@@ -1309,6 +1317,23 @@ const ChatInterface: React.FC = () => {
               disabled={isLoading || !selectedAiConfig}
             />
             <Button
+              icon={<IconSearch />}
+              onClick={() => setIsVectorSearchOpen(true)}
+              type="tertiary"
+              theme="borderless"
+              style={{
+                height: '36px',
+                width: '36px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: 'var(--semi-color-text-2)'
+              }}
+              title="搜索本地文档"
+            />
+            <Button
               type="primary"
               icon={isGenerating ? <IconStop /> : <IconSend />}
               onClick={isGenerating ? handleStopGenerate : handleSendMessage}
@@ -1336,6 +1361,13 @@ const ChatInterface: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 向量搜索面板 */}
+      <VectorSearchPanel
+        isVisible={isVectorSearchOpen}
+        onClose={() => setIsVectorSearchOpen(false)}
+        onInsertText={handleInsertVectorText}
+      />
     </div>
   )
 }
