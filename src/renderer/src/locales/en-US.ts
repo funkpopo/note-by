@@ -537,7 +537,16 @@ export const enUS: ExtendedDictionary = {
     search: 'Search...',
     vectorSearch: 'Enter keywords to search, e.g.: machine learning, data structures...',
     nodeContent: 'Enter node content',
-    selectFolder: 'Select folder'
+    selectFolder: 'Select folder',
+    linkUrl: 'https://example.com',
+    selectCloudProvider: 'Select cloud storage service',
+    selectAiModel: 'Select AI model',
+    enterAuthCode: 'Enter authorization code',
+    masterPassword: 'Enter master password',
+    confirmPassword: 'Confirm password',
+    currentPassword: 'Enter current master password',
+    newPassword: 'Enter new master password',
+    confirmNewPassword: 'Confirm new password'
   },
   // Navigation
   navigation: {
@@ -694,7 +703,13 @@ export const enUS: ExtendedDictionary = {
       redirectUri: 'http://localhost:3000/auth/callback',
       authCode: 'Enter authorization code',
       remotePath: '/notes',
-      localPath: 'Local notes folder path'
+      localPath: 'Local notes folder path',
+      webdavServerExample: 'e.g.: https://dav.example.com/remote.php/dav/files/username/',
+      webdavUsername: 'WebDAV username',
+      webdavPassword: 'WebDAV password',
+      dropboxAppKey: 'Enter Dropbox App Key',
+      dropboxAppSecret: 'Enter Dropbox App Secret',
+      embedUrl: 'Enter embed URL (e.g: https://www.youtube.com/)'
     },
     syncProgress: {
       uploading: 'Uploading files...',

@@ -15,6 +15,7 @@ import {
 import { IconUpload, IconDownload, IconSync } from '@douyinfe/semi-icons'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import { CloudStorageConfig, CloudSyncResult } from '../../../shared/types/cloud-storage'
+import { useLanguage } from '../locales/LanguageContext'
 import './CloudStorageSettings.css'
 
 const { Text, Title } = Typography
@@ -24,6 +25,7 @@ interface CloudStorageSettingsProps {
 }
 
 const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncComplete }) => {
+  const { t } = useLanguage()
   const [formApi, setFormApi] = useState<FormApi<Partial<CloudStorageConfig>> | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [testLoading, setTestLoading] = useState<boolean>(false)
@@ -229,20 +231,20 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             <Form.Input
               field="url"
               label="WebDAV 服务器地址"
-              placeholder="https://your-webdav-server.com"
+              placeholder={t('webdav.placeholders.serverUrl')}
               rules={[{ required: true, message: '请输入WebDAV服务器地址' }]}
             />
             <Form.Input
               field="username"
               label="用户名"
-              placeholder="请输入用户名"
+              placeholder={t('webdav.placeholders.username')}
               rules={[{ required: true, message: '请输入用户名' }]}
             />
             <Form.Input
               field="password"
               label="密码"
               mode="password"
-              placeholder="请输入密码"
+              placeholder={t('webdav.placeholders.password')}
               rules={[{ required: true, message: '请输入密码' }]}
             />
           </>
@@ -254,20 +256,20 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             <Form.Input
               field="auth.clientId"
               label="客户端 ID"
-              placeholder="请输入Google Cloud客户端ID"
+              placeholder={t('webdav.placeholders.clientId')}
               rules={[{ required: true, message: '请输入客户端ID' }]}
             />
             <Form.Input
               field="auth.clientSecret"
               label="客户端密钥"
               mode="password"
-              placeholder="请输入Google Cloud客户端密钥"
+              placeholder={t('webdav.placeholders.clientSecret')}
               rules={[{ required: true, message: '请输入客户端密钥' }]}
             />
             <Form.Input
               field="auth.redirectUri"
               label="重定向 URI"
-              placeholder="http://localhost:3000/auth/callback"
+              placeholder={t('webdav.placeholders.redirectUri')}
               initValue="http://localhost:3000/auth/callback"
             />
             <Button
@@ -288,20 +290,20 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
             <Form.Input
               field="auth.clientId"
               label="App Key"
-              placeholder="请输入Dropbox App Key"
+              placeholder={t('webdav.placeholders.dropboxAppKey')}
               rules={[{ required: true, message: '请输入App Key' }]}
             />
             <Form.Input
               field="auth.clientSecret"
               label="App Secret"
               mode="password"
-              placeholder="请输入Dropbox App Secret"
+              placeholder={t('webdav.placeholders.dropboxAppSecret')}
               rules={[{ required: true, message: '请输入App Secret' }]}
             />
             <Form.Input
               field="auth.redirectUri"
               label="重定向 URI"
-              placeholder="http://localhost:3000/auth/callback"
+              placeholder={t('webdav.placeholders.redirectUri')}
               initValue="http://localhost:3000/auth/callback"
             />
             <Button
@@ -333,7 +335,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
         <Form.Select
           field="provider"
           label="云存储服务"
-          placeholder="选择云存储服务"
+          placeholder={t('placeholders.selectCloudProvider')}
           value={selectedProvider}
           onChange={(value) => handleProviderChange(value as string)}
           className="cloud-storage-select"
@@ -359,7 +361,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
         <Form.Input
           field="remotePath"
           label="远程路径"
-          placeholder="/notes"
+          placeholder={t('webdav.placeholders.remotePath')}
           initValue="/notes"
           rules={[{ required: true, message: '请输入远程路径' }]}
         />
@@ -367,7 +369,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
         <Form.Input
           field="localPath"
           label="本地路径"
-          placeholder="本地笔记文件夹路径"
+          placeholder={t('webdav.placeholders.localPath')}
           disabled
           initValue=""
         />
@@ -470,7 +472,7 @@ const CloudStorageSettings: React.FC<CloudStorageSettingsProps> = ({ onSyncCompl
           <Input
             value={authCode}
             onChange={setAuthCode}
-            placeholder="请输入授权码"
+            placeholder={t('placeholders.enterAuthCode')}
             style={{ marginTop: 12 }}
           />
         </div>

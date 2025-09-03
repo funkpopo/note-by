@@ -536,7 +536,16 @@ export const zhCN: ExtendedDictionary = {
       search: '搜索...',
       vectorSearch: '输入搜索关键词，例如：机器学习、数据结构...',
       nodeContent: '请输入节点内容',
-      selectFolder: '请选择文件夹'
+      selectFolder: '请选择文件夹',
+      linkUrl: 'https://example.com',
+      selectCloudProvider: '选择云存储服务',
+      selectAiModel: '选择AI模型',
+      enterAuthCode: '请输入授权码',
+      masterPassword: '请输入主密码',
+      confirmPassword: '请再次输入主密码',
+      currentPassword: '请输入当前主密码',
+      newPassword: '请输入新主密码',
+      confirmNewPassword: '请再次输入新主密码'
     },
     navigation: {
       notes: '笔记',
@@ -689,7 +698,13 @@ export const zhCN: ExtendedDictionary = {
         redirectUri: 'http://localhost:3000/auth/callback',
         authCode: '请输入授权码',
         remotePath: '/notes',
-        localPath: '本地笔记文件夹路径'
+        localPath: '本地笔记文件夹路径',
+        webdavServerExample: '例如: https://dav.example.com/remote.php/dav/files/username/',
+        webdavUsername: 'WebDAV用户名',
+        webdavPassword: 'WebDAV密码',
+        dropboxAppKey: '请输入Dropbox App Key',
+        dropboxAppSecret: '请输入Dropbox App Secret',
+        embedUrl: '输入嵌入地址 (如: https://www.youtube.com/)'
       },
       syncProgress: {
         uploading: '正在上传文件...',

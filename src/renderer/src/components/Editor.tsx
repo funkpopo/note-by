@@ -246,7 +246,7 @@ const MarkdownShortcuts = Extension.create({
               <input 
                 id="link-url-input" 
                 type="url" 
-                placeholder="https://example.com" 
+                placeholder={t('placeholders.linkUrl')} 
                 style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px;"
               />
             </div>
@@ -1402,7 +1402,7 @@ const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFi
                     <input 
                       id="table-link-url-input" 
                       type="url" 
-                      placeholder="https://example.com" 
+                      placeholder={t('placeholders.linkUrl')} 
                       style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px;"
                     />
                   </div>
@@ -2104,7 +2104,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                     <input 
                       id="text-link-url-input" 
                       type="url" 
-                      placeholder="https://example.com" 
+                      placeholder={t('placeholders.linkUrl')} 
                       style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px;"
                     />
                   </div>
@@ -2279,7 +2279,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
                       <input 
                         id="iframe-url-input" 
                         type="url" 
-                        placeholder="输入嵌入地址 (如: https://www.youtube.com/)" 
+                        placeholder={t('webdav.placeholders.embedUrl')} 
                         value="${selectedText || ''}"
                         style="width: 100%; padding: 8px 12px; border: 1px solid var(--semi-color-border); border-radius: 4px; font-size: 14px; background: var(--semi-color-bg-0); color: var(--semi-color-text-0); margin-top: 4px;"
                       />

@@ -12,6 +12,7 @@ import {
   Progress
 } from '@douyinfe/semi-ui'
 import { useTheme } from '../context/theme/useTheme'
+import { useLanguage } from '../locales/LanguageContext'
 import { useAnalysisStore } from '../context/analysis/analysisService'
 import ReactECharts from 'echarts-for-react'
 import 'echarts-wordcloud'
@@ -1060,6 +1061,7 @@ const ContentQualityScore: React.FC<{
 
 const DataAnalysis: React.FC = () => {
   const { isDarkMode } = useTheme()
+  const { t } = useLanguage()
   const {
     isAnalyzing,
     analysisCached,
@@ -2390,7 +2392,7 @@ const DataAnalysis: React.FC = () => {
         >
           <Space>
             <Select
-              placeholder="选择AI模型"
+              placeholder={t('placeholders.selectAiModel')}
               value={selectedModelId || undefined}
               onChange={async (value) => {
                 const modelId = value as string
