@@ -2,6 +2,282 @@
 // Temporarily removing BlockNote-related dictionary configuration, waiting for Tiptap implementation
 
 export interface ExtendedDictionary {
+  common?: {
+    save: string
+    cancel: string
+    delete: string
+    edit: string
+    confirm: string
+    create: string
+    rename: string
+    copy: string
+    refresh: string
+    export: string
+    import: string
+    search: string
+    loading: string
+    success: string
+    failed: string
+    error: string
+    warning: string
+    info: string
+    test: string
+    add: string
+    remove: string
+    update: string
+    upload: string
+    download: string
+    sync: string
+    settings: string
+    close: string
+    yes: string
+    no: string
+  }
+  placeholders?: {
+    name: string
+    folderName: string
+    noteName: string
+    password: string
+    search: string
+    vectorSearch: string
+    nodeContent: string
+    selectFolder: string
+  }
+  navigation?: {
+    notes: string
+    dataAnalysis: string
+    mindMap: string
+    chat: string
+    settings: string
+    themeToggle: string
+    sync: string
+    newNote: string
+    newFolder: string
+    newSubFolder: string
+    renameFolder: string
+    deleteFolder: string
+    renameNote: string
+    deleteNote: string
+    copyDocName: string
+    searchPlaceholder: string
+    emptyNotes: string
+    folderName: string
+    noteName: string
+    confirmDeleteFolder: string
+    confirmDeleteNote: string
+    placeholders: {
+      search: string
+      folderName: string
+      noteName: string
+    }
+  }
+  settings?: {
+    title: string
+    tabs: {
+      basic: string
+      history: string
+      webdav: string
+      performance: string
+    }
+    language: {
+      title: string
+      description: string
+    }
+    autoUpdate: {
+      title: string
+      description: string
+      manual: string
+      manualDescription: string
+      checkNow: string
+      newVersion: string
+      currentLatest: string
+      downloadNow: string
+    }
+    apiConfig: {
+      title: string
+      name: string
+      apiUrl: string
+      apiKey: string
+      model: string
+      temperature: string
+      maxTokens: string
+      thinkingModel: string
+      testConnection: string
+      namePlaceholder: string
+      urlPlaceholder: string
+      keyPlaceholder: string
+      modelPlaceholder: string
+    }
+    embeddingConfig: {
+      namePlaceholder: string
+      keyPlaceholder: string
+      urlPlaceholder: string
+      modelPlaceholder: string
+      dimensionsPlaceholder: string
+    }
+    history: {
+      title: string
+      retentionMode: string
+      retentionByCount: string
+      retentionByDays: string
+      retentionCount: string
+      retentionDays: string
+    }
+    encryption: {
+      title: string
+      useCustom: string
+      setPassword: string
+      changePassword: string
+      closeEncryption: string
+      enterPassword: string
+      confirmPassword: string
+      currentPassword: string
+      newPassword: string
+      passwordMismatch: string
+      passwordTooShort: string
+      incorrectPassword: string
+    }
+    performance: {
+      title: string
+      memory: string
+      memoryUsed: string
+      memoryTotal: string
+      memoryUsage: string
+      editorPerf: string
+      loadTime: string
+      saveTime: string
+      renderTime: string
+      operations: string
+      editCount: string
+      saveCount: string
+      loadCount: string
+      searchCount: string
+      network: string
+      uploadSpeed: string
+      downloadSpeed: string
+      latency: string
+      report: string
+      exportData: string
+      resetStats: string
+    }
+  }
+  webdav?: {
+    title: string
+    serverSettings: string
+    serverUrl: string
+    username: string
+    password: string
+    enable: string
+    autoSync: string
+    syncDirection: string
+    uploadOnly: string
+    downloadOnly: string
+    bidirectional: string
+    syncOptions: string
+    encryptionSettings: string
+    syncOperations: string
+    clearCache: string
+    uploadToCloud: string
+    downloadFromCloud: string
+    testConnection: string
+    masterPassword: string
+    inputMasterPassword: string
+    setMasterPassword: string
+    changeMasterPassword: string
+    closeCustomEncryption: string
+    placeholders: {
+      serverUrl: string
+      username: string
+      password: string
+      clientId: string
+      clientSecret: string
+      redirectUri: string
+      authCode: string
+      remotePath: string
+      localPath: string
+    }
+    syncProgress: {
+      uploading: string
+      downloading: string
+      comparing: string
+    }
+  }
+  mindmap?: {
+    title: string
+    helpText: string
+    centerTopic: string
+    newNode: string
+    addNode: string
+    undo: string
+    redo: string
+    save: string
+    load: string
+    exportHtml: string
+    editNode: string
+    deleteNode: string
+    nodeContent: string
+    nodeStyle: string
+    fontSize: string
+    addArrow: string
+    deleteEdge: string
+    openArrow: string
+    closedArrow: string
+    defaultStyle: string
+    primaryStyle: string
+    successStyle: string
+    warningStyle: string
+    dangerStyle: string
+    contentPlaceholder: string
+  }
+  messages?: {
+    success: {
+      saved: string
+      deleted: string
+      created: string
+      updated: string
+      copied: string
+      synced: string
+      connected: string
+      exported: string
+      imported: string
+      loaded: string
+      cleared: string
+      renamed: string
+      passwordSet: string
+      passwordChanged: string
+      encryptionEnabled: string
+      encryptionDisabled: string
+    }
+    error: {
+      saveFailed: string
+      deleteFailed: string
+      createFailed: string
+      updateFailed: string
+      copyFailed: string
+      syncFailed: string
+      connectionFailed: string
+      exportFailed: string
+      importFailed: string
+      loadFailed: string
+      renameFailed: string
+      notConfigured: string
+      alreadySyncing: string
+      invalidFormat: string
+      parseError: string
+      networkError: string
+      permissionDenied: string
+      fileNotFound: string
+      operationFailed: string
+    }
+    info: {
+      syncing: string
+      cancelling: string
+      loading: string
+      processing: string
+      empty: string
+      noSelection: string
+    }
+  }
   dataAnalysis?: {
     title: string
     analysisButton: string
@@ -13,6 +289,9 @@ export interface ExtendedDictionary {
     cachedResults: string
     retryButton: string
     resetCache: string
+    placeholders: {
+      selectModel: string
+    }
     errors: {
       networkError: string
       dataError: string
@@ -48,12 +327,37 @@ export interface ExtendedDictionary {
     }
   }
   chat?: {
+    actions: {
+      send: string
+      stop: string
+      clear: string
+      history: string
+      copy: string
+      retry: string
+      delete: string
+      newSession: string
+    }
+    notifications: {
+      copied: string
+      cleared: string
+      stopped: string
+      retrying: string
+      deleted: string
+      deleteFailed: string
+      saveFailed: string
+      loadFailed: string
+      selectModel: string
+      noMessage: string
+      retryFailed: string
+      noUserMessage: string
+    }
     inputPlaceholder: string
     modelSelector: {
       placeholder: string
-      noModels: string
       thinkingBadge: string
+      noModels: string
     }
+    suggestions: string[]
     messages: {
       statusIndicator: {
         loading: string
@@ -62,43 +366,15 @@ export interface ExtendedDictionary {
         error: string
       }
     }
-    actions: {
-      send: string
-      stop: string
-      clear: string
-      copy: string
-      retry: string
-      delete: string
-      history: string
-      newSession: string
-    }
-    suggestions: string[]
-    notifications: {
-      copied: string
-      stopped: string
-      cleared: string
-      deleted: string
-      retrying: string
-      sendFailed: string
-      selectModel: string
-      noMessage: string
-      retryFailed: string
-      deleteFailed: string
-      noUserMessage: string
-      saveFailed: string
-      loadFailed: string
-    }
     history: {
       title: string
-      empty: string
       newChat: string
-      loadFailed: string
-      saveFailed: string
-      deleteFailed: string
-      deleteConfirm: string
+      empty: string
       searchPlaceholder: string
-      createdAt: string
-      lastMessage: string
+      deleteConfirm: string
+      saveFailed: string
+      loadFailed: string
+      deleteFailed: string
       loading: string
       notFound: string
       titleUpdated: string
@@ -125,6 +401,16 @@ export interface ExtendedDictionary {
     placeholder: {
       content: string
       title: string
+    }
+    placeholders: {
+      linkUrl: string
+      embedUrl: string
+      imageUrl: string
+      imageAlt: string
+      language: string
+      selectApi: string
+      iframeUrl: string
+      content: string
     }
     notifications: {
       saveSuccess: string
@@ -242,6 +528,17 @@ export const enUS: ExtendedDictionary = {
     yes: 'Yes',
     no: 'No'
   },
+  // Common placeholders
+  placeholders: {
+    name: 'Enter name',
+    folderName: 'Enter folder name',
+    noteName: 'Enter note name',
+    password: 'Enter password',
+    search: 'Search...',
+    vectorSearch: 'Enter keywords to search, e.g.: machine learning, data structures...',
+    nodeContent: 'Enter node content',
+    selectFolder: 'Select folder'
+  },
   // Navigation
   navigation: {
     notes: 'Notes',
@@ -265,7 +562,12 @@ export const enUS: ExtendedDictionary = {
     noteName: 'Enter note name',
     confirmDeleteFolder:
       'Are you sure you want to delete folder "{name}"? All notes in the folder will be deleted.',
-    confirmDeleteNote: 'Are you sure you want to delete note "{name}"?'
+    confirmDeleteNote: 'Are you sure you want to delete note "{name}"?',
+    placeholders: {
+      search: 'Search notes and folders...',
+      folderName: 'Enter folder name',
+      noteName: 'Enter note name'
+    }
   },
   // Settings page
   settings: {
@@ -304,6 +606,13 @@ export const enUS: ExtendedDictionary = {
       urlPlaceholder: 'Enter API URL, e.g. https://api.openai.com',
       keyPlaceholder: 'Enter API Key',
       modelPlaceholder: 'Enter model name, e.g. gpt-3.5-turbo'
+    },
+    embeddingConfig: {
+      namePlaceholder: 'Enter config name, e.g. OpenAI Embedding',
+      keyPlaceholder: 'Enter API Key',
+      urlPlaceholder: 'Enter API URL, e.g. https://api.openai.com',
+      modelPlaceholder: 'Enter model name, e.g. text-embedding-3-small',
+      dimensionsPlaceholder: 'Enter vector dimensions, e.g. 1536'
     },
     history: {
       title: 'History Management',
@@ -376,6 +685,17 @@ export const enUS: ExtendedDictionary = {
     setMasterPassword: 'Set Master Password',
     changeMasterPassword: 'Change Master Password',
     closeCustomEncryption: 'Disable Custom Encryption',
+    placeholders: {
+      serverUrl: 'https://your-webdav-server.com',
+      username: 'Enter username',
+      password: 'Enter password',
+      clientId: 'Enter Google Cloud Client ID',
+      clientSecret: 'Enter Google Cloud Client Secret',
+      redirectUri: 'http://localhost:3000/auth/callback',
+      authCode: 'Enter authorization code',
+      remotePath: '/notes',
+      localPath: 'Local notes folder path'
+    },
     syncProgress: {
       uploading: 'Uploading files...',
       downloading: 'Downloading files...',
@@ -473,6 +793,9 @@ export const enUS: ExtendedDictionary = {
     cachedResults: 'Showing cached analysis results',
     retryButton: 'Retry Analysis',
     resetCache: 'Reset Cache',
+    placeholders: {
+      selectModel: 'Select AI Model'
+    },
     errors: {
       networkError: 'Network connection error, please check your network and retry',
       dataError: 'Data retrieval failed, please try again later',
@@ -545,7 +868,6 @@ export const enUS: ExtendedDictionary = {
       cleared: 'Chat cleared',
       deleted: 'Message deleted',
       retrying: 'Regenerating response...',
-      sendFailed: 'Failed to send message',
       selectModel: 'Please select an AI model first',
       noMessage: 'Cannot find corresponding user message, unable to regenerate',
       retryFailed: 'Regeneration failed, please try again later',
@@ -563,8 +885,6 @@ export const enUS: ExtendedDictionary = {
       deleteFailed: 'Failed to delete chat history',
       deleteConfirm: 'Are you sure you want to delete this conversation?',
       searchPlaceholder: 'Search conversations...',
-      createdAt: 'Created at',
-      lastMessage: 'Last message',
       loading: 'Loading chat history...',
       notFound: 'No chat history found',
       titleUpdated: 'Chat title updated',
@@ -592,6 +912,16 @@ export const enUS: ExtendedDictionary = {
     placeholder: {
       content: 'Start typing content...',
       title: 'File title'
+    },
+    placeholders: {
+      linkUrl: 'https://example.com',
+      embedUrl: 'Enter or select embed URL',
+      imageUrl: 'Enter image URL',
+      imageAlt: 'Alternative text for image',
+      language: 'Language',
+      selectApi: 'Select API',
+      iframeUrl: 'Enter embed URL (e.g: https://www.youtube.com/)',
+      content: 'Start writing...'
     },
     notifications: {
       saveSuccess: 'File saved successfully',

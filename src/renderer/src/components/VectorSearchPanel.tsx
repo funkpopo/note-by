@@ -16,6 +16,7 @@ import {
   IconClock,
   IconBookmark
 } from '@douyinfe/semi-icons'
+import { useLanguage } from '../locales/LanguageContext'
 
 const { Text } = Typography
 
@@ -47,6 +48,7 @@ const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
   onClose,
   onInsertText
 }) => {
+  const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<VectorSearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -167,7 +169,7 @@ const VectorSearchPanel: React.FC<VectorSearchPanelProps> = ({
       {/* 搜索输入框 */}
       <div style={{ marginBottom: '16px' }}>
         <Input
-          placeholder="输入搜索关键词，例如：机器学习、数据结构..."
+          placeholder={t('placeholders.vectorSearch')}
           value={query}
           onChange={(value) => setQuery(value)}
           onEnterPress={handleSearch}

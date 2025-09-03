@@ -11,6 +11,7 @@ import {
   IconTick
 } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
+import { useLanguage } from '../../locales/LanguageContext'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -25,6 +26,7 @@ interface EmbeddingApiConfig {
 }
 
 const EmbeddingConfigSection: React.FC = () => {
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [embeddingConfigs, setEmbeddingConfigs] = useState<EmbeddingApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<EmbeddingApiConfig | null>(null)
@@ -405,7 +407,7 @@ const EmbeddingConfigSection: React.FC = () => {
           <Form.Input
             field="name"
             label="配置名称"
-            placeholder="请输入配置名称，如OpenAI Embedding等"
+            placeholder={t('settings.embeddingConfig.namePlaceholder')}
             initValue={currentConfig?.name}
             onChange={(value) => handleConfigChange('name', value)}
             showClear
@@ -414,7 +416,7 @@ const EmbeddingConfigSection: React.FC = () => {
           <Form.Input
             field="apiKey"
             label="API Key"
-            placeholder="请输入API Key"
+            placeholder={t('settings.embeddingConfig.keyPlaceholder')}
             initValue={currentConfig?.apiKey}
             onChange={(value) => handleConfigChange('apiKey', value)}
             showClear
@@ -423,7 +425,7 @@ const EmbeddingConfigSection: React.FC = () => {
           <Form.Input
             field="apiUrl"
             label="API URL"
-            placeholder="请输入API URL，如https://api.openai.com"
+            placeholder={t('settings.embeddingConfig.urlPlaceholder')}
             initValue={currentConfig?.apiUrl}
             onChange={(value) => handleConfigChange('apiUrl', value)}
             showClear
@@ -432,7 +434,7 @@ const EmbeddingConfigSection: React.FC = () => {
           <Form.Input
             field="modelName"
             label="模型名称"
-            placeholder="请输入模型名称，如text-embedding-3-small"
+            placeholder={t('settings.embeddingConfig.modelPlaceholder')}
             initValue={currentConfig?.modelName}
             onChange={(value) => handleConfigChange('modelName', value)}
             showClear
@@ -441,7 +443,7 @@ const EmbeddingConfigSection: React.FC = () => {
           <Form.InputNumber
             field="dimensions"
             label="向量维度"
-            placeholder="请输入向量维度，如1536"
+            placeholder={t('settings.embeddingConfig.dimensionsPlaceholder')}
             initValue={currentConfig?.dimensions}
             onChange={(value) => handleConfigChange('dimensions', value || 1536)}
             min={1}

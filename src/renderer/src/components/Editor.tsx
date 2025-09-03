@@ -93,6 +93,7 @@ import HighlightColorPicker from './HighlightColorPicker'
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import './Editor.css'
+import { useLanguage } from '../locales/LanguageContext'
 
 const lowlight = createLowlight()
 
@@ -452,7 +453,7 @@ const IframeComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) 
                 <Select
                   value={src}
                   onChange={setSrc}
-                  placeholder="输入或选择嵌入地址"
+                  placeholder={t('editor.placeholders.embedUrl')}
                   filter
                   style={{ marginTop: '4px', width: '100%' }}
                   showClear
@@ -797,7 +798,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
                   type="text"
                   value={src}
                   onChange={(e) => setSrc(e.target.value)}
-                  placeholder="输入图片地址"
+                  placeholder={t('editor.placeholders.imageUrl')}
                   style={{
                     marginTop: '4px',
                     width: '100%',
@@ -815,7 +816,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
                   type="text"
                   value={alt}
                   onChange={(e) => setAlt(e.target.value)}
-                  placeholder="图片的替代文本"
+                  placeholder={t('editor.placeholders.imageAlt')}
                   style={{
                     marginTop: '4px',
                     width: '100%',
@@ -999,7 +1000,7 @@ const CodeBlockComponent: React.FC<any> = ({ node, updateAttributes }) => {
           onChange={handleLanguageChange}
           style={{ width: 120 }}
           size="small"
-          placeholder="语言"
+          placeholder={t('editor.placeholders.language')}
         >
           {SUPPORTED_LANGUAGES.map((lang) => (
             <Select.Option key={lang.value} value={lang.value}>
@@ -2048,7 +2049,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
               onChange={(value) => setSelectedConfigId(value as string)}
               size="small"
               style={{ width: 120, marginRight: '8px' }}
-              placeholder="选择API"
+              placeholder={t('editor.placeholders.selectApi')}
             >
               {apiConfigs.map((config) => (
                 <Select.Option key={config.id} value={config.id}>
@@ -2476,7 +2477,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
 
 const Editor: React.FC<EditorProps> = ({
   content = '',
-  placeholder = '开始写作...',
+  placeholder,
   onUpdate,
   editable = true,
   className = '',
@@ -2484,6 +2485,8 @@ const Editor: React.FC<EditorProps> = ({
   currentFile,
   onFileChanged
 }) => {
+  const { t } = useLanguage()
+  const defaultPlaceholder = placeholder || t('editor.placeholders.content')
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [loadedContent, setLoadedContent] = useState('')
@@ -2567,7 +2570,7 @@ const Editor: React.FC<EditorProps> = ({
           codeBlock: false
         }),
         Placeholder.configure({
-          placeholder
+          placeholder: defaultPlaceholder
         }),
         Underline,
         Typography,

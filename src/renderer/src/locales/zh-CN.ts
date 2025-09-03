@@ -33,6 +33,16 @@ export interface ExtendedDictionary {
     yes: string
     no: string
   }
+  placeholders?: {
+    name: string
+    folderName: string
+    noteName: string
+    password: string
+    search: string
+    vectorSearch: string
+    nodeContent: string
+    selectFolder: string
+  }
   navigation?: {
     notes: string
     dataAnalysis: string
@@ -55,6 +65,11 @@ export interface ExtendedDictionary {
     noteName: string
     confirmDeleteFolder: string
     confirmDeleteNote: string
+    placeholders: {
+      search: string
+      folderName: string
+      noteName: string
+    }
   }
   settings?: {
     title: string
@@ -92,6 +107,13 @@ export interface ExtendedDictionary {
       urlPlaceholder: string
       keyPlaceholder: string
       modelPlaceholder: string
+    }
+    embeddingConfig: {
+      namePlaceholder: string
+      keyPlaceholder: string
+      urlPlaceholder: string
+      modelPlaceholder: string
+      dimensionsPlaceholder: string
     }
     history: {
       title: string
@@ -163,6 +185,17 @@ export interface ExtendedDictionary {
     setMasterPassword: string
     changeMasterPassword: string
     closeCustomEncryption: string
+    placeholders: {
+      serverUrl: string
+      username: string
+      password: string
+      clientId: string
+      clientSecret: string
+      redirectUri: string
+      authCode: string
+      remotePath: string
+      localPath: string
+    }
     syncProgress: {
       uploading: string
       downloading: string
@@ -256,6 +289,9 @@ export interface ExtendedDictionary {
     cachedResults: string
     retryButton: string
     resetCache: string
+    placeholders: {
+      selectModel: string
+    }
     errors: {
       networkError: string
       dataError: string
@@ -366,6 +402,15 @@ export interface ExtendedDictionary {
       content: string
       title: string
     }
+    placeholders: {
+      linkUrl: string
+      embedUrl: string
+      imageUrl: string
+      imageAlt: string
+      language: string
+      selectApi: string
+      iframeUrl: string
+    }
     notifications: {
       saveSuccess: string
       saveFailed: string
@@ -450,177 +495,208 @@ export interface ExtendedDictionary {
 }
 
 export const zhCN: ExtendedDictionary = {
-  // 通用文本
-  common: {
-    save: '保存',
-    cancel: '取消',
-    delete: '删除',
-    edit: '编辑',
-    confirm: '确认',
-    create: '创建',
-    rename: '重命名',
-    copy: '复制',
-    refresh: '刷新',
-    export: '导出',
-    import: '导入',
-    search: '搜索',
-    loading: '加载中...',
-    success: '成功',
-    failed: '失败',
-    error: '错误',
-    warning: '警告',
-    info: '信息',
-    test: '测试',
-    add: '添加',
-    remove: '移除',
-    update: '更新',
-    upload: '上传',
-    download: '下载',
-    sync: '同步',
-    settings: '设置',
-    close: '关闭',
-    yes: '是',
-    no: '否'
-  },
-  // 导航栏
-  navigation: {
-    notes: '笔记',
-    dataAnalysis: '数据分析',
-    mindMap: '思维导图',
-    chat: '对话',
-    settings: '设置',
-    themeToggle: '主题切换',
-    sync: '同步',
-    newNote: '新建笔记',
-    newFolder: '新建文件夹',
-    newSubFolder: '新建子文件夹',
-    renameFolder: '重命名文件夹',
-    deleteFolder: '删除文件夹',
-    renameNote: '重命名笔记',
-    deleteNote: '删除笔记',
-    copyDocName: '复制文档名称',
-    searchPlaceholder: '搜索笔记和文件夹...',
-    emptyNotes: '暂无笔记',
-    folderName: '请输入文件夹名称',
-    noteName: '请输入笔记名称',
-    confirmDeleteFolder: '确定要删除文件夹 "{name}" 吗？文件夹中的所有笔记都将被删除。',
-    confirmDeleteNote: '确定要删除笔记 "{name}" 吗？'
-  },
-  // 设置页面
-  settings: {
-    title: '设置',
-    tabs: {
-      basic: '基本设置',
-      history: '历史记录管理',
-      webdav: 'WebDAV同步',
-      performance: '性能监控'
+    // 通用文本
+    common: {
+      save: '保存',
+      cancel: '取消',
+      delete: '删除',
+      edit: '编辑',
+      confirm: '确认',
+      create: '创建',
+      rename: '重命名',
+      copy: '复制',
+      refresh: '刷新',
+      export: '导出',
+      import: '导入',
+      search: '搜索',
+      loading: '加载中...',
+      success: '成功',
+      failed: '失败',
+      error: '错误',
+      warning: '警告',
+      info: '信息',
+      test: '测试',
+      add: '添加',
+      remove: '移除',
+      update: '更新',
+      upload: '上传',
+      download: '下载',
+      sync: '同步',
+      settings: '设置',
+      close: '关闭',
+      yes: '是',
+      no: '否'
     },
-    language: {
-      title: '界面语言',
-      description: '选择应用程序的显示语言'
+    // 通用占位符
+    placeholders: {
+      name: '请输入名称',
+      folderName: '请输入文件夹名称',
+      noteName: '请输入笔记名称',
+      password: '请输入密码',
+      search: '搜索...',
+      vectorSearch: '输入搜索关键词，例如：机器学习、数据结构...',
+      nodeContent: '请输入节点内容',
+      selectFolder: '请选择文件夹'
     },
-    autoUpdate: {
-      title: '自动检查更新',
-      description: '应用启动时自动检查是否有新版本',
-      manual: '手动检查更新',
-      manualDescription: '检查GitHub上是否有新版本发布',
-      checkNow: '检查更新',
-      newVersion: '发现新版本:',
-      currentLatest: '当前已是最新版本',
-      downloadNow: '前往下载'
+    navigation: {
+      notes: '笔记',
+      dataAnalysis: '数据分析',
+      mindMap: '思维导图',
+      chat: '对话',
+      settings: '设置',
+      themeToggle: '主题切换',
+      sync: '同步',
+      newNote: '新建笔记',
+      newFolder: '新建文件夹',
+      newSubFolder: '新建子文件夹',
+      renameFolder: '重命名文件夹',
+      deleteFolder: '删除文件夹',
+      renameNote: '重命名笔记',
+      deleteNote: '删除笔记',
+      copyDocName: '复制文档名称',
+      searchPlaceholder: '搜索笔记和文件夹...',
+      emptyNotes: '暂无笔记',
+      folderName: '请输入文件夹名称',
+      noteName: '请输入笔记名称',
+      confirmDeleteFolder: '确定要删除文件夹 "{name}" 吗？文件夹中的所有笔记都将被删除。',
+      confirmDeleteNote: '确定要删除笔记 "{name}" 吗？',
+      placeholders: {
+        search: '搜索笔记和文件夹...',
+        folderName: '请输入文件夹名称',
+        noteName: '请输入笔记名称'
+      }
     },
-    apiConfig: {
-      title: 'AI API配置',
-      name: '配置名称',
-      apiUrl: 'API URL',
-      apiKey: 'API Key',
-      model: '模型',
-      temperature: '温度 (Temperature)',
-      maxTokens: '最大Token数 (Max Tokens)',
-      thinkingModel: '思维模型',
+    settings: {
+      title: '设置',
+      tabs: {
+        basic: '基本设置',
+        history: '历史记录管理',
+        webdav: 'WebDAV同步',
+        performance: '性能监控'
+      },
+      language: {
+        title: '界面语言',
+        description: '选择应用程序的显示语言'
+      },
+      autoUpdate: {
+        title: '自动检查更新',
+        description: '应用启动时自动检查是否有新版本',
+        manual: '手动检查更新',
+        manualDescription: '检查GitHub上是否有新版本发布',
+        checkNow: '检查更新',
+        newVersion: '发现新版本:',
+        currentLatest: '当前已是最新版本',
+        downloadNow: '前往下载'
+      },
+      apiConfig: {
+        title: 'AI API配置',
+        name: '配置名称',
+        apiUrl: 'API URL',
+        apiKey: 'API Key',
+        model: '模型',
+        temperature: '温度 (Temperature)',
+        maxTokens: '最大Token数 (Max Tokens)',
+        thinkingModel: '思维模型',
+        testConnection: '测试连接',
+        namePlaceholder: '请输入配置名称，如OpenAI、Claude等',
+        urlPlaceholder: '请输入API URL，如https://api.openai.com',
+        keyPlaceholder: '请输入API Key',
+        modelPlaceholder: '请输入模型名称，如gpt-3.5-turbo'
+      },
+      embeddingConfig: {
+        namePlaceholder: '请输入配置名称，如OpenAI Embedding等',
+        keyPlaceholder: '请输入API Key',
+        urlPlaceholder: '请输入API URL，如https://api.openai.com',
+        modelPlaceholder: '请输入模型名称，如text-embedding-3-small',
+        dimensionsPlaceholder: '请输入向量维度，如1536'
+      },
+      history: {
+        title: '历史记录管理',
+        retentionMode: '历史记录保留方式',
+        retentionByCount: '按数量保留',
+        retentionByDays: '按时间保留',
+        retentionCount: '保留最近的记录数量',
+        retentionDays: '保留天数'
+      },
+      encryption: {
+        title: '加密设置',
+        useCustom: '使用自定义加密',
+        setPassword: '设置主密码',
+        changePassword: '更改主密码',
+        closeEncryption: '关闭自定义加密',
+        enterPassword: '请输入主密码',
+        confirmPassword: '确认密码',
+        currentPassword: '当前密码',
+        newPassword: '新密码',
+        passwordMismatch: '两次输入的密码不一致',
+        passwordTooShort: '密码长度至少为8个字符',
+        incorrectPassword: '当前密码不正确'
+      },
+      performance: {
+        title: '性能统计',
+        memory: '内存使用',
+        memoryUsed: '已使用',
+        memoryTotal: '总量',
+        memoryUsage: '使用率',
+        editorPerf: '编辑器性能',
+        loadTime: '加载时间',
+        saveTime: '保存时间',
+        renderTime: '渲染时间',
+        operations: '操作统计',
+        editCount: '编辑次数',
+        saveCount: '保存次数',
+        loadCount: '加载次数',
+        searchCount: '搜索次数',
+        network: '网络性能',
+        uploadSpeed: '上传速度',
+        downloadSpeed: '下载速度',
+        latency: '延迟',
+        report: '性能分析报告',
+        exportData: '导出数据',
+        resetStats: '重置统计'
+      }
+    },
+    webdav: {
+      title: 'WebDAV同步设置',
+      serverSettings: 'WebDAV 服务器设置',
+      serverUrl: 'WebDAV服务器地址',
+      username: '用户名',
+      password: '密码',
+      enable: '启用WebDAV同步',
+      autoSync: '应用启动时自动同步',
+      syncDirection: '同步方向',
+      uploadOnly: '本地 → 远程 (上传)',
+      downloadOnly: '远程 → 本地 (下载)',
+      bidirectional: '双向同步',
+      syncOptions: '同步选项',
+      encryptionSettings: '加密设置',
+      syncOperations: '同步操作',
+      clearCache: '清除同步缓存',
+      uploadToCloud: '上传到云端',
+      downloadFromCloud: '从云端下载',
       testConnection: '测试连接',
-      namePlaceholder: '请输入配置名称，如OpenAI、Claude等',
-      urlPlaceholder: '请输入API URL，如https://api.openai.com',
-      keyPlaceholder: '请输入API Key',
-      modelPlaceholder: '请输入模型名称，如gpt-3.5-turbo'
+      masterPassword: '主密码',
+      inputMasterPassword: '输入主密码',
+      setMasterPassword: '设置主密码',
+      changeMasterPassword: '更改主密码',
+      closeCustomEncryption: '关闭自定义加密',
+      placeholders: {
+        serverUrl: 'https://your-webdav-server.com',
+        username: '请输入用户名',
+        password: '请输入密码',
+        clientId: '请输入Google Cloud客户端ID',
+        clientSecret: '请输入Google Cloud客户端密钥',
+        redirectUri: 'http://localhost:3000/auth/callback',
+        authCode: '请输入授权码',
+        remotePath: '/notes',
+        localPath: '本地笔记文件夹路径'
+      },
+      syncProgress: {
+        uploading: '正在上传文件...',
+        downloading: '正在下载文件...',
+        comparing: '正在比较文件内容...'
+      }
     },
-    history: {
-      title: '历史记录管理',
-      retentionMode: '历史记录保留方式',
-      retentionByCount: '按数量保留',
-      retentionByDays: '按时间保留',
-      retentionCount: '保留最近的记录数量',
-      retentionDays: '保留天数'
-    },
-    encryption: {
-      title: '加密设置',
-      useCustom: '使用自定义加密',
-      setPassword: '设置主密码',
-      changePassword: '更改主密码',
-      closeEncryption: '关闭自定义加密',
-      enterPassword: '请输入主密码',
-      confirmPassword: '确认密码',
-      currentPassword: '当前密码',
-      newPassword: '新密码',
-      passwordMismatch: '两次输入的密码不一致',
-      passwordTooShort: '密码长度至少为8个字符',
-      incorrectPassword: '当前密码不正确'
-    },
-    performance: {
-      title: '性能统计',
-      memory: '内存使用',
-      memoryUsed: '已使用',
-      memoryTotal: '总量',
-      memoryUsage: '使用率',
-      editorPerf: '编辑器性能',
-      loadTime: '加载时间',
-      saveTime: '保存时间',
-      renderTime: '渲染时间',
-      operations: '操作统计',
-      editCount: '编辑次数',
-      saveCount: '保存次数',
-      loadCount: '加载次数',
-      searchCount: '搜索次数',
-      network: '网络性能',
-      uploadSpeed: '上传速度',
-      downloadSpeed: '下载速度',
-      latency: '延迟',
-      report: '性能分析报告',
-      exportData: '导出数据',
-      resetStats: '重置统计'
-    }
-  },
-  // WebDAV同步
-  webdav: {
-    title: 'WebDAV同步设置',
-    serverSettings: 'WebDAV 服务器设置',
-    serverUrl: 'WebDAV服务器地址',
-    username: '用户名',
-    password: '密码',
-    enable: '启用WebDAV同步',
-    autoSync: '应用启动时自动同步',
-    syncDirection: '同步方向',
-    uploadOnly: '本地 → 远程 (上传)',
-    downloadOnly: '远程 → 本地 (下载)',
-    bidirectional: '双向同步',
-    syncOptions: '同步选项',
-    encryptionSettings: '加密设置',
-    syncOperations: '同步操作',
-    clearCache: '清除同步缓存',
-    uploadToCloud: '上传到云端',
-    downloadFromCloud: '从云端下载',
-    testConnection: '测试连接',
-    masterPassword: '主密码',
-    inputMasterPassword: '输入主密码',
-    setMasterPassword: '设置主密码',
-    changeMasterPassword: '更改主密码',
-    closeCustomEncryption: '关闭自定义加密',
-    syncProgress: {
-      uploading: '正在上传文件...',
-      downloading: '正在下载文件...',
-      comparing: '正在比较文件内容...'
-    }
-  },
   // 思维导图
   mindmap: {
     title: '思维导图',
@@ -699,52 +775,54 @@ export const zhCN: ExtendedDictionary = {
       noSelection: '请先选择项目'
     }
   },
-  // 数据分析模块国际化
-  dataAnalysis: {
-    title: '笔记数据分析',
-    analysisButton: '执行分析',
-    reAnalysisButton: '重新分析',
-    selectModel: '选择AI模型',
-    analyzing: '正在分析您的笔记数据...',
-    loadingData: '正在加载数据...',
-    noResults: '暂无分析结果',
-    cachedResults: '当前显示的是缓存的分析结果',
-    retryButton: '重试分析',
-    resetCache: '重置缓存',
-    errors: {
-      networkError: '网络连接错误，请检查网络后重试',
-      dataError: '数据获取失败，请稍后重试',
-      apiError: 'AI服务调用失败，请检查模型配置',
-      cacheError: '缓存操作失败',
-      unknownError: '未知错误，请重试',
-      noModel: '请先选择AI模型',
-      noData: '暂无笔记数据，请先创建和编辑一些笔记',
-      parseError: '数据解析失败，请联系技术支持',
-      maxRetries: '达到最大重试次数，请检查配置后手动重试'
+    dataAnalysis: {
+      title: '笔记数据分析',
+      analysisButton: '执行分析',
+      reAnalysisButton: '重新分析',
+      selectModel: '选择AI模型',
+      analyzing: '正在分析您的笔记数据...',
+      loadingData: '正在加载数据...',
+      noResults: '暂无分析结果',
+      cachedResults: '当前显示的是缓存的分析结果',
+      retryButton: '重试分析',
+      resetCache: '重置缓存',
+      placeholders: {
+        selectModel: '选择AI模型'
+      },
+      errors: {
+        networkError: '网络连接错误，请检查网络后重试',
+        dataError: '数据获取失败，请稍后重试',
+        apiError: 'AI服务调用失败，请检查模型配置',
+        cacheError: '缓存操作失败',
+        unknownError: '未知错误，请重试',
+        noModel: '请先选择AI模型',
+        noData: '暂无笔记数据，请先创建和编辑一些笔记',
+        parseError: '数据解析失败，请联系技术支持',
+        maxRetries: '达到最大重试次数，请检查配置后手动重试'
+      },
+      tabs: {
+        habits: '写作习惯',
+        content: '内容分析',
+        suggestions: '改进建议',
+        visualization: '数据可视化'
+      },
+      charts: {
+        hourlyDistribution: '每日时段编辑分布',
+        topNotes: '最常编辑的笔记',
+        editTrend: '每日编辑次数趋势',
+        noteTrend: '每日活跃笔记数趋势',
+        activeHours: '日内活跃时段分布',
+        topFolders: '最常用的文件夹',
+        topTags: '最常用的标签',
+        tagRelations: '标签关联分析',
+        tagGraph: '标签关联知识图谱'
+      },
+      status: {
+        success: '分析完成',
+        failed: '分析失败',
+        retrying: '正在重试...'
+      }
     },
-    tabs: {
-      habits: '写作习惯',
-      content: '内容分析',
-      suggestions: '改进建议',
-      visualization: '数据可视化'
-    },
-    charts: {
-      hourlyDistribution: '每日时段编辑分布',
-      topNotes: '最常编辑的笔记',
-      editTrend: '每日编辑次数趋势',
-      noteTrend: '每日活跃笔记数趋势',
-      activeHours: '日内活跃时段分布',
-      topFolders: '最常用的文件夹',
-      topTags: '最常用的标签',
-      tagRelations: '标签关联分析',
-      tagGraph: '标签关联知识图谱'
-    },
-    status: {
-      success: '分析完成',
-      failed: '分析失败',
-      retrying: '正在重试...'
-    }
-  },
   // 聊天界面国际化
   chat: {
     inputPlaceholder: '输入你的问题... (Shift+Enter换行，Enter发送)',
@@ -806,109 +884,117 @@ export const zhCN: ExtendedDictionary = {
       titleUpdateFailed: '更新标题失败'
     }
   },
-  // 编辑器界面国际化
-  editor: {
-    actions: {
-      save: '保存',
-      export: '导出',
-      exportPdf: '导出PDF',
-      exportDocx: '导出DOCX',
-      exportHtml: '导出HTML',
-      createFile: '创建文件',
-      createFolder: '创建文件夹'
-    },
-    status: {
-      saving: '保存中...',
-      autoSaving: '自动保存...',
-      saved: '已保存',
-      editing: '编辑中',
-      loaded: '已加载'
-    },
-    placeholder: {
-      content: '开始输入内容...',
-      title: '文件标题'
-    },
-    notifications: {
-      saveSuccess: '文件保存成功',
-      saveFailed: '保存失败',
-      exportSuccess: '导出成功',
-      exportFailed: '导出失败',
-      loadFailed: '加载文件内容失败',
-      noFileSelected: '没有选择文件',
-      createSuccess: '创建文件成功',
-      createFailed: '创建文件失败',
-      restoreSuccess: '已恢复历史版本',
-      restoreFailed: '恢复历史版本失败',
-      conflictDetected: '检测到文件冲突',
-      memoryWarning: '内存使用警告',
-      memoryCritical: '内存使用严重！正在清理...'
-    },
-    shortcuts: {
-      save: '使用 Ctrl+S 保存文件',
-      title: '提示与快捷键:'
-    },
-    prompts: {
-      noFile: '请从左侧边栏选择一个文件开始编辑，或者创建一个新的Markdown文件',
-      welcomeMessage: '支持代码块高亮和Markdown格式化',
-      imageUrl: '请输入图片链接',
-      linkUrl: '请输入链接地址'
-    },
-    menu: {
-      aiCommands: {
-        improve: '改进写作',
-        simplify: '简化内容',
-        expand: '扩展内容',
-        fixGrammar: '修正语法',
-        translateToEn: '翻译成英文',
-        translateToCn: '翻译成中文',
-        summarize: '总结要点',
-        continue: '续写内容',
-        processing: '处理中'
+    editor: {
+      actions: {
+        save: '保存',
+        export: '导出',
+        exportPdf: '导出PDF',
+        exportDocx: '导出DOCX',
+        exportHtml: '导出HTML',
+        createFile: '创建文件',
+        createFolder: '创建文件夹'
       },
-      slashCommands: {
-        heading1: '大标题',
-        heading2: '中标题',
-        heading3: '小标题',
-        bold: '粗体',
-        italic: '斜体',
-        underline: '下划线',
-        bulletList: '无序列表',
-        orderedList: '有序列表',
-        quote: '引用',
-        codeBlock: '代码块',
-        image: '插入图片',
-        link: '插入链接',
-        noCommands: '未找到匹配的命令',
-        placeholder: '输入命令...'
+      status: {
+        saving: '保存中...',
+        autoSaving: '自动保存...',
+        saved: '已保存',
+        editing: '编辑中',
+        loaded: '已加载'
       },
-      bubbleMenu: {
-        unorderedList: '无序列表',
-        orderedList: '有序列表',
-        quote: '引用',
-        divider: '分割线',
-        insertImage: '插入图片',
-        ai: 'AI'
+      placeholder: {
+        content: '开始输入内容...',
+        title: '文件标题'
+      },
+      placeholders: {
+        linkUrl: 'https://example.com',
+        embedUrl: '输入或选择嵌入地址',
+        imageUrl: '输入图片地址',
+        imageAlt: '图片的替代文本',
+        language: '语言',
+        selectApi: '选择API',
+        iframeUrl: '输入嵌入地址 (如: https://www.youtube.com/)'
+      },
+      notifications: {
+        saveSuccess: '文件保存成功',
+        saveFailed: '保存失败',
+        exportSuccess: '导出成功',
+        exportFailed: '导出失败',
+        loadFailed: '加载文件内容失败',
+        noFileSelected: '没有选择文件',
+        createSuccess: '创建文件成功',
+        createFailed: '创建文件失败',
+        restoreSuccess: '已恢复历史版本',
+        restoreFailed: '恢复历史版本失败',
+        conflictDetected: '检测到文件冲突',
+        memoryWarning: '内存使用警告',
+        memoryCritical: '内存使用严重！正在清理...'
+      },
+      shortcuts: {
+        save: '使用 Ctrl+S 保存文件',
+        title: '提示与快捷键:'
+      },
+      prompts: {
+        noFile: '请从左侧边栏选择一个文件开始编辑，或者创建一个新的Markdown文件',
+        welcomeMessage: '支持代码块高亮和Markdown格式化',
+        imageUrl: '请输入图片链接',
+        linkUrl: '请输入链接地址'
+      },
+      menu: {
+        aiCommands: {
+          improve: '改进写作',
+          simplify: '简化内容',
+          expand: '扩展内容',
+          fixGrammar: '修正语法',
+          translateToEn: '翻译成英文',
+          translateToCn: '翻译成中文',
+          summarize: '总结要点',
+          continue: '续写内容',
+          processing: '处理中'
+        },
+        slashCommands: {
+          heading1: '大标题',
+          heading2: '中标题',
+          heading3: '小标题',
+          bold: '粗体',
+          italic: '斜体',
+          underline: '下划线',
+          bulletList: '无序列表',
+          orderedList: '有序列表',
+          quote: '引用',
+          codeBlock: '代码块',
+          image: '插入图片',
+          link: '插入链接',
+          noCommands: '未找到匹配的命令',
+          placeholder: '输入命令...'
+        },
+        bubbleMenu: {
+          unorderedList: '无序列表',
+          orderedList: '有序列表',
+          quote: '引用',
+          divider: '分割线',
+          insertImage: '插入图片',
+          ai: 'AI'
+        }
+      },
+      codeBlock: {
+        copied: '已复制',
+        copy: '复制'
+      },
+      model: {
+        loading: '加载中...',
+        select: '选择模型',
+        noModels: '暂无可用模型',
+        manage: '管理模型...',
+        thinking: '思维模型'
+      },
+      errors: {
+        apiNotConfigured: '请先在设置中配置AI API',
+        modelNotFound: '未找到指定的AI模型配置',
+        incompleteConfig: 'AI API配置不完整，请检查设置',
+        processingFailed: 'AI处理失败',
+        noTextSelected: '请先选择要处理的文本'
       }
-    },
-    codeBlock: {
-      copied: '已复制',
-      copy: '复制'
-    },
-    model: {
-      loading: '加载中...',
-      select: '选择模型',
-      noModels: '暂无可用模型',
-      manage: '管理模型...',
-      thinking: '思维模型'
-    },
-    errors: {
-      apiNotConfigured: '请先在设置中配置AI API',
-      modelNotFound: '未找到指定的AI模型配置',
-      incompleteConfig: 'AI API配置不完整，请检查设置',
-      processingFailed: 'AI处理失败',
-      noTextSelected: '请先选择要处理的文本'
     }
-  }
 }
 
 export default zhCN

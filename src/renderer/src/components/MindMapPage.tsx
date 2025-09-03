@@ -32,6 +32,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { toPng } from 'html-to-image'
 import { MindMapSkeleton } from './Skeleton'
+import { useLanguage } from '../locales/LanguageContext'
 
 // 添加右键菜单样式
 const contextMenuStyles = `
@@ -117,6 +118,7 @@ const initialEdges: Edge[] = []
 
 // 思维导图内容组件
 const MindMapFlow: React.FC = () => {
+  const { t } = useLanguage()
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [nodeId, setNodeId] = useState(2)
@@ -917,7 +919,7 @@ const MindMapFlow: React.FC = () => {
               onChange={(value) =>
                 setEditingNode((prev) => (prev ? { ...prev, label: value } : null))
               }
-              placeholder="请输入节点内容"
+              placeholder={t('placeholders.nodeContent')}
               autoFocus
               onEnterPress={saveNodeEdit}
             />

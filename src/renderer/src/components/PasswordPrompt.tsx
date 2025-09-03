@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Modal, Form, Button, Typography, Toast } from '@douyinfe/semi-ui'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
+import { useLanguage } from '../locales/LanguageContext'
 
 const { Text } = Typography
 
@@ -23,6 +24,7 @@ const PasswordPrompt: React.FC<PasswordPromptProps> = ({
   onCancel,
   onConfirm
 }) => {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -106,7 +108,7 @@ const PasswordPrompt: React.FC<PasswordPromptProps> = ({
               field="password"
               label="密码"
               type="password"
-              placeholder="请输入主密码"
+              placeholder={t('placeholders.password')}
               validateStatus={error ? 'error' : undefined}
               showClear
             />

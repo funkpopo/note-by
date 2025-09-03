@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Form, Select } from '@douyinfe/semi-ui'
+import { useLanguage } from '../locales/LanguageContext'
 
 interface CreateDialogProps {
   visible: boolean
@@ -20,10 +21,12 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
   folders,
   onConfirm,
   onCancel,
-  placeholder = '请输入名称',
+  placeholder,
   validateMessage = '名称不能为空',
   defaultFolder
 }) => {
+  const { t } = useLanguage()
+  const defaultPlaceholder = placeholder || t('placeholders.name')
   const [value, setValue] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('')
   const [error, setError] = useState('')
@@ -123,7 +126,7 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
           <Form.Select
             field="folder"
             label="选择文件夹"
-            placeholder="请选择文件夹"
+            placeholder={t('placeholders.selectFolder')}
             initValue={folders.length > 0 ? folders[0] : undefined}
             onChange={handleFolderChange}
             style={{ width: '100%', marginBottom: '16px' }}
@@ -148,7 +151,7 @@ const CreateDialog: React.FC<CreateDialogProps> = ({
         <Form.Input
           field="name"
           label={type === 'folder' ? '文件夹名称' : '笔记名称'}
-          placeholder={placeholder}
+          placeholder={defaultPlaceholder}
           initValue="" // 强制初始值为空字符串，不使用state中的value
           onChange={(val) => handleChange(val as string)}
           onKeyDown={handleKeyDown}
