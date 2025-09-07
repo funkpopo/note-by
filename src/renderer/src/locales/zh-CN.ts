@@ -447,6 +447,35 @@ export interface ExtendedDictionary {
       noTextSelected: string
     }
   }
+  placeholder?: {
+    folderName: string
+    noteName: string
+    cloudServiceSelection: string
+    remotePath: string
+    localPath: string
+    authCode: string
+    linkUrl: string
+    embedUrl: string
+    imageUrl: string
+    imageAlt: string
+    selectApi: string
+    language: string
+    selectFolder: string
+    enterPassword: string
+    confirmPassword: string
+    currentPassword: string
+    newPassword: string
+    webdavUrl: string
+    webdavUsername: string
+    webdavPassword: string
+    googleClientId: string
+    googleClientSecret: string
+    googleRedirectUri: string
+    dropboxAppKey: string
+    dropboxAppSecret: string
+    dropboxRedirectUri: string
+    modelSelect: string
+  }
 }
 
 export const zhCN: ExtendedDictionary = {
@@ -908,6 +937,36 @@ export const zhCN: ExtendedDictionary = {
       processingFailed: 'AI处理失败',
       noTextSelected: '请先选择要处理的文本'
     }
+  },
+  // 全局占位符文本
+  placeholder: {
+    folderName: '请输入文件夹名称',
+    noteName: '请输入笔记名称',
+    cloudServiceSelection: '选择云存储服务',
+    remotePath: '/notes',
+    localPath: '本地笔记文件夹路径',
+    authCode: '请输入授权码',
+    linkUrl: 'https://example.com',
+    embedUrl: '输入嵌入地址 (如: https://www.youtube.com/)',
+    imageUrl: '输入图片地址',
+    imageAlt: '图片的替代文本',
+    selectApi: '选择API',
+    language: '语言',
+    selectFolder: '请选择文件夹',
+    enterPassword: '请输入主密码',
+    confirmPassword: '请再次输入主密码',
+    currentPassword: '请输入当前主密码',
+    newPassword: '请输入新主密码',
+    webdavUrl: '例如: https://dav.example.com/remote.php/dav/files/username/',
+    webdavUsername: 'WebDAV用户名',
+    webdavPassword: 'WebDAV密码',
+    googleClientId: '请输入Google Cloud客户端ID',
+    googleClientSecret: '请输入Google Cloud客户端密钥',
+    googleRedirectUri: 'http://localhost:3000/auth/callback',
+    dropboxAppKey: '请输入Dropbox App Key',
+    dropboxAppSecret: '请输入Dropbox App Secret',
+    dropboxRedirectUri: 'http://localhost:3000/auth/callback',
+    modelSelect: '选择AI模型'
   }
 }
 

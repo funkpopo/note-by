@@ -14,6 +14,7 @@ import {
 import { IconUpload, IconDownload, IconSync, IconLock } from '@douyinfe/semi-icons'
 import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 import PasswordPrompt from './PasswordPrompt'
+import { useLanguage } from '../locales'
 
 const { Text } = Typography
 
@@ -44,6 +45,7 @@ interface WebDAVSettingsProps {
 }
 
 const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
+  const { t } = useLanguage()
   // 使用统一的Partial<WebDAVConfig>类型
   const [formApi, setFormApi] = useState<FormApi<Partial<WebDAVConfig>> | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
@@ -822,21 +824,21 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
             <Form.Input
               field="url"
               label="WebDAV服务器地址"
-              placeholder="例如: https://dav.example.com/remote.php/dav/files/username/"
+              placeholder={t('placeholder.webdavUrl')}
               rules={[{ required: true, message: '请输入WebDAV服务器地址' }]}
             />
 
             <Form.Input
               field="username"
               label="用户名"
-              placeholder="WebDAV用户名"
+              placeholder={t('placeholder.webdavUsername')}
               rules={[{ required: true, message: '请输入用户名' }]}
             />
 
             <Form.Input
               field="password"
               label="密码"
-              placeholder="WebDAV密码"
+              placeholder={t('placeholder.webdavPassword')}
               type="password"
               rules={[{ required: true, message: '请输入密码' }]}
             />
@@ -1028,7 +1030,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
           <div style={{ marginTop: 16 }}>
             <Form>
               <Input
-                placeholder="请输入主密码"
+                placeholder={t('placeholder.enterPassword')}
                 value={masterPassword}
                 autoComplete="new-password"
                 type="password"
@@ -1070,7 +1072,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               <div style={{ marginTop: '16px' }}>
                 <Text>确认主密码</Text>
                 <Input
-                  placeholder="请再次输入主密码"
+                  placeholder={t('placeholder.confirmPassword')}
                   value={confirmMasterPassword}
                   autoComplete="new-password"
                   type="password"
@@ -1134,7 +1136,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               <div style={{ marginBottom: '16px' }}>
                 <Text>当前主密码</Text>
                 <Input
-                  placeholder="请输入当前主密码"
+                  placeholder={t('placeholder.currentPassword')}
                   value={currentPassword}
                   type="password"
                   autoComplete="current-password"
@@ -1146,7 +1148,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               <div>
                 <Text>新主密码</Text>
                 <Input
-                  placeholder="请输入新主密码"
+                  placeholder={t('placeholder.newPassword')}
                   value={newPassword}
                   type="password"
                   autoComplete="new-password"
@@ -1190,7 +1192,7 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
               <div style={{ marginTop: '16px' }}>
                 <Text>确认新主密码</Text>
                 <Input
-                  placeholder="请再次输入新主密码"
+                  placeholder={t('placeholder.confirmPassword')}
                   value={confirmNewPassword}
                   type="password"
                   autoComplete="new-password"

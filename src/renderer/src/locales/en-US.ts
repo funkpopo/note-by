@@ -207,6 +207,35 @@ export interface ExtendedDictionary {
       noTextSelected: string
     }
   }
+  placeholder?: {
+    folderName: string
+    noteName: string
+    cloudServiceSelection: string
+    remotePath: string
+    localPath: string
+    authCode: string
+    linkUrl: string
+    embedUrl: string
+    imageUrl: string
+    imageAlt: string
+    selectApi: string
+    language: string
+    selectFolder: string
+    enterPassword: string
+    confirmPassword: string
+    currentPassword: string
+    newPassword: string
+    webdavUrl: string
+    webdavUsername: string
+    webdavPassword: string
+    googleClientId: string
+    googleClientSecret: string
+    googleRedirectUri: string
+    dropboxAppKey: string
+    dropboxAppSecret: string
+    dropboxRedirectUri: string
+    modelSelect: string
+  }
 }
 
 export const enUS: ExtendedDictionary = {
@@ -674,6 +703,36 @@ export const enUS: ExtendedDictionary = {
       processingFailed: 'AI processing failed',
       noTextSelected: 'Please select text to process first'
     }
+  },
+  // Global placeholder texts
+  placeholder: {
+    folderName: 'Enter folder name',
+    noteName: 'Enter note name',
+    cloudServiceSelection: 'Select cloud storage service',
+    remotePath: '/notes',
+    localPath: 'Local notes folder path',
+    authCode: 'Enter authorization code',
+    linkUrl: 'https://example.com',
+    embedUrl: 'Enter embed URL (e.g., https://www.youtube.com/)',
+    imageUrl: 'Enter image URL',
+    imageAlt: 'Image alternative text',
+    selectApi: 'Select API',
+    language: 'Language',
+    selectFolder: 'Select folder',
+    enterPassword: 'Enter master password',
+    confirmPassword: 'Confirm master password',
+    currentPassword: 'Enter current master password',
+    newPassword: 'Enter new master password',
+    webdavUrl: 'e.g., https://dav.example.com/remote.php/dav/files/username/',
+    webdavUsername: 'WebDAV username',
+    webdavPassword: 'WebDAV password',
+    googleClientId: 'Enter Google Cloud Client ID',
+    googleClientSecret: 'Enter Google Cloud Client Secret',
+    googleRedirectUri: 'http://localhost:3000/auth/callback',
+    dropboxAppKey: 'Enter Dropbox App Key',
+    dropboxAppSecret: 'Enter Dropbox App Secret',
+    dropboxRedirectUri: 'http://localhost:3000/auth/callback',
+    modelSelect: 'Select AI Model'
   }
 }
 

@@ -11,6 +11,7 @@ import {
   IconTick
 } from '@douyinfe/semi-icons'
 import { v4 as uuidv4 } from 'uuid'
+import { useLanguage } from '../../locales'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -26,6 +27,7 @@ interface AiApiConfig {
 }
 
 const ApiConfigSection: React.FC = () => {
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [AiApiConfigs, setApiConfigs] = useState<AiApiConfig[]>([])
   const [currentConfig, setCurrentConfig] = useState<AiApiConfig | null>(null)
@@ -385,7 +387,7 @@ const ApiConfigSection: React.FC = () => {
           <Form.Input
             field="name"
             label="配置名称"
-            placeholder="请输入配置名称，如OpenAI、Claude等"
+            placeholder={t('settings.apiConfig.namePlaceholder')}
             initValue={currentConfig?.name}
             onChange={(value) => handleConfigChange('name', value)}
             showClear
@@ -394,7 +396,7 @@ const ApiConfigSection: React.FC = () => {
           <Form.Input
             field="apiKey"
             label="API Key"
-            placeholder="请输入API Key"
+            placeholder={t('settings.apiConfig.keyPlaceholder')}
             initValue={currentConfig?.apiKey}
             onChange={(value) => handleConfigChange('apiKey', value)}
             showClear
@@ -402,7 +404,7 @@ const ApiConfigSection: React.FC = () => {
           <Form.Input
             field="apiUrl"
             label="API URL"
-            placeholder="请输入API URL，如https://api.openai.com"
+            placeholder={t('settings.apiConfig.urlPlaceholder')}
             initValue={currentConfig?.apiUrl}
             onChange={(value) => handleConfigChange('apiUrl', value)}
             showClear
@@ -410,7 +412,7 @@ const ApiConfigSection: React.FC = () => {
           <Form.Input
             field="modelName"
             label="模型名称"
-            placeholder="请输入模型名称，如gpt-3.5-turbo"
+            placeholder={t('settings.apiConfig.modelPlaceholder')}
             initValue={currentConfig?.modelName}
             onChange={(value) => handleConfigChange('modelName', value)}
             showClear

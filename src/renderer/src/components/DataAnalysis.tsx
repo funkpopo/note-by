@@ -20,6 +20,7 @@ import { modelSelectionService } from '../services/modelSelectionService'
 import { VirtualTextList } from './VirtualList'
 import { scheduleRenderTask, processBatch } from '../utils/RenderOptimizer'
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
+import { useLanguage } from '../locales'
 
 // 图谱数据接口定义
 interface GraphNode {
@@ -1060,6 +1061,7 @@ const ContentQualityScore: React.FC<{
 
 const DataAnalysis: React.FC = () => {
   const { isDarkMode } = useTheme()
+  const { t } = useLanguage()
   const {
     isAnalyzing,
     analysisCached,
@@ -2390,7 +2392,7 @@ const DataAnalysis: React.FC = () => {
         >
           <Space>
             <Select
-              placeholder="选择AI模型"
+              placeholder={t('placeholder.modelSelect')}
               value={selectedModelId || undefined}
               onChange={async (value) => {
                 const modelId = value as string
