@@ -28,7 +28,6 @@
     "@douyinfe/semi-ui": "^2.84.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@notionhq/client": "^4.0.2",
     "@tiptap/core": "^3.2.1",
     "@tiptap/extension-bubble-menu": "^3.2.1",
     "@tiptap/extension-character-count": "^3.2.1",
@@ -86,7 +85,7 @@
     "tippy.js": "^6.3.7",
     "turndown": "^7.2.1",
     "unified": "^11.0.5",
-    "uuid": "^11.1.0",
+    "uuid": "^12.0.0",
     "webdav": "^5.8.0",
     "zustand": "^5.0.5"
   },

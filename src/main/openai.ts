@@ -15,8 +15,120 @@ export interface ContentGenerationRequest {
 // 处理API URL，确保格式正确
 function normalizeApiUrl(url: string): string {
   if (!url) return ''
-  const normalizedUrl = url.trim().replace(/\/+$/, '')
+  
+  // 移除尾部斜杠
+  let normalizedUrl = url.trim().replace(/\/+$/, '')
+  
+  // 确保URL以http://或https://开头
+  if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+    normalizedUrl = 'https://' + normalizedUrl
+  }
+  
+  // 对于OpenAI兼容API，确保路径正确
+  // 如果URL不包含/v1，且看起来像是基础域名，自动添加/v1
+  if (!normalizedUrl.includes('/v1') && !normalizedUrl.includes('/api')) {
+    // 检查是否是标准OpenAI域名
+    if (normalizedUrl.includes('api.openai.com')) {
+      normalizedUrl = normalizedUrl + '/v1'
+    } else if (!normalizedUrl.endsWith('/chat/completions')) {
+      // 对于其他API，如果没有明确的路径，添加/v1
+      normalizedUrl = normalizedUrl + '/v1'
+    }
+  }
+  
+  console.log('[OpenAI] Normalized API URL:', normalizedUrl)
   return normalizedUrl
+}
+
+// 创建一个兼容性更好的请求函数
+async function makeCompatibleRequest(
+  apiUrl: string,
+  apiKey: string,
+  modelName: string,
+  prompt: string,
+  maxTokens: number = 2000,
+  stream: boolean = false
+): Promise<any> {
+  const url = `${apiUrl}/chat/completions`
+  
+  const requestBody = {
+    model: modelName,
+    messages: [
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    max_tokens: maxTokens,
+    temperature: 0.7,
+    stream: stream
+  }
+
+  console.log('[OpenAI] Direct API Request:', {
+    url,
+    model: modelName,
+    max_tokens: maxTokens,
+    stream,
+    bodyPreview: JSON.stringify(requestBody).substring(0, 200)
+  })
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'User-Agent': 'NoteBy/1.0'
+    },
+    body: JSON.stringify(requestBody)
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('[OpenAI] API Error Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorBody: errorText
+    })
+    
+    let errorMessage = `API请求失败 (HTTP ${response.status})`
+    
+    // 尝试解析错误消息
+    try {
+      const errorJson = JSON.parse(errorText)
+      if (errorJson.error?.message) {
+        errorMessage = errorJson.error.message
+      } else if (errorJson.message) {
+        errorMessage = errorJson.message
+      }
+    } catch {}
+    
+    // 根据状态码提供更具体的错误信息
+    if (response.status === 400) {
+      // 检查是否是max_tokens错误
+      if (errorMessage.includes('max_tokens')) {
+        // 提取限制值
+        const match = errorMessage.match(/\d+/g)
+        const limit = match ? match[match.length - 1] : ''
+        errorMessage = `该模型的max_tokens限制为${limit}，请在设置中调整Max Tokens参数为${limit}或更小的值`
+      } else if (errorMessage.includes('model')) {
+        errorMessage = `模型名称错误: ${errorMessage}`
+      } else {
+        errorMessage = `请求格式错误: ${errorMessage}`
+      }
+    } else if (response.status === 401) {
+      errorMessage = 'API密钥无效或已过期，请检查API Key'
+    } else if (response.status === 404) {
+      errorMessage = 'API端点不存在，请检查API地址是否正确'
+    } else if (response.status === 429) {
+      errorMessage = 'API请求频率过高，请稍后再试'
+    } else if (response.status >= 500) {
+      errorMessage = 'API服务器错误，请稍后再试'
+    }
+    
+    throw new Error(errorMessage)
+  }
+
+  return response
 }
 
 // 测试AI API连接
@@ -41,46 +153,36 @@ export async function testOpenAIConnection(
     // 处理并规范化API URL
     const normalizedApiUrl = normalizeApiUrl(apiUrl)
 
-    // 创建 AI 客户端
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: normalizedApiUrl
-    })
-
-    // 发送一个简单的测试请求
-    const response = await openai.chat.completions.create({
-      model: modelName,
-      messages: [{ role: 'user', content: 'ping. Just reply "pong"' }],
-      max_tokens: 20
-    })
-
-    // 增强检查响应格式
-
-    // 尝试提取内容
-    let content = ''
-
     try {
-      // 标准OpenAI格式
-      if (response?.choices?.[0]?.message?.content) {
-        content = response.choices[0].message.content
-      }
-      // 兼容其他可能的返回格式
-      else if (response && typeof response === 'object') {
-        if ('text' in response && typeof response.text === 'string') {
-          content = response.text
-        } else if ('content' in response && typeof response.content === 'string') {
-          content = response.content
-        } else {
-          content = '已收到响应 (非标准格式)'
-        }
-      }
-    } catch {
-      content = '解析响应内容时出错'
-    }
+      // 使用兼容性请求
+      const response = await makeCompatibleRequest(
+        normalizedApiUrl,
+        apiKey,
+        modelName,
+        'ping. Just reply "pong"',
+        20,
+        false
+      )
 
-    return {
-      success: true,
-      message: content ? `` : '连接成功!'
+      const data = await response.json()
+      
+      // 尝试提取内容
+      let content = ''
+      if (data?.choices?.[0]?.message?.content) {
+        content = data.choices[0].message.content
+      } else if (data?.content) {
+        content = data.content
+      } else if (data?.text) {
+        content = data.text
+      }
+
+      return {
+        success: true,
+        message: content || '连接成功!'
+      }
+    } catch (error) {
+      console.error('[OpenAI] Connection test failed:', error)
+      throw error
     }
   } catch (error: unknown) {
     // 提取更友好的错误信息
@@ -88,23 +190,6 @@ export async function testOpenAIConnection(
 
     if (error instanceof Error) {
       errorMessage += `: ${error.message}`
-    }
-
-    // 处理AI API的错误，它们可能有特定的结构
-    const apiError = error as { response?: { status?: number }; status?: number }
-    const statusCode = apiError.status || apiError.response?.status
-
-    if (statusCode) {
-      errorMessage += ` (HTTP 状态码: ${statusCode})`
-
-      // 为常见错误提供更具体的说明
-      if (statusCode === 404) {
-        errorMessage += '。可能是API URL不正确，请检查URL格式。'
-      } else if (statusCode === 401) {
-        errorMessage += '。API密钥可能无效或已过期。'
-      } else if (statusCode === 429) {
-        errorMessage += '。请求频率过高或达到API限制。'
-      }
     }
 
     return { success: false, message: errorMessage }
@@ -144,7 +229,14 @@ export async function generateWithMessages(
     // 创建 AI 客户端
     const openai = new OpenAI({
       apiKey: config.apiKey,
-      baseURL: normalizedApiUrl
+      baseURL: normalizedApiUrl,
+      dangerouslyAllowBrowser: true, // 允许在浏览器环境运行
+      defaultHeaders: {
+        'User-Agent': 'NoteBy/1.0',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      timeout: 30000 // 30秒超时
     })
 
     // 发送内容生成请求
@@ -172,7 +264,7 @@ export async function generateWithMessages(
         } else {
           const jsonContent = JSON.stringify(response)
           if (jsonContent && jsonContent.length > 2) {
-            content = '返回数据格式异常，无法提取文本内容'
+            return { success: false, error: '返回数据格式异常，无法提取文本内容' }
           }
         }
       }
@@ -207,6 +299,8 @@ export async function generateWithMessages(
         errorMessage += '。API密钥可能无效或已过期。'
       } else if (statusCode === 429) {
         errorMessage += '。请求频率过高或达到API限制。'
+      } else if (statusCode >= 500) {
+        errorMessage += '。服务器端错误，可能是API服务暂时不可用。'
       }
     }
 
@@ -214,12 +308,20 @@ export async function generateWithMessages(
   }
 }
 
-// 生成内容
+// 生成内容 - 使用更兼容的实现
 export async function generateContent(
   request: ContentGenerationRequest
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
     const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
+
+    console.log('[OpenAI] Generate Content Request:', {
+      apiUrl,
+      modelName,
+      promptLength: prompt?.length,
+      maxTokens,
+      stream
+    })
 
     // 如果请求包含stream=true，则返回错误，提示使用streamGenerateContent
     if (stream) {
@@ -244,72 +346,87 @@ export async function generateContent(
     // 处理并规范化API URL
     const normalizedApiUrl = normalizeApiUrl(apiUrl)
 
-    // 创建 AI 客户端
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: normalizedApiUrl
-    })
-
-    // 发送内容生成请求
-    const response = await openai.chat.completions.create({
-      model: modelName,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: maxTokens
-    })
-
-    // 尝试提取内容
-    let content = ''
-
     try {
-      // 标准OpenAI格式
-      if (response?.choices?.[0]?.message?.content) {
-        content = response.choices[0].message.content
-      }
-      // 兼容其他可能的返回格式
-      else if (response && typeof response === 'object') {
-        if ('text' in response && typeof response.text === 'string') {
-          content = response.text
-        } else if ('content' in response && typeof response.content === 'string') {
-          content = response.content
-        } else {
-          const jsonContent = JSON.stringify(response)
-          if (jsonContent && jsonContent.length > 2) {
-            content = '返回数据格式异常，无法提取文本内容'
-          }
-        }
-      }
-    } catch {
-      return { success: false, error: '解析响应内容时出错' }
-    }
+      // 先尝试使用兼容性请求
+      console.log('[OpenAI] Trying compatible request first...')
+      const response = await makeCompatibleRequest(
+        normalizedApiUrl,
+        apiKey,
+        modelName,
+        prompt,
+        maxTokens,
+        false
+      )
 
-    if (content) {
-      return { success: true, content }
-    } else {
-      return { success: false, error: '生成内容为空' }
+      const data = await response.json()
+      console.log('[OpenAI] Response data structure:', {
+        hasChoices: !!data?.choices,
+        choicesCount: data?.choices?.length,
+        hasContent: !!data?.content,
+        hasText: !!data?.text
+      })
+
+      // 尝试提取内容
+      let content = ''
+      if (data?.choices?.[0]?.message?.content) {
+        content = data.choices[0].message.content
+      } else if (data?.content) {
+        content = data.content
+      } else if (data?.text) {
+        content = data.text
+      } else if (data?.choices?.[0]?.text) {
+        content = data.choices[0].text
+      }
+
+      if (content) {
+        console.log('[OpenAI] Content extracted successfully')
+        return { success: true, content }
+      } else {
+        console.error('[OpenAI] No content found in response:', data)
+        return { success: false, error: '生成内容为空' }
+      }
+    } catch (error) {
+      console.error('[OpenAI] Compatible request failed, trying OpenAI SDK...', error)
+      
+      // 如果兼容性请求失败，尝试使用OpenAI SDK
+      try {
+        const openai = new OpenAI({
+          apiKey,
+          baseURL: normalizedApiUrl,
+          dangerouslyAllowBrowser: true,
+          defaultHeaders: {
+            'User-Agent': 'NoteBy/1.0',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000,
+          maxRetries: 0
+        })
+
+        const response = await openai.chat.completions.create({
+          model: modelName,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.7
+        })
+
+        const content = response?.choices?.[0]?.message?.content
+        if (content) {
+          return { success: true, content }
+        } else {
+          return { success: false, error: '生成内容为空' }
+        }
+      } catch (sdkError) {
+        console.error('[OpenAI] OpenAI SDK also failed:', sdkError)
+        throw error // 抛出原始错误
+      }
     }
   } catch (error: unknown) {
-    // 提取更友好的错误信息
-    let errorMessage = '生成失败'
-
+    console.error('[OpenAI] Generate content error:', error)
+    
+    let errorMessage = '内容生成失败'
     if (error instanceof Error) {
-      errorMessage += `: ${error.message}`
-    }
-
-    // 处理AI API的错误，它们可能有特定的结构
-    const apiError = error as { response?: { status?: number }; status?: number }
-    const statusCode = apiError.status || apiError.response?.status
-
-    if (statusCode) {
-      errorMessage += ` (HTTP 状态码: ${statusCode})`
-
-      // 为常见错误提供更具体的说明
-      if (statusCode === 404) {
-        errorMessage += '。可能是API URL不正确，请检查URL格式。'
-      } else if (statusCode === 401) {
-        errorMessage += '。API密钥可能无效或已过期。'
-      } else if (statusCode === 429) {
-        errorMessage += '。请求频率过高或达到API限制。'
-      }
+      errorMessage = error.message
     }
 
     return { success: false, error: errorMessage }
@@ -335,6 +452,13 @@ export async function streamGenerateContent(
     try {
       const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
 
+      console.log('[OpenAI Stream] Request:', {
+        apiUrl,
+        modelName,
+        promptLength: prompt?.length,
+        maxTokens
+      })
+
       if (!apiKey) {
         eventEmitter.emit('error', 'API Key 未设置')
         return
@@ -354,101 +478,158 @@ export async function streamGenerateContent(
       const normalizedApiUrl = normalizeApiUrl(apiUrl)
 
       try {
-        // 创建 AI 客户端
-        const openai = new OpenAI({
-          apiKey,
-          baseURL: normalizedApiUrl,
-          timeout: 60000, // 设置60秒超时
-          maxRetries: 2 // 启用自动重试
-        })
-
-        // 使用流式响应选项，添加AbortController支持
-        const stream = await openai.chat.completions.create(
-          {
-            model: modelName,
-            messages: [{ role: 'user', content: prompt }],
-            max_tokens: maxTokens,
-            stream: true
-          },
-          {
-            signal: abortController.signal
-          }
-        )
-
-        // 用于累积完整响应
-        let fullContent = ''
-        let chunkCount = 0
-
-        // 处理流式响应
-        for await (const chunk of stream) {
-          // 检查是否被中断
-          if (abortController.signal.aborted) {
-            eventEmitter.emit('error', '请求已被用户停止')
-            return
-          }
-
-          try {
-            // 提取delta内容
-            const content = chunk.choices[0]?.delta?.content || ''
-
-            if (content) {
-              // 发送增量内容
-              eventEmitter.emit('data', content)
-
-              // 累积完整内容
-              fullContent += content
-              chunkCount++
-
-              // 每10个块记录一次进度
-              if (chunkCount % 10 === 0) {
-                // 进度记录（可选）
-              }
-            }
-          } catch {
-            // 继续处理下一个块，不中断整个流
-          }
+        // 先尝试使用原生fetch进行流式请求
+        console.log('[OpenAI Stream] Using native fetch for streaming...')
+        
+        const url = `${normalizedApiUrl}/chat/completions`
+        const requestBody = {
+          model: modelName,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.7,
+          stream: true
         }
 
-        // 流结束，发送完成事件
-        eventEmitter.emit('done', fullContent)
-      } catch (apiError) {
-        // 检查是否是用户主动中断
-        if (abortController.signal.aborted) {
-          eventEmitter.emit('error', '请求已被用户停止')
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'text/event-stream',
+            'User-Agent': 'NoteBy/1.0'
+          },
+          body: JSON.stringify(requestBody),
+          signal: abortController.signal
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('[OpenAI Stream] Error response:', {
+            status: response.status,
+            errorText
+          })
+          
+          let errorMessage = `流式生成失败 (HTTP ${response.status})`
+          try {
+            const errorJson = JSON.parse(errorText)
+            if (errorJson.error?.message) {
+              errorMessage = errorJson.error.message
+            }
+          } catch {}
+          
+          if (response.status === 400) {
+            errorMessage = `请求格式错误: ${errorMessage}`
+          } else if (response.status === 401) {
+            errorMessage = 'API密钥无效'
+          } else if (response.status === 404) {
+            errorMessage = 'API端点不存在'
+          }
+          
+          eventEmitter.emit('error', errorMessage)
           return
         }
 
-        // 提取更友好的错误信息
-        let errorMessage = '流式生成失败'
-
-        if (apiError instanceof Error) {
-          errorMessage += `: ${apiError.message}`
+        console.log('[OpenAI Stream] Stream response received')
+        
+        const reader = response.body?.getReader()
+        if (!reader) {
+          eventEmitter.emit('error', '无法创建流读取器')
+          return
         }
 
-        // 处理API错误的状态码
-        const statusError = apiError as { response?: { status?: number }; status?: number }
-        const statusCode = statusError.status || statusError.response?.status
+        const decoder = new TextDecoder()
+        let fullContent = ''
+        let buffer = ''
 
-        if (statusCode) {
-          errorMessage += ` (HTTP 状态码: ${statusCode})`
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
 
-          if (statusCode === 404) {
-            errorMessage += '。可能是API URL不正确，请检查URL格式。'
-          } else if (statusCode === 401) {
-            errorMessage += '。API密钥可能无效或已过期。'
-          } else if (statusCode === 429) {
-            errorMessage += '。请求频率过高或达到API限制，建议稍后再试。'
-          } else if (statusCode >= 500) {
-            errorMessage += '。服务器端错误，可能是API服务暂时不可用，请稍后再试。'
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (line.trim() === '') continue
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') {
+                console.log('[OpenAI Stream] Stream completed')
+                eventEmitter.emit('done', fullContent)
+                return
+              }
+
+              try {
+                const json = JSON.parse(data)
+                const content = json.choices?.[0]?.delta?.content || ''
+                if (content) {
+                  fullContent += content
+                  eventEmitter.emit('data', content)
+                }
+              } catch (e) {
+                console.error('[OpenAI Stream] Error parsing chunk:', e, data)
+              }
+            }
           }
         }
 
-        eventEmitter.emit('error', errorMessage)
+        eventEmitter.emit('done', fullContent)
+      } catch (error) {
+        console.error('[OpenAI Stream] Streaming error:', error)
+        
+        // 如果原生fetch失败，尝试使用OpenAI SDK
+        try {
+          console.log('[OpenAI Stream] Falling back to OpenAI SDK...')
+          
+          const openai = new OpenAI({
+            apiKey,
+            baseURL: normalizedApiUrl,
+            dangerouslyAllowBrowser: true,
+            timeout: 60000,
+            maxRetries: 0
+          })
+
+          const stream = await openai.chat.completions.create(
+            {
+              model: modelName,
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: maxTokens,
+              stream: true,
+              temperature: 0.7
+            },
+            {
+              signal: abortController.signal
+            }
+          )
+
+          let fullContent = ''
+          for await (const chunk of stream) {
+            if (abortController.signal.aborted) {
+              eventEmitter.emit('error', '请求已被用户停止')
+              return
+            }
+
+            const content = chunk.choices[0]?.delta?.content || ''
+            if (content) {
+              eventEmitter.emit('data', content)
+              fullContent += content
+            }
+          }
+
+          eventEmitter.emit('done', fullContent)
+        } catch (sdkError) {
+          console.error('[OpenAI Stream] SDK fallback also failed:', sdkError)
+          
+          let errorMessage = '流式生成失败'
+          if (error instanceof Error) {
+            errorMessage = error.message
+          }
+          eventEmitter.emit('error', errorMessage)
+        }
       }
     } catch (error) {
-      // 提供更具体的错误信息
-      const errorMessage = error instanceof Error ? `发生错误: ${error.message}` : '发生未知错误'
-
+      console.error('[OpenAI Stream] Unexpected error:', error)
+      const errorMessage = error instanceof Error ? error.message : '发生未知错误'
       eventEmitter.emit('error', errorMessage)
     }
   })()

@@ -1653,6 +1653,7 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
       }
 
       try {
+        // 确保这是一个await调用
         const result = await window.api.openai.generateContent({
           apiKey: config.apiKey,
           apiUrl: config.apiUrl,
@@ -1661,13 +1662,25 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
           maxTokens: parseInt(config.maxTokens || '2000')
         })
 
+        // 确保result是一个已解析的对象，而不是Promise
+        if (!result || typeof result !== 'object') {
+          throw new Error('API返回格式错误')
+        }
+
         if (!result.success) {
           throw new Error(result.error || '生成失败')
         }
 
         return result.content || ''
       } catch (error) {
-        throw error
+        // 确保错误是可序列化的
+        if (error instanceof Error) {
+          throw error
+        } else if (typeof error === 'string') {
+          throw new Error(error)
+        } else {
+          throw new Error('未知错误')
+        }
       }
     },
     [getCurrentConfig]
@@ -1829,7 +1842,16 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
         }
       } catch (error) {
         console.error('AI 翻译失败:', error)
-        Toast.error(`翻译失败: ${error instanceof Error ? error.message : '未知错误'}`)
+        // 确保错误消息是字符串，而不是Promise或其他对象
+        let errorMessage = '未知错误'
+        if (error instanceof Error) {
+          errorMessage = error.message
+        } else if (typeof error === 'string') {
+          errorMessage = error
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message)
+        }
+        Toast.error(`翻译失败: ${errorMessage}`)
       } finally {
         setIsLoading(false)
         setLoadingFeature(null)
@@ -1895,7 +1917,16 @@ const TextBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFil
         }
       } catch (error) {
         console.error(`AI ${feature.label} failed:`, error)
-        Toast.error(`${feature.label}失败: ${error instanceof Error ? error.message : '未知错误'}`)
+        // 确保错误消息是字符串，而不是Promise或其他对象
+        let errorMessage = '未知错误'
+        if (error instanceof Error) {
+          errorMessage = error.message
+        } else if (typeof error === 'string') {
+          errorMessage = error
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message)
+        }
+        Toast.error(`${feature.label}失败: ${errorMessage}`)
       } finally {
         setIsLoading(false)
         setLoadingFeature(null)
