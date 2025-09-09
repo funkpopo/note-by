@@ -18,6 +18,7 @@
   user-select: none;
   cursor: default;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .inline-diff-header {
@@ -37,19 +38,21 @@
 
 .inline-diff-content {
   padding: 10px 12px;
+  position: relative;
 }
 
 .inline-diff-text {
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
-  margin-bottom: 10px;
   word-wrap: break-word;
   white-space: pre-wrap;
   max-height: 300px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--semi-color-border) transparent;
+  padding-bottom: 8px; /* Add padding to prevent overlap with buttons */
+  transition: padding-right 0.2s ease;
 }
 
 .inline-diff-text::-webkit-scrollbar {
@@ -107,16 +110,67 @@
 }
 
 .inline-diff-actions {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 10;
+}
+
+.inline-diff-actions.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Button styles when shown */
+.inline-diff-actions .semi-button {
+  background: var(--semi-color-bg-0);
+  border: 1px solid var(--semi-color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+}
+
+.inline-diff-actions .semi-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.inline-diff-actions .semi-button[type="primary"] {
+  background: var(--semi-color-primary);
+  border-color: var(--semi-color-primary);
+  color: white;
+}
+
+.inline-diff-actions .semi-button[type="primary"]:hover {
+  background: var(--semi-color-primary-hover);
+  border-color: var(--semi-color-primary-hover);
+}
+
+.inline-diff-actions .semi-button[type="tertiary"] {
+  background: var(--semi-color-bg-0);
+  border-color: var(--semi-color-danger);
+  color: var(--semi-color-danger);
+}
+
+.inline-diff-actions .semi-button[type="tertiary"]:hover {
+  background: var(--semi-color-danger-light-default);
+  border-color: var(--semi-color-danger);
+}
+
+/* Ensure content doesn't overlap with buttons */
+.inline-diff.hovered .inline-diff-text {
+  padding-right: 80px; /* Make room for buttons when visible */
 }
 
 /* 悬停效果 */
 .inline-diff:hover {
   border-color: var(--semi-color-primary-light-default);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
 }
 
 /* 动画效果 */
@@ -155,7 +209,7 @@
   border-color: var(--semi-color-primary-light-hover);
 }
 
-/* 响应式 */
+/* 响应式 - Update for better mobile support */
 @media (max-width: 768px) {
   .inline-diff {
     max-width: 100%;
@@ -169,7 +223,17 @@
 
   .inline-diff-text {
     font-size: 13px;
-    margin-bottom: 8px;
     max-height: 200px;
+    padding-bottom: 40px; /* More padding on mobile for buttons */
+  }
+  
+  .inline-diff-actions {
+    bottom: 4px;
+    right: 4px;
+  }
+  
+  /* Show buttons slightly visible on mobile for touch devices */
+  .inline-diff-actions {
+    opacity: 0.3; /* Slightly visible on mobile */
   }
 }

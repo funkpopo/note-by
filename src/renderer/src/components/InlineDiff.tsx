@@ -32,6 +32,7 @@ interface InlineDiffProps {
 
 const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   const { originalText, newText, diffResult, feature } = node.attrs
+  const [isHovered, setIsHovered] = React.useState(false)
 
   // 组件挂载时记录节点，卸载时清理
   useEffect(() => {
@@ -115,7 +116,9 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
   return (
     <NodeViewWrapper className="inline-diff-wrapper" contentEditable={false} draggable={false}>
       <div
-        className="inline-diff"
+        className={`inline-diff ${isHovered ? 'hovered' : ''}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onMouseDown={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -128,10 +131,10 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
         <div className="inline-diff-content">
           <div className="inline-diff-text">{renderDiffText()}</div>
 
-          <div className="inline-diff-actions">
+          <div className={`inline-diff-actions ${isHovered ? 'visible' : ''}`}>
             <Space>
-              <Button icon={<IconClose />} size="small" type="tertiary" onClick={handleReject} />
-              <Button icon={<IconCheck />} size="small" type="primary" onClick={handleAccept} />
+              <Button icon={<IconClose />} size="small" type="tertiary" onClick={handleReject} title="取消" />
+              <Button icon={<IconCheck />} size="small" type="primary" onClick={handleAccept} title="确认" />
             </Space>
           </div>
         </div>
