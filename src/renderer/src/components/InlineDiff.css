@@ -9,14 +9,15 @@
 
 .inline-diff {
   border: 1px solid var(--semi-color-border);
-  border-radius: 6px;
+  border-radius: 12px;
   background: var(--semi-color-bg-0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  min-width: 200px;
-  max-width: 600px;
-  user-select: none; /* 防止文本选择 */
-  cursor: default; /* 使用默认光标而不是文本光标 */
+  min-width: 180px;
+  max-width: 500px;
+  user-select: none;
+  cursor: default;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .inline-diff-header {
@@ -35,16 +36,37 @@
 }
 
 .inline-diff-content {
-  padding: 12px;
+  padding: 10px 12px;
 }
 
 .inline-diff-text {
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   word-wrap: break-word;
   white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--semi-color-border) transparent;
+}
+
+.inline-diff-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inline-diff-text::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inline-diff-text::-webkit-scrollbar-thumb {
+  background: var(--semi-color-border);
+  border-radius: 3px;
+}
+
+.inline-diff-text::-webkit-scrollbar-thumb:hover {
+  background: var(--semi-color-text-3);
 }
 
 .diff-text {
@@ -56,20 +78,20 @@
 }
 
 .diff-text.diff-insert {
-  background: var(--semi-color-success-light-active);
+  background: rgba(52, 199, 89, 0.15);
   color: var(--semi-color-success);
-  padding: 1px 2px;
-  border-radius: 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
   font-weight: 500;
 }
 
 .diff-text.diff-delete {
-  background: var(--semi-color-danger-light-active);
+  background: rgba(255, 77, 79, 0.15);
   color: var(--semi-color-danger);
   text-decoration: line-through;
-  padding: 1px 2px;
-  border-radius: 2px;
-  opacity: 0.8;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.85;
 }
 
 .diff-replace {
@@ -77,58 +99,60 @@
 }
 
 .diff-replace .diff-delete {
-  margin-right: 4px;
+  margin-right: 6px;
 }
 
 .diff-replace .diff-insert {
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
 .inline-diff-actions {
   display: flex;
   justify-content: flex-end;
-  padding-top: 8px;
-  border-top: 1px solid var(--semi-color-border);
+  gap: 8px;
 }
 
 /* 悬停效果 */
 .inline-diff:hover {
   border-color: var(--semi-color-primary-light-default);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
 }
 
 /* 动画效果 */
 @keyframes diff-appear {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: scale(0.95) translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
 .inline-diff {
-  animation: diff-appear 0.3s ease-out;
+  animation: diff-appear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* 暗色主题适配 */
 [theme-mode='dark'] .inline-diff {
   border-color: var(--semi-color-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: var(--semi-color-bg-1);
 }
 
 [theme-mode='dark'] .diff-text.diff-insert {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(52, 199, 89, 0.25);
 }
 
 [theme-mode='dark'] .diff-text.diff-delete {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(255, 77, 79, 0.25);
 }
 
 [theme-mode='dark'] .inline-diff:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border-color: var(--semi-color-primary-light-hover);
 }
 
 /* 响应式 */
@@ -136,18 +160,16 @@
   .inline-diff {
     max-width: 100%;
     min-width: 150px;
-  }
-
-  .inline-diff-header {
-    padding: 6px 8px;
+    border-radius: 10px;
   }
 
   .inline-diff-content {
-    padding: 8px;
+    padding: 8px 10px;
   }
 
   .inline-diff-text {
     font-size: 13px;
     margin-bottom: 8px;
+    max-height: 200px;
   }
 }

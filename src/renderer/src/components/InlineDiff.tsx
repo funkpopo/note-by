@@ -125,10 +125,6 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
           e.stopPropagation()
         }}
       >
-        <div className="inline-diff-header">
-          <span className="inline-diff-label">AI{feature?.label || '处理'}结果</span>
-        </div>
-
         <div className="inline-diff-content">
           <div className="inline-diff-text">{renderDiffText()}</div>
 
