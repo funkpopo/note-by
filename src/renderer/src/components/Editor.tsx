@@ -3050,9 +3050,8 @@ const Editor: React.FC<EditorProps> = ({
       {editable && (
         <div className="editor-footer">
           <span className="character-count">
-            {editor.storage.characterCount.characters()} / 50000 字符
+            {editor.storage.characterCount.characters()} 字
           </span>
-          <span className="word-count">{editor.storage.characterCount.words()} 词</span>
         </div>
       )}
     </div>
