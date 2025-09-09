@@ -579,7 +579,7 @@ const ChatInterface: React.FC = () => {
 
   // 执行AI回复 - 流式响应版本（带上下文）
   const performAIResponse = useCallback(
-    async (userContent: string, userMessageId?: string) => {
+    async (userContent: string, userMessageId?: string, sessionId?: string) => {
       try {
         // 获取选中的AI配置
         const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
@@ -587,14 +587,10 @@ const ChatInterface: React.FC = () => {
           throw new Error(t.chat?.notifications.selectModel || '请先配置AI API')
         }
 
-        // 确保有当前会话ID，如果没有则创建新会话
-        if (!currentSessionId) {
-          const newSessionId = await window.api.chat.createSession()
-          if (newSessionId) {
-            setCurrentSessionId(newSessionId)
-          } else {
-            throw new Error(t.chat?.notifications.saveFailed || '创建会话失败')
-          }
+        // 使用传入的sessionId或当前会话ID
+        const activeSessionId = sessionId || currentSessionId
+        if (!activeSessionId) {
+          throw new Error(t.chat?.notifications.saveFailed || '没有活动的会话')
         }
 
         // 构建带有上下文的提示
@@ -603,7 +599,7 @@ const ChatInterface: React.FC = () => {
         // 创建初始的流式消息
         const streamMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
-          sessionId: currentSessionId!,
+          sessionId: activeSessionId,
           role: 'assistant',
           content: '',
           createdAt: Date.now(),
@@ -649,7 +645,7 @@ const ChatInterface: React.FC = () => {
             },
 
             // 流式完成处理 - 保留完整内容，让MessageRenderer处理思维内容
-            onDone: (fullContent: string) => {
+            onDone: async (fullContent: string) => {
               // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
 
@@ -667,6 +663,29 @@ const ChatInterface: React.FC = () => {
                 return newMessages
               })
 
+              // 保存完成的AI消息到数据库
+              if (activeSessionId) {
+                try {
+                  await window.api.chat.saveMessage({
+                    id: streamMessage.id,
+                    sessionId: activeSessionId,
+                    role: 'assistant',
+                    content: fullContent,
+                    status: 'complete',
+                    parentId: userMessageId,
+                    createdAt: streamMessage.createdAt
+                  })
+                  // 从未保存集合中移除
+                  setUnsavedMessages((prev) => {
+                    const newSet = new Set(prev)
+                    newSet.delete(streamMessage.id.toString())
+                    return newSet
+                  })
+                } catch (error) {
+                  console.error('保存AI消息失败:', error)
+                }
+              }
+
               // 清理状态
               setIsGenerating(false)
               setIsLoading(false)
@@ -675,7 +694,7 @@ const ChatInterface: React.FC = () => {
             },
 
             // 错误处理 - 优化超时和内容保留，保留完整内容
-            onError: (error: string) => {
+            onError: async (error: string) => {
               // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
 
@@ -713,6 +732,38 @@ const ChatInterface: React.FC = () => {
                 }
                 return newMessages
               })
+
+              // 保存消息到数据库（即使是错误状态）
+              if (activeSessionId) {
+                try {
+                  const messages = await new Promise<ChatMessage[]>((resolve) => {
+                    setMessages((prev) => {
+                      resolve(prev)
+                      return prev
+                    })
+                  })
+                  const finalMessage = messages.find((msg) => msg.id === streamMessage.id)
+                  if (finalMessage) {
+                    await window.api.chat.saveMessage({
+                      id: streamMessage.id,
+                      sessionId: activeSessionId,
+                      role: 'assistant',
+                      content: finalMessage.content,
+                      status: finalMessage.status,
+                      parentId: userMessageId,
+                      createdAt: streamMessage.createdAt
+                    })
+                    // 从未保存集合中移除
+                    setUnsavedMessages((prev) => {
+                      const newSet = new Set(prev)
+                      newSet.delete(streamMessage.id.toString())
+                      return newSet
+                    })
+                  }
+                } catch (saveError) {
+                  console.error('保存AI消息失败:', saveError)
+                }
+              }
 
               // 清理状态
               setIsGenerating(false)
@@ -755,7 +806,7 @@ const ChatInterface: React.FC = () => {
         setCurrentStreamCleanup(null)
       }
     },
-    [aiApiConfigs, selectedAiConfig, buildConversationContext]
+    [aiApiConfigs, selectedAiConfig, buildConversationContext, currentSessionId, t]
   )
 
   // 发送消息
@@ -774,6 +825,7 @@ const ChatInterface: React.FC = () => {
       sessionId = await window.api.chat.createSession()
       if (sessionId) {
         setCurrentSessionId(sessionId)
+        localStorage.setItem('lastSessionId', sessionId)
       } else {
         Toast.error(t.chat?.notifications.saveFailed || '创建会话失败')
         return
@@ -793,11 +845,22 @@ const ChatInterface: React.FC = () => {
     setInputValue('') // 清空输入框
     setIsLoading(true)
 
-    // 标记消息为待保存
-    setUnsavedMessages((prev) => new Set(prev).add(userMessage.id.toString()))
+    // 立即保存用户消息到数据库
+    try {
+      await window.api.chat.saveMessage({
+        id: userMessage.id,
+        sessionId: sessionId,
+        role: 'user',
+        content: userMessage.content,
+        status: 'complete',
+        createdAt: userMessage.createdAt
+      })
+    } catch (error) {
+      console.error('保存用户消息失败:', error)
+    }
 
     // 执行AI回复
-    performAIResponse(userMessage.content, userMessage.id?.toString())
+    performAIResponse(userMessage.content, userMessage.id?.toString(), sessionId)
   }, [inputValue, isLoading, selectedAiConfig, currentSessionId, performAIResponse, t])
 
   // 停止生成
@@ -846,43 +909,23 @@ const ChatInterface: React.FC = () => {
   )
 
   // 创建新的聊天会话
-  const createNewSession = useCallback(
-    async (saveCurrentSession = true) => {
-      try {
-        // 如果需要保存当前会话，确保所有消息都已保存
-        if (saveCurrentSession && currentSessionId && messages.length > 0) {
-          // 等待所有未保存的消息完成保存
-          if (unsavedMessages.size > 0) {
-            // 创建一个Promise来等待所有未保存的消息完成
-            await new Promise<void>((resolve) => {
-              const checkUnsaved = () => {
-                if (unsavedMessages.size === 0) {
-                  resolve()
-                } else {
-                  setTimeout(checkUnsaved, 100)
-                }
-              }
-              checkUnsaved()
-            })
-          }
-        }
-
-        const newSessionId = await window.api.chat.createSession()
-        if (newSessionId) {
-          setCurrentSessionId(newSessionId)
-          setMessages([])
-          setLastUserMessage(null)
-          setUnsavedMessages(new Set())
-          return newSessionId
-        }
-      } catch (error) {
-        console.error('创建新会话失败:', error)
-        Toast.error('创建新会话失败')
+  const createNewSession = useCallback(async () => {
+    try {
+      const newSessionId = await window.api.chat.createSession()
+      if (newSessionId) {
+        setCurrentSessionId(newSessionId)
+        setMessages([])
+        setLastUserMessage(null)
+        setUnsavedMessages(new Set())
+        localStorage.setItem('lastSessionId', newSessionId)
+        return newSessionId
       }
-      return null
-    },
-    [currentSessionId, messages, unsavedMessages]
-  )
+    } catch (error) {
+      console.error('创建新会话失败:', error)
+      Toast.error('创建新会话失败')
+    }
+    return null
+  }, [])
 
   // 清空对话
   const handleClearChat = useCallback(async () => {
@@ -895,11 +938,11 @@ const ChatInterface: React.FC = () => {
     setStreamingMessageId(null)
     setCurrentStreamCleanup(null)
 
-    // 保存当前会话（如果有的话）并创建新的会话
-    await createNewSession(true) // true indicates we want to save the current session
+    // 创建新的会话
+    await createNewSession()
 
     Toast.success(t?.chat?.notifications?.cleared || '会话已清空')
-  }, [currentStreamCleanup, t, currentSessionId, createNewSession])
+  }, [currentStreamCleanup, t, createNewSession])
 
   // 重新生成消息
   const handleRetryMessage = useCallback(
@@ -925,7 +968,7 @@ const ChatInterface: React.FC = () => {
 
             // 重新发送用户消息
             setIsLoading(true)
-            performAIResponse(parentMessage.content, parentMessage.id?.toString())
+            performAIResponse(parentMessage.content, parentMessage.id?.toString(), currentSessionId || undefined)
 
             Toast.info(t.chat?.notifications.retrying || '正在重新生成回复...')
             return
@@ -939,7 +982,7 @@ const ChatInterface: React.FC = () => {
 
           // 重新发送最后一条用户消息
           setIsLoading(true)
-          performAIResponse(lastUserMessage.content, lastUserMessage.id?.toString())
+          performAIResponse(lastUserMessage.content, lastUserMessage.id?.toString(), currentSessionId || undefined)
 
           Toast.info(t.chat?.notifications.retrying || '正在重新生成回复...')
           return

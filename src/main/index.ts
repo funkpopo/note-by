@@ -2572,6 +2572,7 @@ ${htmlContent}
         content: string
         status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
         parentId?: string
+        createdAt?: number
         modelId?: string
       }
     ) => {

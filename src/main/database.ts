@@ -1900,13 +1900,21 @@ export async function createChatSession(title?: string): Promise<string | null> 
 }
 
 // 保存聊天消息
-export async function saveChatMessage(message: Omit<ChatMessage, 'createdAt'>): Promise<boolean> {
+export async function saveChatMessage(message: ChatMessage): Promise<boolean> {
   const result = await withDatabase(async (database) => {
-    const now = Date.now()
+    // 使用传入的createdAt，如果没有则使用当前时间
+    const createdAt = message.createdAt || Date.now()
 
-    // 插入消息
+    // 先检查消息是否已存在
+    const checkExistingStmt = database.prepare(`
+      SELECT COUNT(*) as count FROM chat_messages WHERE id = ?
+    `)
+    const existing = checkExistingStmt.get(message.id) as { count: number }
+    const isNewMessage = !existing || existing.count === 0
+
+    // 使用 INSERT OR REPLACE 来处理ID冲突
     const insertMessageStmt = database.prepare(`
-      INSERT INTO chat_messages (id, session_id, role, content, status, parent_id, created_at, model_id)
+      INSERT OR REPLACE INTO chat_messages (id, session_id, role, content, status, parent_id, created_at, model_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
@@ -1917,18 +1925,27 @@ export async function saveChatMessage(message: Omit<ChatMessage, 'createdAt'>): 
       message.content,
       message.status || 'complete',
       message.parentId || null,
-      now,
+      createdAt,
       message.modelId || null
     )
-
-    // 更新会话的消息数量和最后更新时间
-    const updateSessionStmt = database.prepare(`
-      UPDATE chat_sessions 
-      SET message_count = message_count + 1, updated_at = ?
-      WHERE id = ?
-    `)
-
-    updateSessionStmt.run(now, message.sessionId)
+    
+    // 如果是新消息，更新会话的消息数量和最后更新时间
+    if (isNewMessage) {
+      const updateSessionStmt = database.prepare(`
+        UPDATE chat_sessions 
+        SET message_count = message_count + 1, updated_at = ?
+        WHERE id = ?
+      `)
+      updateSessionStmt.run(createdAt, message.sessionId)
+    } else {
+      // 如果是更新已有消息，只更新会话的最后更新时间
+      const updateSessionStmt = database.prepare(`
+        UPDATE chat_sessions 
+        SET updated_at = ?
+        WHERE id = ?
+      `)
+      updateSessionStmt.run(createdAt, message.sessionId)
+    }
 
     return true
   })
