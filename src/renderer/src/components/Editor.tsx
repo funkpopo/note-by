@@ -718,7 +718,6 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
   const [src, setSrc] = useState(node.attrs.src)
   const [width, setWidth] = useState(node.attrs.width || '100%')
   const [height, setHeight] = useState(node.attrs.height || 'auto')
-  const [alt, setAlt] = useState(node.attrs.alt || '')
   const [, setIsLoaded] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -768,24 +767,38 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
     updateAttributes({
       src: src.trim(),
       width: width || '100%',
-      height: height || 'auto',
-      alt: alt.trim()
+      height: height || 'auto'
     })
     setIsEditing(false)
-  }, [src, width, height, alt, updateAttributes])
+  }, [src, width, height, updateAttributes])
 
   const handleCancel = useCallback(() => {
     setSrc(node.attrs.src)
     setWidth(node.attrs.width || '100%')
     setHeight(node.attrs.height || 'auto')
-    setAlt(node.attrs.alt || '')
     setIsEditing(false)
   }, [node.attrs])
 
   if (isEditing) {
     return (
       <NodeViewWrapper className="image-wrapper editing">
-        <div className="image-edit-form">
+        <div 
+          className="image-edit-form"
+          onClick={(e) => {
+            // Prevent click event from bubbling and causing text selection
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Only prevent default if clicking on the form background, not inputs
+            const target = e.target as HTMLElement
+            if (target.classList.contains('image-edit-form') || 
+                target.classList.contains('image-edit-header') || 
+                target.classList.contains('image-edit-body') ||
+                target.classList.contains('image-edit-footer')) {
+              e.preventDefault()
+            }
+          }}
+        >
           <div className="image-edit-header">
             <span>编辑图片</span>
           </div>
@@ -798,24 +811,7 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
                   value={src}
                   onChange={(e) => setSrc(e.target.value)}
                   placeholder="输入图片地址"
-                  style={{
-                    marginTop: '4px',
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid var(--semi-color-border)',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
-              <div>
-                <label>替代文本:</label>
-                <input
-                  type="text"
-                  value={alt}
-                  onChange={(e) => setAlt(e.target.value)}
-                  placeholder="图片的替代文本"
+                  onClick={(e) => e.stopPropagation()}
                   style={{
                     marginTop: '4px',
                     width: '100%',
@@ -886,30 +882,25 @@ const ImageComponent: React.FC<any> = ({ node, updateAttributes, deleteNode }) =
         style={{
           width: node.attrs.width || '100%',
           maxWidth: '100%',
-          display: 'inline-block'
+          display: 'inline-block',
+          position: 'relative'
         }}
       >
-        <div className="image-controls">
-          <span className="image-info">
-            {width} × {height}
-            {alt && ` - ${alt}`}
-          </span>
-          <Space>
-            <Button
-              icon={<IconEdit />}
-              size="small"
-              type="tertiary"
-              onClick={() => setIsEditing(true)}
-              title="编辑图片"
-            />
-            <Button
-              icon={<IconDelete />}
-              size="small"
-              type="tertiary"
-              onClick={() => deleteNode()}
-              title="删除图片"
-            />
-          </Space>
+        <div className="image-buttons">
+          <Button
+            icon={<IconEdit />}
+            size="small"
+            type="tertiary"
+            onClick={() => setIsEditing(true)}
+            title="编辑图片"
+          />
+          <Button
+            icon={<IconDelete />}
+            size="small"
+            type="tertiary"
+            onClick={() => deleteNode()}
+            title="删除图片"
+          />
         </div>
         <div className="image-content">
           {isVisible ? (

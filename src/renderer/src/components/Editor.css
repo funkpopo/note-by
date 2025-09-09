@@ -1321,11 +1321,10 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
 .image-wrapper.editing .image-container {
   display: block !important;
   width: 100% !important;
-  border: 1px solid var(--semi-color-border);
+  border: 1px solid var(--semi-color-primary) !important;
   border-radius: 8px;
   background: var(--semi-color-bg-0);
   overflow: hidden;
-  border-color: var(--semi-color-primary) !important;
   box-shadow: 0 0 0 2px var(--semi-color-primary-light-default) !important;
 }
 
@@ -1333,19 +1332,54 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   border-radius: 8px;
   border: 1px solid var(--semi-color-border);
   background: var(--semi-color-bg-0);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
-.image-controls {
+/* Image buttons positioned at top-right corner */
+.image-buttons {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   display: flex;
-  justify-content: space-between;
+  gap: 4px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: var(--semi-color-bg-0);
+  backdrop-filter: blur(4px);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--semi-color-border);
+}
+
+/* Show buttons on hover */
+.image-wrapper:hover .image-buttons,
+.image-wrapper.ProseMirror-selectednode .image-buttons {
+  opacity: 1;
+}
+
+/* Image buttons style */
+.image-buttons .semi-button {
+  background: var(--semi-color-bg-0);
+  border: 1px solid var(--semi-color-border);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
   align-items: center;
-  padding: 8px 12px;
-  background: var(--semi-color-fill-0);
-  border-bottom: 1px solid var(--semi-color-border);
-  font-size: 12px;
-  user-select: none;
+  justify-content: center;
+}
+
+.image-buttons .semi-button:hover {
+  background: var(--semi-color-fill-1);
+  border-color: var(--semi-color-primary);
+}
+
+/* Remove old controls styles */
+.image-controls {
+  display: none;
 }
 
 .image-info {
@@ -1355,18 +1389,22 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 300px;
-  user-select: text;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .image-content {
   position: relative;
   overflow: hidden;
   background: var(--semi-color-bg-0);
+  border-radius: 8px;
 }
 
 .image-content img {
   display: block;
-  border-radius: 0 0 4px 4px;
+  border-radius: 8px;
   box-shadow: none;
   transition: all 0.2s ease;
   width: 100%;
@@ -1385,6 +1423,20 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
 /* Edit form styles */
 .image-edit-form {
   padding: 16px;
+  border: 1px solid var(--semi-color-border);
+  border-radius: 8px;
+  background: var(--semi-color-bg-0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  user-select: none;
+}
+
+.image-edit-form input,
+.image-edit-form textarea,
+.image-edit-form select {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
 }
 
 .image-edit-header {
