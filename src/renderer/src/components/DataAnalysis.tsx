@@ -2360,6 +2360,9 @@ const DataAnalysis: React.FC = () => {
     >
       <div
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           padding: '16px 24px',
           borderBottom: '1px solid var(--semi-color-border)',
           backgroundColor: 'var(--semi-color-bg-1)',
@@ -2369,6 +2372,59 @@ const DataAnalysis: React.FC = () => {
         <Title heading={3} style={{ margin: 0, color: 'var(--semi-color-text-0)' }}>
           笔记数据分析
         </Title>
+        <Space>
+          <Select
+            placeholder={t('placeholder.modelSelect')}
+            value={selectedModelId || undefined}
+            onChange={async (value) => {
+              const modelId = value as string
+              setSelectedModelId(modelId)
+              try {
+                await modelSelectionService.setSelectedModelId(modelId)
+              } catch (error) {
+                console.error('保存选中模型失败:', error)
+                Toast.error({
+                  content: '保存模型选择失败'
+                })
+              }
+            }}
+            style={{ width: 200 }}
+          >
+            {availableModels.map((model) => (
+              <Select.Option key={model.id} value={model.id}>
+                {model.name}
+              </Select.Option>
+            ))}
+          </Select>
+          <Button
+            theme="solid"
+            type="primary"
+            onClick={() => handlePerformAnalysis(true)}
+            loading={isAnalyzing}
+            disabled={!selectedModelId || availableModels.length === 0}
+          >
+            {isAnalyzing ? '分析中...' : '执行分析'}
+          </Button>
+          {process.env.NODE_ENV !== 'production' && (
+            <Button
+              type="warning"
+              onClick={async () => {
+                try {
+                  await window.api.analytics.resetAnalysisCache?.()
+                  Toast.success({
+                    content: '分析缓存已重置'
+                  })
+                } catch {
+                  Toast.error({
+                    content: '重置缓存失败'
+                  })
+                }
+              }}
+            >
+              重置缓存
+            </Button>
+          )}
+        </Space>
       </div>
       <div
         style={{
@@ -2378,72 +2434,6 @@ const DataAnalysis: React.FC = () => {
           flexDirection: 'column'
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            marginBottom: 20,
-            backgroundColor: 'var(--semi-color-bg-0)',
-            padding: '12px 24px',
-            borderBottom: '1px solid var(--semi-color-border)',
-            flexShrink: 0
-          }}
-        >
-          <Space>
-            <Select
-              placeholder={t('placeholder.modelSelect')}
-              value={selectedModelId || undefined}
-              onChange={async (value) => {
-                const modelId = value as string
-                setSelectedModelId(modelId)
-                try {
-                  await modelSelectionService.setSelectedModelId(modelId)
-                } catch (error) {
-                  console.error('保存选中模型失败:', error)
-                  Toast.error({
-                    content: '保存模型选择失败'
-                  })
-                }
-              }}
-              style={{ width: 200 }}
-            >
-              {availableModels.map((model) => (
-                <Select.Option key={model.id} value={model.id}>
-                  {model.name}
-                </Select.Option>
-              ))}
-            </Select>
-            <Button
-              theme="solid"
-              type="primary"
-              onClick={() => handlePerformAnalysis(true)}
-              loading={isAnalyzing}
-              disabled={!selectedModelId || availableModels.length === 0}
-            >
-              {isAnalyzing ? '分析中...' : '执行分析'}
-            </Button>
-            {process.env.NODE_ENV !== 'production' && (
-              <Button
-                type="warning"
-                onClick={async () => {
-                  try {
-                    await window.api.analytics.resetAnalysisCache?.()
-                    Toast.success({
-                      content: '分析缓存已重置'
-                    })
-                  } catch {
-                    Toast.error({
-                      content: '重置缓存失败'
-                    })
-                  }
-                }}
-              >
-                重置缓存
-              </Button>
-            )}
-          </Space>
-        </div>
         <div
           ref={analysisContainerRef}
           className="settings-scroll-container data-analysis"
