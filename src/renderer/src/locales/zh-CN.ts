@@ -138,6 +138,29 @@ export interface ExtendedDictionary {
       exportData: string
       resetStats: string
     }
+    cloudSync?: {
+      title: string
+      add: string
+      empty: string
+      actions: {
+        authorize: string
+        configure: string
+      }
+      labels: {
+        enabled: string
+        service: string
+        name: string
+        remotePath: string
+        localPath: string
+      }
+      modal: {
+        addTitle: string
+        editTitle: string
+        credsTitle: string
+        oauthTitle: string
+        oauthInstruction: string
+      }
+    }
   }
   webdav?: {
     title: string

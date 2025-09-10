@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Typography, Card, Divider, Tabs } from '@douyinfe/semi-ui'
 import { IconCloud } from '@douyinfe/semi-icons'
-import CloudStorageSettings from './CloudStorageSettings'
+import CloudStorageManager from './CloudStorageManager'
 import './Settings.css'
 import {
   LanguageSettings,
@@ -68,7 +68,7 @@ const Settings: React.FC = () => {
                   </div>
                 </div>
                 <Divider className="settings-divider" />
-                <CloudStorageSettings onSyncComplete={handleSyncComplete} />
+                <CloudStorageManager onSyncComplete={handleSyncComplete} />
               </Card>
             </div>
           </Tabs.TabPane>
