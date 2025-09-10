@@ -76,6 +76,9 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
   const remove = async (id: string): Promise<void> => { await saveItems(items.filter(i => i.id !== id)); Toast.success('已删除') }
 
   const upsertBasic = async (v: Partial<CloudStorageItem>): Promise<void> => {
+    // Require name and provider
+    if (!v.name || String(v.name).trim() === '') { Toast.error('请输入名称'); return }
+    if (!v.provider || String(v.provider).trim() === '') { Toast.error('请选择云存储服务'); return }
     if (!v.id) v.id = genId()
     const idx = items.findIndex(i => i.id === v.id)
     const nextItem: CloudStorageItem = {

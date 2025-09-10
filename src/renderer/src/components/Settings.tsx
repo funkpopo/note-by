@@ -56,7 +56,7 @@ const Settings: React.FC = () => {
           <Tabs.TabPane tab={<span className="tab-label">同步设置</span>} itemKey="sync">
             <div className="tab-content">
               <Card className="settings-card animated-card">
-                <div className="card-header">
+                <div className="card-header" style={{ display: 'none' }}>
                   <div className="card-icon-wrapper sync-icon">
                     <IconCloud size="large" />
                   </div>
@@ -67,7 +67,7 @@ const Settings: React.FC = () => {
                     </Text>
                   </div>
                 </div>
-                <Divider className="settings-divider" />
+                
                 <CloudStorageManager onSyncComplete={handleSyncComplete} />
               </Card>
             </div>
