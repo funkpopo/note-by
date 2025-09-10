@@ -1,0 +1,47 @@
+/* Ensure text selection is allowed inside chat message bubbles */
+.chat-bubble-content {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Also ensure all child elements remain selectable */
+.chat-bubble-content * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Improve visibility of selection on colored user bubbles */
+/* Light theme: white selection highlight on dark bubble */
+body[theme-mode='light'] .chat-user-message-content::selection,
+body[theme-mode='light'] .chat-user-message-content *::selection {
+  background-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Dark theme: dark selection highlight on light bubble */
+body[theme-mode='dark'] .chat-user-message-content::selection,
+body[theme-mode='dark'] .chat-user-message-content *::selection {
+  background-color: rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Theme-specific user bubble colors (remove blue tone) */
+body[theme-mode='light'] .chat-user-bubble {
+  background: #3a3a3a !important; /* deep gray */
+  border: none !important;
+}
+
+body[theme-mode='light'] .chat-user-bubble .semi-card-body {
+  color: #ffffff !important; /* ensure contrast on dark bubble */
+}
+
+body[theme-mode='dark'] .chat-user-bubble {
+  background: #e6e6e6 !important; /* light gray */
+  border: none !important;
+}
+
+body[theme-mode='dark'] .chat-user-bubble .semi-card-body {
+  color: #1f1f1f !important; /* dark text for readability */
+}

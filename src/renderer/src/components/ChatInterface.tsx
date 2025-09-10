@@ -24,6 +24,7 @@ import { modelSelectionService, type AiApiConfig } from '../services/modelSelect
 import throttle from 'lodash.throttle'
 import { processThinkingContent } from '../utils/filterThinking'
 import MessageRenderer from './MessageRenderer'
+import './ChatInterface.css'
 import ChatHistorySidebar from './ChatHistorySidebar'
 import { ChatSkeleton } from './Skeleton'
 import { zhCN } from '../locales/zh-CN'
@@ -207,9 +208,10 @@ const MessageBubbleCustom: React.FC<{
       >
         {/* 消息内容 */}
         <Card
+          className={isUser ? 'chat-user-bubble' : 'chat-ai-bubble'}
           style={{
             background: isUser
-              ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+              ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)' // will be overridden by CSS for user bubble
               : 'var(--semi-color-bg-2)',
             border: isUser ? 'none' : '1px solid var(--semi-color-border)',
             borderRadius: '16px',
@@ -302,6 +304,7 @@ const MessageBubbleCustom: React.FC<{
 
           {isUser ? (
             <div
+              className="chat-bubble-content chat-user-message-content"
               style={{
                 fontSize: '15px',
                 lineHeight: '1.6',
@@ -312,6 +315,7 @@ const MessageBubbleCustom: React.FC<{
             </div>
           ) : (
             <MessageRenderer
+              className="chat-bubble-content chat-ai-message-content"
               content={message.content || ''}
               style={{
                 color: 'inherit',
