@@ -22,7 +22,7 @@ import {
 } from '@douyinfe/semi-icons'
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
-import { processThinkingContent } from '../utils/filterThinking'
+import { processThinkingContent, stripThinkingForStreaming } from '../utils/filterThinking'
 import MessageRenderer from './MessageRenderer'
 import './ChatInterface.css'
 import ChatHistorySidebar from './ChatHistorySidebar'
@@ -315,8 +315,13 @@ const MessageBubbleCustom: React.FC<{
             </div>
           ) : (
             <MessageRenderer
+              key={`${message.id}-${message.status === 'complete' ? 'final' : 'live'}`}
               className="chat-bubble-content chat-ai-message-content"
-              content={message.content || ''}
+              content={
+                message.status === 'complete'
+                  ? message.content || ''
+                  : stripThinkingForStreaming(message.content || '')
+              }
               style={{
                 color: 'inherit',
                 fontSize: '15px',
