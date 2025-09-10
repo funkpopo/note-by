@@ -32,7 +32,7 @@ import {
 import { useLanguage } from '../locales'
 import '@xyflow/react/dist/style.css'
 import { toPng } from 'html-to-image'
-import { MindMapSkeleton } from './Skeleton'
+// 移除思维导图骨架屏显示
 
 // 添加右键菜单样式
 const contextMenuStyles = `
@@ -123,7 +123,7 @@ const MindMapFlow: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [nodeId, setNodeId] = useState(2)
   const [isLoading, setIsLoading] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(true)
+  // 取消初始化骨架屏逻辑，直接渲染内容
   const [editingNode, setEditingNode] = useState<{
     id: string
     label: string
@@ -647,15 +647,7 @@ const MindMapFlow: React.FC = () => {
     }
   }, [ctrlNPressed, addNode])
 
-  // 初始化组件
-  useEffect(() => {
-    // 模拟组件加载时间
-    const timer = setTimeout(() => {
-      setIsInitializing(false)
-    }, 800) // 模拟初始化时间
-
-    return () => clearTimeout(timer)
-  }, [])
+  // 不再使用初始化延迟与骨架屏
 
   useEffect(() => {
     if (ctrlZPressed) {
@@ -690,10 +682,7 @@ const MindMapFlow: React.FC = () => {
     }
   }, [])
 
-  // 显示初始化骨架屏
-  if (isInitializing) {
-    return <MindMapSkeleton />
-  }
+  // 直接渲染，无骨架屏
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
