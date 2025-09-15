@@ -322,7 +322,12 @@ export async function updateLastGlobalSyncTime(): Promise<boolean> {
 export async function setCacheConfig(config: Partial<SyncCacheData['cacheConfig']>): Promise<boolean> {
   try {
     const cache = await loadCache()
-    cache.cacheConfig = { ...cache.cacheConfig, ...config }
+    const newConfig: { defaultTTL: number; maxEntries: number; enableExpiration: boolean } = {
+      ...DEFAULT_CACHE_CONFIG,
+      ...(cache.cacheConfig || {}),
+      ...(config || {})
+    }
+    cache.cacheConfig = newConfig
     return saveCache(cache)
   } catch {
     return false
@@ -371,7 +376,6 @@ export async function getCacheStats(): Promise<{
   try {
     const cache = await loadCache()
     const entries = Object.values(cache.files)
-    const now = Date.now()
     
     let expiredCount = 0
     let oldestSync = Infinity

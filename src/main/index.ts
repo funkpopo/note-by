@@ -2577,7 +2577,11 @@ ${htmlContent}
       }
     ) => {
       try {
-        const success = await saveChatMessage(message)
+        const msgToSave = {
+          ...message,
+          createdAt: message.createdAt ?? Date.now()
+        }
+        const success = await saveChatMessage(msgToSave)
         return success
       } catch (error) {
         console.error('保存聊天消息失败:', error)
