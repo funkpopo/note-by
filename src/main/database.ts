@@ -63,6 +63,11 @@ class EnhancedDatabasePool {
   private isInitialized: boolean = false
   private healthCheckTimer?: NodeJS.Timeout
   private isShuttingDown: boolean = false
+  // 备份清理配置
+  private lastBackupCleanup: number = 0
+  private readonly backupCleanupIntervalMs: number = 24 * 60 * 60 * 1000 // 每日清理一次
+  private readonly maxBackupFiles: number = 5 // 最多保留的备份文件数（wal+shm 总数）
+  private readonly maxBackupAgeMs: number = 14 * 24 * 60 * 60 * 1000 // 14天
 
   async initialize(): Promise<boolean> {
     if (this.isInitialized) {
@@ -81,6 +86,12 @@ class EnhancedDatabasePool {
       // 动态导入better-sqlite3
       const SqliteModule = await import('better-sqlite3')
       this.SqliteDatabase = SqliteModule.default
+
+      // 在建立连接前，尝试处理可能遗留的 WAL/SHM 文件，避免异常退出后下次无法读写
+      await this.prepareDatabaseFiles()
+
+      // 启动时清理历史备份，避免堆积（按需求：启动后不保留任何备份）
+      await this.cleanupBackupFiles(true)
 
       this.isInitialized = true
 
@@ -196,6 +207,184 @@ class EnhancedDatabasePool {
       connection.pragma('foreign_keys = ON')
     } catch {
       // Failed to configure SQLite connection
+    }
+  }
+
+  /**
+   * 启动前检查并处理异常退出后遗留的 WAL/SHM 文件
+   * 优先尝试 checkpoint，将 WAL 合并进主库；若失败，备份后清理
+   */
+  private async prepareDatabaseFiles(): Promise<void> {
+    try {
+      const walPath = `${this.dbPath}-wal`
+      const shmPath = `${this.dbPath}-shm`
+
+      const walExists = fs.existsSync(walPath)
+      const shmExists = fs.existsSync(shmPath)
+
+      if (!walExists && !shmExists) {
+        return
+      }
+
+      // 首先尝试通过临时连接执行 checkpoint
+      const checkpointOk = await this.runWalCheckpoint('TRUNCATE')
+      if (checkpointOk) {
+        return
+      }
+
+      // 如果 checkpoint 失败，则将 WAL/SHM 备份后移除，避免阻塞读写
+      const ts = new Date().toISOString().replace(/[:.]/g, '-')
+      if (walExists) {
+        try {
+          fs.renameSync(walPath, `${walPath}.backup-${ts}`)
+        } catch {
+          try {
+            fs.unlinkSync(walPath)
+          } catch {
+            // 删除失败，忽略以避免阻塞启动
+          }
+        }
+      }
+      if (shmExists) {
+        try {
+          fs.renameSync(shmPath, `${shmPath}.backup-${ts}`)
+        } catch {
+          try {
+            fs.unlinkSync(shmPath)
+          } catch {
+            // 删除失败，忽略以避免阻塞启动
+          }
+        }
+      }
+    } catch {
+      // 预处理失败不应阻止启动，交由后续连接重试
+    }
+  }
+
+  /**
+   * 使用短暂连接执行 WAL checkpoint
+   */
+  private async runWalCheckpoint(mode: 'PASSIVE' | 'FULL' | 'RESTART' | 'TRUNCATE' = 'TRUNCATE') {
+    try {
+      if (!this.SqliteDatabase) return false
+      const temp = new this.SqliteDatabase(this.dbPath)
+      try {
+        this.configureSQLiteConnection(temp)
+        // 执行 checkpoint，将 WAL 合并回主库
+        temp.pragma(`wal_checkpoint(${mode})`)
+        return true
+      } finally {
+        try {
+          temp.close()
+        } catch {
+          // ignore
+        }
+      }
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 清理通过备份方式保留的 wal/shm 文件，防止数量无限增长
+   * 策略：
+   * - 删除超过 maxBackupAgeMs 的旧备份
+   * - 限制总量不超过 maxBackupFiles，按修改时间保留最新
+   */
+  private async cleanupBackupFiles(deleteAll: boolean = false): Promise<void> {
+    try {
+      const dir = path.dirname(this.dbPath)
+      const base = path.basename(this.dbPath)
+      const walPrefix = `${base}-wal.backup-`
+      const shmPrefix = `${base}-shm.backup-`
+
+      let entries: string[] = []
+      try {
+        entries = fs.readdirSync(dir)
+      } catch {
+        this.lastBackupCleanup = Date.now()
+        return
+      }
+
+      const backups = entries
+        .filter((name) => name.startsWith(walPrefix) || name.startsWith(shmPrefix))
+        .map((name) => {
+          const full = path.join(dir, name)
+          let mtime = 0
+          try {
+            mtime = fs.statSync(full).mtimeMs
+          } catch {
+            mtime = 0
+          }
+          return { name, full, mtime }
+        })
+
+      if (backups.length === 0) {
+        this.lastBackupCleanup = Date.now()
+        return
+      }
+
+      // 如果要求删除全部备份，直接清空并返回
+      if (deleteAll) {
+        for (const f of backups) {
+          try {
+            fs.unlinkSync(f.full)
+          } catch {
+            // ignore
+          }
+        }
+        this.lastBackupCleanup = Date.now()
+        return
+      }
+
+      const now = Date.now()
+      // 删除超过最大保存时长的备份
+      for (const f of backups) {
+        if (f.mtime && now - f.mtime > this.maxBackupAgeMs) {
+          try {
+            fs.unlinkSync(f.full)
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      // 重新列举剩余备份以应用数量限制
+      let remaining: { name: string; full: string; mtime: number }[] = []
+      try {
+        remaining = fs
+          .readdirSync(dir)
+          .filter((name) => name.startsWith(walPrefix) || name.startsWith(shmPrefix))
+          .map((name) => {
+            const full = path.join(dir, name)
+            let mtime = 0
+            try {
+              mtime = fs.statSync(full).mtimeMs
+            } catch {
+              mtime = 0
+            }
+            return { name, full, mtime }
+          })
+          .sort((a, b) => b.mtime - a.mtime)
+      } catch {
+        this.lastBackupCleanup = Date.now()
+        return
+      }
+
+      if (remaining.length > this.maxBackupFiles) {
+        const toDelete = remaining.slice(this.maxBackupFiles)
+        for (const f of toDelete) {
+          try {
+            fs.unlinkSync(f.full)
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      this.lastBackupCleanup = Date.now()
+    } catch {
+      // 忽略清理错误
     }
   }
 
@@ -365,6 +554,11 @@ class EnhancedDatabasePool {
     this.healthCheckTimer = setInterval(async () => {
       await this.performHealthCheck()
       this.cleanupIdleConnections()
+      // 按天清理备份
+      const now = Date.now()
+      if (now - this.lastBackupCleanup > this.backupCleanupIntervalMs) {
+        await this.cleanupBackupFiles(false)
+      }
     }, this.healthCheckInterval)
   }
 
@@ -498,6 +692,9 @@ class EnhancedDatabasePool {
     await Promise.all(promises)
     this.connections.clear()
     this.isInitialized = false
+
+    // 关闭后尝试最终一次 checkpoint，尽量清理 WAL/SHM，避免异常退出影响下次启动
+    await this.runWalCheckpoint('TRUNCATE')
 
     // Enhanced database pool shut down successfully
   }

@@ -69,6 +69,7 @@ import {
   getChatSessionStats,
   cleanupOldChatSessions
 } from './database'
+import { closeAllDatabaseConnections } from './database'
 
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
@@ -2776,6 +2777,45 @@ app.on('before-quit', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const appWithIsQuitting = app as any
   appWithIsQuitting.isQuitting = true
+  // 在退出前尽量刷新并关闭数据库连接，避免遗留 WAL/SHM 导致下次启动异常
+  try {
+    // 由于这是同步钩子，触发异步关闭但不阻塞退出
+    void closeAllDatabaseConnections()
+  } catch {
+    // ignore
+  }
+})
+
+app.on('will-quit', () => {
+  try {
+    void closeAllDatabaseConnections()
+  } catch {
+    // ignore
+  }
+})
+
+process.on('SIGINT', () => {
+  try {
+    void closeAllDatabaseConnections()
+  } finally {
+    app.quit()
+  }
+})
+
+process.on('SIGTERM', () => {
+  try {
+    void closeAllDatabaseConnections()
+  } finally {
+    app.quit()
+  }
+})
+
+process.on('uncaughtException', () => {
+  try {
+    void closeAllDatabaseConnections()
+  } catch {
+    // ignore
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
