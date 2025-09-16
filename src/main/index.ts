@@ -73,7 +73,6 @@ import { closeAllDatabaseConnections } from './database'
 
 import { mdToPdf } from 'md-to-pdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
-import Showdown from 'showdown'
 import { fileStreamManager } from './utils/FileStreamManager'
 import { memoryMonitor } from './utils/MemoryMonitor'
 import { performDatabaseMemoryCleanup } from './database'
@@ -1017,7 +1016,7 @@ app.whenReady().then(() => {
   // 将Markdown转换为DOCX
   async function markdownToDocx(markdownContent: string): Promise<Buffer> {
     // 使用Showdown将Markdown转换为HTML（用于解析结构）
-    const converter = new Showdown.Converter({
+    const converter = new showdown.Converter({
       tables: true,
       tasklists: true,
       strikethrough: true
@@ -1114,7 +1113,7 @@ app.whenReady().then(() => {
       }
 
       // 使用Showdown将Markdown转换为HTML
-      const converter = new Showdown.Converter({
+      const converter = new showdown.Converter({
         tables: true,
         tasklists: true,
         strikethrough: true,

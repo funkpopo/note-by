@@ -36,7 +36,6 @@ function normalizeApiUrl(url: string): string {
     }
   }
   
-  console.log('[OpenAI] Normalized API URL:', normalizedUrl)
   return normalizedUrl
 }
 
@@ -64,13 +63,6 @@ async function makeCompatibleRequest(
     stream: stream
   }
 
-  console.log('[OpenAI] Direct API Request:', {
-    url,
-    model: modelName,
-    max_tokens: maxTokens,
-    stream,
-    bodyPreview: JSON.stringify(requestBody).substring(0, 200)
-  })
 
   const response = await fetch(url, {
     method: 'POST',
@@ -315,13 +307,6 @@ export async function generateContent(
   try {
     const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
 
-    console.log('[OpenAI] Generate Content Request:', {
-      apiUrl,
-      modelName,
-      promptLength: prompt?.length,
-      maxTokens,
-      stream
-    })
 
     // 如果请求包含stream=true，则返回错误，提示使用streamGenerateContent
     if (stream) {
@@ -348,7 +333,6 @@ export async function generateContent(
 
     try {
       // 先尝试使用兼容性请求
-      console.log('[OpenAI] Trying compatible request first...')
       const response = await makeCompatibleRequest(
         normalizedApiUrl,
         apiKey,
@@ -359,12 +343,6 @@ export async function generateContent(
       )
 
       const data = await response.json()
-      console.log('[OpenAI] Response data structure:', {
-        hasChoices: !!data?.choices,
-        choicesCount: data?.choices?.length,
-        hasContent: !!data?.content,
-        hasText: !!data?.text
-      })
 
       // 尝试提取内容
       let content = ''
@@ -379,7 +357,6 @@ export async function generateContent(
       }
 
       if (content) {
-        console.log('[OpenAI] Content extracted successfully')
         return { success: true, content }
       } else {
         console.error('[OpenAI] No content found in response:', data)
@@ -452,12 +429,6 @@ export async function streamGenerateContent(
     try {
       const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
 
-      console.log('[OpenAI Stream] Request:', {
-        apiUrl,
-        modelName,
-        promptLength: prompt?.length,
-        maxTokens
-      })
 
       if (!apiKey) {
         eventEmitter.emit('error', 'API Key 未设置')
@@ -479,7 +450,6 @@ export async function streamGenerateContent(
 
       try {
         // 先尝试使用原生fetch进行流式请求
-        console.log('[OpenAI Stream] Using native fetch for streaming...')
         
         const url = `${normalizedApiUrl}/chat/completions`
         const requestBody = {
@@ -529,7 +499,6 @@ export async function streamGenerateContent(
           return
         }
 
-        console.log('[OpenAI Stream] Stream response received')
         
         const reader = response.body?.getReader()
         if (!reader) {
@@ -554,7 +523,6 @@ export async function streamGenerateContent(
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
               if (data === '[DONE]') {
-                console.log('[OpenAI Stream] Stream completed')
                 eventEmitter.emit('done', fullContent)
                 return
               }
@@ -579,7 +547,6 @@ export async function streamGenerateContent(
         
         // 如果原生fetch失败，尝试使用OpenAI SDK
         try {
-          console.log('[OpenAI Stream] Falling back to OpenAI SDK...')
           
           const openai = new OpenAI({
             apiKey,
