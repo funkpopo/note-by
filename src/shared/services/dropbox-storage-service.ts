@@ -259,8 +259,7 @@ export class DropboxStorageService implements ICloudStorageService {
             }
           }
         } catch (error) {
-          // 如果本地目录不存在，跳过上传
-          console.warn('本地目录不存在，跳过上传:', localDir)
+          // 如果本地目录不存在，跳过上传 - 静默处理
         }
       }
 

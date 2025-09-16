@@ -2924,12 +2924,11 @@ const Editor: React.FC<EditorProps> = ({
     editorMemoryManager.startMonitoring()
 
     // 添加内存事件监听器
-    const memoryEventListener = (eventType: string, data: any) => {
+    const memoryEventListener = (eventType: string) => {
       if (eventType === 'critical') {
         Toast.warning('内存使用率过高，建议保存并刷新页面')
-      } else if (eventType === 'warning') {
-        console.warn('内存警告:', data.message)
       }
+      // 内存警告已通过 Toast 提示，不需要额外的 console 输出
     }
 
     editorMemoryManager.addEventListener('critical', memoryEventListener)

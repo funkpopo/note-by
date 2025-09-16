@@ -39,5 +39,10 @@ const errorHandler = UnifiedErrorHandler.getInstance(config)
 // 添加React错误边界处理方法（保持向后兼容）
 export const rendererErrorHandler = {
   ...errorHandler,
-  handleReactError: errorHandler.handleReactError.bind(errorHandler)
+  handleReactError: errorHandler.handleReactError.bind(errorHandler),
+  // Add missing methods from UnifiedErrorHandler
+  warn: errorHandler.warn.bind(errorHandler),
+  error: errorHandler.error.bind(errorHandler),
+  info: errorHandler.info.bind(errorHandler),
+  debug: errorHandler.debug.bind(errorHandler)
 }
