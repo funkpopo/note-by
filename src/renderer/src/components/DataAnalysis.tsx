@@ -835,6 +835,9 @@ const WritingEfficiencyTrend: React.FC<{
     return efficiencyData
   }, [statsData, activityData])
 
+  // 生成效率数据 - 只调用一次并缓存结果
+  const efficiencyData = generateEfficiencyData()
+
   const efficiencyOption: EChartsOption = {
     title: {
       text: '写作效率趋势分析',
@@ -848,7 +851,7 @@ const WritingEfficiencyTrend: React.FC<{
       trigger: 'axis',
       formatter: (params: any) => {
         const data = params[0]
-        const efficiency = generateEfficiencyData()[data.dataIndex]
+        const efficiency = efficiencyData[data.dataIndex]
         return `${efficiency.date}<br/>
                 效率指数: ${efficiency.efficiency}<br/>
                 编辑次数: ${efficiency.edits}<br/>
@@ -863,7 +866,7 @@ const WritingEfficiencyTrend: React.FC<{
     },
     xAxis: {
       type: 'category',
-      data: generateEfficiencyData().map((item) => {
+      data: efficiencyData.map((item) => {
         const date = new Date(item.date)
         return `${date.getMonth() + 1}/${date.getDate()}`
       }),
@@ -881,7 +884,7 @@ const WritingEfficiencyTrend: React.FC<{
     series: [
       {
         type: 'line',
-        data: generateEfficiencyData().map((item) => item.efficiency),
+        data: efficiencyData.map((item) => item.efficiency),
         smooth: true,
         lineStyle: {
           color: isDarkMode ? '#4299e1' : '#1890ff',
@@ -1824,18 +1827,23 @@ const DataAnalysis: React.FC = () => {
     data: { source: string; target: string; strength: number }[],
     title: string
   ): JSX.Element => {
-    // 将关系数据转换为适合显示的格式
-    const relationLabels = data.map((relation) => `${relation.source} ↔ ${relation.target}`)
-    const relationValues = data.map((relation) => relation.strength)
+    // 将关系数据转换为适合显示的格式 - 一次遍历处理所有数据
+    const processedData = data.map((relation) => ({
+      label: `${relation.source} ↔ ${relation.target}`,
+      value: relation.strength
+    }))
+
+    const relationLabels = processedData.map(item => item.label)
+    const relationValues = processedData.map(item => item.value)
 
     // 为每个关系生成颜色
     const colors = generateColors(relationLabels.length)
 
     // 创建ECharts饼图数据
-    const seriesData = relationLabels.map((label, index) => {
+    const seriesData = processedData.map((item, index) => {
       return {
-        name: label,
-        value: relationValues[index],
+        name: item.label,
+        value: item.value,
         itemStyle: {
           color: colors[index]
         }
@@ -2124,13 +2132,18 @@ const DataAnalysis: React.FC = () => {
       return colors
     }
 
-    // 1. 编辑时间分布图表（24小时）
+    // 1. 编辑时间分布图表（24小时） - 合并map操作
+    const editTimeData = statsData.editTimeDistribution.map((item) => ({
+      label: `${item.hour}点:00`,
+      count: item.count
+    }))
+
     const hourlyDistribution: ChartData = {
-      labels: statsData.editTimeDistribution.map((item) => `${item.hour}点:00`),
+      labels: editTimeData.map(item => item.label),
       datasets: [
         {
           label: '编辑次数',
-          data: statsData.editTimeDistribution.map((item) => item.count),
+          data: editTimeData.map(item => item.count),
           backgroundColor: 'rgba(75, 192, 192, 0.5)',
           borderColor: 'rgba(75, 192, 192, 1)',
           borderWidth: 1
@@ -2138,19 +2151,22 @@ const DataAnalysis: React.FC = () => {
       ]
     }
 
-    // 2. 最常编辑的笔记（饼图）
+    // 2. 最常编辑的笔记（饼图） - 合并map操作
+    const notesData = statsData.mostEditedNotes.map((note) => {
+      // 从文件路径中提取文件名，限制长度
+      const fileName = note.filePath.split('/').pop() || ''
+      return {
+        label: fileName.length > 15 ? fileName.substring(0, 15) + '...' : fileName,
+        count: note.count || 0
+      }
+    })
+
     const topNotes: ChartData = {
-      labels: statsData.mostEditedNotes.map((note) => {
-        // 从文件路径中提取文件名，限制长度
-        const fileName = note.filePath.split('/').pop() || ''
-        return fileName.length > 15 ? fileName.substring(0, 15) + '...' : fileName
-      }),
+      labels: notesData.map(item => item.label),
       datasets: [
         {
           label: '编辑次数',
-          data: statsData.mostEditedNotes.map((note) => {
-            return note.count || 0
-          }),
+          data: notesData.map(item => item.count),
           backgroundColor: generateColors(statsData.mostEditedNotes.length),
           borderColor: generateColors(statsData.mostEditedNotes.length, 1),
           borderWidth: 1
@@ -2158,7 +2174,7 @@ const DataAnalysis: React.FC = () => {
       ]
     }
 
-    // 3. 每日编辑次数趋势（折线图）
+    // 3. 每日编辑次数趋势（折线图） - 合并map操作
     const sortedEditsByDate = [...statsData.editsByDate].sort((a, b) => {
       return new Date(a.date).getTime() - new Date(b.date).getTime()
     })
@@ -2198,14 +2214,19 @@ const DataAnalysis: React.FC = () => {
 
     let topFolders: ChartData | undefined = undefined
 
-    // 5. 最常用的文件夹（柱状图）
+    // 5. 最常用的文件夹（柱状图） - 合并map操作
     if (statsData.topFolders && statsData.topFolders.length > 0) {
+      const foldersData = statsData.topFolders.map((folder) => ({
+        label: folder.folder,
+        count: folder.count
+      }))
+
       topFolders = {
-        labels: statsData.topFolders.map((folder) => folder.folder),
+        labels: foldersData.map(item => item.label),
         datasets: [
           {
             label: '使用次数',
-            data: statsData.topFolders.map((folder) => folder.count),
+            data: foldersData.map(item => item.count),
             backgroundColor: 'rgba(153, 102, 255, 0.5)',
             borderColor: 'rgba(153, 102, 255, 1)',
             borderWidth: 1
@@ -2284,25 +2305,30 @@ const DataAnalysis: React.FC = () => {
             if (item.hour === mostActiveHour.hour) {
               return 'rgba(255, 99, 132, 1)'
             }
-            if (item.hour >= 0 && item.hour < 6) return 'rgba(153, 102, 255, 1)' // 凌晨
-            if (item.hour >= 6 && item.hour < 12) return 'rgba(54, 162, 235, 1)' // 上午
-            if (item.hour >= 12 && item.hour < 18) return 'rgba(255, 206, 86, 1)' // 下午
-            return 'rgba(75, 192, 192, 1)' // 晚上
+            if (item.hour >= 0 && item.hour < 6) return 'rgba(153, 102, 255, 1)'
+            if (item.hour >= 6 && item.hour < 12) return 'rgba(54, 162, 235, 1)'
+            if (item.hour >= 12 && item.hour < 18) return 'rgba(255, 206, 86, 1)'
+            return 'rgba(75, 192, 192, 1)'
           }),
           borderWidth: 1
         }
       ]
     }
 
-    // 7. 最常用的标签（标签云）
+    // 7. 最常用的标签（标签云） - 合并map操作
     let topTags: ChartData | undefined = undefined
     if (statsData.topTags && statsData.topTags.length > 0) {
+      const tagsData = statsData.topTags.map((tag) => ({
+        label: tag.tag,
+        count: tag.count
+      }))
+
       topTags = {
-        labels: statsData.topTags.map((tag) => tag.tag),
+        labels: tagsData.map(item => item.label),
         datasets: [
           {
             label: '使用次数',
-            data: statsData.topTags.map((tag) => tag.count),
+            data: tagsData.map(item => item.count),
             backgroundColor: generateColors(statsData.topTags.length),
             borderColor: generateColors(statsData.topTags.length, 1),
             borderWidth: 1
