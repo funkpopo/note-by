@@ -40,7 +40,7 @@ interface SyncCompleteCallback {
   cancelled?: boolean
 }
 
-interface WebDAVSettingsProps {
+export interface WebDAVSettingsProps {
   onSyncComplete?: (result: SyncCompleteCallback) => void
 }
 

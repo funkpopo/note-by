@@ -12,7 +12,7 @@ import { processThinkingContent } from '../utils/filterThinking'
 
 const { Text } = Typography
 
-interface MessageRendererProps {
+export interface MessageRendererProps {
   content: string
   className?: string
   style?: React.CSSProperties

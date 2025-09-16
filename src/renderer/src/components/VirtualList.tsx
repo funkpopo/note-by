@@ -9,7 +9,7 @@ export interface VirtualListItem {
 }
 
 // 虚拟列表组件的Props
-interface VirtualListProps {
+export interface VirtualListProps {
   items: VirtualListItem[]
   height: number
   itemHeight: number
@@ -107,3 +107,6 @@ export const VirtualTextList: React.FC<VirtualTextListProps> = memo(
 )
 
 VirtualTextList.displayName = 'VirtualTextList'
+
+// Default export for lazy loading
+export default VirtualList

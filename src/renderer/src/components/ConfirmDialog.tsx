@@ -1,7 +1,7 @@
 import React from 'react'
 import { Modal, Button, Typography } from '@douyinfe/semi-ui'
 
-interface ConfirmDialogProps {
+export interface ConfirmDialogProps {
   visible: boolean
   title: string
   content: string

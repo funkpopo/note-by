@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Form } from '@douyinfe/semi-ui'
 
-interface RenameDialogProps {
+export interface RenameDialogProps {
   visible: boolean
   title: string
   initialValue: string

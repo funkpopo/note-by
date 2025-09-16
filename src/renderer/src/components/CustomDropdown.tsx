@@ -9,7 +9,7 @@ export interface DropdownMenuItem {
   icon?: ReactNode
 }
 
-interface CustomDropdownProps {
+export interface CustomDropdownProps {
   children: ReactNode
   menu: DropdownMenuItem[]
   trigger?: 'click' | 'hover'

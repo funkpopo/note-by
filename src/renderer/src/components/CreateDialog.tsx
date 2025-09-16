@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Form, Select } from '@douyinfe/semi-ui'
 
-interface CreateDialogProps {
+export interface CreateDialogProps {
   visible: boolean
   title: string
   type: 'folder' | 'note'

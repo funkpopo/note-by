@@ -4,7 +4,7 @@ import { IconChevronDown } from '@douyinfe/semi-icons'
 import { Editor } from '@tiptap/react'
 import './HighlightColorPicker.css'
 
-interface HighlightColorPickerProps {
+export interface HighlightColorPickerProps {
   editor: Editor
   isActive?: boolean
 }

@@ -4,7 +4,7 @@ import { FormApi } from '@douyinfe/semi-ui/lib/es/form'
 
 const { Text } = Typography
 
-interface PasswordPromptProps {
+export interface PasswordPromptProps {
   visible: boolean
   title?: string
   explanation?: string

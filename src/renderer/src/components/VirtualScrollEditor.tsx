@@ -9,7 +9,7 @@ import { StarterKit } from '@tiptap/starter-kit'
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
 import './VirtualScrollEditor.css'
 
-interface VirtualScrollEditorProps {
+export interface VirtualScrollEditorProps {
   content: string
   onUpdate?: (content: string) => void
   itemHeight?: number

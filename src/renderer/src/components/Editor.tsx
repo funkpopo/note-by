@@ -1133,7 +1133,7 @@ const AIModelDropdown: React.FC = () => {
   )
 }
 
-interface EditorProps {
+export interface EditorProps {
   content?: string
   placeholder?: string
   onUpdate?: (content: string) => void

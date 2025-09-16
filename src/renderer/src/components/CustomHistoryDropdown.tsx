@@ -175,7 +175,7 @@ const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
   return <EditorContent editor={editor} />
 }
 
-interface CustomHistoryDropdownProps {
+export interface CustomHistoryDropdownProps {
   filePath?: string
   currentContent?: string
   onRestore?: (content: string) => void
