@@ -1,15 +1,14 @@
 import React, { lazy, Suspense } from 'react'
 import { Spin } from '@douyinfe/semi-ui'
-import { scheduleRenderTask } from '../utils/RenderOptimizer'
 
-// 懒加载组件定义
+// 主要组件懒加载
 export const LazyDataAnalysis = lazy(() => import('./DataAnalysis'))
 export const LazyMindMapPage = lazy(() => import('./MindMapPage'))
 export const LazyEditor = lazy(() => import('./Editor'))
 export const LazyChatInterface = lazy(() => import('./ChatInterface'))
 export const LazySettings = lazy(() => import('./Settings'))
 
-// 小型组件懒加载（按需加载）
+// 小型组件懒加载
 export const LazyDiffViewer = lazy(() => import('./DiffViewer'))
 export const LazyVirtualList = lazy(() => import('./VirtualList'))
 export const LazySlashMenu = lazy(() => import('./SlashMenu'))
@@ -19,6 +18,15 @@ export const LazyCustomDropdown = lazy(() => import('./CustomDropdown'))
 export const LazyPasswordPrompt = lazy(() => import('./PasswordPrompt'))
 export const LazyMessageRenderer = lazy(() => import('./MessageRenderer'))
 export const LazyVirtualScrollEditor = lazy(() => import('./VirtualScrollEditor'))
+
+// 对话框组件懒加载
+export const LazyConfirmDialog = lazy(() => import('./ConfirmDialog'))
+export const LazyRenameDialog = lazy(() => import('./RenameDialog'))
+export const LazyCreateDialog = lazy(() => import('./CreateDialog'))
+
+// 下拉菜单组件懒加载
+export const LazyHistoryDropdown = lazy(() => import('./HistoryDropdown'))
+export const LazyCustomHistoryDropdown = lazy(() => import('./CustomHistoryDropdown'))
 
 // 通用加载组件
 export const ComponentLoader: React.FC<{
@@ -61,111 +69,6 @@ export const SettingsLoader: React.FC = () => (
   <ComponentLoader height="400px" text="设置页面加载中..." />
 )
 
-// 智能预加载容器组件
-export const SmartPreloadContainer: React.FC<{
-  componentKey: string
-  Component: React.LazyExoticComponent<React.ComponentType<any>>
-  Loader: React.ComponentType
-  priority?: 'high' | 'medium' | 'low'
-  preloadDelay?: number
-  children?: React.ReactNode
-}> = ({ componentKey, Component, Loader, priority = 'low', preloadDelay = 2000, children }) => {
-  const [isPreloaded, setIsPreloaded] = React.useState(false)
-
-  React.useEffect(() => {
-    // 延迟预加载组件
-    const preloadComponent = async () => {
-      try {
-        await scheduleRenderTask({
-          id: `preload-${componentKey}`,
-          priority,
-          callback: async () => {
-            // 预加载组件模块
-            await (Component as any)._payload?._result?.catch?.(() => {})
-            // 触发组件加载
-            await Component
-            setIsPreloaded(true)
-          }
-        })
-      } catch (error) {
-        // Failed to preload component
-      }
-    }
-
-    const timer = setTimeout(preloadComponent, preloadDelay)
-    return () => clearTimeout(timer)
-  }, [componentKey, Component, priority, preloadDelay])
-
-  return (
-    <Suspense
-      fallback={
-        <div style={{ position: 'relative' }}>
-          <Loader />
-          {isPreloaded && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                fontSize: 12,
-                color: 'var(--semi-color-success)',
-                background: 'var(--semi-color-success-light-default)',
-                padding: '2px 6px',
-                borderRadius: 4
-              }}
-            >
-              ✓ 预加载完成
-            </div>
-          )}
-        </div>
-      }
-    >
-      <Component>{children}</Component>
-    </Suspense>
-  )
-}
-
-// 导出预配置的智能预加载组件
-export const SmartDataAnalysis: React.FC = () => (
-  <SmartPreloadContainer
-    componentKey="DataAnalysis"
-    Component={LazyDataAnalysis}
-    Loader={DataAnalysisLoader}
-    priority="medium"
-    preloadDelay={1000}
-  />
-)
-
-export const SmartMindMap: React.FC = () => (
-  <SmartPreloadContainer
-    componentKey="MindMap"
-    Component={LazyMindMapPage}
-    Loader={MindMapLoader}
-    priority="low"
-    preloadDelay={3000}
-  />
-)
-
-export const SmartChat: React.FC = () => (
-  <SmartPreloadContainer
-    componentKey="Chat"
-    Component={LazyChatInterface}
-    Loader={ChatLoader}
-    priority="low"
-    preloadDelay={2000}
-  />
-)
-
-export const SmartSettings: React.FC = () => (
-  <SmartPreloadContainer
-    componentKey="Settings"
-    Component={LazySettings}
-    Loader={SettingsLoader}
-    priority="medium"
-    preloadDelay={1500}
-  />
-)
-
 // 小型组件加载器
 export const SmallComponentLoader: React.FC<{ text?: string }> = ({ text = '组件加载中...' }) => (
   <div
@@ -183,11 +86,20 @@ export const SmallComponentLoader: React.FC<{ text?: string }> = ({ text = '组�
   </div>
 )
 
-// 对话框组件懒加载
-export const LazyConfirmDialog = lazy(() => import('./ConfirmDialog'))
-export const LazyRenameDialog = lazy(() => import('./RenameDialog'))
-export const LazyCreateDialog = lazy(() => import('./CreateDialog'))
+// 简化的包装组件，使用 React 内置的 Suspense
+export const withLazyLoad = <P extends object>(
+  Component: React.LazyExoticComponent<React.ComponentType<P>>,
+  Loader: React.FC = ComponentLoader
+): React.FC<P> => {
+  return (props: P) => (
+    <Suspense fallback={<Loader />}>
+      <Component {...props} />
+    </Suspense>
+  )
+}
 
-// 下拉菜单组件懒加载
-export const LazyHistoryDropdown = lazy(() => import('./HistoryDropdown'))
-export const LazyCustomHistoryDropdown = lazy(() => import('./CustomHistoryDropdown'))
+// 导出简化的懒加载组件（向后兼容）
+export const SmartDataAnalysis = withLazyLoad(LazyDataAnalysis, DataAnalysisLoader)
+export const SmartMindMap = withLazyLoad(LazyMindMapPage, MindMapLoader)
+export const SmartChat = withLazyLoad(LazyChatInterface, ChatLoader)
+export const SmartSettings = withLazyLoad(LazySettings, SettingsLoader)

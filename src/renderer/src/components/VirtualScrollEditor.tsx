@@ -7,7 +7,6 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
-import { renderOptimizer, type RenderTask } from '../utils/RenderOptimizer'
 import './VirtualScrollEditor.css'
 
 interface VirtualScrollEditorProps {
@@ -77,42 +76,38 @@ const VirtualScrollEditor: React.FC<VirtualScrollEditorProps> = ({
   }, [scrollTop, itemHeight, containerHeight, overscan, virtualItems.length])
 
   // 渲染可见项目
-  const renderVisibleItems = useCallback(async () => {
+  const renderVisibleItems = useCallback(() => {
     const { start, end } = getVisibleRange()
 
     // 分批渲染以避免阻塞主线程
-    const tasks: RenderTask[] = []
     for (let i = start; i <= end; i += chunkSize) {
       const batchEnd = Math.min(i + chunkSize - 1, end)
-      tasks.push({
-        id: `render-batch-${i}-${batchEnd}`,
-        priority: 'high',
-        callback: async () => {
-          // 批量更新虚拟项目的渲染状态
-          setVirtualItems((prev) =>
-            prev.map((item) => {
-              if (item.index >= i && item.index <= batchEnd) {
-                return { ...item, rendered: true }
-              }
-              return item
-            })
-          )
-        }
+
+      // 使用 requestAnimationFrame 来优化渲染
+      requestAnimationFrame(() => {
+        // 批量更新虚拟项目的渲染状态
+        setVirtualItems((prev) =>
+          prev.map((item) => {
+            if (item.index >= i && item.index <= batchEnd) {
+              return { ...item, rendered: true }
+            }
+            return item
+          })
+        )
       })
     }
 
-    // 使用渲染优化器处理任务
-    await Promise.all(tasks.map((task) => renderOptimizer.addTask(task)))
-
     // 清理不可见的项目以节省内存
-    setVirtualItems((prev) =>
-      prev.map((item) => {
-        if (item.index < start - overscan || item.index > end + overscan) {
-          return { ...item, rendered: false }
-        }
-        return item
-      })
-    )
+    requestAnimationFrame(() => {
+      setVirtualItems((prev) =>
+        prev.map((item) => {
+          if (item.index < start - overscan || item.index > end + overscan) {
+            return { ...item, rendered: false }
+          }
+          return item
+        })
+      )
+    })
   }, [getVisibleRange, chunkSize, overscan])
 
   // 处理滚动事件

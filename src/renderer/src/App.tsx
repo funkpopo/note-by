@@ -1,24 +1,16 @@
-import React, { useState, Suspense, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Layout } from '@douyinfe/semi-ui'
 import Navigation from './components/Navigation'
 import { performanceMonitor } from './utils/PerformanceMonitor'
 import {
-  LazySettings,
-  LazyEditor,
-  LazyDataAnalysis,
-  LazyMindMapPage,
-  LazyChatInterface,
-  SettingsLoader,
-  EditorLoader,
-  DataAnalysisLoader,
-  MindMapLoader,
-  ChatLoader,
   SmartDataAnalysis,
   SmartMindMap,
   SmartChat,
-  SmartSettings
+  SmartSettings,
+  withLazyLoad,
+  LazyEditor,
+  EditorLoader
 } from './components/LazyComponents'
-import { scheduleRenderTask } from './utils/RenderOptimizer'
 
 const App: React.FC = () => {
   const { Content } = Layout
@@ -26,7 +18,6 @@ const App: React.FC = () => {
   const [currentFolder, setCurrentFolder] = useState<string | undefined>(undefined)
   const [currentFile, setCurrentFile] = useState<string | undefined>(undefined)
   const [fileListVersion, setFileListVersion] = useState(0)
-  const [useSmartPreloading] = useState(true)
 
   const handleNavChange = (key: string): void => {
     setCurrentView(key)
@@ -53,60 +44,16 @@ const App: React.FC = () => {
     }
   }
 
-  // 启动性能监控和智能预加载
+  // 启动性能监控
   useEffect(() => {
     // 启动性能监控并立即执行首次数据收集
     performanceMonitor.startMonitoring(true)
 
-    // 基于用户行为的智能预加载
-    if (useSmartPreloading) {
-      const preloadComponents = async (): Promise<void> => {
-        // 延迟预加载常用组件
-        await scheduleRenderTask({
-          id: 'smart-preload-strategy',
-          priority: 'low',
-          callback: async () => {
-            // 根据当前视图预测下一个可能访问的组件
-            switch (currentView) {
-              case 'Editor':
-                // 编辑器用户可能会访问数据分析
-                scheduleRenderTask({
-                  id: 'preload-dataanalysis-from-editor',
-                  priority: 'low',
-                  callback: async () => {
-                    await LazyDataAnalysis
-                  }
-                })
-                break
-              case 'DataAnalysis':
-                // 数据分析用户可能会返回编辑器或查看思维导图
-                scheduleRenderTask({
-                  id: 'preload-mindmap-from-analysis',
-                  priority: 'low',
-                  callback: async () => {
-                    await LazyMindMapPage
-                  }
-                })
-                break
-            }
-          }
-        })
-      }
-
-      // 延迟5秒后开始预加载，避免影响初始加载性能
-      const timer = setTimeout(preloadComponents, 5000)
-
-      // 组件卸载时清理性能监控
-      return () => {
-        clearTimeout(timer)
-        performanceMonitor.cleanup()
-      }
-    } else {
-      return () => {
-        performanceMonitor.cleanup()
-      }
+    // 组件卸载时清理性能监控
+    return () => {
+      performanceMonitor.cleanup()
     }
-  }, [currentView, useSmartPreloading])
+  }, [])
 
   // 监听来自主进程的导航事件
   useEffect(() => {
@@ -120,70 +67,27 @@ const App: React.FC = () => {
   }, [])
 
   const renderContent = (): React.ReactNode => {
-    // 根据设置选择是否使用智能预加载
-    if (useSmartPreloading) {
-      switch (currentView) {
-        case 'Settings':
-          return <SmartSettings />
-        case 'Editor':
-          return (
-            <Suspense fallback={<EditorLoader />}>
-              <LazyEditor
-                currentFolder={currentFolder}
-                currentFile={currentFile}
-                onFileChanged={handleFileChanged}
-              />
-            </Suspense>
-          )
-        case 'DataAnalysis':
-          return <SmartDataAnalysis />
-        case 'MindMap':
-          return <SmartMindMap />
-        case 'Chat':
-          return <SmartChat />
-        default:
-          return <div>分组管理内容</div>
-      }
-    } else {
-      // 传统懒加载方式
-      switch (currentView) {
-        case 'Settings':
-          return (
-            <Suspense fallback={<SettingsLoader />}>
-              <LazySettings />
-            </Suspense>
-          )
-        case 'Editor':
-          return (
-            <Suspense fallback={<EditorLoader />}>
-              <LazyEditor
-                currentFolder={currentFolder}
-                currentFile={currentFile}
-                onFileChanged={handleFileChanged}
-              />
-            </Suspense>
-          )
-        case 'DataAnalysis':
-          return (
-            <Suspense fallback={<DataAnalysisLoader />}>
-              <LazyDataAnalysis />
-            </Suspense>
-          )
-        case 'MindMap':
-          return (
-            <Suspense fallback={<MindMapLoader />}>
-              <LazyMindMapPage />
-            </Suspense>
-          )
-        case 'Chat':
-          return (
-            <Suspense fallback={<ChatLoader />}>
-              <LazyChatInterface />
-            </Suspense>
-          )
-        default:
-          return <div>分组管理内容</div>
-      }
+    switch (currentView) {
+      case 'Settings':
+        return <SmartSettings />
+      case 'Editor':
+        // Editor 需要特殊处理，因为它需要传递 props
+        const EditorWithLazy = withLazyLoad(LazyEditor, EditorLoader)
+        return (
+          <EditorWithLazy
+            currentFolder={currentFolder}
+            currentFile={currentFile}
+            onFileChanged={handleFileChanged}
+          />
+        )
+      case 'DataAnalysis':
+        return <SmartDataAnalysis />
+      case 'MindMap':
+        return <SmartMindMap />
+      case 'Chat':
+        return <SmartChat />
+      default:
+        return <div>分组管理内容</div>
     }
   }
 

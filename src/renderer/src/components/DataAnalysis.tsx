@@ -18,7 +18,6 @@ import 'echarts-wordcloud'
 import { DataAnalysisSkeleton } from './Skeleton'
 import { modelSelectionService } from '../services/modelSelectionService'
 import { VirtualTextList } from './VirtualList'
-import { scheduleRenderTask, processBatch } from '../utils/RenderOptimizer'
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
 import { useLanguage } from '../locales'
 
@@ -303,8 +302,8 @@ interface ActivityData {
 
 const { Title, Paragraph, Text } = Typography
 
-// 异步图表配置生成器
-const generateChartConfigAsync = async (
+// 图表配置生成器
+const generateChartConfig = (
   chartType: 'pie' | 'bar' | 'line' | 'wordCloud',
   data: ChartData,
   options: {
@@ -313,24 +312,16 @@ const generateChartConfigAsync = async (
     highlightIndex?: number
     isDarkMode?: boolean
   } = {}
-): Promise<EChartsOption> => {
-  return scheduleRenderTask({
-    id: `chart-config-${chartType}-${Date.now()}`,
-    priority: 'medium',
-    callback: async () => {
-      const { vertical = true, highlightIndex, isDarkMode = false } = options
+): EChartsOption => {
+  const { vertical = true, highlightIndex, isDarkMode = false } = options
 
-      switch (chartType) {
-        case 'pie': {
-          // 使用批处理生成饼图数据
-          const seriesData = await processBatch(
-            data.labels,
-            async (label, index) => ({
-              name: label,
-              value: data.datasets[0].data[index]
-            }),
-            { batchSize: 20, useIdleCallback: true }
-          )
+  switch (chartType) {
+    case 'pie': {
+      // 直接生成饼图数据
+      const seriesData = data.labels.map((label, index) => ({
+        name: label,
+        value: data.datasets[0].data[index]
+      }))
 
           const colors = Array.isArray(data.datasets[0].backgroundColor)
             ? data.datasets[0].backgroundColor
@@ -385,30 +376,26 @@ const generateChartConfigAsync = async (
         }
 
         case 'bar': {
-          // 使用批处理生成柱状图数据
-          const seriesData = await processBatch(
-            data.datasets,
-            async (dataset) => ({
-              name: dataset.label,
-              type: 'bar' as const,
-              data: dataset.data,
-              itemStyle: {
-                color: (params: any) => {
-                  if (highlightIndex !== undefined && params.dataIndex === highlightIndex) {
-                    return 'rgba(255, 99, 132, 0.8)'
-                  }
-                  if (Array.isArray(dataset.backgroundColor)) {
-                    return dataset.backgroundColor[params.dataIndex] || dataset.backgroundColor[0]
-                  }
-                  return dataset.backgroundColor
+          // 直接生成柱状图数据
+          const seriesData = data.datasets.map((dataset) => ({
+            name: dataset.label,
+            type: 'bar' as const,
+            data: dataset.data,
+            itemStyle: {
+              color: (params: any) => {
+                if (highlightIndex !== undefined && params.dataIndex === highlightIndex) {
+                  return 'rgba(255, 99, 132, 0.8)'
                 }
-              },
-              barWidth: vertical ? '60%' : undefined,
-              barCategoryGap: '30%',
-              label: { show: false }
-            }),
-            { batchSize: 10, useIdleCallback: true }
-          )
+                if (Array.isArray(dataset.backgroundColor)) {
+                  return dataset.backgroundColor[params.dataIndex] || dataset.backgroundColor[0]
+                }
+                return dataset.backgroundColor
+              }
+            },
+            barWidth: vertical ? '60%' : undefined,
+            barCategoryGap: '30%',
+            label: { show: false }
+          }))
 
           return {
             title: { text: '', left: 'center' },
@@ -503,40 +490,36 @@ const generateChartConfigAsync = async (
         }
 
         case 'line': {
-          // 使用批处理生成折线图数据
-          const seriesData = await processBatch(
-            data.datasets,
-            async (dataset) => ({
-              name: dataset.label,
-              type: 'line' as const,
-              data: dataset.data,
-              itemStyle: {
-                color: Array.isArray(dataset.borderColor)
-                  ? dataset.borderColor[0]
-                  : dataset.borderColor
-              },
-              lineStyle: {
-                width: dataset.borderWidth || 2,
-                type: 'solid',
-                color: Array.isArray(dataset.borderColor)
-                  ? dataset.borderColor[0]
-                  : dataset.borderColor
-              },
-              areaStyle: dataset.backgroundColor
-                ? {
-                    color: Array.isArray(dataset.backgroundColor)
-                      ? dataset.backgroundColor[0]
-                      : dataset.backgroundColor,
-                    opacity: 0.3
-                  }
-                : undefined,
-              smooth: dataset.tension ? true : false,
-              symbol: 'circle',
-              symbolSize: 6,
-              showSymbol: false
-            }),
-            { batchSize: 10, useIdleCallback: true }
-          )
+          // 直接生成折线图数据
+          const seriesData = data.datasets.map((dataset) => ({
+            name: dataset.label,
+            type: 'line' as const,
+            data: dataset.data,
+            itemStyle: {
+              color: Array.isArray(dataset.borderColor)
+                ? dataset.borderColor[0]
+                : dataset.borderColor
+            },
+            lineStyle: {
+              width: dataset.borderWidth || 2,
+              type: 'solid',
+              color: Array.isArray(dataset.borderColor)
+                ? dataset.borderColor[0]
+                : dataset.borderColor
+            },
+            areaStyle: dataset.backgroundColor
+              ? {
+                  color: Array.isArray(dataset.backgroundColor)
+                    ? dataset.backgroundColor[0]
+                    : dataset.backgroundColor,
+                  opacity: 0.3
+                }
+              : undefined,
+            smooth: dataset.tension ? true : false,
+            symbol: 'circle',
+            symbolSize: 6,
+            showSymbol: false
+          }))
 
           return {
             title: { text: '', left: 'center' },
@@ -590,15 +573,11 @@ const generateChartConfigAsync = async (
         }
 
         case 'wordCloud': {
-          // 使用批处理生成词云数据
-          const cloudData = await processBatch(
-            data.labels,
-            async (label, index) => ({
-              name: label,
-              value: data.datasets[0].data[index]
-            }),
-            { batchSize: 15, useIdleCallback: true }
-          )
+          // 直接生成词云数据
+          const cloudData = data.labels.map((label, index) => ({
+            name: label,
+            value: data.datasets[0].data[index]
+          }))
 
           const colors = Array.isArray(data.datasets[0].backgroundColor)
             ? data.datasets[0].backgroundColor
@@ -645,8 +624,6 @@ const generateChartConfigAsync = async (
         default:
           throw new Error(`Unsupported chart type: ${chartType}`)
       }
-    }
-  })
 }
 
 // 异步图表容器组件
@@ -678,8 +655,8 @@ const AsyncChartContainer: React.FC<{
             return
           }
 
-          // 异步生成图表配置
-          const option = await generateChartConfigAsync(chartType, data, {
+          // 生成图表配置
+          const option = generateChartConfig(chartType, data, {
             title,
             vertical,
             highlightIndex,
