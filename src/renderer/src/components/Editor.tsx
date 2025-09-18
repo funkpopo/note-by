@@ -122,6 +122,7 @@ const Editor: React.FC<EditorProps> = ({
     })
 
     if (hasChanges) {
+      tr.setMeta('addToHistory', false) // keep history intact when removing diff nodes
       editorInstance.view.dispatch(tr)
 
       // 释放内存
