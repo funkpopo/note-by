@@ -80,6 +80,18 @@ const Editor: React.FC<EditorProps> = ({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastEditTimeRef = useRef<number>(0)
   const isEditingRef = useRef<boolean>(false)
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges)
+  const unsavedChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editorUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onUpdateRef = useRef(onUpdate)
+
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges
+  }, [hasUnsavedChanges])
+
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+  }, [onUpdate])
 
   // 清理所有未处理的diff节点（优化版本）
   const clearAllDiffNodes = useCallback((editorInstance: any) => {
@@ -146,6 +158,29 @@ const Editor: React.FC<EditorProps> = ({
       setIsLoading(false)
     }
   }, [])
+
+  // 序列化操作较重，封装成函数便于复用和调度
+  const flushEditorUpdate = useCallback((editorInstance: any) => {
+    if (!editorInstance) return
+
+    const html = editorInstance.getHTML()
+    onUpdateRef.current?.(html)
+  }, [])
+
+  // 使用短延迟批量处理 onUpdate，减少连续输入时的阻塞
+  const scheduleSerializedUpdate = useCallback(
+    (editorInstance: any) => {
+      if (editorUpdateTimeoutRef.current) {
+        clearTimeout(editorUpdateTimeoutRef.current)
+      }
+
+      editorUpdateTimeoutRef.current = setTimeout(() => {
+        editorUpdateTimeoutRef.current = null
+        flushEditorUpdate(editorInstance)
+      }, 200)
+    },
+    [flushEditorUpdate]
+  )
 
   const editor = useEditor(
     {
@@ -268,24 +303,23 @@ const Editor: React.FC<EditorProps> = ({
       content: loadedContent || content,
       editable,
       onUpdate: ({ editor }) => {
-        const html = editor.getHTML()
-
         // 更新编辑时间，但延迟设置 hasUnsavedChanges 以减少频繁触发
         lastEditTimeRef.current = Date.now()
         isEditingRef.current = true
 
-        // 使用防抖设置未保存状态，避免过于频繁的状态更新
-        if (autoSaveTimeoutRef.current) {
-          // 如果已有自动保存计划，直接设置状态
-          setHasUnsavedChanges(true)
-        } else {
-          // 延迟设置状态，给用户一些缓冲时间
-          setTimeout(() => {
+        if (!hasUnsavedChangesRef.current) {
+          if (unsavedChangeTimerRef.current) {
+            clearTimeout(unsavedChangeTimerRef.current)
+          }
+
+          unsavedChangeTimerRef.current = setTimeout(() => {
+            unsavedChangeTimerRef.current = null
+            hasUnsavedChangesRef.current = true
             setHasUnsavedChanges(true)
           }, 500)
         }
 
-        onUpdate?.(html)
+        scheduleSerializedUpdate(editor)
       },
       editorProps: {
         attributes: {
@@ -357,6 +391,11 @@ const Editor: React.FC<EditorProps> = ({
 
         if (result.success) {
           setHasUnsavedChanges(false)
+          hasUnsavedChangesRef.current = false
+          if (unsavedChangeTimerRef.current) {
+            clearTimeout(unsavedChangeTimerRef.current)
+            unsavedChangeTimerRef.current = null
+          }
           // 只有手动保存才显示Toast提示
           if (!isAutoSave) {
             Toast.success(`文档已保存`)
@@ -465,8 +504,19 @@ const Editor: React.FC<EditorProps> = ({
   // 当加载的内容发生变化时，更新编辑器内容
   useEffect(() => {
     if (editor && loadedContent !== editor.getHTML()) {
+      if (unsavedChangeTimerRef.current) {
+        clearTimeout(unsavedChangeTimerRef.current)
+        unsavedChangeTimerRef.current = null
+      }
+
+      if (editorUpdateTimeoutRef.current) {
+        clearTimeout(editorUpdateTimeoutRef.current)
+        editorUpdateTimeoutRef.current = null
+      }
+
       editor.commands.setContent(loadedContent)
       setHasUnsavedChanges(false)
+      hasUnsavedChangesRef.current = false
 
       // 确保字符统计正确更新
       setTimeout(() => {
@@ -505,6 +555,20 @@ const Editor: React.FC<EditorProps> = ({
         clearTimeout(autoSaveTimeoutRef.current)
       }
 
+      if (unsavedChangeTimerRef.current) {
+        clearTimeout(unsavedChangeTimerRef.current)
+        unsavedChangeTimerRef.current = null
+      }
+
+      if (editorUpdateTimeoutRef.current) {
+        clearTimeout(editorUpdateTimeoutRef.current)
+        editorUpdateTimeoutRef.current = null
+      }
+
+      if (editor) {
+        flushEditorUpdate(editor)
+      }
+
       // 清理所有diff节点
       if (editor) {
         clearAllDiffNodes(editor)
@@ -519,7 +583,7 @@ const Editor: React.FC<EditorProps> = ({
         // 清理完成
       })
     }
-  }, [clearAllDiffNodes, editor])
+  }, [clearAllDiffNodes, editor, flushEditorUpdate])
 
   // 页面可见性变化监听，隐藏时清理diff节点
   useEffect(() => {
