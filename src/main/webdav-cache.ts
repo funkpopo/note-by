@@ -39,7 +39,10 @@ const DEFAULT_CACHE_CONFIG = {
 }
 
 // 检查缓存记录是否过期
-function isExpired(record: Omit<WebDAVSyncRecord, 'filePath'>, config: SyncCacheData['cacheConfig']): boolean {
+function isExpired(
+  record: Omit<WebDAVSyncRecord, 'filePath'>,
+  config: SyncCacheData['cacheConfig']
+): boolean {
   if (!config?.enableExpiration || !record.expiresAt) {
     return false // 如果未启用过期机制或没有过期时间，则不过期
   }
@@ -73,7 +76,7 @@ function limitCacheEntries(data: SyncCacheData): void {
 
   // 按lastSyncTime排序，移除最旧的条目
   entries.sort((a, b) => (a[1].lastSyncTime || 0) - (b[1].lastSyncTime || 0))
-  
+
   const entriesToRemove = entries.slice(0, entries.length - maxEntries)
   for (const [filePath] of entriesToRemove) {
     delete data.files[filePath]
@@ -105,18 +108,17 @@ async function loadCache(): Promise<SyncCacheData> {
     if (fs.existsSync(cacheFilePath)) {
       const data = await fs.promises.readFile(cacheFilePath, 'utf-8')
       cacheData = JSON.parse(data) as SyncCacheData
-      
+
       // 确保缓存配置存在
       if (!cacheData.cacheConfig) {
         cacheData.cacheConfig = { ...DEFAULT_CACHE_CONFIG }
       }
-      
+
       // 清理过期条目
       cleanExpiredEntries(cacheData)
-      
+
       // 限制缓存条目数量
       limitCacheEntries(cacheData)
-      
     } else {
       // 创建默认缓存
       cacheData = {
@@ -151,10 +153,10 @@ async function saveCache(data: SyncCacheData): Promise<boolean> {
   try {
     // 清理过期条目
     cleanExpiredEntries(data)
-    
+
     // 限制缓存条目数量
     limitCacheEntries(data)
-    
+
     // 更新最后同步时间
     data.lastSync = Date.now()
     // 将数据写入文件
@@ -319,7 +321,9 @@ export async function updateLastGlobalSyncTime(): Promise<boolean> {
 }
 
 // 设置缓存配置
-export async function setCacheConfig(config: Partial<SyncCacheData['cacheConfig']>): Promise<boolean> {
+export async function setCacheConfig(
+  config: Partial<SyncCacheData['cacheConfig']>
+): Promise<boolean> {
   try {
     const cache = await loadCache()
     const newConfig: { defaultTTL: number; maxEntries: number; enableExpiration: boolean } = {
@@ -349,16 +353,16 @@ export async function cleanExpiredCache(): Promise<{ success: boolean; removedCo
   try {
     const cache = await loadCache()
     const beforeCount = Object.keys(cache.files).length
-    
+
     cleanExpiredEntries(cache)
-    
+
     const afterCount = Object.keys(cache.files).length
     const removedCount = beforeCount - afterCount
-    
+
     if (removedCount > 0) {
       await saveCache(cache)
     }
-    
+
     return { success: true, removedCount }
   } catch {
     return { success: false, removedCount: 0 }
@@ -376,11 +380,11 @@ export async function getCacheStats(): Promise<{
   try {
     const cache = await loadCache()
     const entries = Object.values(cache.files)
-    
+
     let expiredCount = 0
     let oldestSync = Infinity
     let newestSync = 0
-    
+
     for (const entry of entries) {
       if (isExpired(entry, cache.cacheConfig)) {
         expiredCount++
@@ -392,7 +396,7 @@ export async function getCacheStats(): Promise<{
         newestSync = entry.lastSyncTime
       }
     }
-    
+
     return {
       totalEntries: entries.length,
       expiredEntries: expiredCount,

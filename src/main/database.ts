@@ -2125,7 +2125,7 @@ export async function saveChatMessage(message: ChatMessage): Promise<boolean> {
       createdAt,
       message.modelId || null
     )
-    
+
     // 如果是新消息，更新会话的消息数量和最后更新时间
     if (isNewMessage) {
       const updateSessionStmt = database.prepare(`

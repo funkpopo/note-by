@@ -36,7 +36,11 @@ import { IconChevronDown } from './Icons'
 import { uploadImage } from './editorUtils'
 
 // 表格专用 BubbleMenu 组件
-export const TableBubbleMenu: React.FC<{ editor: any; currentFolder?: string; currentFile?: string }> = ({ editor }) => {
+export const TableBubbleMenu: React.FC<{
+  editor: any
+  currentFolder?: string
+  currentFile?: string
+}> = ({ editor }) => {
   if (!editor) return null
 
   return (
@@ -1204,4 +1208,3 @@ export const TextBubbleMenu: React.FC<{
     </BubbleMenu>
   )
 }
-

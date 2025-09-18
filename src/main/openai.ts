@@ -15,15 +15,15 @@ export interface ContentGenerationRequest {
 // 处理API URL，确保格式正确
 function normalizeApiUrl(url: string): string {
   if (!url) return ''
-  
+
   // 移除尾部斜杠
   let normalizedUrl = url.trim().replace(/\/+$/, '')
-  
+
   // 确保URL以http://或https://开头
   if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = 'https://' + normalizedUrl
   }
-  
+
   // 对于OpenAI兼容API，确保路径正确
   // 如果URL不包含/v1，且看起来像是基础域名，自动添加/v1
   if (!normalizedUrl.includes('/v1') && !normalizedUrl.includes('/api')) {
@@ -35,7 +35,7 @@ function normalizeApiUrl(url: string): string {
       normalizedUrl = normalizedUrl + '/v1'
     }
   }
-  
+
   return normalizedUrl
 }
 
@@ -49,7 +49,7 @@ async function makeCompatibleRequest(
   stream: boolean = false
 ): Promise<any> {
   const url = `${apiUrl}/chat/completions`
-  
+
   const requestBody = {
     model: modelName,
     messages: [
@@ -63,12 +63,11 @@ async function makeCompatibleRequest(
     stream: stream
   }
 
-
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'User-Agent': 'NoteBy/1.0'
     },
     body: JSON.stringify(requestBody)
@@ -81,9 +80,9 @@ async function makeCompatibleRequest(
       statusText: response.statusText,
       errorBody: errorText
     })
-    
+
     let errorMessage = `API请求失败 (HTTP ${response.status})`
-    
+
     // 尝试解析错误消息
     try {
       const errorJson = JSON.parse(errorText)
@@ -93,7 +92,7 @@ async function makeCompatibleRequest(
         errorMessage = errorJson.message
       }
     } catch {}
-    
+
     // 根据状态码提供更具体的错误信息
     if (response.status === 400) {
       // 检查是否是max_tokens错误
@@ -116,7 +115,7 @@ async function makeCompatibleRequest(
     } else if (response.status >= 500) {
       errorMessage = 'API服务器错误，请稍后再试'
     }
-    
+
     throw new Error(errorMessage)
   }
 
@@ -157,7 +156,7 @@ export async function testOpenAIConnection(
       )
 
       const data = await response.json()
-      
+
       // 尝试提取内容
       let content = ''
       if (data?.choices?.[0]?.message?.content) {
@@ -225,7 +224,7 @@ export async function generateWithMessages(
       dangerouslyAllowBrowser: true, // 允许在浏览器环境运行
       defaultHeaders: {
         'User-Agent': 'NoteBy/1.0',
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'Content-Type': 'application/json'
       },
       timeout: 30000 // 30秒超时
@@ -307,7 +306,6 @@ export async function generateContent(
   try {
     const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
 
-
     // 如果请求包含stream=true，则返回错误，提示使用streamGenerateContent
     if (stream) {
       return {
@@ -364,7 +362,7 @@ export async function generateContent(
       }
     } catch (error) {
       console.error('[OpenAI] Compatible request failed, trying OpenAI SDK...', error)
-      
+
       // 如果兼容性请求失败，尝试使用OpenAI SDK
       try {
         const openai = new OpenAI({
@@ -373,7 +371,7 @@ export async function generateContent(
           dangerouslyAllowBrowser: true,
           defaultHeaders: {
             'User-Agent': 'NoteBy/1.0',
-            'Accept': 'application/json',
+            Accept: 'application/json',
             'Content-Type': 'application/json'
           },
           timeout: 30000,
@@ -400,7 +398,7 @@ export async function generateContent(
     }
   } catch (error: unknown) {
     console.error('[OpenAI] Generate content error:', error)
-    
+
     let errorMessage = '内容生成失败'
     if (error instanceof Error) {
       errorMessage = error.message
@@ -429,7 +427,6 @@ export async function streamGenerateContent(
     try {
       const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
 
-
       if (!apiKey) {
         eventEmitter.emit('error', 'API Key 未设置')
         return
@@ -450,7 +447,7 @@ export async function streamGenerateContent(
 
       try {
         // 先尝试使用原生fetch进行流式请求
-        
+
         const url = `${normalizedApiUrl}/chat/completions`
         const requestBody = {
           model: modelName,
@@ -464,8 +461,8 @@ export async function streamGenerateContent(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'text/event-stream',
+            Authorization: `Bearer ${apiKey}`,
+            Accept: 'text/event-stream',
             'User-Agent': 'NoteBy/1.0'
           },
           body: JSON.stringify(requestBody),
@@ -478,7 +475,7 @@ export async function streamGenerateContent(
             status: response.status,
             errorText
           })
-          
+
           let errorMessage = `流式生成失败 (HTTP ${response.status})`
           try {
             const errorJson = JSON.parse(errorText)
@@ -486,7 +483,7 @@ export async function streamGenerateContent(
               errorMessage = errorJson.error.message
             }
           } catch {}
-          
+
           if (response.status === 400) {
             errorMessage = `请求格式错误: ${errorMessage}`
           } else if (response.status === 401) {
@@ -494,12 +491,11 @@ export async function streamGenerateContent(
           } else if (response.status === 404) {
             errorMessage = 'API端点不存在'
           }
-          
+
           eventEmitter.emit('error', errorMessage)
           return
         }
 
-        
         const reader = response.body?.getReader()
         if (!reader) {
           eventEmitter.emit('error', '无法创建流读取器')
@@ -544,10 +540,9 @@ export async function streamGenerateContent(
         eventEmitter.emit('done', fullContent)
       } catch (error) {
         console.error('[OpenAI Stream] Streaming error:', error)
-        
+
         // 如果原生fetch失败，尝试使用OpenAI SDK
         try {
-          
           const openai = new OpenAI({
             apiKey,
             baseURL: normalizedApiUrl,
@@ -586,7 +581,7 @@ export async function streamGenerateContent(
           eventEmitter.emit('done', fullContent)
         } catch (sdkError) {
           console.error('[OpenAI Stream] SDK fallback also failed:', sdkError)
-          
+
           let errorMessage = '流式生成失败'
           if (error instanceof Error) {
             errorMessage = error.message

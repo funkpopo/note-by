@@ -117,7 +117,9 @@
   gap: 8px;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
   z-index: 10;
 }
 
@@ -140,24 +142,24 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.inline-diff-actions .semi-button[type="primary"] {
+.inline-diff-actions .semi-button[type='primary'] {
   background: var(--semi-color-primary);
   border-color: var(--semi-color-primary);
   color: white;
 }
 
-.inline-diff-actions .semi-button[type="primary"]:hover {
+.inline-diff-actions .semi-button[type='primary']:hover {
   background: var(--semi-color-primary-hover);
   border-color: var(--semi-color-primary-hover);
 }
 
-.inline-diff-actions .semi-button[type="tertiary"] {
+.inline-diff-actions .semi-button[type='tertiary'] {
   background: var(--semi-color-bg-0);
   border-color: var(--semi-color-danger);
   color: var(--semi-color-danger);
 }
 
-.inline-diff-actions .semi-button[type="tertiary"]:hover {
+.inline-diff-actions .semi-button[type='tertiary']:hover {
   background: var(--semi-color-danger-light-default);
   border-color: var(--semi-color-danger);
 }
@@ -226,12 +228,12 @@
     max-height: 200px;
     padding-bottom: 40px; /* More padding on mobile for buttons */
   }
-  
+
   .inline-diff-actions {
     bottom: 4px;
     right: 4px;
   }
-  
+
   /* Show buttons slightly visible on mobile for touch devices */
   .inline-diff-actions {
     opacity: 0.3; /* Slightly visible on mobile */

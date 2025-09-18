@@ -133,8 +133,20 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
 
           <div className={`inline-diff-actions ${isHovered ? 'visible' : ''}`}>
             <Space>
-              <Button icon={<IconClose />} size="small" type="tertiary" onClick={handleReject} title="取消" />
-              <Button icon={<IconCheck />} size="small" type="primary" onClick={handleAccept} title="确认" />
+              <Button
+                icon={<IconClose />}
+                size="small"
+                type="tertiary"
+                onClick={handleReject}
+                title="取消"
+              />
+              <Button
+                icon={<IconCheck />}
+                size="small"
+                type="primary"
+                onClick={handleAccept}
+                title="确认"
+              />
             </Space>
           </div>
         </div>

@@ -52,20 +52,13 @@ const SettingsSkeleton: React.FC<SettingsSkeletonProps> = ({
                 <Row key={itemIndex} style={{ marginBottom: 20 }}>
                   <Col span={8}>
                     <div className="settings-skeleton-label">
-                      <Skeleton.Title
-                        style={{ width: '80%', height: 16, marginBottom: 4 }}
-                      />
-                      <Skeleton.Paragraph
-                        rows={1}
-                        style={{ width: '90%', fontSize: '12px' }}
-                      />
+                      <Skeleton.Title style={{ width: '80%', height: 16, marginBottom: 4 }} />
+                      <Skeleton.Paragraph rows={1} style={{ width: '90%', fontSize: '12px' }} />
                     </div>
                   </Col>
                   <Col span={16}>
                     <div className="settings-skeleton-control">
-                      {itemIndex % 3 === 0 && (
-                        <Skeleton.Button style={{ width: 60, height: 28 }} />
-                      )}
+                      {itemIndex % 3 === 0 && <Skeleton.Button style={{ width: 60, height: 28 }} />}
                       {itemIndex % 3 === 1 && (
                         <Skeleton.Title style={{ width: 200, height: 32, marginBottom: 0 }} />
                       )}

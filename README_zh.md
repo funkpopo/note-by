@@ -15,24 +15,28 @@
 ## ✨ 核心特性
 
 ### 🚀 性能与架构
+
 - **高性能数据层**：SQLite 数据库，智能连接池（90% 连接复用率），多级缓存（LRU/LFU）
 - **优化的编辑器**：Tiptap v3 编辑器，虚拟滚动，大文件内存占用降低 60%，自动图片压缩
 - **原子化配置**：基于事务的设置管理，自动备份和版本控制
 - **实时监控**：内置性能监控面板，跟踪内存、编辑器性能和网络操作
 
 ### 📝 丰富的编辑体验
+
 - **高级编辑器**：基于 Tiptap，完整 Markdown 支持，表格、代码块、数学公式（KaTeX）
 - **AI 集成**：内置支持 OpenAI、Claude 和自定义 AI 端点的内容生成
 - **多格式导出**：支持导出为 PDF、DOCX、Markdown、HTML 和 Notion 格式
 - **版本历史**：自动笔记版本控制，支持差异查看和恢复
 
 ### 🔄 同步与存储
+
 - **WebDAV 同步**：双向、手动和自动同步，智能冲突解决
 - **云存储**：支持 Dropbox 和 Google Drive 集成
 - **本地优先**：所有数据使用 SQLite 本地存储，支持离线访问和数据所有权
 - **加密存储**：主密码保护敏感配置
 
 ### 🎨 用户界面
+
 - **现代设计**：使用 Semi Design 组件构建的简洁界面
 - **暗黑模式**：完整的暗色主题支持，平滑过渡
 - **思维导图**：使用 React Flow 创建交互式思维导图
@@ -43,7 +47,7 @@
 
 ### 系统要求
 
-- Node.js 22.0+ 
+- Node.js 22.0+
 - npm 10.0+
 - Windows 10+、macOS 10.15+ 或 Linux (Ubuntu 20.04+)
 
@@ -107,6 +111,7 @@ npm run format       # 使用 Prettier 格式化代码
 ## 🛠️ 技术栈
 
 ### 核心技术
+
 - **[Electron](https://www.electronjs.org/)** v36 - 桌面应用框架
 - **[React](https://react.dev/)** v18 - UI 框架
 - **[TypeScript](https://www.typescriptlang.org/)** v5 - 类型安全
@@ -114,6 +119,7 @@ npm run format       # 使用 Prettier 格式化代码
 - **[electron-vite](https://electron-vite.org/)** - Electron + Vite 集成
 
 ### UI 与样式
+
 - **[Semi Design](https://semi.design/)** v2 - 组件库
 - **[Tiptap](https://tiptap.dev/)** v3 - 富文本编辑器
 - **[React Flow](https://reactflow.dev/)** - 思维导图可视化
@@ -121,11 +127,13 @@ npm run format       # 使用 Prettier 格式化代码
 - **[Sass](https://sass-lang.com/)** - CSS 预处理器
 
 ### 数据与状态
+
 - **[SQLite3](https://www.sqlite.org/)** - 本地数据库（通过 better-sqlite3）
 - **[Zustand](https://zustand-demo.pmnd.rs/)** v5 - 状态管理
 - **[LRU Cache](https://github.com/isaacs/node-lru-cache)** - 缓存层
 
 ### 集成与 API
+
 - **[WebDAV](https://github.com/perry-mitchell/webdav-client)** - 文件同步
 - **[OpenAI SDK](https://github.com/openai/openai-node)** - AI 集成
 - **[Dropbox SDK](https://github.com/dropbox/dropbox-sdk-js)** - 云存储

@@ -16,7 +16,7 @@ const { Title, Text } = Typography
 
 const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // 添加WebDAV同步完成回调
   const handleSyncComplete = (): void => {}
 
@@ -67,7 +67,7 @@ const Settings: React.FC = () => {
                     </Text>
                   </div>
                 </div>
-                
+
                 <CloudStorageManager onSyncComplete={handleSyncComplete} />
               </Card>
             </div>

@@ -136,9 +136,15 @@
 }
 
 @keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .side-by-side-content {
@@ -310,25 +316,25 @@
     gap: 12px;
     padding: 12px 16px;
   }
-  
+
   .header-actions {
     align-self: flex-end;
   }
-  
+
   .side-by-side-view {
     flex-direction: column;
   }
-  
+
   .side-by-side-editor {
     border-right: none;
     border-bottom: 1px solid var(--semi-color-border);
     min-height: 50%;
   }
-  
+
   .side-by-side-editor:last-child {
     border-bottom: none;
   }
-  
+
   .side-by-side-divider {
     height: 2px;
     width: 100%;
@@ -358,9 +364,15 @@
 
 /* 加载动画 */
 @keyframes loading-shimmer {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 
 .version-comparison.loading {

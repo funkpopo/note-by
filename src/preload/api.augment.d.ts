@@ -15,4 +15,3 @@ interface MindmapAPI {
 interface API {
   mindmap: MindmapAPI
 }
-

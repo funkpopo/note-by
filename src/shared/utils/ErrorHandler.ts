@@ -300,7 +300,12 @@ export class UnifiedErrorHandler {
 
   private setupRendererHandlers(): void {
     window.addEventListener('unhandledrejection', (event) => {
-      this.error('Unhandled Promise Rejection', event.reason, ErrorCategory.SYSTEM, 'unhandledrejection')
+      this.error(
+        'Unhandled Promise Rejection',
+        event.reason,
+        ErrorCategory.SYSTEM,
+        'unhandledrejection'
+      )
     })
 
     window.addEventListener('error', (event) => {
@@ -540,7 +545,8 @@ class FileLogHelper {
 
       // 移动现有的日志文件
       for (let i = maxFiles - 2; i >= 0; i--) {
-        const currentLog = i === 0 ? this.config.logFile : this.path.join(logDir, `${basename}.${i}.log`)
+        const currentLog =
+          i === 0 ? this.config.logFile : this.path.join(logDir, `${basename}.${i}.log`)
         const nextLog = this.path.join(logDir, `${basename}.${i + 1}.log`)
 
         if (this.fs.existsSync(currentLog)) {

@@ -423,11 +423,11 @@
   .mindmap-skeleton-node {
     animation-duration: 3s;
   }
-  
+
   .chart-skeleton-line-path {
     animation-duration: 3s;
   }
-  
+
   /* 减少移动设备上的动画强度 */
   @media (prefers-reduced-motion: reduce) {
     .skeleton-wrapper *,
@@ -692,23 +692,23 @@ body[theme-mode='dark'] .chart-skeleton-bar-item {
   .settings-skeleton {
     padding: 16px 20px;
   }
-  
+
   .chat-skeleton-header,
   .chat-skeleton-messages,
   .chat-skeleton-input {
     padding-left: 16px;
     padding-right: 16px;
   }
-  
+
   .mindmap-skeleton-toolbar {
     padding: 12px 16px;
   }
-  
+
   .list-skeleton-item-detailed {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .list-skeleton-item-detailed .list-skeleton-actions {
     flex-direction: row;
     margin-top: 8px;

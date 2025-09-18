@@ -191,11 +191,19 @@ class MemoryMonitor extends EventEmitter {
         })
 
         if (this.config.enableLogging) {
-          mainErrorHandler.info(`垃圾回收完成，释放内存: ${freed}MB`, ErrorCategory.SYSTEM, 'MemoryMonitor')
+          mainErrorHandler.info(
+            `垃圾回收完成，释放内存: ${freed}MB`,
+            ErrorCategory.SYSTEM,
+            'MemoryMonitor'
+          )
         }
       } else {
         if (this.config.enableLogging) {
-          mainErrorHandler.warn('global.gc 不可用，无法执行垃圾回收', ErrorCategory.SYSTEM, 'MemoryMonitor')
+          mainErrorHandler.warn(
+            'global.gc 不可用，无法执行垃圾回收',
+            ErrorCategory.SYSTEM,
+            'MemoryMonitor'
+          )
         }
       }
     } catch {

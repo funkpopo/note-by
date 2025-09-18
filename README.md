@@ -15,24 +15,28 @@ A high-performance, feature-rich note-taking application built with Electron and
 ## ✨ Core Features
 
 ### 🚀 Performance & Architecture
+
 - **High-Performance Database Layer**: SQLite with smart connection pooling (90% connection reuse rate) and multi-level caching (LRU/LFU)
 - **Optimized Editor**: Tiptap v3 with virtual scrolling, 60% memory reduction for large files, and automatic image compression
 - **Atomic Configuration**: Transaction-based settings management with automatic backup and versioning
 - **Real-Time Monitoring**: Built-in performance dashboard tracking memory, editor performance, and network operations
 
 ### 📝 Rich Editing Experience
+
 - **Advanced Editor**: Based on Tiptap with full Markdown support, tables, code blocks, and math formulas (KaTeX)
 - **AI Integration**: Built-in support for OpenAI, Claude, and custom AI endpoints for content generation
 - **Multiple Export Formats**: Export to PDF, DOCX, Markdown, HTML, and Notion format
 - **Version History**: Automatic note versioning with diff viewer and restore capabilities
 
 ### 🔄 Synchronization & Storage
+
 - **WebDAV Sync**: Bidirectional, manual, and automatic synchronization with conflict resolution
 - **Cloud Storage**: Support for Dropbox and Google Drive integration
 - **Local-First**: All data stored locally with SQLite for offline access and data ownership
 - **Encrypted Storage**: Master password protection for sensitive configurations
 
 ### 🎨 User Interface
+
 - **Modern Design**: Clean interface built with Semi Design components
 - **Dark Mode**: Full dark theme support with smooth transitions
 - **Mind Maps**: Interactive mind map creation with React Flow
@@ -43,7 +47,7 @@ A high-performance, feature-rich note-taking application built with Electron and
 
 ### Prerequisites
 
-- Node.js 22.0+ 
+- Node.js 22.0+
 - npm 10.0+
 - Windows 10+, macOS 10.15+, or Linux (Ubuntu 20.04+)
 
@@ -99,7 +103,7 @@ npm run format       # Format code with Prettier
 ### Data Storage
 
 - **Development**: `./settings.json` in project root
-- **Production**: 
+- **Production**:
   - Windows: `%APPDATA%/note-by/`
   - macOS: `~/Library/Application Support/note-by/`
   - Linux: `~/.config/note-by/`
@@ -107,6 +111,7 @@ npm run format       # Format code with Prettier
 ## 🛠️ Technology Stack
 
 ### Core Technologies
+
 - **[Electron](https://www.electronjs.org/)** v36 - Desktop application framework
 - **[React](https://react.dev/)** v18 - UI framework
 - **[TypeScript](https://www.typescriptlang.org/)** v5 - Type safety
@@ -114,6 +119,7 @@ npm run format       # Format code with Prettier
 - **[electron-vite](https://electron-vite.org/)** - Electron + Vite integration
 
 ### UI & Styling
+
 - **[Semi Design](https://semi.design/)** v2 - Component library
 - **[Tiptap](https://tiptap.dev/)** v3 - Rich text editor
 - **[React Flow](https://reactflow.dev/)** - Mind map visualization
@@ -121,11 +127,13 @@ npm run format       # Format code with Prettier
 - **[Sass](https://sass-lang.com/)** - CSS preprocessing
 
 ### Data & State
+
 - **[SQLite3](https://www.sqlite.org/)** - Local database (via better-sqlite3)
 - **[Zustand](https://zustand-demo.pmnd.rs/)** v5 - State management
 - **[LRU Cache](https://github.com/isaacs/node-lru-cache)** - Caching layer
 
 ### Integration & APIs
+
 - **[WebDAV](https://github.com/perry-mitchell/webdav-client)** - File synchronization
 - **[OpenAI SDK](https://github.com/openai/openai-node)** - AI integration
 - **[Dropbox SDK](https://github.com/dropbox/dropbox-sdk-js)** - Cloud storage

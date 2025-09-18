@@ -53,10 +53,7 @@ const ChatSkeleton: React.FC<ChatSkeletonProps> = ({
                     }}
                   />
                 )}
-                <Card
-                  className="chat-skeleton-message-bubble"
-                  bodyStyle={{ padding: '12px 16px' }}
-                >
+                <Card className="chat-skeleton-message-bubble" bodyStyle={{ padding: '12px 16px' }}>
                   <Skeleton.Paragraph
                     rows={Math.floor(Math.random() * 3) + 1}
                     style={{ marginBottom: 0 }}

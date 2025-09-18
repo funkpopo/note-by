@@ -977,7 +977,11 @@ const ChatInterface: React.FC = () => {
 
             // 重新发送用户消息
             setIsLoading(true)
-            performAIResponse(parentMessage.content, parentMessage.id?.toString(), currentSessionId || undefined)
+            performAIResponse(
+              parentMessage.content,
+              parentMessage.id?.toString(),
+              currentSessionId || undefined
+            )
 
             Toast.info(t.chat?.notifications.retrying || '正在重新生成回复...')
             return
@@ -991,7 +995,11 @@ const ChatInterface: React.FC = () => {
 
           // 重新发送最后一条用户消息
           setIsLoading(true)
-          performAIResponse(lastUserMessage.content, lastUserMessage.id?.toString(), currentSessionId || undefined)
+          performAIResponse(
+            lastUserMessage.content,
+            lastUserMessage.id?.toString(),
+            currentSessionId || undefined
+          )
 
           Toast.info(t.chat?.notifications.retrying || '正在重新生成回复...')
           return

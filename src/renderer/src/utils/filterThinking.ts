@@ -29,7 +29,10 @@ export function processThinkingContent(text: string): {
 
   if (parts.length > 0) {
     const thinkingContent = parts.join('\n\n---\n\n')
-    const displayText = text.replace(/<(?:think|thinking)>[\s\S]*?<\/(?:think|thinking)>(\r?\n)?/gi, '')
+    const displayText = text.replace(
+      /<(?:think|thinking)>[\s\S]*?<\/(?:think|thinking)>(\r?\n)?/gi,
+      ''
+    )
 
     return {
       hasThinking: true,
