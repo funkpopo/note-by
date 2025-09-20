@@ -119,6 +119,9 @@ const Navigation: React.FC<NavigationProps> = ({
 
   const navWidth = '160px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
+  // 避免卸载后 setState 的安全标记 & 最新请求序号
+  const mountedRef = useRef(false)
+  const fetchIdRef = useRef(0)
   const rootWrapStyle = useMemo<React.CSSProperties>(() => ({ display: 'flex', height: '100%' }), [])
   const mainNavStyle = useMemo<React.CSSProperties>(() => ({
     height: '100%',
@@ -341,8 +344,9 @@ const Navigation: React.FC<NavigationProps> = ({
     })
   }, [collapsed, onNavChange, toggleSecondaryNav, isDarkMode, toggleTheme])
 
-  const fetchFileList = useCallback(async () => {
-    setIsLoading(true)
+    const fetchFileList = useCallback(async () => {
+    const currentFetchId = ++fetchIdRef.current
+    if (mountedRef.current) setIsLoading(true)
     try {
       const {
         success: foldersSuccess,
@@ -354,40 +358,71 @@ const Navigation: React.FC<NavigationProps> = ({
       }
 
       const newNavItems: NavItem[] = []
-      if (folders) {
+      if (folders && folders.length > 0) {
         const filteredFolders = folders.filter((folder) => !folder.includes('.assets'))
-        for (const folder of filteredFolders) {
-          const {
-            success: filesSuccess,
-            files,
-            error: filesError
-          } = await window.api.markdown.getFiles(folder)
-          if (filesSuccess && files) {
-            newNavItems.push({
-              itemKey: `folder:${folder}`,
-              text: folder,
-              isFolder: true,
-              icon: <IconFolder />,
-              items: files.map((file) => ({
-                itemKey: `file:${folder}:${file}`,
-                text: file.replace(/\.md$/, ''),
-                icon: <IconFile />,
-                isFolder: false
-              }))
-            })
-          } else {
-            console.error(`Failed to get files for folder ${folder}:`, filesError)
-          }
+
+        // 简单并发阈值（可按需调整 4~8）
+        const CONCURRENCY = 6
+
+        // 结果占位，按原顺序填充
+        const results: Array<NavItem | undefined> = new Array(filteredFolders.length)
+
+        for (let start = 0; start < filteredFolders.length; start += CONCURRENCY) {
+          const slice = filteredFolders.slice(start, start + CONCURRENCY)
+          const settled = await Promise.allSettled(
+            slice.map((folder) => window.api.markdown.getFiles(folder))
+          )
+
+          settled.forEach((res, idx) => {
+            const folder = slice[idx]
+            if (res.status === 'fulfilled') {
+              const { success: filesSuccess, files, error: filesError } = res.value as {
+                success: boolean
+                files?: string[]
+                error?: string
+              }
+              if (filesSuccess && files) {
+                results[start + idx] = {
+                  itemKey: `folder:${folder}`,
+                  text: folder,
+                  isFolder: true,
+                  icon: <IconFolder />,
+                  items: files.map((file) => ({
+                    itemKey: `file:${folder}:${file}`,
+                    text: file.replace(/\.md$/, ''),
+                    icon: <IconFile />,
+                    isFolder: false
+                  }))
+                }
+              } else {
+                console.error(`Failed to get files for folder ${folder}:`, filesError)
+              }
+            } else {
+              console.error(`Failed to get files for folder ${folder}:`, res.reason)
+            }
+          })
+        }
+
+        // 保序合并，仅保留成功项
+        for (let i = 0; i < results.length; i++) {
+          const item = results[i]
+          if (item) newNavItems.push(item)
         }
       }
-      setNavItems(newNavItems)
+
+      // 只在组件仍挂载且为最新请求时更新状态
+      if (mountedRef.current && currentFetchId === fetchIdRef.current) {
+        setNavItems(newNavItems)
+      }
     } catch (error) {
       Toast.error(
         `Error loading file list: ${error instanceof Error ? error.message : String(error)}`
       )
       console.error('Error fetching file list:', error)
     } finally {
-      setIsLoading(false)
+      if (mountedRef.current && currentFetchId === fetchIdRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [])
 
@@ -406,6 +441,13 @@ const Navigation: React.FC<NavigationProps> = ({
       }
     }
   }, [showSecondaryNav, fetchFileList])
+  // 标记组件挂载/卸载，避免卸载后 setState
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   // 当fileListVersion变化时重新加载文件列表
   useEffect(() => {
@@ -1440,3 +1482,4 @@ const Navigation: React.FC<NavigationProps> = ({
 }
 
 export default Navigation
+
