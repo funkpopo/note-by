@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { ChatMessage } from '../../../main/database'
 import {
   Typography,
@@ -56,6 +56,130 @@ const MessageBubbleCustom: React.FC<{
   const isUser = message.role === 'user'
   const isAssistant = message.role === 'assistant'
 
+  // memoized styles to avoid recreations on each render
+  const containerStyle = useMemo<React.CSSProperties>(() => ({
+    marginBottom: isLast ? '8px' : '32px',
+    display: 'flex',
+    flexDirection: isUser ? 'row-reverse' : 'row',
+    gap: '16px',
+    alignItems: 'flex-start'
+  }), [isLast, isUser])
+
+  const avatarStyle = useMemo<React.CSSProperties>(() => ({
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    background: isUser
+      ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+      : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '14px',
+    fontWeight: '600',
+    flexShrink: 0,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+  }), [isUser])
+
+  const contentWrapStyle = useMemo<React.CSSProperties>(() => ({
+    flex: 1,
+    maxWidth: 'calc(100% - 80px)',
+    minWidth: 0,
+    position: 'relative'
+  }), [])
+
+  const cardStyle = useMemo<React.CSSProperties>(() => ({
+    background: isUser
+      ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+      : 'var(--semi-color-bg-2)',
+    border: isUser ? 'none' : '1px solid var(--semi-color-border)',
+    borderRadius: '16px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    padding: 0,
+    position: 'relative'
+  }), [isUser])
+
+  const cardBodyStyle = useMemo<React.CSSProperties>(() => ({
+    padding: '16px 20px',
+    color: isUser ? 'white' : 'var(--semi-color-text-0)'
+  }), [isUser])
+
+  const quickActionsStyle = useMemo<React.CSSProperties>(() => ({
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    display: 'flex',
+    gap: '4px',
+    opacity: 0,
+    transition: 'opacity 0.2s ease',
+    zIndex: 10
+  }), [])
+
+  const quickBtnBaseStyle = useMemo<React.CSSProperties>(() => ({
+    borderRadius: '6px',
+    padding: '4px',
+    width: '28px',
+    height: '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'var(--semi-color-bg-0)',
+    color: 'var(--semi-color-text-1)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  }), [])
+
+  const timeActionsStyle = useMemo<React.CSSProperties>(() => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: isUser ? 'flex-end' : 'flex-start',
+    marginTop: '8px',
+    gap: '12px'
+  }), [isUser])
+
+  const moreBtnStyle = useMemo<React.CSSProperties>(() => ({
+    opacity: 0.5,
+    transition: 'all 0.2s',
+    borderRadius: '8px'
+  }), [])
+
+  const statusRowStyle = useMemo<React.CSSProperties>(() => ({
+    display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px'
+  }), [])
+
+  const statusBoxStyle = useMemo<React.CSSProperties>(() => ({ marginTop: '12px' }), [])
+
+  const streamingDotStyle = useMemo<React.CSSProperties>(() => ({
+    width: '8px',
+    height: '8px',
+    background: 'var(--semi-color-primary)',
+    borderRadius: '50%',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  }), [])
+
+  const aiMessageStyle = useMemo<React.CSSProperties>(() => ({
+    color: 'inherit',
+    fontSize: '15px',
+    lineHeight: '1.7'
+  }), [])
+
+  const userMessageStyle = useMemo<React.CSSProperties>(() => ({
+    fontSize: '15px',
+    lineHeight: '1.6',
+    wordBreak: 'break-word'
+  }), [])
+
+  // stable event handlers
+  const handleShowQuickActions = useCallback((e: React.MouseEvent) => {
+    const quickActions = (e.currentTarget as HTMLElement).querySelector('.quick-actions') as HTMLElement
+    if (quickActions) quickActions.style.opacity = '1'
+  }, [])
+
+  const handleHideQuickActions = useCallback((e: React.MouseEvent) => {
+    const quickActions = (e.currentTarget as HTMLElement).querySelector('.quick-actions') as HTMLElement
+    if (quickActions) quickActions.style.opacity = '0'
+  }, [])
+
   // 获取AI模型名称首字母
   const getAiModelInitial = () => {
     if (!isAssistant) return ''
@@ -69,7 +193,7 @@ const MessageBubbleCustom: React.FC<{
     Toast.success(t.chat?.notifications.copied || '已复制到剪贴板')
   }
 
-  const dropdownItems = [
+  const dropdownItems = useMemo(() => [
     {
       node: 'item' as const,
       key: 'copy',
@@ -100,13 +224,13 @@ const MessageBubbleCustom: React.FC<{
           }
         ]
       : [])
-  ]
+  ], [t, handleCopy, isAssistant, onRetry, onDelete, message])
 
   const getStatusIndicator = () => {
     switch (message.status) {
       case 'loading':
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+          <div style={statusRowStyle}>
             <Spin size="small" />
             <Text size="small" type="tertiary">
               {t.chat?.messages.statusIndicator.loading || '正在思考中...'}
@@ -115,16 +239,8 @@ const MessageBubbleCustom: React.FC<{
         )
       case 'streaming':
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                background: 'var(--semi-color-primary)',
-                borderRadius: '50%',
-                animation: 'pulse 1.5s ease-in-out infinite'
-              }}
-            />
+          <div style={statusRowStyle}>
+            <div style={streamingDotStyle} />
             <Text size="small" type="tertiary">
               {t.chat?.messages.statusIndicator.streaming || 'AI正在思考...'}
             </Text>
@@ -152,93 +268,19 @@ const MessageBubbleCustom: React.FC<{
   }
 
   return (
-    <div
-      style={{
-        marginBottom: isLast ? '8px' : '32px',
-        display: 'flex',
-        flexDirection: isUser ? 'row-reverse' : 'row',
-        gap: '16px',
-        alignItems: 'flex-start'
-      }}
-    >
+    <div style={containerStyle}>
       {/* 头像 - 改为文字显示 */}
-      <div
-        style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          background: isUser
-            ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
-            : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: '14px',
-          fontWeight: '600',
-          flexShrink: 0,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-        }}
-      >
+      <div style={avatarStyle}>
         {isUser ? '我' : getAiModelInitial()}
       </div>
 
       {/* 消息内容 */}
-      <div
-        style={{
-          flex: 1,
-          maxWidth: 'calc(100% - 80px)',
-          minWidth: 0,
-          position: 'relative'
-        }}
-        onMouseEnter={(e) => {
-          // 显示快速操作按钮组
-          const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
-          if (quickActions) {
-            quickActions.style.opacity = '1'
-          }
-        }}
-        onMouseLeave={(e) => {
-          // 隐藏快速操作按钮组
-          const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement
-          if (quickActions) {
-            quickActions.style.opacity = '0'
-          }
-        }}
-      >
+      <div style={contentWrapStyle} onMouseEnter={handleShowQuickActions} onMouseLeave={handleHideQuickActions}>
         {/* 消息内容 */}
-        <Card
-          className={isUser ? 'chat-user-bubble' : 'chat-ai-bubble'}
-          style={{
-            background: isUser
-              ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)' // will be overridden by CSS for user bubble
-              : 'var(--semi-color-bg-2)',
-            border: isUser ? 'none' : '1px solid var(--semi-color-border)',
-            borderRadius: '16px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            padding: '0',
-            position: 'relative'
-          }}
-          bodyStyle={{
-            padding: '16px 20px',
-            color: isUser ? 'white' : 'var(--semi-color-text-0)'
-          }}
-        >
+        <Card className={isUser ? 'chat-user-bubble' : 'chat-ai-bubble'} style={cardStyle} bodyStyle={cardBodyStyle}>
           {/* 快速操作按钮组 - 仅对AI消息显示 */}
           {isAssistant && (
-            <div
-              className="quick-actions"
-              style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                display: 'flex',
-                gap: '4px',
-                opacity: 0,
-                transition: 'opacity 0.2s ease',
-                zIndex: 10
-              }}
-            >
+            <div className="quick-actions" style={quickActionsStyle}>
               {/* 刷新重发按钮 */}
               {onRetry && (
                 <Button
@@ -247,18 +289,7 @@ const MessageBubbleCustom: React.FC<{
                   theme="borderless"
                   size="small"
                   onClick={() => onRetry(message)}
-                  style={{
-                    borderRadius: '6px',
-                    padding: '4px',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'var(--semi-color-bg-0)',
-                    color: 'var(--semi-color-text-1)',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}
+                  style={quickBtnBaseStyle}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor =
                       'var(--semi-color-success-light-default)'
@@ -303,14 +334,7 @@ const MessageBubbleCustom: React.FC<{
           )}
 
           {isUser ? (
-            <div
-              className="chat-bubble-content chat-user-message-content"
-              style={{
-                fontSize: '15px',
-                lineHeight: '1.6',
-                wordBreak: 'break-word'
-              }}
-            >
+            <div className="chat-bubble-content chat-user-message-content" style={userMessageStyle}>
               {message.content}
             </div>
           ) : (
@@ -322,11 +346,7 @@ const MessageBubbleCustom: React.FC<{
                   ? message.content || ''
                   : stripThinkingForStreaming(message.content || '')
               }
-              style={{
-                color: 'inherit',
-                fontSize: '15px',
-                lineHeight: '1.7'
-              }}
+              style={aiMessageStyle}
             />
           )}
 

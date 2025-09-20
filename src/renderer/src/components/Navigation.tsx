@@ -119,6 +119,48 @@ const Navigation: React.FC<NavigationProps> = ({
 
   const navWidth = '160px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
+  const rootWrapStyle = useMemo<React.CSSProperties>(() => ({ display: 'flex', height: '100%' }), [])
+  const mainNavStyle = useMemo<React.CSSProperties>(() => ({
+    height: '100%',
+    background: 'var(--semi-color-bg-1)',
+    width: collapsed ? '64px' : navWidth,
+    transition: 'width 0.2s ease',
+    flex: 'none',
+    position: 'relative',
+    zIndex: 3
+  }), [collapsed])
+  const secondaryNavStyle = useMemo<React.CSSProperties>(() => ({
+    width: showSecondaryNav ? `${secondaryNavWidth}px` : 0,
+    height: '100%',
+    background: 'var(--semi-color-bg-2)',
+    borderRight: '1px solid var(--semi-color-border)',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    transition: 'width 0.3s ease-in-out',
+    flexShrink: 0
+  }), [showSecondaryNav, secondaryNavWidth])
+  const skeletonStyle = useMemo<React.CSSProperties>(() => ({ padding: '0', height: '100%' }), [])
+  const treeStyle = useMemo<React.CSSProperties>(() => ({
+    width: '100%',
+    borderRadius: '3px',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none'
+  }), [])
+  const contextMenuStyle = useMemo<React.CSSProperties>(() => ({
+    position: 'fixed',
+    top: contextMenu.y,
+    left: contextMenu.x,
+    zIndex: 1000,
+    background: 'var(--semi-color-bg-2)',
+    boxShadow: 'var(--semi-shadow-elevated)',
+    borderRadius: '4px',
+    padding: '4px 0',
+    minWidth: '180px',
+    border: '1px solid var(--semi-color-border)'
+  }), [contextMenu])
 
   const toggleSecondaryNav = useCallback((): void => {
     const newShowState = !showSecondaryNav
@@ -425,12 +467,12 @@ const Navigation: React.FC<NavigationProps> = ({
   }
 
   // 隐藏右键菜单
-  const hideContextMenu = (): void => {
+  const hideContextMenu = useCallback((): void => {
     setContextMenu((prev) => ({ ...prev, visible: false }))
-  }
+  }, [])
 
   // 处理右键菜单事件
-  const handleContextMenu = (e: React.MouseEvent, itemKey: string, isFolder: boolean): void => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, itemKey: string, isFolder: boolean): void => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -452,10 +494,10 @@ const Navigation: React.FC<NavigationProps> = ({
       isFolder,
       isEmpty: false
     })
-  }
+  }, [])
 
   // 处理空白区域右键菜单
-  const handleEmptyAreaContextMenu = (e: React.MouseEvent): void => {
+  const handleEmptyAreaContextMenu = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
 
     // 确保点击的是空白区域，而非Tree中的节点
@@ -476,7 +518,7 @@ const Navigation: React.FC<NavigationProps> = ({
         isEmpty: true
       })
     }
-  }
+  }, [])
 
   // 删除项目
   const handleDelete = async (): Promise<void> => {
@@ -824,7 +866,7 @@ const Navigation: React.FC<NavigationProps> = ({
   }
 
   // 处理树节点点击事件
-  const handleTreeSelect = (selectedKey: string): void => {
+  const handleTreeSelect = useCallback((selectedKey: string): void => {
     // 如果有双击计时器正在运行，说明这是双击的一部分，忽略选择事件
     if (doubleClickTimer) {
       return
@@ -855,15 +897,15 @@ const Navigation: React.FC<NavigationProps> = ({
       // 其他情况直接选择
       setSelectedKeys([selectedKey])
     }
-  }
+  }, [doubleClickTimer, onFileSelect])
 
   // 处理树节点展开/折叠事件
-  const handleTreeExpand = (expandedKeys: string[]): void => {
+  const handleTreeExpand = useCallback((expandedKeys: string[]): void => {
     setExpandedKeys(expandedKeys)
-  }
+  }, [])
 
   // 处理双击事件，用于展开/收起文件夹
-  const handleTreeDoubleClick = (e: React.MouseEvent, nodeKey: string): void => {
+  const handleTreeDoubleClick = useCallback((e: React.MouseEvent, nodeKey: string): void => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -887,10 +929,10 @@ const Navigation: React.FC<NavigationProps> = ({
         setCurrentExpandedKeys([...currentExpandedKeys, nodeKey])
       }
     }
-  }
+  }, [doubleClickTimer, filteredExpandedKeys, expandedKeys, searchText])
 
   // 自定义渲染Tree节点标签
-  const renderTreeLabel = (
+  const renderTreeLabel = useCallback((
     label?: React.ReactNode,
     data?: TreeNodeData,
     _searchWord?: string
@@ -928,7 +970,7 @@ const Navigation: React.FC<NavigationProps> = ({
         {label}
       </span>
     )
-  }
+  }, [handleTreeDoubleClick, handleContextMenu])
 
   // 打开确认对话框
   const openConfirmDialog = (
@@ -1004,22 +1046,14 @@ const Navigation: React.FC<NavigationProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div style={rootWrapStyle}>
       {isLoading ? (
         <NavigationSkeleton />
       ) : (
         <>
           {/* 主导航栏 */}
           <Nav
-            style={{
-              height: '100%',
-              background: 'var(--semi-color-bg-1)',
-              width: collapsed ? '64px' : navWidth,
-              transition: 'width 0.2s ease',
-              flex: 'none', // 防止导航栏被挤压
-              position: 'relative',
-              zIndex: 3 // 确保一级导航栏始终在最上层
-            }}
+            style={mainNavStyle}
             selectedKeys={selectedKeys}
             collapsed={collapsed}
             isCollapsed={collapsed}
@@ -1030,17 +1064,7 @@ const Navigation: React.FC<NavigationProps> = ({
           {showSecondaryNav && (
             <div
               className="secondary-nav"
-              style={{
-                width: showSecondaryNav ? `${secondaryNavWidth}px` : 0,
-                height: '100%',
-                background: 'var(--semi-color-bg-2)',
-                borderRight: '1px solid var(--semi-color-border)',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: 'width 0.3s ease-in-out',
-                flexShrink: 0
-              }}
+              style={secondaryNavStyle}
               ref={secondaryNavRef}
               onContextMenu={handleEmptyAreaContextMenu}
             >
@@ -1070,13 +1094,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 )}
 
                 {isLoading ? (
-                  <NavigationSkeleton
-                    style={{
-                      padding: '0',
-                      height: '100%'
-                    }}
-                    itemCount={10}
-                  />
+                  <NavigationSkeleton style={skeletonStyle} itemCount={10} />
                 ) : (
                   <div
                     className="secondary-nav-tree"
@@ -1100,14 +1118,7 @@ const Navigation: React.FC<NavigationProps> = ({
                           {t('navigation.emptyNotes')}
                         </Typography.Text>
                       }
-                      style={{
-                        width: '100%',
-                        borderRadius: '3px',
-                        userSelect: 'none', // 禁止选中文本
-                        WebkitUserSelect: 'none',
-                        MozUserSelect: 'none',
-                        msUserSelect: 'none'
-                      }}
+                      style={treeStyle}
                       filterTreeNode={true}
                       showFilteredOnly={showFilteredOnly}
                       searchRender={renderSearch}
