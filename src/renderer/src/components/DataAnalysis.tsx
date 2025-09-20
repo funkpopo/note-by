@@ -14,7 +14,14 @@ import {
 import { useTheme } from '../context/theme/useTheme'
 import { useAnalysisStore } from '../context/analysis/analysisService'
 import ReactECharts from 'echarts-for-react'
-import 'echarts-wordcloud'
+// 按需加载词云插件，避免在非词云场景下引入体积
+let __wordCloudPluginPromise: Promise<unknown> | null = null
+const ensureWordCloudPlugin = async (): Promise<void> => {
+  if (!__wordCloudPluginPromise) {
+    __wordCloudPluginPromise = import('echarts-wordcloud')
+  }
+  await __wordCloudPluginPromise
+}
 import { DataAnalysisSkeleton } from './Skeleton'
 import { modelSelectionService } from '../services/modelSelectionService'
 import { VirtualTextList } from './VirtualList'
@@ -651,6 +658,11 @@ const AsyncChartContainer: React.FC<{
             return
           }
 
+          // 按需加载词云插件
+          if (chartType === 'wordCloud') {
+            await ensureWordCloudPlugin()
+          }
+
           // 生成图表配置
           const option = generateChartConfig(chartType, data, {
             title,
@@ -764,6 +776,47 @@ const AsyncChartContainer: React.FC<{
 )
 
 AsyncChartContainer.displayName = 'AsyncChartContainer'
+
+// 封装的词云图表，内部按需加载词云插件
+const WordCloudEChart: React.FC<{ option: EChartsOption; style?: React.CSSProperties }> = ({
+  option,
+  style
+}) => {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let canceled = false
+    ensureWordCloudPlugin()
+      .then(() => {
+        if (!canceled) setReady(true)
+      })
+      .catch(() => {
+        if (!canceled) setReady(false)
+      })
+    return () => {
+      canceled = true
+    }
+  }, [])
+
+  if (!ready) {
+    return (
+      <div
+        style={{
+          height: style?.height || 300,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--semi-color-bg-1)',
+          borderRadius: 8
+        }}
+      >
+        <Text type="tertiary">加载词云组件...</Text>
+      </div>
+    )
+  }
+
+  return <ReactECharts option={option} style={style} notMerge={true} lazyUpdate={true} opts={{ renderer: 'canvas' }} />
+}
 
 // 写作效率趋势分析组件
 const WritingEfficiencyTrend: React.FC<{
@@ -1798,7 +1851,7 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <ReactECharts option={option} style={{ height: '300px' }} notMerge={true} lazyUpdate={true} opts={{ renderer: 'canvas' }} />
+        <WordCloudEChart option={option} style={{ height: '300px' }} />
       </div>
     )
   }
