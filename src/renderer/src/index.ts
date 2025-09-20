@@ -18,7 +18,6 @@ export {
   LazyCustomDropdown,
   LazyPasswordPrompt,
   LazyMessageRenderer,
-  LazyVirtualScrollEditor,
   LazyConfirmDialog,
   LazyRenameDialog,
   LazyCreateDialog,

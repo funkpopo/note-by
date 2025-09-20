@@ -17,7 +17,6 @@ export const LazyWebDAVSettings = lazy(() => import('./WebDAVSettings'))
 export const LazyCustomDropdown = lazy(() => import('./CustomDropdown'))
 export const LazyPasswordPrompt = lazy(() => import('./PasswordPrompt'))
 export const LazyMessageRenderer = lazy(() => import('./MessageRenderer'))
-export const LazyVirtualScrollEditor = lazy(() => import('./VirtualScrollEditor'))
 
 // 对话框组件懒加载
 export const LazyConfirmDialog = lazy(() => import('./ConfirmDialog'))

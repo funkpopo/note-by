@@ -4,12 +4,6 @@ export function filterThinkingContent(text: string): string {
   return text.replace(/<(?:think|thinking)>[\s\S]*?<\/(?:think|thinking)>(\r?\n)?/gi, '')
 }
 
-export function containsThinkingTags(text: string): boolean {
-  if (!text) return false
-  // 检查是否包含<think>/<thinking>标签
-  return /<(?:think|thinking)>[\s\S]*?<\/(?:think|thinking)>/i.test(text)
-}
-
 export function processThinkingContent(text: string): {
   hasThinking: boolean
   displayText: string
