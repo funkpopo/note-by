@@ -754,6 +754,8 @@ const AsyncChartContainer: React.FC<{
         <ReactECharts
           option={chartOption}
           style={{ height: height - 50 }}
+          notMerge={true}
+          lazyUpdate={true}
           opts={{ renderer: 'canvas' }}
         />
       </div>
@@ -876,6 +878,8 @@ const WritingEfficiencyTrend: React.FC<{
       <ReactECharts
         option={efficiencyOption}
         style={{ height: '300px' }}
+        notMerge={true}
+        lazyUpdate={true}
         theme={isDarkMode ? 'dark' : 'light'}
       />
       <div style={{ marginTop: 16, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
@@ -1029,6 +1033,8 @@ const ContentQualityScore: React.FC<{
       <ReactECharts
         option={scoreOption}
         style={{ height: '300px' }}
+        notMerge={true}
+        lazyUpdate={true}
         theme={isDarkMode ? 'dark' : 'light'}
       />
     </Card>
@@ -1437,7 +1443,7 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <ReactECharts option={option} style={{ height: 300 }} opts={{ renderer: 'canvas' }} />
+        <ReactECharts option={option} style={{ height: 300 }} notMerge={true} lazyUpdate={true} opts={{ renderer: 'canvas' }} />
       </div>
     )
   }
@@ -1604,6 +1610,8 @@ const DataAnalysis: React.FC = () => {
         <ReactECharts
           option={option}
           style={{ height: vertical ? 300 : 200 }}
+          notMerge={true}
+          lazyUpdate={true}
           opts={{ renderer: 'canvas' }}
         />
       </div>
@@ -1719,7 +1727,7 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <ReactECharts option={option} style={{ height: 300 }} opts={{ renderer: 'canvas' }} />
+        <ReactECharts option={option} style={{ height: 300 }} notMerge={true} lazyUpdate={true} opts={{ renderer: 'canvas' }} />
       </div>
     )
   }
@@ -1790,7 +1798,7 @@ const DataAnalysis: React.FC = () => {
         >
           {title}
         </Title>
-        <ReactECharts option={option} style={{ height: '300px' }} opts={{ renderer: 'canvas' }} />
+        <ReactECharts option={option} style={{ height: '300px' }} notMerge={true} lazyUpdate={true} opts={{ renderer: 'canvas' }} />
       </div>
     )
   }
@@ -1889,7 +1897,7 @@ const DataAnalysis: React.FC = () => {
           {title}
         </Title>
         <div style={{ height: '380px', overflowY: 'auto' }}>
-          <ReactECharts option={option} style={{ height: '100%' }} opts={{ renderer: 'canvas' }} />
+          <ReactECharts option={option} style={{ height: '100%' }} notMerge={true} lazyUpdate={true} opts={{ renderer: 'canvas' }} />
         </div>
       </div>
     )
@@ -2065,16 +2073,18 @@ const DataAnalysis: React.FC = () => {
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}
           >
-            <ReactECharts
-              option={option}
-              style={{ height: '100%', width: '100%' }}
-              onEvents={{
-                click: () => {
-                  // 标签点击事件处理
-                }
-              }}
-              opts={{ renderer: 'canvas' }} // 使用canvas渲染器提高性能
-            />
+          <ReactECharts
+            option={option}
+            style={{ height: '100%', width: '100%' }}
+            notMerge={true}
+            lazyUpdate={true}
+            onEvents={{
+              click: () => {
+                // 标签点击事件处理
+              }
+            }}
+            opts={{ renderer: 'canvas' }} // 使用canvas渲染器提高性能
+          />
           </div>
         </div>
       )
