@@ -122,6 +122,10 @@ const Navigation: React.FC<NavigationProps> = ({
   // 避免卸载后 setState 的安全标记 & 最新请求序号
   const mountedRef = useRef(false)
   const fetchIdRef = useRef(0)
+  const folderCacheRef = useRef<Map<string, { files: string[]; item: NavItem }>>(new Map())
+  const folderOrderRef = useRef<string[]>([])
+  const fileListVersionRef = useRef<number | undefined>(fileListVersion)
+  const lastLoadedVersionRef = useRef<number | undefined>(undefined)
   const rootWrapStyle = useMemo<React.CSSProperties>(() => ({ display: 'flex', height: '100%' }), [])
   const mainNavStyle = useMemo<React.CSSProperties>(() => ({
     height: '100%',
@@ -164,6 +168,21 @@ const Navigation: React.FC<NavigationProps> = ({
     minWidth: '180px',
     border: '1px solid var(--semi-color-border)'
   }), [contextMenu])
+
+  const updateNavItemsFromCache = useCallback((): void => {
+    const orderedItems: NavItem[] = []
+    folderOrderRef.current.forEach((folder) => {
+      const cached = folderCacheRef.current.get(folder)
+      if (cached) orderedItems.push(cached.item)
+    })
+
+    setNavItems((prev) => {
+      if (prev.length === orderedItems.length && prev.every((item, idx) => item === orderedItems[idx])) {
+        return prev
+      }
+      return orderedItems
+    })
+  }, [])
 
   const toggleSecondaryNav = useCallback((): void => {
     const newShowState = !showSecondaryNav
@@ -317,7 +336,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
             if (result.success) {
               Toast.success(result.message)
-              fetchFileList()
+              fetchFileList({ force: true })
             } else if ((result as { cancelled?: boolean }).cancelled) {
               Toast.warning(t('messages.info.syncCancelled'))
             } else {
@@ -344,95 +363,170 @@ const Navigation: React.FC<NavigationProps> = ({
     })
   }, [collapsed, onNavChange, toggleSecondaryNav, isDarkMode, toggleTheme])
 
-    const fetchFileList = useCallback(async () => {
-    const currentFetchId = ++fetchIdRef.current
-    if (mountedRef.current) setIsLoading(true)
-    try {
-      const {
-        success: foldersSuccess,
-        folders,
-        error: foldersError
-      } = await window.api.markdown.getFolders()
-      if (!foldersSuccess) {
-        throw new Error(foldersError || 'Failed to get folders')
+  const fetchFileList = useCallback(
+    async (options?: { force?: boolean; targetFolders?: string[] }) => {
+      const { force = false, targetFolders } = options ?? {}
+      const currentFetchId = ++fetchIdRef.current
+      let loadingShown = false
+
+      const updateFromCache = (): void => {
+        if (mountedRef.current && currentFetchId === fetchIdRef.current) {
+          updateNavItemsFromCache()
+          lastLoadedVersionRef.current = fileListVersionRef.current
+        }
       }
 
-      const newNavItems: NavItem[] = []
-      if (folders && folders.length > 0) {
-        const filteredFolders = folders.filter((folder) => !folder.includes('.assets'))
+      const finalizeLoading = (): void => {
+        if (mountedRef.current && currentFetchId === fetchIdRef.current) {
+          setIsLoading(false)
+        }
+      }
 
-        // 简单并发阈值（可按需调整 4~8）
-        const CONCURRENCY = 6
+      try {
+        const shouldFetchFolders =
+          force || !targetFolders || folderOrderRef.current.length === 0
 
-        // 结果占位，按原顺序填充
-        const results: Array<NavItem | undefined> = new Array(filteredFolders.length)
+        if (
+          mountedRef.current &&
+          (shouldFetchFolders || folderCacheRef.current.size === 0 || force)
+        ) {
+          setIsLoading(true)
+          loadingShown = true
+        }
 
-        for (let start = 0; start < filteredFolders.length; start += CONCURRENCY) {
-          const slice = filteredFolders.slice(start, start + CONCURRENCY)
-          const settled = await Promise.allSettled(
-            slice.map((folder) => window.api.markdown.getFiles(folder))
+        if (shouldFetchFolders) {
+          const {
+            success: foldersSuccess,
+            folders,
+            error: foldersError
+          } = await window.api.markdown.getFolders()
+          if (!foldersSuccess) {
+            throw new Error(foldersError || 'Failed to get folders')
+          }
+
+          const filteredFolders = (folders ?? []).filter(
+            (folder) => !folder.includes('.assets')
           )
+          folderOrderRef.current = filteredFolders
 
-          settled.forEach((res, idx) => {
-            const folder = slice[idx]
-            if (res.status === 'fulfilled') {
-              const { success: filesSuccess, files, error: filesError } = res.value as {
-                success: boolean
-                files?: string[]
-                error?: string
-              }
-              if (filesSuccess && files) {
-                results[start + idx] = {
-                  itemKey: `folder:${folder}`,
-                  text: folder,
-                  isFolder: true,
-                  icon: <IconFolder />,
-                  items: files.map((file) => ({
-                    itemKey: `file:${folder}:${file}`,
-                    text: file.replace(/\.md$/, ''),
-                    icon: <IconFile />,
-                    isFolder: false
-                  }))
-                }
-              } else {
-                console.error(`Failed to get files for folder ${folder}:`, filesError)
-              }
-            } else {
-              console.error(`Failed to get files for folder ${folder}:`, res.reason)
+          const latestFolderSet = new Set(filteredFolders)
+          Array.from(folderCacheRef.current.keys()).forEach((folder) => {
+            if (!latestFolderSet.has(folder)) {
+              folderCacheRef.current.delete(folder)
             }
           })
         }
 
-        // 保序合并，仅保留成功项
-        for (let i = 0; i < results.length; i++) {
-          const item = results[i]
-          if (item) newNavItems.push(item)
-        }
-      }
+        const orderedFolders = folderOrderRef.current
+        const folderSet = new Set(orderedFolders)
+        const foldersToUpdate = new Set<string>()
 
-      // 只在组件仍挂载且为最新请求时更新状态
-      if (mountedRef.current && currentFetchId === fetchIdRef.current) {
-        setNavItems(newNavItems)
+        if (force || folderCacheRef.current.size === 0) {
+          const sourceFolders = targetFolders ?? orderedFolders
+          sourceFolders.forEach((folder) => {
+            if (folderSet.has(folder)) {
+              foldersToUpdate.add(folder)
+            }
+          })
+        } else if (targetFolders?.length) {
+          targetFolders.forEach((folder) => {
+            if (folderSet.has(folder)) {
+              foldersToUpdate.add(folder)
+            }
+          })
+        } else {
+          orderedFolders.forEach((folder) => {
+            if (!folderCacheRef.current.has(folder)) {
+              foldersToUpdate.add(folder)
+            }
+          })
+        }
+
+        const targets = Array.from(foldersToUpdate)
+
+        if (!loadingShown && mountedRef.current && targets.length > 0) {
+          setIsLoading(true)
+          loadingShown = true
+        }
+
+        if (targets.length > 0) {
+          const CONCURRENCY = 6
+          for (let start = 0; start < targets.length; start += CONCURRENCY) {
+            const slice = targets.slice(start, start + CONCURRENCY)
+            const settled = await Promise.allSettled(
+              slice.map((folder) => window.api.markdown.getFiles(folder))
+            )
+
+            settled.forEach((res, idx) => {
+              const folder = slice[idx]
+              if (res.status === 'fulfilled') {
+                const { success: filesSuccess, files, error: filesError } = res.value as {
+                  success: boolean
+                  files?: string[]
+                  error?: string
+                }
+
+                if (filesSuccess) {
+                  const normalizedFiles = [...(files ?? [])]
+                  const cached = folderCacheRef.current.get(folder)
+                  if (
+                    cached &&
+                    cached.files.length === normalizedFiles.length &&
+                    cached.files.every((file, fileIdx) => file === normalizedFiles[fileIdx])
+                  ) {
+                    return
+                  }
+
+                  const item: NavItem = {
+                    itemKey: `folder:${folder}`,
+                    text: folder,
+                    isFolder: true,
+                    icon: <IconFolder />,
+                    items: normalizedFiles.map((file) => ({
+                      itemKey: `file:${folder}:${file}`,
+                      text: file.replace(/\.md$/, ''),
+                      icon: <IconFile />,
+                      isFolder: false
+                    }))
+                  }
+
+                  folderCacheRef.current.set(folder, {
+                    files: normalizedFiles,
+                    item
+                  })
+                } else {
+                  console.error(`Failed to get files for folder ${folder}:`, filesError)
+                }
+              } else {
+                console.error(`Failed to get files for folder ${folder}:`, res.reason)
+              }
+            })
+          }
+        }
+
+        updateFromCache()
+      } catch (error) {
+        Toast.error(
+          `Error loading file list: ${error instanceof Error ? error.message : String(error)}`
+        )
+        console.error('Error fetching file list:', error)
+      } finally {
+        finalizeLoading()
       }
-    } catch (error) {
-      Toast.error(
-        `Error loading file list: ${error instanceof Error ? error.message : String(error)}`
-      )
-      console.error('Error fetching file list:', error)
-    } finally {
-      if (mountedRef.current && currentFetchId === fetchIdRef.current) {
-        setIsLoading(false)
-      }
-    }
-  }, [])
+    },
+    [updateNavItemsFromCache]
+  )
 
   useEffect(() => {
-    // 组件挂载时加载文件夹和文件
     if (showSecondaryNav) {
-      fetchFileList()
+      const hasCache = folderCacheRef.current.size > 0
+      if (hasCache && lastLoadedVersionRef.current === fileListVersionRef.current) {
+        updateNavItemsFromCache()
+      } else {
+        fetchFileList({ force: !hasCache })
+      }
     }
 
-    // 组件卸载时清理状态和计时器
     return (): void => {
       setExpandedKeys([])
       if (doubleClickTimer) {
@@ -440,7 +534,7 @@ const Navigation: React.FC<NavigationProps> = ({
         setDoubleClickTimer(null)
       }
     }
-  }, [showSecondaryNav, fetchFileList])
+  }, [showSecondaryNav, fetchFileList, updateNavItemsFromCache])
   // 标记组件挂载/卸载，避免卸载后 setState
   useEffect(() => {
     mountedRef.current = true
@@ -449,12 +543,37 @@ const Navigation: React.FC<NavigationProps> = ({
     }
   }, [])
 
+  useEffect(() => {
+    fileListVersionRef.current = fileListVersion
+  }, [fileListVersion])
+
   // 当fileListVersion变化时重新加载文件列表
   useEffect(() => {
-    if (showSecondaryNav && fileListVersion !== undefined) {
+    if (!showSecondaryNav || fileListVersion === undefined) {
+      return
+    }
+
+    const selectedKey = selectedKeys[0]
+    let targetFolder: string | undefined
+
+    if (selectedKey?.startsWith('file:')) {
+      const parts = selectedKey.split(':')
+      if (parts.length === 3) {
+        targetFolder = parts[1]
+      }
+    } else if (selectedKey?.startsWith('folder:')) {
+      const parts = selectedKey.split(':')
+      if (parts.length === 2) {
+        targetFolder = parts[1]
+      }
+    }
+
+    if (targetFolder) {
+      fetchFileList({ targetFolders: [targetFolder] })
+    } else {
       fetchFileList()
     }
-  }, [showSecondaryNav, fileListVersion, fetchFileList])
+  }, [showSecondaryNav, fileListVersion, fetchFileList, selectedKeys])
 
   // 监听当前视图变化，自动隐藏二级侧边栏（除Editor外）
   useEffect(() => {
@@ -579,7 +698,7 @@ const Navigation: React.FC<NavigationProps> = ({
           if (result.success) {
             Toast.success(t('messages.success.deleted'))
             // 刷新列表
-            fetchFileList()
+            fetchFileList({ force: true })
           } else {
             Toast.error(
               t('messages.error.deleteFailed', { message: result.error || 'Unknown error' })
@@ -602,7 +721,7 @@ const Navigation: React.FC<NavigationProps> = ({
               onFileDeleted(folder, file)
             }
             // 刷新列表
-            fetchFileList()
+            fetchFileList({ targetFolders: [folder] })
           } else {
             Toast.error(
               t('messages.error.deleteFailed', { message: result.error || 'Unknown error' })
@@ -662,7 +781,7 @@ const Navigation: React.FC<NavigationProps> = ({
           if (result.success) {
             Toast.success(t('messages.success.renamed'))
             // 刷新列表
-            fetchFileList()
+            fetchFileList({ force: true })
           } else {
             Toast.error(
               t('messages.error.renameFailed', { message: result.error || 'Unknown error' })
@@ -685,7 +804,7 @@ const Navigation: React.FC<NavigationProps> = ({
             if (result.success) {
               Toast.success(t('messages.success.renamed'))
               // 刷新列表
-              fetchFileList()
+              fetchFileList({ targetFolders: [folder] })
             } else {
               Toast.error(
                 t('messages.error.renameFailed', { message: result.error || 'Unknown error' })
@@ -822,7 +941,7 @@ const Navigation: React.FC<NavigationProps> = ({
         if (result.success) {
           Toast.success(t('messages.success.created'))
           // 刷新列表
-          fetchFileList()
+          fetchFileList({ force: true })
         } else {
           Toast.error(
             t('messages.error.createFailed', { message: result.error || 'Unknown error' })
@@ -846,7 +965,7 @@ const Navigation: React.FC<NavigationProps> = ({
         if (result.success) {
           Toast.success(t('messages.success.created'))
           // 刷新列表
-          fetchFileList()
+          fetchFileList({ targetFolders: [finalFolder] })
           // 可选：打开新创建的笔记
           if (onFileSelect) {
             onFileSelect(finalFolder, `${name}.md`)
@@ -1174,21 +1293,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
               {/* 右键菜单 - 使用绝对定位 */}
               {contextMenu.visible && (
-                <div
-                  className="context-menu"
-                  style={{
-                    position: 'fixed',
-                    top: contextMenu.y,
-                    left: contextMenu.x,
-                    zIndex: 1000,
-                    background: 'var(--semi-color-bg-2)',
-                    boxShadow: 'var(--semi-shadow-elevated)',
-                    borderRadius: '4px',
-                    padding: '4px 0',
-                    minWidth: '180px',
-                    border: '1px solid var(--semi-color-border)'
-                  }}
-                >
+                <div className="context-menu" style={contextMenuStyle}>
                   {contextMenu.isFolder && (
                     <>
                       <div

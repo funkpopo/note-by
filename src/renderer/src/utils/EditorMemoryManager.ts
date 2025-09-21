@@ -607,42 +607,59 @@ export class EditorMemoryManager {
   }
 
   /**
+   * 计算缩放后的目标尺寸
+   */
+  private calculateTargetDimensions(
+    width: number,
+    height: number,
+    config: ImageOptimizationConfig
+  ): { width: number; height: number } {
+    if (width <= 0 || height <= 0) {
+      return { width: Math.max(1, config.maxWidth), height: Math.max(1, config.maxHeight) }
+    }
+
+    let targetWidth = width
+    let targetHeight = height
+    const aspectRatio = width / height
+
+    if (targetWidth > config.maxWidth) {
+      targetWidth = config.maxWidth
+      targetHeight = Math.round(targetWidth / aspectRatio)
+    }
+
+    if (targetHeight > config.maxHeight) {
+      targetHeight = config.maxHeight
+      targetWidth = Math.round(targetHeight * aspectRatio)
+    }
+
+    return {
+      width: Math.max(1, Math.round(targetWidth)),
+      height: Math.max(1, Math.round(targetHeight))
+    }
+  }
+
+  /**
    * 优化图片
    */
   private async optimizeImage(blob: Blob, config: ImageOptimizationConfig): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
+    const canvasToBlob = async (
+      width: number,
+      height: number,
+      draw: (ctx: CanvasRenderingContext2D) => void
+    ): Promise<Blob> => {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
 
       if (!ctx) {
-        reject(new Error('Canvas context not available'))
-        return
+        throw new Error('Canvas context not available')
       }
 
-      img.onload = () => {
-        // 计算新的尺寸
-        let { width, height } = img
-        const aspectRatio = width / height
+      canvas.width = width
+      canvas.height = height
 
-        if (width > config.maxWidth) {
-          width = config.maxWidth
-          height = width / aspectRatio
-        }
+      draw(ctx)
 
-        if (height > config.maxHeight) {
-          height = config.maxHeight
-          width = height * aspectRatio
-        }
-
-        // 设置画布尺寸
-        canvas.width = width
-        canvas.height = height
-
-        // 绘制图片
-        ctx.drawImage(img, 0, 0, width, height)
-
-        // 转换为blob
+      return new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
           (optimizedBlob) => {
             if (optimizedBlob) {
@@ -654,11 +671,66 @@ export class EditorMemoryManager {
           this.getOptimalFormat(config.format),
           config.quality
         )
-      }
+      })
+    }
 
-      img.onerror = () => reject(new Error('Failed to load image'))
-      img.src = URL.createObjectURL(blob)
-    })
+    const processWithBitmap = async (): Promise<Blob> => {
+      const bitmap = await window.createImageBitmap(blob)
+      try {
+        const { width, height } = this.calculateTargetDimensions(
+          bitmap.width,
+          bitmap.height,
+          config
+        )
+        return canvasToBlob(width, height, (ctx) => {
+          ctx.drawImage(bitmap, 0, 0, width, height)
+        })
+      } finally {
+        bitmap.close()
+      }
+    }
+
+    const processWithImageElement = (): Promise<Blob> =>
+      new Promise((resolve, reject) => {
+        const img = new Image()
+        const objectUrl = URL.createObjectURL(blob)
+
+        img.onload = async () => {
+          URL.revokeObjectURL(objectUrl)
+          try {
+            const sourceWidth = img.naturalWidth || img.width
+            const sourceHeight = img.naturalHeight || img.height
+            const { width, height } = this.calculateTargetDimensions(
+              sourceWidth,
+              sourceHeight,
+              config
+            )
+            const optimizedBlob = await canvasToBlob(width, height, (ctx) => {
+              ctx.drawImage(img, 0, 0, width, height)
+            })
+            resolve(optimizedBlob)
+          } catch (error) {
+            reject(error)
+          }
+        }
+
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl)
+          reject(new Error('Failed to load image'))
+        }
+
+        img.src = objectUrl
+      })
+
+    if (typeof window !== 'undefined' && typeof window.createImageBitmap === 'function') {
+      try {
+        return await processWithBitmap()
+      } catch (error) {
+        console.warn('createImageBitmap failed, falling back to Image decoding.', error)
+      }
+    }
+
+    return processWithImageElement()
   }
 
   /**
