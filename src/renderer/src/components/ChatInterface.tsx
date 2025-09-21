@@ -23,12 +23,14 @@ import {
 import { modelSelectionService, type AiApiConfig } from '../services/modelSelectionService'
 import throttle from 'lodash.throttle'
 import { processThinkingContent, stripThinkingForStreaming } from '../utils/filterThinking'
-import MessageRenderer from './MessageRenderer'
+import { LazyMessageRenderer, SmallComponentLoader, withLazyLoad } from './LazyComponents'
 import './ChatInterface.css'
 import ChatHistorySidebar from './ChatHistorySidebar'
 import { ChatSkeleton } from './Skeleton'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
+
+const LazyMessageRendererWithFallback = withLazyLoad(LazyMessageRenderer, SmallComponentLoader)
 
 const { Text } = Typography
 
@@ -44,189 +46,284 @@ const getTranslations = (): typeof zhCN => {
 }
 
 // 自定义消息气泡组件
-const MessageBubbleCustom: React.FC<{
+
+interface MessageBubbleCustomProps {
   message: ChatMessage
   onRetry?: (message: ChatMessage) => void
   onDelete?: (message: ChatMessage) => void
   isLast?: boolean
-  selectedAiConfig: string
-  aiApiConfigs: AiApiConfig[]
-}> = ({ message, onRetry, onDelete, isLast, selectedAiConfig, aiApiConfigs }) => {
-  const t = getTranslations()
+  aiModelInitial: string
+  translations: typeof zhCN
+}
+
+const MessageBubbleCustomComponent: React.FC<MessageBubbleCustomProps> = ({
+  message,
+  onRetry,
+  onDelete,
+  isLast,
+  aiModelInitial,
+  translations
+}) => {
+  const t = translations
   const isUser = message.role === 'user'
   const isAssistant = message.role === 'assistant'
 
-  // memoized styles to avoid recreations on each render
-  const containerStyle = useMemo<React.CSSProperties>(() => ({
-    marginBottom: isLast ? '8px' : '32px',
-    display: 'flex',
-    flexDirection: isUser ? 'row-reverse' : 'row',
-    gap: '16px',
-    alignItems: 'flex-start'
-  }), [isLast, isUser])
+  const containerStyle = useMemo<React.CSSProperties>(
+    () => ({
+      marginBottom: isLast ? '8px' : '32px',
+      display: 'flex',
+      flexDirection: isUser ? 'row-reverse' : 'row',
+      gap: '16px',
+      alignItems: 'flex-start'
+    }),
+    [isLast, isUser]
+  )
 
-  const avatarStyle = useMemo<React.CSSProperties>(() => ({
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: isUser
-      ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
-      : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: '600',
-    flexShrink: 0,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-  }), [isUser])
+  const avatarStyle = useMemo<React.CSSProperties>(
+    () => ({
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      background: isUser
+        ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+        : 'linear-gradient(135deg, var(--semi-color-success) 0%, var(--semi-color-success-light-active) 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontSize: '14px',
+      fontWeight: '600',
+      flexShrink: 0,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+    }),
+    [isUser]
+  )
 
-  const contentWrapStyle = useMemo<React.CSSProperties>(() => ({
-    flex: 1,
-    maxWidth: 'calc(100% - 80px)',
-    minWidth: 0,
-    position: 'relative'
-  }), [])
+  const contentWrapStyle = useMemo<React.CSSProperties>(
+    () => ({
+      flex: 1,
+      maxWidth: 'calc(100% - 80px)',
+      minWidth: 0,
+      position: 'relative'
+    }),
+    []
+  )
 
-  const cardStyle = useMemo<React.CSSProperties>(() => ({
-    background: isUser
-      ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
-      : 'var(--semi-color-bg-2)',
-    border: isUser ? 'none' : '1px solid var(--semi-color-border)',
-    borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-    padding: 0,
-    position: 'relative'
-  }), [isUser])
+  const cardStyle = useMemo<React.CSSProperties>(
+    () => ({
+      background: isUser
+        ? 'linear-gradient(135deg, var(--semi-color-primary) 0%, var(--semi-color-primary-light-active) 100%)'
+        : 'var(--semi-color-bg-2)',
+      border: isUser ? 'none' : '1px solid var(--semi-color-border)',
+      borderRadius: '16px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      padding: 0,
+      position: 'relative'
+    }),
+    [isUser]
+  )
 
-  const cardBodyStyle = useMemo<React.CSSProperties>(() => ({
-    padding: '16px 20px',
-    color: isUser ? 'white' : 'var(--semi-color-text-0)'
-  }), [isUser])
+  const cardBodyStyle = useMemo<React.CSSProperties>(
+    () => ({
+      padding: '16px 20px',
+      color: isUser ? 'white' : 'var(--semi-color-text-0)'
+    }),
+    [isUser]
+  )
 
-  const quickActionsStyle = useMemo<React.CSSProperties>(() => ({
-    position: 'absolute',
-    top: '8px',
-    right: '8px',
-    display: 'flex',
-    gap: '4px',
-    opacity: 0,
-    transition: 'opacity 0.2s ease',
-    zIndex: 10
-  }), [])
+  const quickActionsStyle = useMemo<React.CSSProperties>(
+    () => ({
+      position: 'absolute',
+      top: '8px',
+      right: '8px',
+      display: 'flex',
+      gap: '4px',
+      opacity: 0,
+      transition: 'opacity 0.2s ease',
+      zIndex: 10
+    }),
+    []
+  )
 
-  const quickBtnBaseStyle = useMemo<React.CSSProperties>(() => ({
-    borderRadius: '6px',
-    padding: '4px',
-    width: '28px',
-    height: '28px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'var(--semi-color-bg-0)',
-    color: 'var(--semi-color-text-1)',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  }), [])
+  const quickBtnBaseStyle = useMemo<React.CSSProperties>(
+    () => ({
+      borderRadius: '6px',
+      padding: '4px',
+      width: '28px',
+      height: '28px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'var(--semi-color-bg-0)',
+      color: 'var(--semi-color-text-1)',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    }),
+    []
+  )
 
-  const timeActionsStyle = useMemo<React.CSSProperties>(() => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: isUser ? 'flex-end' : 'flex-start',
-    marginTop: '8px',
-    gap: '12px'
-  }), [isUser])
+  const timeActionsStyle = useMemo<React.CSSProperties>(
+    () => ({
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: isUser ? 'flex-end' : 'flex-start',
+      marginTop: '8px',
+      gap: '12px'
+    }),
+    [isUser]
+  )
 
-  const moreBtnStyle = useMemo<React.CSSProperties>(() => ({
-    opacity: 0.5,
-    transition: 'all 0.2s',
-    borderRadius: '8px'
-  }), [])
+  const moreBtnStyle = useMemo<React.CSSProperties>(
+    () => ({
+      opacity: 0.5,
+      transition: 'all 0.2s',
+      borderRadius: '8px'
+    }),
+    []
+  )
 
-  const statusRowStyle = useMemo<React.CSSProperties>(() => ({
-    display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px'
-  }), [])
+  const statusRowStyle = useMemo<React.CSSProperties>(
+    () => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      marginTop: '12px'
+    }),
+    []
+  )
 
   const statusBoxStyle = useMemo<React.CSSProperties>(() => ({ marginTop: '12px' }), [])
 
-  const streamingDotStyle = useMemo<React.CSSProperties>(() => ({
-    width: '8px',
-    height: '8px',
-    background: 'var(--semi-color-primary)',
-    borderRadius: '50%',
-    animation: 'pulse 1.5s ease-in-out infinite'
-  }), [])
+  const streamingDotStyle = useMemo<React.CSSProperties>(
+    () => ({
+      width: '8px',
+      height: '8px',
+      background: 'var(--semi-color-primary)',
+      borderRadius: '50%',
+      animation: 'pulse 1.5s ease-in-out infinite'
+    }),
+    []
+  )
 
-  const aiMessageStyle = useMemo<React.CSSProperties>(() => ({
-    color: 'inherit',
-    fontSize: '15px',
-    lineHeight: '1.7'
-  }), [])
+  const aiMessageStyle = useMemo<React.CSSProperties>(
+    () => ({
+      color: 'inherit',
+      fontSize: '15px',
+      lineHeight: '1.7'
+    }),
+    []
+  )
 
-  const userMessageStyle = useMemo<React.CSSProperties>(() => ({
-    fontSize: '15px',
-    lineHeight: '1.6',
-    wordBreak: 'break-word'
-  }), [])
+  const userMessageStyle = useMemo<React.CSSProperties>(
+    () => ({
+      fontSize: '15px',
+      lineHeight: '1.6',
+      wordBreak: 'break-word'
+    }),
+    []
+  )
 
-  // stable event handlers
-  const handleShowQuickActions = useCallback((e: React.MouseEvent) => {
-    const quickActions = (e.currentTarget as HTMLElement).querySelector('.quick-actions') as HTMLElement
+  const handleShowQuickActions = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement | null
     if (quickActions) quickActions.style.opacity = '1'
   }, [])
 
-  const handleHideQuickActions = useCallback((e: React.MouseEvent) => {
-    const quickActions = (e.currentTarget as HTMLElement).querySelector('.quick-actions') as HTMLElement
+  const handleHideQuickActions = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const quickActions = e.currentTarget.querySelector('.quick-actions') as HTMLElement | null
     if (quickActions) quickActions.style.opacity = '0'
   }, [])
 
-  // 获取AI模型名称首字母
-  const getAiModelInitial = () => {
-    if (!isAssistant) return ''
-    const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
-    return aiConfig?.name?.charAt(0)?.toUpperCase() || 'AI'
-  }
+  const avatarLabel = useMemo(() => {
+    if (isUser) return '我'
+    if (!aiModelInitial) return 'AI'
+    return aiModelInitial
+  }, [aiModelInitial, isUser])
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     const { displayText } = processThinkingContent(message.content)
     navigator.clipboard.writeText(displayText || message.content)
     Toast.success(t.chat?.notifications.copied || '已复制到剪贴板')
-  }
+  }, [message.content, t])
 
-  const dropdownItems = useMemo(() => [
-    {
-      node: 'item' as const,
-      key: 'copy',
-      name: t.chat?.actions.copy || '复制',
-      icon: <IconCopy />,
-      onClick: handleCopy
-    },
-    ...(isAssistant && onRetry
-      ? [
-          {
-            node: 'item' as const,
-            key: 'retry',
-            name: t.chat?.actions.retry || '重新生成',
-            icon: <IconRefresh />,
-            onClick: () => onRetry(message)
-          }
-        ]
-      : []),
-    ...(onDelete
-      ? [
-          {
-            node: 'item' as const,
-            key: 'delete',
-            name: t.chat?.actions.delete || '删除',
-            icon: <IconDelete />,
-            onClick: () => onDelete(message),
-            type: 'danger' as const
-          }
-        ]
-      : [])
-  ], [t, handleCopy, isAssistant, onRetry, onDelete, message])
+  const handleRetry = useCallback(() => {
+    if (onRetry) onRetry(message)
+  }, [onRetry, message])
 
-  const getStatusIndicator = () => {
+  const handleDelete = useCallback(() => {
+    if (onDelete) onDelete(message)
+  }, [onDelete, message])
+
+  const handleRefreshMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget
+    target.style.backgroundColor = 'var(--semi-color-success-light-default)'
+    target.style.color = 'var(--semi-color-success)'
+  }, [])
+
+  const handleCopyMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget
+    target.style.backgroundColor = 'var(--semi-color-primary-light-default)'
+    target.style.color = 'var(--semi-color-primary)'
+  }, [])
+
+  const handleDeleteMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget
+    target.style.backgroundColor = 'var(--semi-color-danger-light-default)'
+    target.style.color = 'var(--semi-color-danger)'
+  }, [])
+
+  const handleQuickActionMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget
+    target.style.backgroundColor = 'var(--semi-color-bg-0)'
+    target.style.color = 'var(--semi-color-text-1)'
+  }, [])
+
+  const handleMoreMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget
+    target.style.opacity = '1'
+    target.style.background = 'var(--semi-color-fill-0)'
+  }, [])
+
+  const handleMoreMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget
+    target.style.opacity = '0.5'
+    target.style.background = 'transparent'
+  }, [])
+
+  const dropdownItems = useMemo(() => {
+    const items = [
+      {
+        node: 'item' as const,
+        key: 'copy',
+        name: t.chat?.actions.copy || '复制',
+        icon: <IconCopy />,
+        onClick: handleCopy
+      }
+    ]
+
+    if (isAssistant && onRetry) {
+      items.push({
+        node: 'item' as const,
+        key: 'retry',
+        name: t.chat?.actions.retry || '重新生成',
+        icon: <IconRefresh />,
+        onClick: handleRetry
+      })
+    }
+
+    if (onDelete) {
+      items.push({
+        node: 'item' as const,
+        key: 'delete',
+        name: t.chat?.actions.delete || '删除',
+        icon: <IconDelete />,
+        onClick: handleDelete,
+        type: 'danger' as const
+      } as any)
+    }
+
+    return items
+  }, [handleCopy, handleRetry, handleDelete, isAssistant, onRetry, onDelete, t])
+
+  const statusIndicator = useMemo(() => {
     switch (message.status) {
       case 'loading':
         return (
@@ -242,94 +339,83 @@ const MessageBubbleCustom: React.FC<{
           <div style={statusRowStyle}>
             <div style={streamingDotStyle} />
             <Text size="small" type="tertiary">
-              {t.chat?.messages.statusIndicator.streaming || 'AI正在思考...'}
+              {t.chat?.messages.statusIndicator.streaming || 'AI 正在思考...'}
             </Text>
           </div>
         )
       case 'incomplete':
         return (
-          <div style={{ marginTop: '12px' }}>
+          <div style={statusBoxStyle}>
             <Text size="small" type="warning">
-              {t.chat?.messages.statusIndicator.incomplete || '⚠️ 生成被中断'}
+              {t.chat?.messages.statusIndicator.incomplete || '⚠ 生成被中断'}
             </Text>
           </div>
         )
       case 'error':
         return (
-          <div style={{ marginTop: '12px' }}>
+          <div style={statusBoxStyle}>
             <Text size="small" type="danger">
-              {t.chat?.messages.statusIndicator.error || '❌ 生成出错'}
+              {t.chat?.messages.statusIndicator.error || '× 生成失败'}
             </Text>
           </div>
         )
       default:
         return null
     }
-  }
+  }, [message.status, statusRowStyle, streamingDotStyle, statusBoxStyle, t])
 
   return (
     <div style={containerStyle}>
-      {/* 头像 - 改为文字显示 */}
-      <div style={avatarStyle}>
-        {isUser ? '我' : getAiModelInitial()}
-      </div>
+      <div style={avatarStyle}>{avatarLabel}</div>
 
-      {/* 消息内容 */}
-      <div style={contentWrapStyle} onMouseEnter={handleShowQuickActions} onMouseLeave={handleHideQuickActions}>
-        {/* 消息内容 */}
-        <Card className={isUser ? 'chat-user-bubble' : 'chat-ai-bubble'} style={cardStyle} bodyStyle={cardBodyStyle}>
-          {/* 快速操作按钮组 - 仅对AI消息显示 */}
+      <div
+        style={contentWrapStyle}
+        onMouseEnter={handleShowQuickActions}
+        onMouseLeave={handleHideQuickActions}
+      >
+        <Card
+          className={isUser ? 'chat-user-bubble' : 'chat-ai-bubble'}
+          style={cardStyle}
+          bodyStyle={cardBodyStyle}
+        >
           {isAssistant && (
             <div className="quick-actions" style={quickActionsStyle}>
-              {/* 刷新重发按钮 */}
               {onRetry && (
                 <Button
                   icon={<IconRefresh />}
                   type="tertiary"
                   theme="borderless"
                   size="small"
-                  onClick={() => onRetry(message)}
+                  onClick={handleRetry}
                   style={quickBtnBaseStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      'var(--semi-color-success-light-default)'
-                    e.currentTarget.style.color = 'var(--semi-color-success)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--semi-color-bg-0)'
-                    e.currentTarget.style.color = 'var(--semi-color-text-1)'
-                  }}
+                  onMouseEnter={handleRefreshMouseEnter}
+                  onMouseLeave={handleQuickActionMouseLeave}
                 />
               )}
 
-              {/* 快速复制按钮 */}
               <Button
                 icon={<IconCopy />}
                 type="tertiary"
                 theme="borderless"
                 size="small"
                 onClick={handleCopy}
-                style={{
-                  borderRadius: '6px',
-                  padding: '4px',
-                  width: '28px',
-                  height: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'var(--semi-color-bg-0)',
-                  color: 'var(--semi-color-text-1)',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--semi-color-primary-light-default)'
-                  e.currentTarget.style.color = 'var(--semi-color-primary)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--semi-color-bg-0)'
-                  e.currentTarget.style.color = 'var(--semi-color-text-1)'
-                }}
+                style={quickBtnBaseStyle}
+                onMouseEnter={handleCopyMouseEnter}
+                onMouseLeave={handleQuickActionMouseLeave}
               />
+
+              {onDelete && (
+                <Button
+                  icon={<IconDelete />}
+                  type="danger"
+                  theme="borderless"
+                  size="small"
+                  onClick={handleDelete}
+                  style={quickBtnBaseStyle}
+                  onMouseEnter={handleDeleteMouseEnter}
+                  onMouseLeave={handleQuickActionMouseLeave}
+                />
+              )}
             </div>
           )}
 
@@ -338,7 +424,7 @@ const MessageBubbleCustom: React.FC<{
               {message.content}
             </div>
           ) : (
-            <MessageRenderer
+            <LazyMessageRendererWithFallback
               key={`${message.id}-${message.status === 'complete' ? 'final' : 'live'}`}
               className="chat-bubble-content chat-ai-message-content"
               content={
@@ -350,19 +436,10 @@ const MessageBubbleCustom: React.FC<{
             />
           )}
 
-          {getStatusIndicator()}
+          {statusIndicator}
         </Card>
 
-        {/* 时间和操作 */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: isUser ? 'flex-end' : 'flex-start',
-            marginTop: '8px',
-            gap: '12px'
-          }}
-        >
+        <div style={timeActionsStyle}>
           <Text size="small" type="tertiary">
             {new Date(message.createdAt).toLocaleTimeString()}
           </Text>
@@ -373,19 +450,9 @@ const MessageBubbleCustom: React.FC<{
               type="tertiary"
               theme="borderless"
               size="small"
-              style={{
-                opacity: 0.5,
-                transition: 'all 0.2s',
-                borderRadius: '8px'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '1'
-                e.currentTarget.style.background = 'var(--semi-color-fill-0)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.5'
-                e.currentTarget.style.background = 'transparent'
-              }}
+              style={moreBtnStyle}
+              onMouseEnter={handleMoreMouseEnter}
+              onMouseLeave={handleMoreMouseLeave}
             />
           </Dropdown>
         </div>
@@ -401,6 +468,26 @@ const MessageBubbleCustom: React.FC<{
   )
 }
 
+const areMessageBubblePropsEqual = (
+  prev: MessageBubbleCustomProps,
+  next: MessageBubbleCustomProps
+) => {
+  if (prev.isLast !== next.isLast) return false
+  if (prev.aiModelInitial !== next.aiModelInitial) return false
+  if (prev.translations !== next.translations) return false
+
+  const prevMessage = prev.message
+  const nextMessage = next.message
+
+  return (
+    prevMessage.id === nextMessage.id &&
+    prevMessage.status === nextMessage.status &&
+    prevMessage.content === nextMessage.content &&
+    prevMessage.role === nextMessage.role
+  )
+}
+
+const MessageBubbleCustom = React.memo(MessageBubbleCustomComponent, areMessageBubblePropsEqual)
 const ChatInterface: React.FC = () => {
   const t = getTranslations()
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -410,6 +497,13 @@ const ChatInterface: React.FC = () => {
   const [aiApiConfigs, setAiApiConfigs] = useState<AiApiConfig[]>([])
   const [selectedAiConfig, setSelectedAiConfig] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
+
+  const selectedAiModelInitial = useMemo(() => {
+    if (!selectedAiConfig) return 'AI'
+    const aiConfig = aiApiConfigs.find((config) => config.id === selectedAiConfig)
+    const initial = aiConfig?.name?.trim()?.charAt(0)
+    return initial ? initial.toUpperCase() : 'AI'
+  }, [aiApiConfigs, selectedAiConfig])
 
   // 对话历史相关状态
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -1335,8 +1429,8 @@ const ChatInterface: React.FC = () => {
                   onRetry={handleRetryMessage}
                   onDelete={handleDeleteMessage}
                   isLast={index === messages.length - 1}
-                  selectedAiConfig={selectedAiConfig}
-                  aiApiConfigs={aiApiConfigs}
+                  aiModelInitial={selectedAiModelInitial}
+                  translations={t}
                 />
               ))}
             </div>
