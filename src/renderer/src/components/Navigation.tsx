@@ -1206,343 +1206,340 @@ const Navigation: React.FC<NavigationProps> = ({
     )
   }
 
+  const showInitialSkeleton = isLoading && navItems.length === 0
+
   return (
     <div style={rootWrapStyle}>
-      {isLoading ? (
-        <NavigationSkeleton />
-      ) : (
-        <>
-          {/* 主导航栏 */}
-          <Nav
-            style={mainNavStyle}
-            selectedKeys={selectedKeys}
-            collapsed={collapsed}
-            isCollapsed={collapsed}
-            items={processedNavItems}
-          />
+      {/* 主导航栏 */}
+      <Nav
+        style={mainNavStyle}
+        selectedKeys={selectedKeys}
+        collapsed={collapsed}
+        isCollapsed={collapsed}
+        items={processedNavItems}
+      />
 
-          {/* 二级导航栏 */}
-          {showSecondaryNav && (
-            <div
-              className="secondary-nav"
-              style={secondaryNavStyle}
-              ref={secondaryNavRef}
-              onContextMenu={handleEmptyAreaContextMenu}
-            >
+      {/* 二级导航栏 */}
+      {showSecondaryNav && (
+        <div
+          className="secondary-nav"
+          style={secondaryNavStyle}
+          ref={secondaryNavRef}
+          onContextMenu={handleEmptyAreaContextMenu}
+        >
+          <div
+            className="empty-area"
+            style={{
+              padding: '8px 8px 8px 4px',
+              overflow: 'auto',
+              width: '100%',
+              height: '100%',
+              userSelect: 'none', // 禁止选中文本
+              WebkitUserSelect: 'none', // Safari支持
+              MozUserSelect: 'none', // Firefox支持
+              msUserSelect: 'none' // IE支持
+            }}
+            onClick={hideContextMenu} // 点击空白处隐藏右键菜单
+          >
+            {showSecondaryNav && (
               <div
-                className="empty-area"
                 style={{
-                  padding: '8px 8px 8px 4px',
-                  overflow: 'auto',
-                  width: '100%',
-                  height: '100%',
-                  userSelect: 'none', // 禁止选中文本
-                  WebkitUserSelect: 'none', // Safari支持
-                  MozUserSelect: 'none', // Firefox支持
-                  msUserSelect: 'none' // IE支持
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
                 }}
-                onClick={hideContextMenu} // 点击空白处隐藏右键菜单
+              ></div>
+            )}
+
+            {showInitialSkeleton ? (
+              <NavigationSkeleton style={skeletonStyle} itemCount={10} />
+            ) : (
+              <div
+                className="secondary-nav-tree"
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  padding: '0px 0px 0px 0px'
+                }}
               >
-                {showSecondaryNav && (
+                <Tree
+                  treeData={convertNavItemsToTreeData(navItems)}
+                  value={selectedKeys}
+                  onSelect={(val) => handleTreeSelect(val as string)}
+                  onExpand={handleTreeExpand}
+                  expandedKeys={searchText ? filteredExpandedKeys : expandedKeys}
+                  renderLabel={renderTreeLabel}
+                  expandAction={false}
+                  emptyContent={
+                    <Typography.Text type="tertiary" className="empty-area">
+                      {t('navigation.emptyNotes')}
+                    </Typography.Text>
+                  }
+                  style={treeStyle}
+                  filterTreeNode={true}
+                  showFilteredOnly={showFilteredOnly}
+                  searchRender={renderSearch}
+                  onSearch={handleSearch}
+                  showLine={true}
+                  motion={false}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 右键菜单 - 使用绝对定位 */}
+          {contextMenu.visible && (
+            <div className="context-menu" style={contextMenuStyle}>
+              {contextMenu.isFolder && (
+                <>
                   <div
+                    className="context-menu-item"
                     style={{
-                      marginBottom: '8px',
+                      padding: '8px 12px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between'
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
                     }}
-                  ></div>
-                )}
-
-                {isLoading ? (
-                  <NavigationSkeleton style={skeletonStyle} itemCount={10} />
-                ) : (
+                    onClick={handleCreateNoteInFolder}
+                  >
+                    <IconPlus
+                      style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                    />
+                    <Typography.Text>{t('navigation.newNote')}</Typography.Text>
+                  </div>
                   <div
-                    className="secondary-nav-tree"
+                    className="context-menu-item"
                     style={{
-                      flex: 1,
-                      overflowY: 'auto',
-                      overflowX: 'hidden',
-                      padding: '0px 0px 0px 0px'
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={handleCreateSubFolder}
+                  >
+                    <IconFolder
+                      style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
+                    />
+                    <Typography.Text>{t('navigation.newSubFolder')}</Typography.Text>
+                  </div>
+                  <div className="context-menu-divider" />
+                  <div
+                    className="context-menu-item"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={handleRenameFolder}
+                  >
+                    <IconEdit
+                      style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
+                    />
+                    <Typography.Text>{t('navigation.renameFolder')}</Typography.Text>
+                  </div>
+                  <div className="context-menu-divider" />
+                  <div
+                    className="context-menu-item context-menu-item-danger"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={(): void => {
+                      // 从itemKey中提取文件夹名称
+                      const folderName = contextMenu.itemKey.split(':')[1]
+                      openConfirmDialog(
+                        t('navigation.confirmDeleteFolder', { name: folderName }),
+                        t('navigation.confirmDeleteFolder', { name: folderName }),
+                        handleDelete,
+                        'danger'
+                      )
+                      hideContextMenu()
                     }}
                   >
-                    <Tree
-                      treeData={convertNavItemsToTreeData(navItems)}
-                      value={selectedKeys}
-                      onSelect={(val) => handleTreeSelect(val as string)}
-                      onExpand={handleTreeExpand}
-                      expandedKeys={searchText ? filteredExpandedKeys : expandedKeys}
-                      renderLabel={renderTreeLabel}
-                      expandAction={false}
-                      emptyContent={
-                        <Typography.Text type="tertiary" className="empty-area">
-                          {t('navigation.emptyNotes')}
-                        </Typography.Text>
-                      }
-                      style={treeStyle}
-                      filterTreeNode={true}
-                      showFilteredOnly={showFilteredOnly}
-                      searchRender={renderSearch}
-                      onSearch={handleSearch}
-                      showLine={true}
-                      motion={false}
+                    <IconDelete
+                      style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
                     />
+                    <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
+                      {t('navigation.deleteFolder')}
+                    </Typography.Text>
                   </div>
-                )}
-              </div>
-
-              {/* 右键菜单 - 使用绝对定位 */}
-              {contextMenu.visible && (
-                <div className="context-menu" style={contextMenuStyle}>
-                  {contextMenu.isFolder && (
-                    <>
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={handleCreateNoteInFolder}
-                      >
-                        <IconPlus
-                          style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
-                        />
-                        <Typography.Text>{t('navigation.newNote')}</Typography.Text>
-                      </div>
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={handleCreateSubFolder}
-                      >
-                        <IconFolder
-                          style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
-                        />
-                        <Typography.Text>{t('navigation.newSubFolder')}</Typography.Text>
-                      </div>
-                      <div className="context-menu-divider" />
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={handleRenameFolder}
-                      >
-                        <IconEdit
-                          style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
-                        />
-                        <Typography.Text>{t('navigation.renameFolder')}</Typography.Text>
-                      </div>
-                      <div className="context-menu-divider" />
-                      <div
-                        className="context-menu-item context-menu-item-danger"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={(): void => {
-                          // 从itemKey中提取文件夹名称
-                          const folderName = contextMenu.itemKey.split(':')[1]
-                          openConfirmDialog(
-                            t('navigation.confirmDeleteFolder', { name: folderName }),
-                            t('navigation.confirmDeleteFolder', { name: folderName }),
-                            handleDelete,
-                            'danger'
-                          )
-                          hideContextMenu()
-                        }}
-                      >
-                        <IconDelete
-                          style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
-                        />
-                        <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
-                          {t('navigation.deleteFolder')}
-                        </Typography.Text>
-                      </div>
-                    </>
-                  )}
-
-                  {!contextMenu.isFolder && !contextMenu.isEmpty && (
-                    <>
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={handleRenameFile}
-                      >
-                        <IconEdit
-                          style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
-                        />
-                        <Typography.Text>{t('navigation.renameNote')}</Typography.Text>
-                      </div>
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={handleCopyFileName}
-                      >
-                        <IconCopy style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
-                        <Typography.Text>{t('navigation.copyDocName')}</Typography.Text>
-                      </div>
-                      <div className="context-menu-divider" />
-                      <div
-                        className="context-menu-item context-menu-item-danger"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={(): void => {
-                          // 从itemKey中提取笔记名称 (format: file:文件夹:文件名)
-                          const parts = contextMenu.itemKey.split(':')
-                          if (parts.length === 3) {
-                            const fileName = parts[2].replace('.md', '')
-                            openConfirmDialog(
-                              t('navigation.confirmDeleteNote', { name: fileName }),
-                              t('navigation.confirmDeleteNote', { name: fileName }),
-                              handleDelete,
-                              'danger'
-                            )
-                          } else {
-                            openConfirmDialog(
-                              t('navigation.deleteNote'),
-                              t('navigation.confirmDeleteNote'),
-                              handleDelete,
-                              'danger'
-                            )
-                          }
-                          hideContextMenu()
-                        }}
-                      >
-                        <IconDelete
-                          style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
-                        />
-                        <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
-                          {t('navigation.deleteNote')}
-                        </Typography.Text>
-                      </div>
-                    </>
-                  )}
-
-                  {contextMenu.isEmpty && (
-                    <>
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={handleCreateFolder}
-                      >
-                        <IconFolder
-                          style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
-                        />
-                        <Typography.Text>{t('navigation.newFolder')}</Typography.Text>
-                      </div>
-                      <div className="context-menu-divider" />
-                      <div
-                        className="context-menu-item"
-                        style={{
-                          padding: '8px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          transition: 'background 0.3s'
-                        }}
-                        onClick={() => handleCreateNote()}
-                      >
-                        <IconFile
-                          style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
-                        />
-                        <Typography.Text>{t('navigation.newNote')}</Typography.Text>
-                      </div>
-                    </>
-                  )}
-                </div>
+                </>
               )}
 
-              {/* 点击其他区域关闭右键菜单 */}
-              {contextMenu.visible && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    zIndex: 999
-                  }}
-                  onClick={hideContextMenu}
-                />
+              {!contextMenu.isFolder && !contextMenu.isEmpty && (
+                <>
+                  <div
+                    className="context-menu-item"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={handleRenameFile}
+                  >
+                    <IconEdit
+                      style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
+                    />
+                    <Typography.Text>{t('navigation.renameNote')}</Typography.Text>
+                  </div>
+                  <div
+                    className="context-menu-item"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={handleCopyFileName}
+                  >
+                    <IconCopy style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
+                    <Typography.Text>{t('navigation.copyDocName')}</Typography.Text>
+                  </div>
+                  <div className="context-menu-divider" />
+                  <div
+                    className="context-menu-item context-menu-item-danger"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={(): void => {
+                      // 从itemKey中提取笔记名称 (format: file:文件夹:文件名)
+                      const parts = contextMenu.itemKey.split(':')
+                      if (parts.length === 3) {
+                        const fileName = parts[2].replace('.md', '')
+                        openConfirmDialog(
+                          t('navigation.confirmDeleteNote', { name: fileName }),
+                          t('navigation.confirmDeleteNote', { name: fileName }),
+                          handleDelete,
+                          'danger'
+                        )
+                      } else {
+                        openConfirmDialog(
+                          t('navigation.deleteNote'),
+                          t('navigation.confirmDeleteNote'),
+                          handleDelete,
+                          'danger'
+                        )
+                      }
+                      hideContextMenu()
+                    }}
+                  >
+                    <IconDelete
+                      style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
+                    />
+                    <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
+                      {t('navigation.deleteNote')}
+                    </Typography.Text>
+                  </div>
+                </>
               )}
 
-              <div
-                className="resize-handle"
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  width: '5px',
-                  height: '100%',
-                  cursor: 'col-resize',
-                  background: 'transparent',
-                  zIndex: 10
-                }}
-                onMouseDown={(e): void => {
-                  e.preventDefault()
-                  const startX = e.clientX
-                  const startWidth = secondaryNavWidth
-
-                  const onMouseMove = (moveEvent: MouseEvent): void => {
-                    const newWidth = startWidth + moveEvent.clientX - startX
-                    if (newWidth >= 150 && newWidth <= 400) {
-                      setSecondaryNavWidth(newWidth)
-                    }
-                  }
-
-                  const onMouseUp = (): void => {
-                    document.removeEventListener('mousemove', onMouseMove)
-                    document.removeEventListener('mouseup', onMouseUp)
-                  }
-
-                  document.addEventListener('mousemove', onMouseMove)
-                  document.addEventListener('mouseup', onMouseUp)
-                }}
-              />
+              {contextMenu.isEmpty && (
+                <>
+                  <div
+                    className="context-menu-item"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={handleCreateFolder}
+                  >
+                    <IconFolder
+                      style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
+                    />
+                    <Typography.Text>{t('navigation.newFolder')}</Typography.Text>
+                  </div>
+                  <div className="context-menu-divider" />
+                  <div
+                    className="context-menu-item"
+                    style={{
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.3s'
+                    }}
+                    onClick={() => handleCreateNote()}
+                  >
+                    <IconFile
+                      style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
+                    />
+                    <Typography.Text>{t('navigation.newNote')}</Typography.Text>
+                  </div>
+                </>
+              )}
             </div>
           )}
-        </>
+
+          {/* 点击其他区域关闭右键菜单 */}
+          {contextMenu.visible && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                zIndex: 999
+              }}
+              onClick={hideContextMenu}
+            />
+          )}
+
+          <div
+            className="resize-handle"
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              width: '5px',
+              height: '100%',
+              cursor: 'col-resize',
+              background: 'transparent',
+              zIndex: 10
+            }}
+            onMouseDown={(e): void => {
+              e.preventDefault()
+              const startX = e.clientX
+              const startWidth = secondaryNavWidth
+
+              const onMouseMove = (moveEvent: MouseEvent): void => {
+                const newWidth = startWidth + moveEvent.clientX - startX
+                if (newWidth >= 150 && newWidth <= 400) {
+                  setSecondaryNavWidth(newWidth)
+                }
+              }
+
+              const onMouseUp = (): void => {
+                document.removeEventListener('mousemove', onMouseMove)
+                document.removeEventListener('mouseup', onMouseUp)
+              }
+
+              document.addEventListener('mousemove', onMouseMove)
+              document.addEventListener('mouseup', onMouseUp)
+            }}
+          />
+        </div>
       )}
+
 
       {/* 确认对话框 */}
       <ConfirmDialog
