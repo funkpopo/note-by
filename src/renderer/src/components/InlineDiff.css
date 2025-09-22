@@ -2,8 +2,10 @@
 
 .inline-diff-wrapper {
   display: inline-block;
-  margin: 4px 0;
-  max-width: 100%;
+  /* 垂直保持 4px，水平使用变量 gutter 以统一来源 */
+  margin: 4px var(--inline-diff-gutter, 32px);
+  /* 始终与编辑页左右边缘保持距离（两侧各留 gutter） */
+  max-width: calc(100% - 2 * var(--inline-diff-gutter, 32px));
   user-select: none; /* 防止文本选择 */
 }
 
@@ -13,8 +15,11 @@
   background: var(--semi-color-bg-0);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  min-width: 180px;
-  max-width: 500px;
+  /* 在极窄容器下，最小宽度也遵循安全间距 */
+  min-width: min(180px, calc(100% - 2 * var(--inline-diff-gutter, 32px)));
+  /* 自适应宽度（外层 wrapper 已处理与边缘的安全距离） */
+  max-width: min(500px, 100%);
+  box-sizing: border-box;
   user-select: none;
   cursor: default;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -46,12 +51,13 @@
   font-size: 14px;
   line-height: 1.5;
   word-wrap: break-word;
+  overflow-wrap: anywhere; /* 防止极长单词导致溢出 */
   white-space: pre-wrap;
   max-height: 300px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--semi-color-border) transparent;
-  padding-bottom: 8px; /* Add padding to prevent overlap with buttons */
+  padding-bottom: max(8px, var(--inline-diff-actions-offset, 8px)); /* Leave room for actions */
   transition: padding-right 0.2s ease;
 }
 
@@ -111,10 +117,16 @@
 
 .inline-diff-actions {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: var(
+    --inline-diff-actions-offset,
+    max(8px, calc(var(--inline-diff-gutter, 32px) / 2))
+  );
+  right: var(
+    --inline-diff-actions-offset,
+    max(8px, calc(var(--inline-diff-gutter, 32px) / 2))
+  );
   display: flex;
-  gap: 8px;
+  gap: var(--inline-diff-actions-gap, 8px);
   opacity: 0;
   visibility: hidden;
   transition:
@@ -164,9 +176,11 @@
   border-color: var(--semi-color-danger);
 }
 
-/* Ensure content doesn't overlap with buttons */
+/* Ensure content doesn't overlap with buttons (variable-driven) */
 .inline-diff.hovered .inline-diff-text {
-  padding-right: 80px; /* Make room for buttons when visible */
+  padding-right: calc(
+    var(--inline-diff-actions-size, 80px) + var(--inline-diff-actions-offset, 8px)
+  );
 }
 
 /* 悬停效果 */
@@ -213,9 +227,13 @@
 
 /* 响应式 - Update for better mobile support */
 @media (max-width: 768px) {
+  .inline-diff-wrapper {
+    /* 移动端使用更小的安全间距（两侧各留 gutter） */
+    max-width: calc(100% - 2 * var(--inline-diff-gutter, 24px));
+  }
   .inline-diff {
     max-width: 100%;
-    min-width: 150px;
+    min-width: min(150px, calc(100% - 2 * var(--inline-diff-gutter, 20px)));
     border-radius: 10px;
   }
 
@@ -226,16 +244,38 @@
   .inline-diff-text {
     font-size: 13px;
     max-height: 200px;
-    padding-bottom: 40px; /* More padding on mobile for buttons */
+    /* 根据按钮高度与偏移自适应底部留白，避免遮挡 */
+    padding-bottom: clamp(
+      12px,
+      calc(
+        var(--inline-diff-button-size-mobile, var(--inline-diff-button-size, 28px)) +
+          var(--inline-diff-actions-offset-mobile, 4px)
+      ),
+      calc(
+        var(--inline-diff-actions-size-mobile, 72px) +
+          var(--inline-diff-actions-offset-mobile, 4px)
+      )
+    );
   }
 
   .inline-diff-actions {
-    bottom: 4px;
-    right: 4px;
+    bottom: var(
+      --inline-diff-actions-offset-mobile,
+      max(4px, calc(var(--inline-diff-gutter, 20px) / 2))
+    );
+    right: var(
+      --inline-diff-actions-offset-mobile,
+      max(4px, calc(var(--inline-diff-gutter, 20px) / 2))
+    );
+    /* Show buttons slightly visible on mobile for touch devices */
+    opacity: var(--inline-diff-actions-opacity-mobile, 0.3);
   }
 
-  /* Show buttons slightly visible on mobile for touch devices */
-  .inline-diff-actions {
-    opacity: 0.3; /* Slightly visible on mobile */
+  /* Reserve space for actions on hover (mobile) */
+  .inline-diff.hovered .inline-diff-text {
+    padding-right: calc(
+      var(--inline-diff-actions-size-mobile, 72px) +
+        var(--inline-diff-actions-offset-mobile, 4px)
+    );
   }
 }

@@ -396,6 +396,31 @@
 }
 
 .ProseMirror {
+  /* Inline Diff 安全边距默认值（可被媒体查询/主题覆盖） */
+  --inline-diff-gutter: 32px;
+  /* Inline Diff 操作按钮偏移（桌面） - 随 gutter 自适应 */
+  --inline-diff-actions-offset: max(8px, calc(var(--inline-diff-gutter, 32px) / 2));
+  /* Inline Diff 操作按钮偏移（移动端） - 随 gutter 自适应 */
+  --inline-diff-actions-offset-mobile: max(4px, calc(var(--inline-diff-gutter, 20px) / 2));
+  /* Inline Diff 操作按钮在移动端的默认可见度 */
+  --inline-diff-actions-opacity-mobile: 0.3;
+  /* Inline Diff 按钮和间距（可按需覆盖） */
+  --inline-diff-actions-gap: 8px;                /* 按钮之间的间距 */
+  --inline-diff-button-count: 2;                 /* 按钮数量（默认2个：取消/确认） */
+  --inline-diff-button-size: 28px;               /* 单个按钮宽度（含边框） */
+  --inline-diff-button-count-mobile: var(--inline-diff-button-count, 2);
+  --inline-diff-button-size-mobile: var(--inline-diff-button-size, 28px);
+  /* 根据按钮数量与尺寸推导操作区总宽度（避免手动维护） */
+  --inline-diff-actions-size: calc(
+    (var(--inline-diff-button-count, 2) * var(--inline-diff-button-size, 28px)) +
+    ((var(--inline-diff-button-count, 2) - 1) * var(--inline-diff-actions-gap, 8px))
+  );
+  --inline-diff-actions-size-mobile: calc(
+    (var(--inline-diff-button-count-mobile, var(--inline-diff-button-count, 2)) *
+      var(--inline-diff-button-size-mobile, var(--inline-diff-button-size, 28px))) +
+    ((var(--inline-diff-button-count-mobile, var(--inline-diff-button-count, 2)) - 1) *
+      var(--inline-diff-actions-gap, 8px))
+  );
   padding: 24px;
   outline: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -405,6 +430,38 @@
   min-height: 300px;
   background: var(--semi-color-bg-0);
   overflow-x: auto;
+}
+
+/* 主题适配：暗色模式可使用略小的安全边距 */
+[theme-mode='dark'] .ProseMirror {
+  --inline-diff-gutter: 28px;
+}
+
+/* 根据视口宽度动态调整安全边距（优先级在主题默认之后） */
+@media (max-width: 1200px) {
+  .ProseMirror {
+    --inline-diff-gutter: 28px;
+  }
+}
+
+@media (max-width: 992px) {
+  .ProseMirror {
+    --inline-diff-gutter: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ProseMirror {
+    --inline-diff-gutter: 20px;
+    --inline-diff-actions-opacity-mobile: 0.33;
+  }
+}
+
+@media (max-width: 480px) {
+  .ProseMirror {
+    --inline-diff-gutter: 16px;
+    --inline-diff-actions-opacity-mobile: 0.35;
+  }
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
