@@ -196,6 +196,7 @@
   padding: 0;
   z-index: 1000;
   min-width: 200px;
+  box-sizing: border-box;
 }
 
 .bubble-menu .semi-button-group {
@@ -234,6 +235,22 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* AI BubbleMenu: 自适应宽度并避免触碰边缘 */
+.bubble-menu.ai-bubble-menu {
+  /* 让内容决定宽度，但不超过视口（兜底） */
+  max-width: min(720px, calc(100vw - 32px));
+  width: max-content;
+  min-width: 200px;
+  overflow: hidden;
+}
+
+/* 内容文本换行，避免横向溢出 */
+.bubble-menu.ai-bubble-menu,
+.bubble-menu.ai-bubble-menu .ai-streaming-box {
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .ai-stream-overlay.streaming .ai-stream-header {

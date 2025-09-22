@@ -266,6 +266,7 @@ export const TextBubbleMenu: React.FC<{
   const [bubbleMenuPosition, setBubbleMenuPosition] = useState<{
     top: number
     left: number
+    maxWidth?: number
   } | null>(null)
   const [preservedSelection, setPreservedSelection] = useState<{ from: number; to: number } | null>(
     null
@@ -460,7 +461,7 @@ export const TextBubbleMenu: React.FC<{
     { key: 'translate_ru', label: '翻译为俄文', targetLang: '俄文' }
   ]
 
-  // 捕获bubble menu位置
+  // 捕获bubble menu位置，并限制在编辑区域边界内，同时计算可用最大宽度
   const captureBubbleMenuPosition = useCallback(() => {
     try {
       // 获取当前bubble menu的位置
@@ -468,38 +469,60 @@ export const TextBubbleMenu: React.FC<{
       if (bubbleMenuElement) {
         const rect = bubbleMenuElement.getBoundingClientRect()
 
-        // 确保位置在视口范围内
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
-        const menuWidth = 200 // AI加载菜单的最大宽度
-        const menuHeight = 50 // AI加载菜单的大概高度
+        // 编辑器容器（优先 editor-wrapper，其次 tiptap-editor）
+        const container =
+          document.querySelector('.editor-wrapper') ||
+          document.querySelector('.tiptap-editor') ||
+          document.body
+
+        const containerRect = container?.getBoundingClientRect?.() ?? {
+          left: 0,
+          right: window.innerWidth,
+          top: 0,
+          bottom: window.innerHeight,
+          width: window.innerWidth,
+          height: window.innerHeight
+        }
+
+        // 与边缘的最小间距（px）
+        const EDGE_GAP = 16
+
+        // 计算AI菜单允许的最大宽度：不超过容器宽度 - 2*EDGE_GAP，同时设上限
+        const computedMaxWidth = Math.max(
+          240,
+          Math.min(720, (containerRect as DOMRect).width - EDGE_GAP * 2, window.innerWidth - EDGE_GAP * 2)
+        )
+
+        // 估算高度（在渲染前无法精确获取，给个保守值）
+        const estimatedHeight = 160
 
         let adjustedTop = rect.top
         let adjustedLeft = rect.left
 
-        // 防止菜单超出右边界
-        if (adjustedLeft + menuWidth > viewportWidth) {
-          adjustedLeft = viewportWidth - menuWidth - 10
+        // 水平方向：限制在容器内并预留 EDGE_GAP
+        const containerLeft = (containerRect as DOMRect).left + EDGE_GAP
+        const containerRight = (containerRect as DOMRect).right - EDGE_GAP
+        if (adjustedLeft + computedMaxWidth > containerRight) {
+          adjustedLeft = containerRight - computedMaxWidth
+        }
+        if (adjustedLeft < containerLeft) {
+          adjustedLeft = containerLeft
         }
 
-        // 防止菜单超出左边界
-        if (adjustedLeft < 10) {
-          adjustedLeft = 10
-        }
-
-        // 防止菜单超出上边界
-        if (adjustedTop < 10) {
+        // 垂直方向：尽量靠近原始位置，必要时翻转到下方/上方
+        const containerTop = (containerRect as DOMRect).top + EDGE_GAP
+        const containerBottom = (containerRect as DOMRect).bottom - EDGE_GAP
+        if (adjustedTop < containerTop) {
           adjustedTop = rect.bottom + 5
         }
-
-        // 防止菜单超出下边界
-        if (adjustedTop + menuHeight > viewportHeight) {
-          adjustedTop = Math.max(10, rect.top - menuHeight - 5)
+        if (adjustedTop + estimatedHeight > containerBottom) {
+          adjustedTop = Math.max(containerTop, rect.top - estimatedHeight - 5)
         }
 
         setBubbleMenuPosition({
           top: adjustedTop,
-          left: adjustedLeft
+          left: adjustedLeft,
+          maxWidth: computedMaxWidth
         })
 
         // Captured bubble menu position
@@ -698,7 +721,9 @@ export const TextBubbleMenu: React.FC<{
                   top: bubbleMenuPosition.top,
                   left: bubbleMenuPosition.left,
                   zIndex: 10000,
-                  maxWidth: 480
+                  // 宽度自适应，但限制在编辑区域内并与边缘保留间距
+                  maxWidth: bubbleMenuPosition.maxWidth,
+                  width: 'max-content'
                 }
               : undefined
           }
