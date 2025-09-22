@@ -854,12 +854,12 @@
 
 /* Dark theme loading text enhancement */
 [theme-mode='dark'] .ai-loading-text {
-  color: var(--semi-color-text-0);
+  color: #fff; /* force white for maximum contrast in dark */
 }
 
 /* Light theme loading text enhancement */
 [theme-mode='light'] .ai-loading-text {
-  color: var(--semi-color-text-0);
+  color: #000; /* force black for maximum contrast in light */
 }
 
 .ai-loading-text::after {
@@ -869,6 +869,17 @@
   background: var(--semi-color-primary);
   border-radius: 50%;
   animation: aiDotPulse 1.2s infinite;
+}
+
+/* Streaming preview box: ensure high-contrast text */
+.ai-streaming-box {
+  color: var(--semi-color-text-0) !important; /* light: near-black, dark: near-white */
+}
+[theme-mode='dark'] .ai-streaming-box {
+  color: #fff !important; /* enforce white in dark mode */
+}
+[theme-mode='light'] .ai-streaming-box {
+  color: #000 !important; /* enforce black in light mode */
 }
 
 .bubble-menu.ai-bubble-menu .semi-spin {

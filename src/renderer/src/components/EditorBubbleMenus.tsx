@@ -34,6 +34,7 @@ import { smartDiff } from '../utils/diffUtils'
 import CustomDropdown from './CustomDropdown'
 import { IconChevronDown } from './Icons'
 import { uploadImage } from './editorUtils'
+import { stripThinkingForStreaming, processThinkingContent } from '../utils/filterThinking'
 
 // 表格专用 BubbleMenu 组件
 export const TableBubbleMenu: React.FC<{
@@ -269,6 +270,9 @@ export const TextBubbleMenu: React.FC<{
   const [preservedSelection, setPreservedSelection] = useState<{ from: number; to: number } | null>(
     null
   )
+  const [streamingText, setStreamingText] = useState<string>('')
+  const [currentStreamId, setCurrentStreamId] = useState<string | null>(null)
+  const [streamError, setStreamError] = useState<string | null>(null)
 
   // 内存优化：使用 useCallback 防止不必要的重新渲染
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -344,9 +348,15 @@ export const TextBubbleMenu: React.FC<{
     return apiConfigs.find((config) => config.id === selectedConfigId) || null
   }, [apiConfigs, selectedConfigId])
 
-  // 调用AI API - 内存优化版本
-  const callAI = useCallback(
-    async (prompt: string, selectedText: string): Promise<string> => {
+  // 调用AI API - 兼容旧逻辑（已被流式逻辑替代，保留空实现以便未来回退/复用）
+
+  // 流式调用AI，并把内容实时渲染到BubbleMenu
+  const streamAI = useCallback(
+    async (
+      prompt: string,
+      selectedText: string,
+      onFinal: (finalText: string) => Promise<void> | void
+    ): Promise<void> => {
       const config = getCurrentConfig()
       if (!config) {
         throw new Error('请先在设置中配置AI API')
@@ -356,35 +366,57 @@ export const TextBubbleMenu: React.FC<{
         throw new Error('API配置不完整，请检查设置')
       }
 
+      setStreamingText('')
+      setStreamError(null)
+
       try {
-        // 确保这是一个await调用
-        const result = await window.api.openai.generateContent({
-          apiKey: config.apiKey,
-          apiUrl: config.apiUrl,
-          modelName: config.modelName,
-          prompt: `${prompt}\n\n${selectedText}`,
-          maxTokens: parseInt(config.maxTokens || '2000')
-        })
+        const result = await window.api.openai.streamGenerateContent(
+          {
+            apiKey: config.apiKey,
+            apiUrl: config.apiUrl,
+            modelName: config.modelName,
+            prompt: `${prompt}\n\n${selectedText}`,
+            maxTokens: parseInt(config.maxTokens || '2000')
+          },
+          {
+            onData: (chunk: string) => {
+              setStreamingText((prev) => prev + stripThinkingForStreaming(chunk))
+            },
+            onDone: async (content: string) => {
+              const { displayText } = processThinkingContent(content || '')
+              await onFinal(displayText.trim())
+            },
+            onError: (error: string) => {
+              setStreamError(error || '未知错误')
+              Toast.error(error || 'AI流式请求失败')
+              setIsLoading(false)
+              setLoadingFeature(null)
+              setBubbleMenuPosition(null)
+              setPreservedSelection(null)
+              setCurrentStreamId(null)
+            }
+          }
+        )
 
-        // 确保result是一个已解析的对象，而不是Promise
-        if (!result || typeof result !== 'object') {
-          throw new Error('API返回格式错误')
+        if (result.success && result.streamId) {
+          setCurrentStreamId(result.streamId)
+        } else if (!result.success) {
+          const err = result.error || '无法启动流式请求'
+          setStreamError(err)
+          Toast.error(err)
+          setIsLoading(false)
+          setLoadingFeature(null)
+          setBubbleMenuPosition(null)
+          setPreservedSelection(null)
         }
-
-        if (!result.success) {
-          throw new Error(result.error || '生成失败')
-        }
-
-        return result.content || ''
       } catch (error) {
-        // 确保错误是可序列化的
-        if (error instanceof Error) {
-          throw error
-        } else if (typeof error === 'string') {
-          throw new Error(error)
-        } else {
-          throw new Error('未知错误')
-        }
+        const msg = error instanceof Error ? error.message : '启动流式请求失败'
+        setStreamError(msg)
+        Toast.error(msg)
+        setIsLoading(false)
+        setLoadingFeature(null)
+        setBubbleMenuPosition(null)
+        setPreservedSelection(null)
       }
     },
     [getCurrentConfig]
@@ -519,51 +551,44 @@ export const TextBubbleMenu: React.FC<{
       setLoadingFeature('translate')
 
       try {
-        const result = await callAI(finalPrompt, selectedText)
-
-        if (result.trim()) {
-          // 计算diff
-          const diffResult = smartDiff(selectedText, result.trim())
-
-          // 在选中位置插入内联diff节点
-          const { from, to } = editor.state.selection
-          editor
-            .chain()
-            .focus()
-            .setTextSelection({ from, to })
-            .deleteSelection()
-            .setInlineDiff({
-              originalText: selectedText,
-              newText: result.trim(),
-              diffResult,
-              feature: { key: 'translate', label: '翻译' }
-            })
-            .run()
-
-          Toast.success('翻译完成')
-        } else {
-          Toast.error('AI返回了空结果')
-        }
+        await streamAI(finalPrompt, selectedText, async (finalText: string) => {
+          if (finalText) {
+            const diffResult = smartDiff(selectedText, finalText)
+            const { from, to } = editor.state.selection
+            editor
+              .chain()
+              .focus()
+              .setTextSelection({ from, to })
+              .deleteSelection()
+              .setInlineDiff({
+                originalText: selectedText,
+                newText: finalText,
+                diffResult,
+                feature: { key: 'translate', label: '翻译' }
+              })
+              .run()
+            Toast.success('翻译完成')
+          } else {
+            Toast.error('AI返回了空结果')
+          }
+          setIsLoading(false)
+          setLoadingFeature(null)
+          setBubbleMenuPosition(null)
+          setPreservedSelection(null)
+          setCurrentStreamId(null)
+        })
       } catch (error) {
         console.error('AI 翻译失败:', error)
-        // 确保错误消息是字符串，而不是Promise或其他对象
-        let errorMessage = '未知错误'
-        if (error instanceof Error) {
-          errorMessage = error.message
-        } else if (typeof error === 'string') {
-          errorMessage = error
-        } else if (error && typeof error === 'object' && 'message' in error) {
-          errorMessage = String(error.message)
-        }
+        const errorMessage = error instanceof Error ? error.message : '未知错误'
         Toast.error(`翻译失败: ${errorMessage}`)
-      } finally {
         setIsLoading(false)
         setLoadingFeature(null)
         setBubbleMenuPosition(null)
         setPreservedSelection(null)
+        setCurrentStreamId(null)
       }
     },
-    [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition]
+    [getSelectedText, apiConfigs, getCurrentConfig, editor, captureBubbleMenuPosition, streamAI]
   )
 
   // 处理AI功能
@@ -594,51 +619,45 @@ export const TextBubbleMenu: React.FC<{
       setLoadingFeature(feature.key)
 
       try {
-        const result = await callAI(feature.prompt, selectedText)
+        await streamAI(feature.prompt, selectedText, async (finalText: string) => {
+          if (finalText) {
+            const diffResult = smartDiff(selectedText, finalText)
+            const { from, to } = editor.state.selection
+            editor
+              .chain()
+              .focus()
+              .setTextSelection({ from, to })
+              .deleteSelection()
+              .setInlineDiff({
+                originalText: selectedText,
+                newText: finalText,
+                diffResult,
+                feature
+              })
+              .run()
+            Toast.success(`${feature.label}完成`)
+          } else {
+            Toast.error('AI返回了空结果')
+          }
 
-        if (result.trim()) {
-          // 计算diff
-          const diffResult = smartDiff(selectedText, result.trim())
-
-          // 在选中位置插入内联diff节点
-          const { from, to } = editor.state.selection
-          editor
-            .chain()
-            .focus()
-            .setTextSelection({ from, to })
-            .deleteSelection()
-            .setInlineDiff({
-              originalText: selectedText,
-              newText: result.trim(),
-              diffResult,
-              feature
-            })
-            .run()
-
-          Toast.success(`${feature.label}完成`)
-        } else {
-          Toast.error('AI返回了空结果')
-        }
+          setIsLoading(false)
+          setLoadingFeature(null)
+          setBubbleMenuPosition(null)
+          setPreservedSelection(null)
+          setCurrentStreamId(null)
+        })
       } catch (error) {
         console.error(`AI ${feature.label} failed:`, error)
-        // 确保错误消息是字符串，而不是Promise或其他对象
-        let errorMessage = '未知错误'
-        if (error instanceof Error) {
-          errorMessage = error.message
-        } else if (typeof error === 'string') {
-          errorMessage = error
-        } else if (error && typeof error === 'object' && 'message' in error) {
-          errorMessage = String(error.message)
-        }
+        const errorMessage = error instanceof Error ? error.message : '未知错误'
         Toast.error(`${feature.label}失败: ${errorMessage}`)
-      } finally {
         setIsLoading(false)
         setLoadingFeature(null)
         setBubbleMenuPosition(null)
         setPreservedSelection(null)
+        setCurrentStreamId(null)
       }
     },
-    [getSelectedText, apiConfigs, getCurrentConfig, callAI, editor, captureBubbleMenuPosition]
+    [getSelectedText, apiConfigs, getCurrentConfig, editor, captureBubbleMenuPosition, streamAI]
   )
 
   if (!editor) return null
@@ -678,31 +697,55 @@ export const TextBubbleMenu: React.FC<{
                   position: 'fixed',
                   top: bubbleMenuPosition.top,
                   left: bubbleMenuPosition.left,
-                  zIndex: 10000
+                  zIndex: 10000,
+                  maxWidth: 480
                 }
               : undefined
           }
         >
-          <div className="ai-loading-content">
-            <div className="ai-loading-text">
+          <div className="ai-loading-content" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="ai-loading-text" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Spin size="small" />
-              AI正在{featureLabel}中
+              <span>AI 正在{featureLabel}...</span>
             </div>
-            <Button
-              size="small"
-              type="danger"
-              theme="borderless"
-              onClick={() => {
-                setIsLoading(false)
-                setLoadingFeature(null)
-                setBubbleMenuPosition(null)
-                setPreservedSelection(null)
-                // 恢复编辑器焦点
-                editor.commands.focus()
+            <div
+              className="ai-streaming-box"
+              style={{
+                maxHeight: 200,
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                fontSize: 13,
+                lineHeight: 1.6,
+                border: '1px solid var(--semi-color-border)',
+                borderRadius: 6,
+                padding: '8px 10px',
+                background: 'var(--semi-color-bg-0)'
               }}
             >
-              停止
-            </Button>
+              {streamingText || (streamError ? `发生错误：${streamError}` : '')}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <Button
+                size="small"
+                type="danger"
+                theme="borderless"
+                onClick={async () => {
+                  try {
+                    if (currentStreamId) {
+                      await window.api.openai.stopStreamGenerate(currentStreamId)
+                    }
+                  } catch {}
+                  setIsLoading(false)
+                  setLoadingFeature(null)
+                  setBubbleMenuPosition(null)
+                  setPreservedSelection(null)
+                  setCurrentStreamId(null)
+                  editor.commands.focus()
+                }}
+              >
+                停止
+              </Button>
+            </div>
           </div>
         </div>
       </BubbleMenu>
