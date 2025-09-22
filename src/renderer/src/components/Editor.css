@@ -218,6 +218,87 @@
   padding: 4px;
 }
 
+/* AI Streaming Overlay */
+.ai-stream-overlay {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  max-width: min(720px, 50vw);
+  min-width: 320px;
+  max-height: 40vh;
+  z-index: 9999;
+  background: var(--semi-color-bg-2);
+  border: 1px solid var(--semi-color-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-stream-overlay.streaming .ai-stream-header {
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+.ai-stream-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--semi-color-bg-1);
+}
+
+.ai-stream-title {
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-stream-model {
+  font-weight: 500;
+  color: var(--semi-color-text-2);
+  font-size: 12px;
+}
+
+.ai-stream-cancel {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--semi-color-text-2);
+  cursor: pointer;
+}
+
+.ai-stream-body {
+  padding: 12px;
+  overflow: auto;
+}
+
+.ai-stream-text {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-stream-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--semi-color-border);
+  border-top-color: var(--semi-color-primary);
+  animation: ai-rotate 1s linear infinite;
+  margin: 8px;
+}
+
+@keyframes ai-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Bubble Menu 分隔符 */
 .bubble-menu-divider {
   width: 1px;

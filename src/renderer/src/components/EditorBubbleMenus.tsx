@@ -284,7 +284,7 @@ export const TextBubbleMenu: React.FC<{
         }
       }
     } catch {
-      console.error('Failed to load API configs:', error)
+      console.error('Failed to load API configs:', Error)
     }
   }, [selectedConfigId])
 
@@ -376,7 +376,7 @@ export const TextBubbleMenu: React.FC<{
         }
 
         return result.content || ''
-      } catch {
+      } catch (error) {
         // 确保错误是可序列化的
         if (error instanceof Error) {
           throw error
@@ -475,7 +475,7 @@ export const TextBubbleMenu: React.FC<{
         // Text bubble menu element not found
       }
     } catch {
-      console.error('Error capturing bubble menu position:', error)
+      console.error('Error capturing bubble menu position:', Error)
       setBubbleMenuPosition(null)
     }
   }, [])
@@ -544,7 +544,7 @@ export const TextBubbleMenu: React.FC<{
         } else {
           Toast.error('AI返回了空结果')
         }
-      } catch {
+      } catch (error) {
         console.error('AI 翻译失败:', error)
         // 确保错误消息是字符串，而不是Promise或其他对象
         let errorMessage = '未知错误'
@@ -619,7 +619,7 @@ export const TextBubbleMenu: React.FC<{
         } else {
           Toast.error('AI返回了空结果')
         }
-      } catch {
+      } catch (error) {
         console.error(`AI ${feature.label} failed:`, error)
         // 确保错误消息是字符串，而不是Promise或其他对象
         let errorMessage = '未知错误'
@@ -982,7 +982,7 @@ export const TextBubbleMenu: React.FC<{
                     const url = await uploadImage(file, currentFolder, currentFile)
                     editor.chain().focus().setImage({ src: url }).run()
                     Toast.success('图片上传成功')
-                  } catch {
+                  } catch (error) {
                     Toast.error(error instanceof Error ? error.message : '图片上传失败')
                   }
                 }

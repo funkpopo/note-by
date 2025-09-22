@@ -48,6 +48,20 @@ export interface PerformanceEvent {
 type PerformanceEventListener = (event: PerformanceEvent) => void
 
 class PerformanceMonitor {
+  /**
+   * 记录 AI 流式输出事件
+   */
+  public logAiStreamingEvent(
+    stage: 'start' | 'update' | 'complete' | 'error' | 'cancel',
+    payload: { source: 'chat' | 'editor'; model?: string; bytes?: number; tokens?: number; note?: string }
+  ): void {
+    this.emitEvent({
+      type: 'user',
+      data: { category: 'ai-stream', stage, ...payload },
+      timestamp: Date.now(),
+      source: 'AIOverlay'
+    })
+  }
   private static instance: PerformanceMonitor | null = null
   private metrics: PerformanceMetrics
   private listeners: PerformanceEventListener[] = []

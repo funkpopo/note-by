@@ -24,6 +24,7 @@ import SlashMenu, { getSuggestionItems } from './SlashMenu'
 import tippy from 'tippy.js'
 import { IconEdit } from '@douyinfe/semi-icons'
 import { EditorHeader } from './EditorHeader'
+import { onEditorFinalized } from '../utils/PostRenderTriggers'
 import { TableBubbleMenu, TextBubbleMenu } from './EditorBubbleMenus'
 import { uploadImage } from './editorUtils'
 import {
@@ -402,6 +403,8 @@ const Editor: React.FC<EditorProps> = ({
             Toast.success(`文档已保存`)
           }
           onFileChanged?.()
+          // Trigger tag refresh and analysis invalidation after a finalized save (debounced)
+          try { onEditorFinalized() } catch {}
         } else {
           Toast.error(`保存失败: ${result.error || '未知错误'}`)
         }

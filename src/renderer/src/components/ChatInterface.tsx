@@ -29,6 +29,8 @@ import ChatHistorySidebar from './ChatHistorySidebar'
 import { ChatSkeleton } from './Skeleton'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
+import { useStreamingOverlay } from './StreamingOverlayContext'
+import { performanceMonitor } from '../utils/PerformanceMonitor'
 
 const LazyMessageRendererWithFallback = withLazyLoad(LazyMessageRenderer, SmallComponentLoader)
 
@@ -490,6 +492,7 @@ const areMessageBubblePropsEqual = (
 const MessageBubbleCustom = React.memo(MessageBubbleCustomComponent, areMessageBubblePropsEqual)
 const ChatInterface: React.FC = () => {
   const t = getTranslations()
+  const overlay = useStreamingOverlay()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -737,6 +740,19 @@ const ChatInterface: React.FC = () => {
         setUnsavedMessages((prev) => new Set(prev).add(streamMessage.id.toString()))
 
         // 调用流式AI API，使用带上下文的提示
+        try {
+          overlay.show({
+            title: t.chat?.messages?.statusIndicator?.streaming || 'AI 正在生成...',
+            modelName: aiConfig.modelName,
+            onCancel: () => {
+              if (currentStreamCleanup) currentStreamCleanup()
+            }
+          })
+          performanceMonitor.logAiStreamingEvent('start', {
+            source: 'chat',
+            model: aiConfig.modelName
+          })
+        } catch {}
         const streamResult = await window.api.openai.streamGenerateContent(
           {
             apiKey: aiConfig.apiKey,
@@ -748,6 +764,15 @@ const ChatInterface: React.FC = () => {
           {
             // 实时更新消息内容 - 优化流式显示
             onData: (chunk: string) => {
+              const displayChunk = stripThinkingForStreaming(chunk)
+              try { overlay.update(displayChunk, 'append') } catch {}
+              try {
+                performanceMonitor.logAiStreamingEvent('update', {
+                  source: 'chat',
+                  model: aiConfig.modelName,
+                  bytes: chunk.length
+                })
+              } catch {}
               const updater = (prev: ChatMessage[]): ChatMessage[] => {
                 const newMessages = [...prev]
                 const messageIndex = newMessages.findIndex((msg) => msg.id === streamMessage.id)
@@ -771,6 +796,8 @@ const ChatInterface: React.FC = () => {
             onDone: async (fullContent: string) => {
               // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
+              try { overlay.hide() } catch {}
+              
 
               // 立即更新最终内容，不使用节流，保留完整内容
               setMessages((prev) => {
@@ -810,6 +837,13 @@ const ChatInterface: React.FC = () => {
               }
 
               // 清理状态
+              try { overlay.hide() } catch {}
+              try {
+                performanceMonitor.logAiStreamingEvent('complete', {
+                  source: 'chat',
+                  model: aiConfig.modelName
+                })
+              } catch {}
               setIsGenerating(false)
               setIsLoading(false)
               setStreamingMessageId(null)
@@ -916,6 +950,13 @@ const ChatInterface: React.FC = () => {
             setIsLoading(false)
             setStreamingMessageId(null)
             setCurrentStreamCleanup(null)
+            try { overlay.hide() } catch {}
+            try {
+              performanceMonitor.logAiStreamingEvent('cancel', {
+                source: 'chat',
+                model: aiConfig.modelName
+              })
+            } catch {}
           }
           setCurrentStreamCleanup(() => cleanup)
         }
@@ -927,6 +968,7 @@ const ChatInterface: React.FC = () => {
         setIsLoading(false)
         setStreamingMessageId(null)
         setCurrentStreamCleanup(null)
+        try { overlay.hide() } catch {}
       }
     },
     [aiApiConfigs, selectedAiConfig, buildConversationContext, currentSessionId, t]

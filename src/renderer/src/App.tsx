@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Layout } from '@douyinfe/semi-ui'
 import Navigation from './components/Navigation'
+import { StreamingOverlayProvider } from './components/StreamingOverlayContext'
 import { performanceMonitor } from './utils/PerformanceMonitor'
 import {
   SmartDataAnalysis,
@@ -92,7 +93,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <Layout
+    <StreamingOverlayProvider>
+      <Layout
       className="components-layout-demo"
       style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}
     >
@@ -123,7 +125,8 @@ const App: React.FC = () => {
           </Content>
         </Layout>
       </Layout>
-    </Layout>
+      </Layout>
+    </StreamingOverlayProvider>
   )
 }
 
