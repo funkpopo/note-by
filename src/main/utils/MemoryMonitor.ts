@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events'
-import { mainErrorHandler, ErrorCategory } from './ErrorHandler'
+import { mainErrorHandler, ErrorCategory } from '../services/ErrorService'
 
 interface MemoryStats {
   heapUsed: number // MB

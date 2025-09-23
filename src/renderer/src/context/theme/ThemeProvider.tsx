@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { LocaleProvider, ConfigProvider } from '@douyinfe/semi-ui'
 import zh_CN from '@douyinfe/semi-ui/lib/es/locale/source/zh_CN'
 import { ThemeContext } from './ThemeContext'
-import { rendererErrorHandler, ErrorCategory } from '../../utils/ErrorHandler'
+import { rendererErrorHandler, ErrorCategory } from '../../services/ErrorService'
 
 interface ThemeProviderProps {
   children: ReactNode

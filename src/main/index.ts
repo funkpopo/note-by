@@ -77,7 +77,7 @@ import { fileStreamManager } from './utils/FileStreamManager'
 import { memoryMonitor } from './utils/MemoryMonitor'
 import { performDatabaseMemoryCleanup } from './database'
 import { updaterService } from './updater'
-import { mainErrorHandler, ErrorCategory } from './utils/ErrorHandler'
+import { mainErrorHandler, ErrorCategory } from './services/ErrorService'
 
 // 导出mainWindow，用于在其他模块中发送事件
 export let mainWindow: BrowserWindow | null = null

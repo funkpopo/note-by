@@ -9,23 +9,22 @@ import {
   ErrorHandlerConfig
 } from '../../shared/utils/ErrorHandler'
 
-// 重新导出共享的类型和枚举，以保持向后兼容性
+// Re-export enums and types for convenience
 export { LogLevel, ErrorCategory }
 export type { ErrorInfo }
 
-// 创建主进程错误处理器配置
+// Main process error handler configuration
 const config: ErrorHandlerConfig = {
   isDev: is.dev,
   fileLog: {
     enabled: true,
     logFile: path.join(app.getPath('userData'), 'logs', 'main.log'),
-    maxLogSize: 10 * 1024 * 1024, // 10MB
+    maxLogSize: 10 * 1024 * 1024,
     maxLogFiles: 5
   },
   consoleLog: true,
   setupGlobalHandlers: true,
   onFatalError: (_error: Error) => {
-    // 在生产环境中，考虑重启应用
     if (!is.dev) {
       setTimeout(() => {
         app.relaunch()
@@ -35,5 +34,5 @@ const config: ErrorHandlerConfig = {
   }
 }
 
-// 导出单例实例
 export const mainErrorHandler = UnifiedErrorHandler.getInstance(config)
+
