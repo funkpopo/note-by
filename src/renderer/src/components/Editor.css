@@ -397,7 +397,7 @@
 
 .ProseMirror {
   /* Inline Diff 安全边距默认值（可被媒体查询/主题覆盖） */
-  --inline-diff-gutter: 32px;
+  --inline-diff-gutter: 20px;
   /* Inline Diff 操作按钮偏移（桌面） - 随 gutter 自适应 */
   --inline-diff-actions-offset: max(8px, calc(var(--inline-diff-gutter, 32px) / 2));
   /* Inline Diff 操作按钮偏移（移动端） - 随 gutter 自适应 */
