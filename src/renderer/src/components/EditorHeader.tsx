@@ -1,16 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Button,
-  Space,
-  Breadcrumb,
-  Dropdown,
-  List,
-  Toast,
-  Spin,
-  Typography as SemiTypography,
-  TagInput,
-  Tag
-} from '@douyinfe/semi-ui'
+import { Button, Space, Dropdown, List, Toast, Spin, Typography as SemiTypography, TagInput, Tag } from '@douyinfe/semi-ui'
 import { IconFile, IconSave, IconChevronDown as IconChevronDownSemi } from '@douyinfe/semi-icons'
 import CustomDropdown from './CustomDropdown'
 import CustomHistoryDropdown from './CustomHistoryDropdown'
@@ -143,6 +132,10 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     if (!currentFolder || !currentFile) return ''
     return `${currentFolder}/${currentFile}`
   }, [currentFolder, currentFile])
+
+  const displayName = useMemo(() => {
+    return currentFile ? currentFile.replace(/\.md$/i, '') : ''
+  }, [currentFile])
 
   const loadTags = useCallback(async (): Promise<void> => {
     if (!filePath) return
@@ -323,10 +316,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
       <div className="editor-header-left">
         <div className="file-info">
           <IconFile size="small" style={{ color: 'var(--semi-color-text-2)' }} />
-          <Breadcrumb separator="/">
-            <Breadcrumb.Item href="#">{currentFolder}</Breadcrumb.Item>
-            <Breadcrumb.Item>{currentFile.replace('.md', '')}</Breadcrumb.Item>
-          </Breadcrumb>
+          <div className="file-title" title={displayName}>{displayName}</div>
           {hasUnsavedChanges && (
             <div className="unsaved-indicator">
               <span>●</span>
@@ -339,7 +329,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
 
       <div className="editor-header-right">
         <Space>
-          <div style={{ minWidth: 220 }}>
+          <div style={{ minWidth: 140 }}>
             <TagInput
               value={fileTags}
               onChange={(val) => {
@@ -352,7 +342,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
               allowDuplicates={false}
               separator="," 
               disabled={!filePath}
-              style={{ width: 260 }}
+              style={{ width: 'clamp(140px, 22vw, 260px)' }}
               renderTagItem={(value, _index, onClose) => {
                 const { color, type } = getTagColor(String(value))
                 return (

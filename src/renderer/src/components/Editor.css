@@ -154,12 +154,15 @@
   align-items: center;
   flex: 1;
   gap: 16px;
+  min-width: 0; /* allow shrink */
 }
 
 .editor-header-right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-shrink: 0; /* keep buttons visible */
+  gap: 8px;
 }
 
 .file-info {
@@ -167,10 +170,24 @@
   align-items: center;
   gap: 8px;
   font-size: 16px;
+  min-width: 0; /* allow ellipsis */
+  overflow: hidden;
 }
 
-.file-info .semi-breadcrumb {
+.file-info .semi-breadcrumb,
+.file-info .file-title {
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+/* Ensure title text is theme-aware and readable */
+.file-info .file-title {
+  color: var(--semi-color-text-0);
+  font-weight: 600;
 }
 
 .unsaved-indicator {

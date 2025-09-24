@@ -59,6 +59,11 @@ const defaultSettings = {
   theme: 'light',
   // 改为空数组，不提供默认API配置
   AiApiConfigs: [] as AiApiConfig[],
+  // Window state (size/position)
+  windowState: {
+    width: 1100,
+    height: 720
+  },
   // 默认WebDAV配置
   webdav: {
     url: '',

@@ -425,9 +425,15 @@ function createWindow(): void {
   const appWithIsQuitting = app as any
   appWithIsQuitting.isQuitting = false
   // Create the browser window.
+  const savedWinState = (getSetting('windowState', { width: 1100, height: 720 }) as unknown) as
+    | { width?: number; height?: number; x?: number; y?: number; isMaximized?: boolean }
+    | undefined
+  const desiredWidth = savedWinState && typeof savedWinState.width === 'number' ? savedWinState.width : 1100
+  const desiredHeight = savedWinState && typeof savedWinState.height === 'number' ? savedWinState.height : 720
+
   mainWindow = new BrowserWindow({
-    width: 950,
-    height: 670,
+    width: desiredWidth,
+    height: desiredHeight,
     minWidth: 400, // 设置最小宽度
     minHeight: 300, // 设置最小高度
     show: false,
@@ -444,6 +450,20 @@ function createWindow(): void {
       backgroundThrottling: false
     }
   })
+
+  // Restore window position if available
+  if (savedWinState && typeof savedWinState.x === 'number' && typeof savedWinState.y === 'number') {
+    try {
+      mainWindow.setPosition(savedWinState.x, savedWinState.y)
+    } catch {}
+  }
+
+  // Restore maximized state if previously maximized
+  if (savedWinState && savedWinState.isMaximized) {
+    try {
+      mainWindow.maximize()
+    } catch {}
+  }
 
   // 禁用BrowserWindow的硬件加速
   mainWindow.webContents.setFrameRate(30)
@@ -473,6 +493,27 @@ function createWindow(): void {
     }
   })
 
+  // Persist window size/position
+  const saveWindowState = (): void => {
+    if (!mainWindow) return
+    const isMax = mainWindow.isMaximized()
+    const bounds = isMax ? mainWindow.getNormalBounds() : mainWindow.getBounds()
+    updateSetting('windowState', { ...bounds, isMaximized: isMax })
+  }
+  let saveWindowStateTimeout: NodeJS.Timeout | null = null
+  const scheduleSaveWindowState = (): void => {
+    if (saveWindowStateTimeout) clearTimeout(saveWindowStateTimeout)
+    saveWindowStateTimeout = setTimeout(() => {
+      saveWindowStateTimeout = null
+      saveWindowState()
+    }, 400)
+  }
+
+  mainWindow.on('resize', scheduleSaveWindowState)
+  mainWindow.on('move', scheduleSaveWindowState)
+  mainWindow.on('maximize', scheduleSaveWindowState)
+  mainWindow.on('unmaximize', scheduleSaveWindowState)
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -488,9 +529,20 @@ function createWindow(): void {
 
   mainWindow.on('close', (event) => {
     if (!appWithIsQuitting.isQuitting) {
+      try {
+        // Persist current window state before hiding
+        saveWindowState()
+      } catch {}
       event.preventDefault()
       mainWindow?.hide()
     }
+  })
+
+  // Also persist on app quit
+  app.on('before-quit', () => {
+    try {
+      saveWindowState()
+    } catch {}
   })
 }
 
