@@ -8,7 +8,8 @@ import {
   Toast,
   Spin,
   Typography as SemiTypography,
-  TagInput
+  TagInput,
+  Tag
 } from '@douyinfe/semi-ui'
 import { IconFile, IconSave, IconChevronDown as IconChevronDownSemi } from '@douyinfe/semi-icons'
 import CustomDropdown from './CustomDropdown'
@@ -241,6 +242,72 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     return null
   }
 
+  // Deterministic tag color mapping (consistent per tag value)
+  const getTagColor = (tag: string): {
+    color:
+      | 'amber'
+      | 'blue'
+      | 'cyan'
+      | 'green'
+      | 'grey'
+      | 'indigo'
+      | 'light-blue'
+      | 'light-green'
+      | 'lime'
+      | 'orange'
+      | 'pink'
+      | 'purple'
+      | 'red'
+      | 'teal'
+      | 'violet'
+      | 'yellow'
+      | 'white'
+    type: 'light' | 'solid' | 'ghost'
+  } => {
+    const palette: Array<
+      | 'amber'
+      | 'blue'
+      | 'cyan'
+      | 'green'
+      | 'grey'
+      | 'indigo'
+      | 'light-blue'
+      | 'light-green'
+      | 'lime'
+      | 'orange'
+      | 'pink'
+      | 'purple'
+      | 'red'
+      | 'teal'
+      | 'violet'
+      | 'yellow'
+    > = [
+      'blue',
+      'green',
+      'amber',
+      'cyan',
+      'indigo',
+      'light-blue',
+      'light-green',
+      'lime',
+      'orange',
+      'pink',
+      'purple',
+      'red',
+      'teal',
+      'violet',
+      'yellow'
+    ]
+    let hash = 5381
+    const str = (tag || '').toString().trim().toLowerCase()
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) + hash + str.charCodeAt(i)
+      hash |= 0
+    }
+    const idx = Math.abs(hash) % palette.length
+    return { color: palette[idx], type: 'light' }
+  }
+
   // use memoized filePath above
 
   const exportFormats = [
@@ -286,6 +353,21 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
               separator="," 
               disabled={!filePath}
               style={{ width: 260 }}
+              renderTagItem={(value, _index, onClose) => {
+                const { color, type } = getTagColor(String(value))
+                return (
+                  <Tag
+                    color={color}
+                    type={type}
+                    size="small"
+                    closable
+                    onClose={onClose}
+                    style={{ marginRight: 4 }}
+                  >
+                    {String(value)}
+                  </Tag>
+                )
+              }}
             />
           </div>
           <CustomHistoryDropdown
