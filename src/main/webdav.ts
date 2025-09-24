@@ -282,112 +282,10 @@ async function getRemoteFiles(remotePath: string): Promise<FileStat[]> {
 }
 
 // 判断文件是否需要上传：新文件或修改过的文件
-async function needUpload(
-  localFilePath: string,
-  remoteFilePath: string,
-  remoteFiles: FileStat[]
-): Promise<boolean> {
-  if (!webdavClient) return false
 
-  try {
-    // 获取本地文件状态
-    const localStats = await fs.stat(localFilePath)
-    const localModTime = localStats.mtime.getTime()
-    const fileSize = localStats.size
-
-    // 首先检查本地缓存
-    const syncRecord = await getWebDAVSyncRecord(localFilePath)
-    const remoteFile = remoteFiles.find((file) => file.filename === remoteFilePath)
-
-    // 如果有缓存记录，先通过缓存判断是否需要上传
-    if (syncRecord) {
-      // 即使有同步记录，如果远程文件丢失了，也必须重新上传
-      if (!remoteFile) {
-        return true
-      }
-      // 如果本地文件未修改（时间戳和大小与上次同步时相同），无需上传
-      if (localModTime === syncRecord.lastModifiedLocal && fileSize === syncRecord.fileSize) {
-        return false
-      }
-
-      // 如果只有时间戳变化但文件大小一致，再通过哈希比较内容
-      if (fileSize === syncRecord.fileSize) {
-        // 计算当前文件哈希值
-        const currentHash = await calculateFileHash(localFilePath)
-        if (currentHash === syncRecord.contentHash) {
-          return false
-        }
-      }
-      return true
-    }
-
-    // 如果没有缓存记录，回退到原来的逻辑
-    // 检查远程文件是否存在
-    if (!remoteFile) {
-      // 远程文件不存在，需要上传
-      return true
-    }
-
-    // 远程文件的最后修改时间
-    const remoteModTime = getRemoteModTime(remoteFile)
-
-    // 时间戳阈值，用于判断时间戳相近的情况（3秒内）
-    const TIME_THRESHOLD = 3000 // 毫秒
-
-    // 如果时间戳相近，通过内容比较判断
-    if (Math.abs(localModTime - remoteModTime) < TIME_THRESHOLD) {
-      return compareFileContent(localFilePath, remoteFilePath)
-    }
-
-    // 如果本地文件更新，则需要上传
-    return localModTime > remoteModTime
-  } catch {
-    // 出错时保守处理，上传文件
-    return true
-  }
-}
 
 // 判断文件是否需要下载：新文件或远程有更新的文件
-async function needDownload(localFilePath: string, remoteFile: FileStat): Promise<boolean> {
-  try {
-    // 检查本地文件是否存在
-    try {
-      await fs.access(localFilePath)
-    } catch {
-      // 本地文件不存在，需要下载
-      return true
-    }
 
-    // 如果本地文件存在，比较修改时间和文件大小
-    const localStats = await fs.stat(localFilePath)
-    const localModTime = localStats.mtime.getTime()
-    const remoteModTime = getRemoteModTime(remoteFile)
-
-    // 比较文件大小
-    if (remoteFile.size !== localStats.size) {
-      return true
-    }
-
-    // 时间戳阈值，用于判断时间戳相近的情况（5秒内认为是同步的）
-    const TIME_THRESHOLD = 5000 // 毫秒
-
-    // 如果时间戳相近且文件大小相同，认为文件未变化
-    if (Math.abs(localModTime - remoteModTime) <= TIME_THRESHOLD) {
-      return false
-    }
-
-    // 如果远程文件更新，则需要下载
-    if (remoteModTime > localModTime) {
-      return true
-    }
-
-    // 本地文件更新或相同，不需要下载
-    return false
-  } catch {
-    // 出错时保守处理，下载文件
-    return true
-  }
-}
 
 // 计算文件的MD5哈希
 async function calculateFileHash(filePath: string): Promise<string> {
@@ -1258,3 +1156,5 @@ export async function handleConfigChanged(): Promise<{ success: boolean; message
     }
   }
 }
+
+
