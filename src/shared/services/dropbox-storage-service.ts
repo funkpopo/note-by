@@ -148,6 +148,50 @@ export class DropboxStorageService implements ICloudStorageService {
     }
   }
 
+  private async computeDropboxContentHash(filePath: string): Promise<string> {
+    const BLOCK_SIZE = 4 * 1024 * 1024
+    return new Promise<string>((resolve, reject) => {
+      try {
+        const blockHashes: Buffer[] = []
+        let buffer = Buffer.alloc(0)
+        const stream = (require('fs') as typeof import('fs')).createReadStream(filePath, {
+          highWaterMark: BLOCK_SIZE
+        })
+
+        const hashBlock = (block: Buffer) => {
+          const blockHash = (require('crypto') as typeof import('crypto'))
+            .createHash('sha256')
+            .update(block)
+            .digest()
+          blockHashes.push(blockHash)
+        }
+
+        stream.on('data', (chunk: Buffer) => {
+          buffer = Buffer.concat([buffer, chunk])
+          while (buffer.length >= BLOCK_SIZE) {
+            hashBlock(buffer.slice(0, BLOCK_SIZE))
+            buffer = buffer.slice(BLOCK_SIZE)
+          }
+        })
+
+        stream.on('end', () => {
+          if (buffer.length > 0) {
+            hashBlock(buffer)
+          }
+          const finalHash = (require('crypto') as typeof import('crypto'))
+            .createHash('sha256')
+            .update(Buffer.concat(blockHashes))
+            .digest('hex')
+          resolve(finalHash)
+        })
+
+        stream.on('error', (err: Error) => reject(err))
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
+
   async listFiles(remotePath: string): Promise<CloudFileInfo[]> {
     if (!this.dbx) return []
 
@@ -250,7 +294,36 @@ export class DropboxStorageService implements ICloudStorageService {
               }
             } else if (entry.isFile() && entry.name.endsWith('.md')) {
               // 同步markdown文件
-              const success = await this.uploadFile(localPath, remotePath)
+              let success = false
+              try {
+                const localStat = await fs.stat(localPath)
+                const localSize = localStat.size
+                const normalized = this.normalizePath(remotePath)
+                let remoteContentHash: string | undefined
+                let remoteSize = -1
+                try {
+                  const meta = await this.dbx.filesGetMetadata({ path: normalized })
+                  const m = meta.result as any
+                  if (m['.tag'] === 'file') {
+                    remoteContentHash = m.content_hash as string
+                    remoteSize = m.size as number
+                  }
+                } catch {}
+
+                if (remoteSize === localSize && remoteContentHash) {
+                  const localHash = await this.computeDropboxContentHash(localPath)
+                  if (localHash === remoteContentHash) {
+                    skipped++
+                    // 跳过上传
+                  } else {
+                    success = await this.uploadFile(localPath, remotePath)
+                  }
+                } else {
+                  success = await this.uploadFile(localPath, remotePath)
+                }
+              } catch {
+                success = await this.uploadFile(localPath, remotePath)
+              }
               if (success) {
                 uploaded++
               } else {
@@ -282,7 +355,33 @@ export class DropboxStorageService implements ICloudStorageService {
             }
           } else if (remoteFile.name.endsWith('.md')) {
             // 同步markdown文件
-            const success = await this.downloadFile(remoteFile.path, localPath)
+            let success = false
+            try {
+              const normalized = this.normalizePath(remoteFile.path)
+              const meta = await this.dbx.filesGetMetadata({ path: normalized })
+              const m = meta.result as any
+              if (m['.tag'] === 'file') {
+                const remoteSize = (m.size as number) || 0
+                const remoteHash = (m.content_hash as string) || ''
+
+                let same = false
+                try {
+                  const stat = await fs.stat(localPath)
+                  if (stat.size === remoteSize && remoteHash) {
+                    const localHash = await this.computeDropboxContentHash(localPath)
+                    same = localHash === remoteHash
+                  }
+                } catch {}
+
+                if (same) {
+                  skipped++
+                } else {
+                  success = await this.downloadFile(remoteFile.path, localPath)
+                }
+              }
+            } catch {
+              success = await this.downloadFile(remoteFile.path, localPath)
+            }
             if (success) {
               downloaded++
             } else {

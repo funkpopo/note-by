@@ -564,7 +564,31 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
         } else if (entry.isFile() && (entry.name.endsWith('.md') || isInAssetsDir)) {
           // 同步markdown文件及.assets目录中的所有文件
           // 检查文件是否需要上传
-          const shouldUpload = await needUpload(localPath, remotePath, remoteFiles)
+          let shouldUpload = false
+          const remoteFile = remoteFiles.find((f) => f.filename === remotePath)
+          const localStats = await fs.stat(localPath)
+          const localModTime = localStats.mtime.getTime()
+          const localSize = localStats.size
+          if (!remoteFile) {
+            shouldUpload = true
+          } else {
+            const remoteModTime = getRemoteModTime(remoteFile)
+            const remoteSize = remoteFile.size || 0
+            const syncRecord = await getWebDAVSyncRecord(localPath)
+            if (
+              syncRecord &&
+              syncRecord.lastModifiedLocal === localModTime &&
+              syncRecord.fileSize === localSize &&
+              syncRecord.lastModifiedRemote === remoteModTime &&
+              syncRecord.fileSize === remoteSize
+            ) {
+              shouldUpload = false
+            } else if (localSize !== remoteSize) {
+              shouldUpload = true
+            } else {
+              shouldUpload = await compareFileContent(localPath, remotePath)
+            }
+          }
 
           if (shouldUpload) {
             // 上传文件
@@ -697,7 +721,31 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
         } else if (entry.type === 'file' && (entryName.endsWith('.md') || isInAssetsDir)) {
           // 同步markdown文件及.assets目录中的所有文件
           // 检查文件是否需要下载
-          const shouldDownload = await needDownload(entryLocalPath, entry)
+          let shouldDownload = false
+          try {
+            await fs.access(entryLocalPath)
+            const localStats = await fs.stat(entryLocalPath)
+            const localModTime = localStats.mtime.getTime()
+            const localSize = localStats.size
+            const remoteModTime = getRemoteModTime(entry)
+            const remoteSize = entry.size || 0
+            const syncRecord = await getWebDAVSyncRecord(entryLocalPath)
+            if (
+              syncRecord &&
+              syncRecord.lastModifiedLocal === localModTime &&
+              syncRecord.fileSize === localSize &&
+              syncRecord.lastModifiedRemote === remoteModTime &&
+              syncRecord.fileSize === remoteSize
+            ) {
+              shouldDownload = false
+            } else if (localSize !== remoteSize) {
+              shouldDownload = true
+            } else {
+              shouldDownload = await compareFileContent(entryLocalPath, entryRemotePath)
+            }
+          } catch {
+            shouldDownload = true
+          }
 
           if (shouldDownload) {
             // 下载文件

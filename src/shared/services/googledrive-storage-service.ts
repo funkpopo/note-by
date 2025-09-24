@@ -6,6 +6,8 @@ import {
 } from '../types/cloud-storage'
 import { google } from 'googleapis'
 import * as fs from 'fs/promises'
+import * as fsNode from 'fs'
+import * as crypto from 'crypto'
 import * as path from 'path'
 
 export class GoogleDriveStorageService implements ICloudStorageService {
@@ -219,6 +221,20 @@ export class GoogleDriveStorageService implements ICloudStorageService {
     }
   }
 
+  private async computeFileMd5(localPath: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      try {
+        const hash = crypto.createHash('md5')
+        const stream = fsNode.createReadStream(localPath)
+        stream.on('data', (chunk) => hash.update(chunk))
+        stream.on('end', () => resolve(hash.digest('hex')))
+        stream.on('error', (err) => reject(err))
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
+
   async listFiles(remotePath: string): Promise<CloudFileInfo[]> {
     if (!this.drive) return []
 
@@ -316,7 +332,24 @@ export class GoogleDriveStorageService implements ICloudStorageService {
             }
           } else if (entry.isFile() && entry.name.endsWith('.md')) {
             // 同步markdown文件
-            const success = await this.uploadFile(localPath, remotePath)
+            let success = false
+            try {
+              const localStat = await fs.stat(localPath)
+              const localSize = localStat.size
+              const info = await this.getFileInfo(remotePath)
+              if (info && info.size === localSize) {
+                const meta = await this.drive.files.get({ fileId: info.id, fields: 'md5Checksum' })
+                const remoteMd5 = meta.data.md5Checksum as string | undefined
+                if (remoteMd5) {
+                  const localMd5 = await this.computeFileMd5(localPath)
+                  if (localMd5 === remoteMd5) {
+                    skipped++
+                    continue
+                  }
+                }
+              }
+            } catch {}
+            success = await this.uploadFile(localPath, remotePath)
             if (success) {
               uploaded++
             } else {
@@ -345,7 +378,27 @@ export class GoogleDriveStorageService implements ICloudStorageService {
             }
           } else if (remoteFile.name.endsWith('.md')) {
             // 同步markdown文件
-            const success = await this.downloadFile(remoteFile.path, localPath)
+            let success = false
+            try {
+              const meta = await this.drive.files.get({ fileId: remoteFile.id, fields: 'md5Checksum, size' })
+              const remoteMd5 = meta.data.md5Checksum as string | undefined
+              const remoteSize = parseInt((meta.data.size as string) || '0')
+              let same = false
+              try {
+                const stat = await fs.stat(localPath)
+                if (stat.size === remoteSize && remoteMd5) {
+                  const localMd5 = await this.computeFileMd5(localPath)
+                  same = localMd5 === remoteMd5
+                }
+              } catch {}
+              if (same) {
+                skipped++
+              } else {
+                success = await this.downloadFile(remoteFile.path, localPath)
+              }
+            } catch {
+              success = await this.downloadFile(remoteFile.path, localPath)
+            }
             if (success) {
               downloaded++
             } else {
