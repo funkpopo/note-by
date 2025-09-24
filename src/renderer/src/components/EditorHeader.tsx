@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Space,
@@ -7,7 +7,8 @@ import {
   List,
   Toast,
   Spin,
-  Typography as SemiTypography
+  Typography as SemiTypography,
+  TagInput
 } from '@douyinfe/semi-ui'
 import { IconFile, IconSave, IconChevronDown as IconChevronDownSemi } from '@douyinfe/semi-icons'
 import CustomDropdown from './CustomDropdown'
@@ -133,6 +134,60 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onContentRestore
 }) => {
   const [isExporting, setIsExporting] = useState(false)
+  const [fileTags, setFileTags] = useState<string[]>([])
+  const [savingTags, setSavingTags] = useState(false)
+  const saveTimer = useRef<number | null>(null)
+
+  const filePath = useMemo(() => {
+    if (!currentFolder || !currentFile) return ''
+    return `${currentFolder}/${currentFile}`
+  }, [currentFolder, currentFile])
+
+  const loadTags = useCallback(async (): Promise<void> => {
+    if (!filePath) return
+    try {
+      const res = await window.electron.ipcRenderer.invoke('tags:get-file-tags', filePath)
+      if (res && res.success && Array.isArray(res.tags)) {
+        setFileTags(res.tags)
+      } else {
+        setFileTags([])
+      }
+    } catch {
+      setFileTags([])
+    }
+  }, [filePath])
+
+  useEffect(() => {
+    void loadTags()
+  }, [loadTags])
+
+  const persistTags = useCallback(
+    async (tags: string[]): Promise<void> => {
+      if (!filePath) return
+      try {
+        setSavingTags(true)
+        await window.electron.ipcRenderer.invoke('tags:set-file-tags', filePath, tags)
+        try {
+          await window.api.tags.refreshGlobalTags()
+        } catch {
+          // ignore refresh errors
+        }
+      } finally {
+        setSavingTags(false)
+      }
+    },
+    [filePath]
+  )
+
+  const schedulePersist = useCallback(
+    (tags: string[]) => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current)
+      saveTimer.current = window.setTimeout(() => {
+        void persistTags(tags)
+      }, 600)
+    },
+    [persistTags]
+  )
 
   const handleExport = useCallback(
     async (format: string) => {
@@ -186,7 +241,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     return null
   }
 
-  const filePath = `${currentFolder}/${currentFile}`
+  // use memoized filePath above
 
   const exportFormats = [
     { key: 'pdf', label: '导出PDF' },
@@ -217,6 +272,22 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
 
       <div className="editor-header-right">
         <Space>
+          <div style={{ minWidth: 220 }}>
+            <TagInput
+              value={fileTags}
+              onChange={(val) => {
+                const list = (val || []).map((v) => String(v).trim()).filter(Boolean)
+                setFileTags(list)
+                schedulePersist(list)
+              }}
+              placeholder="添加标签…"
+              addOnBlur
+              allowDuplicates={false}
+              separator="," 
+              disabled={!filePath}
+              style={{ width: 260 }}
+            />
+          </div>
           <CustomHistoryDropdown
             filePath={filePath}
             currentContent={currentContent}
@@ -244,7 +315,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
               icon={<IconFile />}
               type="tertiary"
               size="default"
-              loading={isExporting}
+              loading={isExporting || savingTags}
               disabled={!currentContent || hasUnsavedChanges}
             >
               导出

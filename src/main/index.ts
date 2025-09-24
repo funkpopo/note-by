@@ -56,7 +56,12 @@ import {
   getAnalysisCache,
   saveAnalysisCache,
   resetAnalysisCache,
-  getDocumentTagsData,
+  getMergedTagsData,
+  getTagsByFile,
+  setTagsForFile,
+  renameFileTags,
+  renameFolderTags,
+  deleteFileTags,
   checkDatabaseStatus,
   type AnalysisCacheItem,
   createChatSession,
@@ -223,6 +228,8 @@ const IPC_CHANNELS = {
   // 添加全局标签相关IPC通道
   GET_GLOBAL_TAGS: 'tags:get-global-tags',
   REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
+  GET_FILE_TAGS: 'tags:get-file-tags',
+  SET_FILE_TAGS: 'tags:set-file-tags',
   // 添加对话框相关IPC通道
   DIALOG_SHOW_SAVE: 'dialog:showSaveDialog',
   DIALOG_SHOW_OPEN: 'dialog:showOpenDialog',
@@ -1585,6 +1592,11 @@ ${htmlContent}
 
       // 重命名文件夹
       await fsPromises.rename(oldPath, newPath)
+      try {
+        await renameFolderTags(oldFolderName, newFolderName)
+      } catch {
+        // ignore tag db errors
+      }
 
       return { success: true }
     } catch (error) {
@@ -1637,6 +1649,11 @@ ${htmlContent}
 
       // 删除文件
       await fsPromises.unlink(fullPath)
+      try {
+        await deleteFileTags(filePath)
+      } catch {
+        // ignore tag db errors
+      }
 
       return { success: true }
     } catch (error) {
@@ -1672,6 +1689,11 @@ ${htmlContent}
 
       // 重命名文件
       await fsPromises.rename(oldPath, newPath)
+      try {
+        await renameFileTags(oldFilePath, newFilePath)
+      } catch {
+        // ignore tag db errors
+      }
 
       return { success: true }
     } catch (error) {
@@ -2203,7 +2225,7 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.GET_GLOBAL_TAGS, async () => {
     try {
       const markdownPath = getMarkdownFolderPath()
-      const tagsData = await getDocumentTagsData(markdownPath)
+      const tagsData = await getMergedTagsData(markdownPath)
       return { success: true, tagsData }
     } catch (error) {
       return { success: false, error: String(error), tagsData: null }
@@ -2214,7 +2236,7 @@ ${htmlContent}
   ipcMain.handle(IPC_CHANNELS.REFRESH_GLOBAL_TAGS, async () => {
     try {
       const markdownPath = getMarkdownFolderPath()
-      const tagsData = await getDocumentTagsData(markdownPath)
+      const tagsData = await getMergedTagsData(markdownPath)
       return { success: true, tagsData }
     } catch (error) {
       return { success: false, error: String(error), tagsData: null }
@@ -2222,6 +2244,29 @@ ${htmlContent}
   })
 
   // 显示保存对话框
+  // 获取单个文件的标签
+  ipcMain.handle(IPC_CHANNELS.GET_FILE_TAGS, async (_event, filePath: string) => {
+    try {
+      const tags = await getTagsByFile(filePath)
+      return { success: true, tags }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // 设置单个文件的标签
+  ipcMain.handle(
+    IPC_CHANNELS.SET_FILE_TAGS,
+    async (_event, filePath: string, tags: string[] = []) => {
+      try {
+        const success = await setTagsForFile(filePath, Array.isArray(tags) ? tags : [])
+        return { success }
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
+    }
+  )
+
   ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_SAVE, async (_, options: Electron.SaveDialogOptions) => {
     try {
       if (!mainWindow) {

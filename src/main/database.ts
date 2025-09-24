@@ -407,6 +407,18 @@ class EnhancedDatabasePool {
         CREATE INDEX IF NOT EXISTS idx_note_history_created_at ON note_history(created_at);
       `)
 
+      // 创建文档-标签关系表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS note_tags (
+          file_path TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          created_at INTEGER DEFAULT (strftime('%s','now')),
+          PRIMARY KEY(file_path, tag)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_note_tags_tag ON note_tags(tag);
+      `)
+
       // 创建WebDAV同步缓存表
       connection.exec(`
         CREATE TABLE IF NOT EXISTS webdav_sync_cache (
@@ -959,6 +971,105 @@ export async function initWebDAVSyncCacheTable(): Promise<void> {
   })
 }
 
+// =====================
+// Tags: note_tags helpers
+// =====================
+
+export async function getTagsByFile(filePath: string): Promise<string[]> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(
+      'SELECT tag FROM note_tags WHERE file_path = ? ORDER BY tag COLLATE NOCASE'
+    )
+    const rows = stmt.all(filePath) as Array<{ tag: string }>
+    return rows.map((r) => r.tag)
+  })
+  return result || []
+}
+
+export async function setTagsForFile(filePath: string, tags: string[]): Promise<boolean> {
+  const normalized = Array.from(
+    new Set((tags || []).map((t) => String(t).trim()).filter((t) => t.length > 0))
+  )
+  const result = await withDatabase(async (database) => {
+    const deleteStmt = database.prepare('DELETE FROM note_tags WHERE file_path = ?')
+    const insertStmt = database.prepare('INSERT OR IGNORE INTO note_tags (file_path, tag) VALUES (?, ?)')
+    const tx = database.transaction((values: string[]) => {
+      deleteStmt.run(filePath)
+      for (const tag of values) {
+        insertStmt.run(filePath, tag)
+      }
+    })
+    tx(normalized)
+    return true
+  })
+  return Boolean(result)
+}
+
+export async function getAllTagsWithCount(): Promise<Array<{ tag: string; count: number }>> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(
+      'SELECT tag, COUNT(DISTINCT file_path) as count FROM note_tags GROUP BY tag ORDER BY count DESC, tag ASC'
+    )
+    return stmt.all() as Array<{ tag: string; count: number }>
+  })
+  return result || []
+}
+
+export async function getTagRelationsFromDB(): Promise<
+  Array<{ source: string; target: string; strength: number }>
+> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT a.tag as source, b.tag as target, COUNT(*) as strength
+      FROM note_tags a
+      JOIN note_tags b
+        ON a.file_path = b.file_path AND a.tag < b.tag
+      GROUP BY a.tag, b.tag
+      ORDER BY strength DESC, source ASC, target ASC
+    `)
+    return stmt.all() as Array<{ source: string; target: string; strength: number }>
+  })
+  return result || []
+}
+
+export async function renameFileTags(
+  oldFilePath: string,
+  newFilePath: string
+): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare('UPDATE note_tags SET file_path = ? WHERE file_path = ?')
+    stmt.run(newFilePath, oldFilePath)
+    return true
+  })
+  return Boolean(result)
+}
+
+export async function renameFolderTags(
+  oldFolder: string,
+  newFolder: string
+): Promise<boolean> {
+  // 仅处理以该前缀开头的相对路径
+  const oldPrefix = oldFolder.endsWith('/') ? oldFolder : `${oldFolder}/`
+  const newPrefix = newFolder.endsWith('/') ? newFolder : `${newFolder}/`
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(
+      "UPDATE note_tags SET file_path = REPLACE(file_path, ?, ?) WHERE file_path LIKE ?"
+    )
+    stmt.run(newPrefix, newPrefix, `${oldPrefix}%`)
+    return true
+  })
+  return Boolean(result)
+}
+
+export async function deleteFileTags(filePath: string): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare('DELETE FROM note_tags WHERE file_path = ?')
+    stmt.run(filePath)
+    return true
+  })
+  return Boolean(result)
+}
+
 // 保存或更新WebDAV同步记录（使用连接池）
 export async function saveWebDAVSyncRecord(record: WebDAVSyncRecord): Promise<boolean> {
   const result = await withDatabase(async (database) => {
@@ -1382,7 +1493,7 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       }
 
       // 分析标签数据
-      tagData = await getDocumentTagsData(markdownPath)
+      tagData = await getMergedTagsData(markdownPath)
     } catch {
       // 继续执行，即使标签分析失败
     }
@@ -1844,6 +1955,123 @@ export async function getDocumentTagsData(markdownPath: string): Promise<{
     return {
       topTags: topTags.slice(0, 20), // 只返回前20个最常用的标签
       tagRelations: tagRelations.slice(0, 50), // 只返回前50个最强的关联关系
+      documentTags
+    }
+  } catch {
+    return null
+  }
+}
+
+// 新版：合并 DB 标签与文档内标签的聚合
+export async function getMergedTagsData(markdownPath: string): Promise<{
+  topTags: Array<{ tag: string; count: number }>
+  tagRelations: Array<{ source: string; target: string; strength: number }>
+  documentTags: Array<{ filePath: string; tags: string[] }>
+} | null> {
+  try {
+    const tagCounts: Record<string, number> = {}
+    const tagCooccurrence: Record<string, Record<string, number>> = {}
+    const documentTagsMap: Record<string, string[]> = {}
+
+    // 读取 DB 标签
+    const dbTagsByFile: Record<string, string[]> = {}
+    try {
+      await withDatabase(async (database) => {
+        const rows = database
+          .prepare("SELECT file_path as filePath, tag FROM note_tags")
+          .all() as Array<{ filePath: string; tag: string }>
+        for (const row of rows) {
+          if (!dbTagsByFile[row.filePath]) dbTagsByFile[row.filePath] = []
+          dbTagsByFile[row.filePath].push(row.tag)
+        }
+        return true
+      })
+    } catch {
+      // ignore db failures
+    }
+
+    // 扫描 markdown 目录
+    const files = await getAllMarkdownFiles(markdownPath)
+    for (const absPath of files) {
+      try {
+        const content = await fsPromises.readFile(absPath, 'utf-8')
+        const tagsMatch = content.match(/<!-- tags: ([^>]*) -->/)
+        let fileTags: string[] = []
+        if (tagsMatch && tagsMatch[1]) {
+          fileTags = tagsMatch[1]
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        }
+        const atTagsMatches = content.matchAll(
+          /(?<![a-zA-Z0-9_\u4e00-\u9fa5])@([a-zA-Z0-9_\u4e00-\u9fa5]+)(?!\.[a-zA-Z0-9_\u4e00-\u9fa5]+)/g
+        )
+        for (const match of atTagsMatches) {
+          if (match[1] && !fileTags.includes(match[1])) fileTags.push(match[1])
+        }
+
+        const relativePath = path.relative(markdownPath, absPath).replace(/\\/g, '/')
+        const dbTags = dbTagsByFile[relativePath] || []
+        const mergedTags = Array.from(new Set([...(dbTags || []), ...fileTags]))
+
+        if (mergedTags.length > 0) {
+          documentTagsMap[relativePath] = mergedTags
+          mergedTags.forEach((tag) => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1
+            if (!tagCooccurrence[tag]) tagCooccurrence[tag] = {}
+            mergedTags.forEach((otherTag) => {
+              if (tag !== otherTag) {
+                tagCooccurrence[tag][otherTag] = (tagCooccurrence[tag][otherTag] || 0) + 1
+              }
+            })
+          })
+        }
+      } catch {
+        continue
+      }
+    }
+
+    // 加入仅存在于 DB 的记录
+    for (const [filePath, tags] of Object.entries(dbTagsByFile)) {
+      if (!documentTagsMap[filePath] && tags.length > 0) {
+        const merged = Array.from(new Set(tags))
+        documentTagsMap[filePath] = merged
+        merged.forEach((tag) => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1
+          if (!tagCooccurrence[tag]) tagCooccurrence[tag] = {}
+          merged.forEach((other) => {
+            if (tag !== other) {
+              tagCooccurrence[tag][other] = (tagCooccurrence[tag][other] || 0) + 1
+            }
+          })
+        })
+      }
+    }
+
+    const topTags = Object.entries(tagCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+
+    const tagRelations: Array<{ source: string; target: string; strength: number }> = []
+    const addedRelations = new Set<string>()
+    Object.entries(tagCooccurrence).forEach(([source, targets]) => {
+      Object.entries(targets).forEach(([target, strength]) => {
+        const relationKey = [source, target].sort().join('-')
+        if (!addedRelations.has(relationKey)) {
+          addedRelations.add(relationKey)
+          tagRelations.push({ source, target, strength })
+        }
+      })
+    })
+    tagRelations.sort((a, b) => b.strength - a.strength)
+
+    const documentTags = Object.entries(documentTagsMap)
+      .map(([filePath, tags]) => ({ filePath, tags }))
+      .sort((a, b) => a.filePath.localeCompare(b.filePath))
+
+    return {
+      topTags: topTags.slice(0, 20),
+      tagRelations: tagRelations.slice(0, 50),
       documentTags
     }
   } catch {

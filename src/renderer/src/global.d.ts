@@ -44,6 +44,29 @@ interface Window {
       // 设置单个设置
       set: <T>(key: string, value: T) => Promise<boolean>
     }
+    // ȫ�ֱ�ǩ API
+    tags: {
+      getGlobalTags: () => Promise<{
+        success: boolean
+        tagsData?: {
+          topTags: Array<{ tag: string; count: number }>
+          tagRelations: Array<{ source: string; target: string; strength: number }>
+          documentTags: Array<{ filePath: string; tags: string[] }>
+        }
+        error?: string
+      }>
+      refreshGlobalTags: () => Promise<{
+        success: boolean
+        tagsData?: {
+          topTags: Array<{ tag: string; count: number }>
+          tagRelations: Array<{ source: string; target: string; strength: number }>
+          documentTags: Array<{ filePath: string; tags: string[] }>
+        }
+        error?: string
+      }>
+      getFileTags: (filePath: string) => Promise<{ success: boolean; tags?: string[]; error?: string }>
+      setFileTags: (filePath: string, tags: string[]) => Promise<{ success: boolean; error?: string }>
+    }
     // 数据分析相关API
     analytics: {
       // 获取笔记历史统计数据

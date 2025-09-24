@@ -263,6 +263,19 @@ interface TagsAPI {
     }
     error?: string
   }>
+
+  // ��ȡָ���ļ��ı�ǩ
+  getFileTags: (filePath: string) => Promise<{
+    success: boolean
+    tags?: string[]
+    error?: string
+  }>
+
+  // ���ñ�ǩ
+  setFileTags: (filePath: string, tags: string[]) => Promise<{
+    success: boolean
+    error?: string
+  }>
 }
 
 // 应用导航API接口定义
