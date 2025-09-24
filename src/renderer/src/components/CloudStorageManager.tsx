@@ -64,11 +64,13 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
   const [basicVisible, setBasicVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [basicApi, setBasicApi] = useState<FormApi<Partial<CloudStorageItem>> | null>(null)
+  const [basicInit, setBasicInit] = useState<Partial<CloudStorageItem> | null>(null)
 
   // Creds modal (separate)
   const [credsVisible, setCredsVisible] = useState(false)
   const [credsId, setCredsId] = useState<string | null>(null)
   const [credsApi, setCredsApi] = useState<FormApi<Partial<CloudStorageItem>> | null>(null)
+  const [credsInit, setCredsInit] = useState<Partial<CloudStorageItem> | null>(null)
 
   // OAuth modal
   const [authVisible, setAuthVisible] = useState(false)
@@ -132,28 +134,32 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
     setEditingId(null)
     setBasicVisible(true)
     const localPath = await getLocalPath()
-    setTimeout(
-      () =>
-        basicApi?.setValues({
-          id: genId(),
-          name: '',
-          provider: 'webdav',
-          enabled: true,
-          remotePath: '/notes',
-          localPath,
-          syncOnStartup: false,
-          syncDirection: 'bidirectional',
-          auth: {}
-        }),
-      0
-    )
+    setBasicInit({
+      id: genId(),
+      name: '',
+      provider: 'webdav',
+      enabled: true,
+      remotePath: '/notes',
+      localPath,
+      syncOnStartup: false,
+      syncDirection: 'bidirectional',
+      auth: {}
+    })
   }
-  const openEdit = (id: string): void => {
-    const it = findItem(id)
-    if (!it) return
+  const openEdit = async (id: string): Promise<void> => {
     setEditingId(id)
     setBasicVisible(true)
-    setTimeout(() => basicApi?.setValues(it), 0)
+    try {
+      // 重新从 settings.json 读取，确保二次编辑时有最新值
+      const settings = await window.api.settings.getAll()
+      const list = (settings as any).cloudStorageList as CloudStorageItem[] | undefined
+      const latest = Array.isArray(list) ? list.find((i) => i.id === id) : undefined
+      const it = latest || findItem(id)
+      if (it) setBasicInit(it)
+    } catch {
+      const it = findItem(id)
+      if (it) setBasicInit(it)
+    }
   }
   const remove = async (id: string): Promise<void> => {
     await saveItems(items.filter((i) => i.id !== id))
@@ -172,16 +178,19 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
     }
     if (!v.id) v.id = genId()
     const idx = items.findIndex((i) => i.id === v.id)
+    const prev = idx >= 0 ? items[idx] : undefined
+    const provider = (v.provider || prev?.provider || 'webdav') as ProviderId
     const nextItem: CloudStorageItem = {
-      provider: (v.provider || 'webdav') as ProviderId,
-      enabled: v.enabled ?? true,
-      remotePath: v.remotePath || '/notes',
-      localPath: v.localPath || (await getLocalPath()),
-      syncOnStartup: v.syncOnStartup ?? false,
-      syncDirection: (v.syncDirection as any) || 'bidirectional',
-      auth: v.auth || {},
-      id: v.id as string,
-      name: v.name || ''
+      provider,
+      enabled: v.enabled ?? (prev?.enabled ?? true),
+      remotePath: v.remotePath || prev?.remotePath || '/notes',
+      localPath: v.localPath || prev?.localPath || (await getLocalPath()),
+      syncOnStartup: v.syncOnStartup ?? (prev?.syncOnStartup ?? false),
+      syncDirection: ((v.syncDirection as any) || prev?.syncDirection || 'bidirectional') as any,
+      // 保留已有认证信息（basic 表单不包含 auth 字段，避免被清空）
+      auth: (v.auth !== undefined ? v.auth : prev?.auth) || {},
+      id: (v.id as string) || (prev?.id as string),
+      name: v.name ?? (prev?.name || '')
     }
     if (idx >= 0) {
       const next = [...items]
@@ -302,20 +311,59 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
     }
   }
 
-  const openCreds = (id: string): void => {
-    const it = findItem(id)
-    if (!it) return
+  const openCreds = async (id: string): Promise<void> => {
     setCredsId(id)
     setCredsVisible(true)
-    setTimeout(() => credsApi?.setValues({ ...it, auth: it.auth || {} }), 0)
+    try {
+      // 打开时从 settings.json 获取已有配置，避免显示为空
+      const settings = await window.api.settings.getAll()
+      const list = (settings as any).cloudStorageList as CloudStorageItem[] | undefined
+      const latest = Array.isArray(list) ? list.find((i) => i.id === id) : undefined
+      const it = latest || findItem(id)
+      if (it) setCredsInit({ ...it, auth: it.auth || {} })
+    } catch {
+      const it = findItem(id)
+      if (it) setCredsInit({ ...it, auth: it.auth || {} })
+    }
   }
   const saveCreds = async (v: Partial<CloudStorageItem>): Promise<void> => {
     if (!credsId) return
-    await saveItems(items.map((i) => (i.id === credsId ? ({ ...i, ...v } as CloudStorageItem) : i)))
+    await saveItems(
+      items.map((i) =>
+        i.id === credsId
+          ? ({
+              ...i,
+              ...v,
+              auth: { ...(i.auth || {}), ...((v as any).auth || {}) }
+            } as CloudStorageItem)
+          : i
+      )
+    )
     setCredsVisible(false)
     setCredsId(null)
     Toast.success('配置已保存')
   }
+
+  // 确保在表单渲染并获取到 FormApi 后再同步初始值，避免显示为空
+  useEffect(() => {
+    if (basicVisible && basicApi && basicInit) {
+      try {
+        basicApi.setValues(basicInit)
+      } catch {}
+    }
+  }, [basicVisible, basicApi, basicInit])
+
+  useEffect(() => {
+    if (credsVisible && credsApi && credsId) {
+      const it = findItem(credsId)
+      const values = credsInit || (it ? { ...it, auth: it.auth || {} } : null)
+      if (values) {
+        try {
+          credsApi.setValues(values)
+        } catch {}
+      }
+    }
+  }, [credsVisible, credsApi, credsId, credsInit, findItem])
 
   const renderCredsForm = (p: ProviderId): React.ReactNode => {
     if (p === 'webdav')
@@ -529,7 +577,10 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
       <Modal
         title={editingId ? '编辑同步项' : '新增同步项'}
         visible={basicVisible}
-        onCancel={() => setBasicVisible(false)}
+        onCancel={() => {
+          setBasicVisible(false)
+          setBasicInit(null)
+        }}
         onOk={() => basicApi?.submitForm()}
       >
         <Form
@@ -538,7 +589,11 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
           labelPosition="left"
           labelAlign="right"
           labelWidth={120}
+          initValues={basicInit || undefined}
+          key={(editingId || 'new') + (basicVisible ? '_visible' : '')}
         >
+          {/* 隐藏字段：确保提交时包含 id，用于更新而非新增 */}
+          <Form.Input field="id" style={{ display: 'none' }} />
           <Form.Input field="name" label="名称" placeholder="" />
           <Form.Select field="provider" label="云存储服务" style={{ width: '100%' }}>
             {providers.map((p) => (
@@ -576,7 +631,10 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
       <Modal
         title="配置凭据"
         visible={credsVisible}
-        onCancel={() => setCredsVisible(false)}
+        onCancel={() => {
+          setCredsVisible(false)
+          setCredsInit(null)
+        }}
         onOk={() => credsApi?.submitForm()}
       >
         {credsId && (
@@ -586,6 +644,8 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
             labelPosition="left"
             labelAlign="right"
             labelWidth={120}
+            initValues={credsInit || undefined}
+            key={(credsId || '') + (credsVisible ? '_visible' : '')}
           >
             {(() => {
               const it = findItem(credsId)

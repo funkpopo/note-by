@@ -20,7 +20,14 @@ function notifySyncProgress(config: {
   action: 'upload' | 'download' | 'compare'
 }): void {
   if (mainWindow) {
+    // 原有的 WebDAV 专用进度事件
     mainWindow.webContents.send('webdav-sync-progress', config)
+    // 同步桥接到云存储通用进度事件，便于云存储页面显示细粒度进度
+    try {
+      mainWindow.webContents.send('cloud-sync-progress', config)
+    } catch {
+      // ignore bridge send failures
+    }
   }
 }
 
