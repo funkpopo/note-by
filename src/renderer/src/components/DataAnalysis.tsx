@@ -1128,7 +1128,7 @@ const DataAnalysis: React.FC = () => {
   const clearAnalyzingToast = (): void => {
     if (currentAnalyzingToastRef.current) {
       try {
-        currentAnalyzingToastRef.current.destroy()
+        Toast.close(currentAnalyzingToastRef.current)
       } catch {
         // Toast清理失败，继续执行
       } finally {
@@ -1208,13 +1208,13 @@ const DataAnalysis: React.FC = () => {
       case 'error':
         Toast.error({
           content: `分析失败: ${error.message || error}`,
-          duration: 5000 // 5秒后自动关闭
+          duration: 5 // 5秒后自动关闭
         })
         break
       case 'completed':
         Toast.success({
           content: '分析完成',
-          duration: 3000 // 3秒后自动关闭
+          duration: 3 // 3秒后自动关闭
         })
         break
     }
