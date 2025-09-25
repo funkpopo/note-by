@@ -281,12 +281,6 @@ async function getRemoteFiles(remotePath: string): Promise<FileStat[]> {
   }
 }
 
-// 判断文件是否需要上传：新文件或修改过的文件
-
-
-// 判断文件是否需要下载：新文件或远程有更新的文件
-
-
 // 计算文件的MD5哈希
 async function calculateFileHash(filePath: string): Promise<string> {
   try {

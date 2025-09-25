@@ -313,97 +313,110 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
 
   return (
     <div className="editor-header">
-      <div className="editor-header-left">
-        <div className="file-info">
-          <IconFile size="small" style={{ color: 'var(--semi-color-text-2)' }} />
-          <div className="file-title" title={displayName}>{displayName}</div>
-          {hasUnsavedChanges && (
-            <div className="unsaved-indicator">
-              <span>●</span>
-              <span>未保存</span>
-            </div>
-          )}
+      <div className="editor-title-bar">
+        <div className="editor-header-left">
+          <div className="file-info">
+            <IconFile size="small" style={{ color: 'var(--semi-color-text-2)' }} />
+            <div className="file-title" title={displayName}>{displayName}</div>
+            {hasUnsavedChanges && (
+              <div className="unsaved-indicator">
+                <span>●</span>
+                <span>未保存</span>
+              </div>
+            )}
+          </div>
+          <AIModelDropdown />
         </div>
-        <AIModelDropdown />
+
+        <div className="editor-header-right">
+          <Space>
+            <CustomHistoryDropdown
+              filePath={filePath}
+              currentContent={currentContent}
+              onRestore={onContentRestore}
+              disabled={hasUnsavedChanges}
+            />
+            <CustomDropdown
+              trigger="click"
+              position="bottomLeft"
+              autoAdjustOverflow
+              constrainToContainer
+              menu={exportFormats.map((format) => ({
+                node: 'item' as const,
+                name: format.label,
+                onClick: () => handleExport(format.key),
+                disabled: isExporting
+              }))}
+              getPopupContainer={() => {
+                const container = document.querySelector('.tiptap-editor')
+                return (container as HTMLElement) || document.body
+              }}
+              className="export-dropdown"
+            >
+              <Button
+                icon={<IconFile />}
+                type="tertiary"
+                size="default"
+                loading={isExporting || savingTags}
+                disabled={!currentContent || hasUnsavedChanges}
+              >
+                导出
+              </Button>
+            </CustomDropdown>
+            <Button
+              icon={<IconSave />}
+              type="primary"
+              size="default"
+              onClick={onSave}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              {isSaving ? <Spin size="small" /> : '保存'}
+            </Button>
+          </Space>
+        </div>
       </div>
 
-      <div className="editor-header-right">
-        <Space>
-          <div style={{ minWidth: 140 }}>
-            <TagInput
-              value={fileTags}
-              onChange={(val) => {
-                const list = (val || []).map((v) => String(v).trim()).filter(Boolean)
-                setFileTags(list)
-                schedulePersist(list)
-              }}
-              placeholder="添加标签…"
-              addOnBlur
-              allowDuplicates={false}
-              separator="," 
-              disabled={!filePath}
-              style={{ width: 'clamp(140px, 22vw, 260px)' }}
-              renderTagItem={(value, _index, onClose) => {
-                const { color, type } = getTagColor(String(value))
-                return (
-                  <Tag
-                    color={color}
-                    type={type}
-                    size="small"
-                    closable
-                    onClose={onClose}
-                    style={{ marginRight: 4 }}
-                  >
-                    {String(value)}
-                  </Tag>
-                )
-              }}
-            />
-          </div>
-          <CustomHistoryDropdown
-            filePath={filePath}
-            currentContent={currentContent}
-            onRestore={onContentRestore}
-            disabled={hasUnsavedChanges}
-          />
-          <CustomDropdown
-            trigger="click"
-            position="bottomLeft"
-            autoAdjustOverflow
-            constrainToContainer
-            menu={exportFormats.map((format) => ({
-              node: 'item' as const,
-              name: format.label,
-              onClick: () => handleExport(format.key),
-              disabled: isExporting
-            }))}
-            getPopupContainer={() => {
-              const container = document.querySelector('.tiptap-editor')
-              return (container as HTMLElement) || document.body
+      <div className="editor-tag-bar">
+        <SemiTypography.Text className="editor-tag-label" type="tertiary" size="small">标签</SemiTypography.Text>
+        <div className="editor-tag-input-container">
+          <TagInput
+            value={fileTags}
+            onChange={(val) => {
+              const list = (val || []).map((v) => String(v).trim()).filter(Boolean)
+              setFileTags(list)
+              schedulePersist(list)
             }}
-            className="export-dropdown"
-          >
-            <Button
-              icon={<IconFile />}
-              type="tertiary"
-              size="default"
-              loading={isExporting || savingTags}
-              disabled={!currentContent || hasUnsavedChanges}
-            >
-              导出
-            </Button>
-          </CustomDropdown>
-          <Button
-            icon={<IconSave />}
-            type="primary"
-            size="default"
-            onClick={onSave}
-            disabled={isSaving || !hasUnsavedChanges}
-          >
-            {isSaving ? <Spin size="small" /> : '保存'}
-          </Button>
-        </Space>
+            placeholder="添加标签"
+            addOnBlur
+            allowDuplicates={false}
+            separator="," 
+            disabled={!filePath}
+            style={{ width: '100%' }}
+            renderTagItem={(value, _index, onClose) => {
+              const { color, type } = getTagColor(String(value))
+              return (
+                <Tag
+                  color={color}
+                  type={type}
+                  size="small"
+                  closable
+                  onClose={onClose}
+                  style={{ marginRight: 4 }}
+                >
+                  {String(value)}
+                </Tag>
+              )
+            }}
+          />
+        </div>
+        {savingTags && (
+          <div className="editor-tag-status">
+            <Spin size="small" />
+            <SemiTypography.Text type="tertiary" size="small">保存中...</SemiTypography.Text>
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
