@@ -38,12 +38,12 @@
 .editor-tag-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
-  row-gap: 8px;
   padding: 6px 16px;
   border-top: 1px solid var(--semi-color-border);
   background: var(--semi-color-fill-0);
+  overflow: hidden;
 }
 
 .editor-tag-label {
@@ -56,6 +56,73 @@
 .editor-tag-input-container {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.editor-tag-input-container .semi-tagInput {
+  width: 100%;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  gap: 4px;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--semi-color-border);
+  border-radius: 3px;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper-tag {
+  flex-shrink: 0;
+  max-width: none;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper-tag .semi-tag {
+  max-width: none;
+  overflow: visible;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: max-content;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper-tag .semi-tag-content,
+.editor-tag-input-container .semi-tagInput-wrapper-tag .semi-tag-content-ellipsis {
+  flex: 0 0 auto;
+  max-width: none;
+  width: max-content;
+  min-width: max-content;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper-input {
+  flex: 0 0 auto;
+  min-width: 36px;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper-input > .semi-input-wrapper {
+  min-width: 36px;
+}
+
+.editor-tag-input-container .semi-tagInput-wrapper-input input {
+  width: 100%;
+  min-width: 36px;
 }
 
 .editor-tag-status {
