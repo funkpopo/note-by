@@ -1868,7 +1868,6 @@ const DataAnalysis: React.FC = () => {
     }))
 
     const relationLabels = processedData.map((item) => item.label)
-    const relationValues = processedData.map((item) => item.value)
 
     // 为每个关系生成颜色
     const colors = generateColors(relationLabels.length)

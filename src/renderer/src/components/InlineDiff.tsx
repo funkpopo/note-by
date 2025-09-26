@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react'
 import { Button, Space } from '@douyinfe/semi-ui'
 import { IconClose } from '@douyinfe/semi-icons'
-import { NodeViewWrapper } from '@tiptap/react'
-import { Editor } from '@tiptap/react'
+import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
 import { DiffResult, DiffFeature, DiffItem } from '../types/diffTypes'
 import './InlineDiff.css'
 
@@ -13,25 +12,18 @@ const IconCheck = () => (
   </svg>
 )
 
-interface InlineDiffNode {
-  attrs: {
-    originalText: string
-    newText: string
-    diffResult: DiffResult
-    feature: DiffFeature
-  }
+type InlineDiffAttrs = {
+  originalText: string
+  newText: string
+  diffResult: DiffResult | null
+  feature: DiffFeature | null
+  accepted?: boolean
+  [key: string]: unknown
 }
 
-interface InlineDiffProps {
-  node: InlineDiffNode
-  updateAttributes: (attrs: Partial<InlineDiffNode['attrs']>) => void
-  deleteNode: () => void
-  getPos: () => number
-  editor: Editor
-}
-
-const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
-  const { originalText, newText, diffResult } = node.attrs
+const InlineDiff: React.FC<NodeViewProps> = ({ node, getPos, editor }) => {
+  const attrs = node.attrs as InlineDiffAttrs
+  const { originalText, newText, diffResult } = attrs
   const [isHovered, setIsHovered] = React.useState(false)
   const wrapperRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -206,4 +198,6 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
 }
 
 export default InlineDiff
+
+
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Card, Divider, Tabs } from '@douyinfe/semi-ui'
+import { Typography, Card, Tabs } from '@douyinfe/semi-ui'
 import { IconCloud } from '@douyinfe/semi-icons'
 import CloudStorageManager from './CloudStorageManager'
 import './Settings.css'
@@ -84,3 +84,5 @@ const Settings: React.FC = () => {
 }
 
 export default Settings
+
+

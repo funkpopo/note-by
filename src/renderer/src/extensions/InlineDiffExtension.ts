@@ -1,4 +1,4 @@
-import { Node, mergeAttributes } from '@tiptap/core'
+import { Node } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { DiffResult, DiffFeature } from '../types/diffTypes'
 import InlineDiff from '../components/InlineDiff'
@@ -141,3 +141,5 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
 })
 
 export default InlineDiffExtension
+
+
