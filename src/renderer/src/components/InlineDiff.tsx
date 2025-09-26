@@ -31,7 +31,7 @@ interface InlineDiffProps {
 }
 
 const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
-  const { originalText, newText, diffResult, feature } = node.attrs
+  const { originalText, newText, diffResult } = node.attrs
   const [isHovered, setIsHovered] = React.useState(false)
   const wrapperRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -206,3 +206,4 @@ const InlineDiff: React.FC<InlineDiffProps> = ({ node, getPos, editor }) => {
 }
 
 export default InlineDiff
+
