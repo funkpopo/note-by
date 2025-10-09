@@ -388,35 +388,117 @@ class EnhancedDatabasePool {
     }
   }
 
-  private initializeTables(connection: Database.Database): void {
+  private   initializeTables(connection: Database.Database): void {
     try {
-      // 创建文档历史记录表
+      // ===== 文件元数据表优化 =====
+      // 创建优化的文档元数据表
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS file_metadata (
+          file_path TEXT PRIMARY KEY,
+          file_name TEXT NOT NULL,
+          file_dir TEXT NOT NULL,
+          file_ext TEXT NOT NULL,
+          file_size INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL,
+          modified_at INTEGER NOT NULL,
+          accessed_at INTEGER,
+          word_count INTEGER DEFAULT 0,
+          line_count INTEGER DEFAULT 0,
+          checksum TEXT,
+          encoding TEXT DEFAULT 'utf-8',
+          is_deleted INTEGER DEFAULT 0,
+          last_sync_at INTEGER,
+          updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_file_metadata_dir ON file_metadata(file_dir);
+        CREATE INDEX IF NOT EXISTS idx_file_metadata_ext ON file_metadata(file_ext);
+        CREATE INDEX IF NOT EXISTS idx_file_metadata_modified ON file_metadata(modified_at);
+        CREATE INDEX IF NOT EXISTS idx_file_metadata_deleted ON file_metadata(is_deleted);
+      `)
+
+      // ===== 历史记录表分区优化 =====
+      // 主历史记录表（只保留最近记录）
       connection.exec(`
         CREATE TABLE IF NOT EXISTS note_history (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           file_path TEXT NOT NULL,
+          partition_year INTEGER NOT NULL,
+          partition_month INTEGER NOT NULL,
           content TEXT NOT NULL,
           timestamp INTEGER NOT NULL,
           content_hash TEXT,
           file_size INTEGER DEFAULT 0,
+          change_type TEXT DEFAULT 'edit', -- edit, create, delete, rename
+          change_summary TEXT, -- 变更摘要
           created_at INTEGER DEFAULT (strftime('%s', 'now'))
         );
-        
+
         CREATE INDEX IF NOT EXISTS idx_note_history_file_path ON note_history(file_path);
         CREATE INDEX IF NOT EXISTS idx_note_history_timestamp ON note_history(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_note_history_partition ON note_history(partition_year, partition_month);
         CREATE INDEX IF NOT EXISTS idx_note_history_created_at ON note_history(created_at);
       `)
 
-      // 创建文档-标签关系表
+      // 历史记录归档表（旧数据自动迁移）
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS note_history_archive (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          file_path TEXT NOT NULL,
+          partition_year INTEGER NOT NULL,
+          partition_month INTEGER NOT NULL,
+          content TEXT,
+          timestamp INTEGER NOT NULL,
+          content_hash TEXT,
+          file_size INTEGER DEFAULT 0,
+          change_type TEXT DEFAULT 'edit',
+          change_summary TEXT,
+          archived_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_archive_file_path ON note_history_archive(file_path);
+        CREATE INDEX IF NOT EXISTS idx_archive_partition ON note_history_archive(partition_year, partition_month);
+        CREATE INDEX IF NOT EXISTS idx_archive_timestamp ON note_history_archive(timestamp);
+      `)
+
+      // ===== 标签关系表索引优化 =====
+      // 优化的文档-标签关系表
       connection.exec(`
         CREATE TABLE IF NOT EXISTS note_tags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
           file_path TEXT NOT NULL,
           tag TEXT NOT NULL,
+          tag_category TEXT, -- 标签分类，如：topic, priority, status等
+          confidence REAL DEFAULT 1.0, -- 标签置信度（自动提取vs手动添加）
+          created_by TEXT DEFAULT 'user', -- user, auto, system
           created_at INTEGER DEFAULT (strftime('%s','now')),
-          PRIMARY KEY(file_path, tag)
+          updated_at INTEGER DEFAULT (strftime('%s','now')),
+          UNIQUE(file_path, tag)
         );
 
         CREATE INDEX IF NOT EXISTS idx_note_tags_tag ON note_tags(tag);
+        CREATE INDEX IF NOT EXISTS idx_note_tags_category ON note_tags(tag_category);
+        CREATE INDEX IF NOT EXISTS idx_note_tags_file_path ON note_tags(file_path);
+        CREATE INDEX IF NOT EXISTS idx_note_tags_confidence ON note_tags(confidence);
+        CREATE INDEX IF NOT EXISTS idx_note_tags_composite ON note_tags(tag, tag_category, confidence);
+      `)
+
+      // 标签统计表（提高标签查询性能）
+      connection.exec(`
+        CREATE TABLE IF NOT EXISTS tag_statistics (
+          tag TEXT PRIMARY KEY,
+          category TEXT,
+          file_count INTEGER DEFAULT 0,
+          total_confidence REAL DEFAULT 0,
+          avg_confidence REAL DEFAULT 0,
+          last_used_at INTEGER,
+          created_at INTEGER DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_tag_stats_category ON tag_statistics(category);
+        CREATE INDEX IF NOT EXISTS idx_tag_stats_count ON tag_statistics(file_count DESC);
+        CREATE INDEX IF NOT EXISTS idx_tag_stats_last_used ON tag_statistics(last_used_at DESC);
       `)
 
       // 创建WebDAV同步缓存表
@@ -990,19 +1072,16 @@ export async function setTagsForFile(filePath: string, tags: string[]): Promise<
   const normalized = Array.from(
     new Set((tags || []).map((t) => String(t).trim()).filter((t) => t.length > 0))
   )
-  const result = await withDatabase(async (database) => {
-    const deleteStmt = database.prepare('DELETE FROM note_tags WHERE file_path = ?')
-    const insertStmt = database.prepare('INSERT OR IGNORE INTO note_tags (file_path, tag) VALUES (?, ?)')
-    const tx = database.transaction((values: string[]) => {
-      deleteStmt.run(filePath)
-      for (const tag of values) {
-        insertStmt.run(filePath, tag)
-      }
-    })
-    tx(normalized)
-    return true
-  })
-  return Boolean(result)
+
+  // 转换为新的标签格式
+  const tagObjects = normalized.map(tag => ({
+    tag,
+    category: 'general' as const,
+    confidence: 1.0,
+    createdBy: 'user' as const
+  }))
+
+  return await batchUpdateTags(filePath, tagObjects)
 }
 
 export async function getAllTagsWithCount(): Promise<Array<{ tag: string; count: number }>> {
@@ -1065,9 +1144,189 @@ export async function deleteFileTags(filePath: string): Promise<boolean> {
   const result = await withDatabase(async (database) => {
     const stmt = database.prepare('DELETE FROM note_tags WHERE file_path = ?')
     stmt.run(filePath)
+
+    // 更新标签统计
+    await updateTagStatistics()
+
     return true
   })
   return Boolean(result)
+}
+
+// ===== 标签统计管理函数 =====
+
+// 更新标签统计（在标签变化后调用）
+export async function updateTagStatistics(): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    // 使用事务确保数据一致性
+    const tx = database.transaction(() => {
+      // 清空现有统计
+      database.prepare('DELETE FROM tag_statistics').run()
+
+      // 重新计算统计数据
+      const insertStmt = database.prepare(`
+        INSERT INTO tag_statistics (tag, category, file_count, total_confidence, avg_confidence, last_used_at, updated_at)
+        SELECT
+          tag,
+          COALESCE(tag_category, 'general') as category,
+          COUNT(DISTINCT file_path) as file_count,
+          SUM(confidence) as total_confidence,
+          AVG(confidence) as avg_confidence,
+          MAX(created_at) as last_used_at,
+          strftime('%s', 'now') as updated_at
+        FROM note_tags
+        GROUP BY tag, COALESCE(tag_category, 'general')
+      `)
+
+      insertStmt.run()
+      return true
+    })
+
+    tx()
+    return true
+  })
+
+  return Boolean(result)
+}
+
+// 获取标签统计数据
+export async function getTagStatistics(): Promise<Array<{
+  tag: string
+  category: string
+  fileCount: number
+  avgConfidence: number
+  lastUsedAt: number
+}>> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT tag, category, file_count as fileCount, avg_confidence as avgConfidence, last_used_at as lastUsedAt
+      FROM tag_statistics
+      ORDER BY file_count DESC, avg_confidence DESC
+    `)
+
+    return stmt.all() as Array<{
+      tag: string
+      category: string
+      fileCount: number
+      avgConfidence: number
+      lastUsedAt: number
+    }>
+  })
+
+  return result || []
+}
+
+// 批量更新标签（支持分类和置信度）
+export async function batchUpdateTags(
+  filePath: string,
+  tags: Array<{ tag: string; category?: string; confidence?: number; createdBy?: string }>
+): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    const deleteStmt = database.prepare('DELETE FROM note_tags WHERE file_path = ?')
+    const insertStmt = database.prepare(`
+      INSERT OR REPLACE INTO note_tags
+      (file_path, tag, tag_category, confidence, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'))
+    `)
+
+    const tx = database.transaction(() => {
+      deleteStmt.run(filePath)
+
+      for (const tagInfo of tags) {
+        insertStmt.run(
+          filePath,
+          tagInfo.tag,
+          tagInfo.category || 'general',
+          tagInfo.confidence || 1.0,
+          tagInfo.createdBy || 'user',
+          Date.now()
+        )
+      }
+
+      return true
+    })
+
+    tx()
+
+    // 更新统计数据
+    await updateTagStatistics()
+
+    return true
+  })
+
+  return Boolean(result)
+}
+
+// 获取智能标签建议（基于现有标签关系）
+export async function getTagSuggestions(filePath: string, limit: number = 10): Promise<Array<{
+  tag: string
+  category: string
+  confidence: number
+  reason: string
+}>> {
+  const result = await withDatabase(async (database) => {
+    // 获取当前文件的标签
+    const currentTagsStmt = database.prepare('SELECT tag FROM note_tags WHERE file_path = ?')
+    const currentTags = currentTagsStmt.all(filePath) as Array<{ tag: string }>
+    const currentTagSet = new Set(currentTags.map(t => t.tag))
+
+    if (currentTagSet.size === 0) {
+      // 如果文件没有标签，返回最热门的标签
+      const popularStmt = database.prepare(`
+        SELECT tag, category, avg_confidence as avgConfidence, file_count as fileCount
+        FROM tag_statistics
+        ORDER BY file_count DESC, avg_confidence DESC
+        LIMIT ?
+      `)
+
+      const popular = popularStmt.all(limit) as Array<{
+        tag: string
+        category: string
+        avgConfidence: number
+        fileCount: number
+      }>
+
+      return popular.map(item => ({
+        tag: item.tag,
+        category: item.category,
+        confidence: Math.min(item.avgConfidence * 0.8, 0.9), // 降低推荐置信度
+        reason: `热门标签 (${item.fileCount}个文件)`
+      }))
+    }
+
+    // 基于现有标签的关系推荐
+    const suggestionsStmt = database.prepare(`
+      SELECT
+        t2.tag as suggested_tag,
+        t2.tag_category as category,
+        COUNT(*) as cooccurrence,
+        AVG(t2.confidence) as avg_confidence
+      FROM note_tags t1
+      JOIN note_tags t2 ON t1.file_path = t2.file_path AND t1.tag != t2.tag
+      WHERE t1.tag IN (${Array.from(currentTagSet).map(() => '?').join(',')})
+        AND t2.tag NOT IN (${Array.from(currentTagSet).map(() => '?').join(',')})
+      GROUP BY t2.tag, t2.tag_category
+      ORDER BY cooccurrence DESC, avg_confidence DESC
+      LIMIT ?
+    `)
+
+    const params = [...Array.from(currentTagSet), ...Array.from(currentTagSet), limit]
+    const suggestions = suggestionsStmt.all(...params) as Array<{
+      suggested_tag: string
+      category: string
+      cooccurrence: number
+      avg_confidence: number
+    }>
+
+    return suggestions.map(item => ({
+      tag: item.suggested_tag,
+      category: item.category,
+      confidence: Math.min(item.avg_confidence * (item.cooccurrence / 10), 0.95),
+      reason: `与现有标签共现${item.cooccurrence}次`
+    }))
+  })
+
+  return result || []
 }
 
 // 保存或更新WebDAV同步记录（使用连接池）
@@ -1207,38 +1466,149 @@ export function performDatabaseMemoryCleanup(): {
   return enhancedDbPool.performMemoryCleanup()
 }
 
-// 添加历史记录
+// ===== 文件元数据管理函数 =====
+
+export interface FileMetadata {
+  filePath: string
+  fileName: string
+  fileDir: string
+  fileExt: string
+  fileSize: number
+  createdAt: number
+  modifiedAt: number
+  accessedAt?: number
+  wordCount: number
+  lineCount: number
+  checksum?: string
+  encoding: string
+  isDeleted: boolean
+  lastSyncAt?: number
+}
+
+export async function saveFileMetadata(metadata: FileMetadata): Promise<boolean> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      INSERT OR REPLACE INTO file_metadata
+      (file_path, file_name, file_dir, file_ext, file_size, created_at, modified_at,
+       accessed_at, word_count, line_count, checksum, encoding, is_deleted, last_sync_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'))
+    `)
+
+    stmt.run(
+      metadata.filePath,
+      metadata.fileName,
+      metadata.fileDir,
+      metadata.fileExt,
+      metadata.fileSize,
+      metadata.createdAt,
+      metadata.modifiedAt,
+      metadata.accessedAt || null,
+      metadata.wordCount,
+      metadata.lineCount,
+      metadata.checksum || null,
+      metadata.encoding,
+      metadata.isDeleted ? 1 : 0,
+      metadata.lastSyncAt || null
+    )
+    return true
+  })
+  return Boolean(result)
+}
+
+export async function getFileMetadata(filePath: string): Promise<FileMetadata | null> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT
+        file_path as filePath, file_name as fileName, file_dir as fileDir,
+        file_ext as fileExt, file_size as fileSize, created_at as createdAt,
+        modified_at as modifiedAt, accessed_at as accessedAt, word_count as wordCount,
+        line_count as lineCount, checksum, encoding, is_deleted as isDeleted,
+        last_sync_at as lastSyncAt, updated_at as updatedAt
+      FROM file_metadata
+      WHERE file_path = ? AND is_deleted = 0
+    `)
+
+    const row = stmt.get(filePath) as any
+    if (row) {
+      row.isDeleted = Boolean(row.isDeleted)
+    }
+    return row || null
+  })
+  return result
+}
+
+export async function getFilesByDirectory(dirPath: string): Promise<FileMetadata[]> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT
+        file_path as filePath, file_name as fileName, file_dir as fileDir,
+        file_ext as fileExt, file_size as fileSize, created_at as createdAt,
+        modified_at as modifiedAt, accessed_at as accessedAt, word_count as wordCount,
+        line_count as lineCount, checksum, encoding, is_deleted as isDeleted,
+        last_sync_at as lastSyncAt
+      FROM file_metadata
+      WHERE file_dir = ? AND is_deleted = 0
+      ORDER BY modified_at DESC
+    `)
+
+    const rows = stmt.all(dirPath) as any[]
+    return rows.map(row => ({ ...row, isDeleted: Boolean(row.isDeleted) }))
+  })
+  return result || []
+}
+
+// ===== 历史记录分区管理函数 =====
+
+// 添加历史记录（支持分区）
 interface AddHistoryParams {
   filePath: string
   content: string
+  changeType?: 'edit' | 'create' | 'delete' | 'rename'
+  changeSummary?: string
 }
 
 export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
   await withDatabase(async (database) => {
     const timestamp = Date.now()
+    const date = new Date(timestamp)
+    const partitionYear = date.getFullYear()
+    const partitionMonth = date.getMonth() + 1 // getMonth() returns 0-11
 
-    // 准备插入语句
-    const stmt = database.prepare(
-      'INSERT INTO note_history (file_path, content, timestamp) VALUES (?, ?, ?)'
-    )
+    // 准备插入语句（支持分区）
+    const stmt = database.prepare(`
+      INSERT INTO note_history
+      (file_path, partition_year, partition_month, content, timestamp, change_type, change_summary)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
 
     // 执行插入
-    stmt.run(params.filePath, params.content, timestamp)
+    stmt.run(
+      params.filePath,
+      partitionYear,
+      partitionMonth,
+      params.content,
+      timestamp,
+      params.changeType || 'edit',
+      params.changeSummary || null
+    )
 
     // 获取历史记录管理设置
     interface HistoryManagementSettings {
       type: 'count' | 'time'
       maxCount: number
       maxDays: number
+      autoArchive: boolean
+      archiveAfterDays: number
     }
 
     const defaultSettings: HistoryManagementSettings = {
       type: 'count',
       maxCount: 20,
-      maxDays: 7
+      maxDays: 7,
+      autoArchive: true,
+      archiveAfterDays: 90
     }
 
-    // 同步调用getSetting
     const historyManagement = getSetting(
       'historyManagement',
       defaultSettings
@@ -1248,11 +1618,11 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
     if (historyManagement.type === 'count') {
       // 基于数量的清理策略
       const cleanStmt = database.prepare(`
-        DELETE FROM note_history 
+        DELETE FROM note_history
         WHERE file_path = ? AND id NOT IN (
-          SELECT id FROM note_history 
-          WHERE file_path = ? 
-          ORDER BY timestamp DESC 
+          SELECT id FROM note_history
+          WHERE file_path = ?
+          ORDER BY timestamp DESC
           LIMIT ?
         )
       `)
@@ -1260,19 +1630,82 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
       cleanStmt.run(params.filePath, params.filePath, historyManagement.maxCount)
     } else if (historyManagement.type === 'time') {
       // 基于时间的清理策略
-      // 计算时间阈值（当前时间减去maxDays天）
       const timeThreshold = Date.now() - historyManagement.maxDays * 24 * 60 * 60 * 1000
 
       const cleanStmt = database.prepare(`
-        DELETE FROM note_history 
+        DELETE FROM note_history
         WHERE file_path = ? AND timestamp < ?
       `)
 
       cleanStmt.run(params.filePath, timeThreshold)
     }
 
+    // 自动归档旧记录
+    if (historyManagement.autoArchive) {
+      await archiveOldHistoryRecords(historyManagement.archiveAfterDays)
+    }
+
     return true
   })
+}
+
+// 历史记录归档管理
+export async function archiveOldHistoryRecords(archiveAfterDays: number = 90): Promise<number> {
+  const result = await withDatabase(async (database) => {
+    const archiveThreshold = Date.now() - archiveAfterDays * 24 * 60 * 60 * 1000
+
+    // 将超过阈值的记录从主表移动到归档表
+    const archiveStmt = database.prepare(`
+      INSERT INTO note_history_archive
+      (file_path, partition_year, partition_month, content, timestamp, content_hash,
+       file_size, change_type, change_summary)
+      SELECT file_path, partition_year, partition_month, content, timestamp, content_hash,
+             file_size, change_type, change_summary
+      FROM note_history
+      WHERE timestamp < ?
+    `)
+
+    const deleteStmt = database.prepare('DELETE FROM note_history WHERE timestamp < ?')
+
+    // 执行归档
+    archiveStmt.run(archiveThreshold)
+    const deleteResult = deleteStmt.run(archiveThreshold)
+
+    return deleteResult.changes
+  })
+
+  return result || 0
+}
+
+// 从归档表查询历史记录
+export async function getArchivedNoteHistory(filePath: string, limit: number = 50): Promise<NoteHistoryItem[]> {
+  const result = await withDatabase(async (database) => {
+    const stmt = database.prepare(`
+      SELECT id, file_path as filePath, content, timestamp, change_type as changeType, change_summary as changeSummary
+      FROM note_history_archive
+      WHERE file_path = ?
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `)
+
+    return stmt.all(filePath, limit) as NoteHistoryItem[]
+  })
+
+  return result || []
+}
+
+// 清理过期的归档记录
+export async function cleanupArchivedHistory(maxAgeDays: number = 365): Promise<number> {
+  const result = await withDatabase(async (database) => {
+    const cleanupThreshold = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000
+
+    const stmt = database.prepare('DELETE FROM note_history_archive WHERE timestamp < ?')
+    const result = stmt.run(cleanupThreshold)
+
+    return result.changes
+  })
+
+  return result || 0
 }
 
 // 获取文档的历史记录
