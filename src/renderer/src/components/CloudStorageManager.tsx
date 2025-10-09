@@ -58,6 +58,13 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
     total: number
     processed: number
     action: 'upload' | 'download' | 'compare'
+    phase?: 'collect' | 'compare' | 'upload' | 'download' | 'finalize'
+    currentFile?: string
+    uploaded?: number
+    downloaded?: number
+    skipped?: number
+    failed?: number
+    conflicts?: number
   } | null>(null)
 
   // Basic modal (no credential form when adding/editing)
@@ -89,6 +96,20 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
   useEffect(() => {
     const u = window.api.cloudStorage.onSyncProgress((p) => setSyncProgress(p))
     return () => u()
+  }, [])
+
+  // 冲突事件：跳转到编辑器并缓存待对比信息
+  useEffect(() => {
+    const off = window.api.cloudStorage.onConflict((payload) => {
+      try {
+        sessionStorage.setItem('pendingConflict', JSON.stringify(payload))
+      } catch {}
+      try {
+        void window.api.navigation.navigateToView('Editor')
+      } catch {}
+      Toast.warning('检测到同步冲突，已生成副本并打开对比视图')
+    })
+    return () => off()
   }, [])
 
   const providerName = useCallback(
@@ -491,13 +512,18 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
             borderRadius: 8
           }}
         >
-          <Text size="small">
-            {syncProgress.action === 'upload'
-              ? t('webdav.syncProgress.uploading')
-              : syncProgress.action === 'download'
-                ? t('webdav.syncProgress.downloading')
-                : t('webdav.syncProgress.comparing')}
-          </Text>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text size="small">
+              {syncProgress.action === 'upload'
+                ? t('webdav.syncProgress.uploading')
+                : syncProgress.action === 'download'
+                  ? t('webdav.syncProgress.downloading')
+                  : t('webdav.syncProgress.comparing')}
+            </Text>
+            <Text size="small" type="tertiary">
+              {syncProgress.phase ? `阶段: ${syncProgress.phase}` : ''}
+            </Text>
+          </div>
           <Progress
             percent={Math.round(
               (syncProgress.processed / Math.max(syncProgress.total || 1, 1)) * 100
@@ -506,6 +532,30 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
             size="large"
             style={{ marginTop: 8 }}
           />
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+            {typeof syncProgress.uploaded === 'number' && (
+              <Text size="small">上传: {syncProgress.uploaded}</Text>
+            )}
+            {typeof syncProgress.downloaded === 'number' && (
+              <Text size="small">下载: {syncProgress.downloaded}</Text>
+            )}
+            {typeof syncProgress.skipped === 'number' && (
+              <Text size="small">跳过: {syncProgress.skipped}</Text>
+            )}
+            {typeof syncProgress.failed === 'number' && (
+              <Text size="small">失败: {syncProgress.failed}</Text>
+            )}
+            {typeof syncProgress.conflicts === 'number' && syncProgress.conflicts > 0 && (
+              <Text size="small" type="danger">冲突: {syncProgress.conflicts}</Text>
+            )}
+          </div>
+          {syncProgress.currentFile && (
+            <div style={{ marginTop: 6 }}>
+              <Text size="small" type="tertiary">
+                当前: {syncProgress.currentFile}
+              </Text>
+            </div>
+          )}
         </div>
       )}
 

@@ -60,6 +60,13 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
     total: number
     processed: number
     action: 'upload' | 'download' | 'compare'
+    phase?: 'collect' | 'compare' | 'upload' | 'download' | 'finalize'
+    currentFile?: string
+    uploaded?: number
+    downloaded?: number
+    skipped?: number
+    failed?: number
+    conflicts?: number
   } | null>(null)
   // 添加密码相关状态
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
@@ -795,7 +802,20 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                   : syncProgress.action === 'download'
                     ? '正在下载文件...'
                     : '正在比较文件内容...'}
+                {syncProgress.phase ? `（阶段：${syncProgress.phase}）` : ''}
               </div>
+              <div style={{ fontSize: '12px', marginTop: '4px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {typeof syncProgress.uploaded === 'number' && <span>上传: {syncProgress.uploaded}</span>}
+                {typeof syncProgress.downloaded === 'number' && <span>下载: {syncProgress.downloaded}</span>}
+                {typeof syncProgress.skipped === 'number' && <span>跳过: {syncProgress.skipped}</span>}
+                {typeof syncProgress.failed === 'number' && <span>失败: {syncProgress.failed}</span>}
+                {typeof syncProgress.conflicts === 'number' && syncProgress.conflicts > 0 && (
+                  <span style={{ color: 'var(--semi-color-danger)' }}>冲突: {syncProgress.conflicts}</span>
+                )}
+              </div>
+              {syncProgress.currentFile && (
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>当前: {syncProgress.currentFile}</div>
+              )}
             </div>
           }
           closeIcon

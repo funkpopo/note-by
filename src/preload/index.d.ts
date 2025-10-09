@@ -443,13 +443,24 @@ interface WebDAVAPI {
     error?: string
   }>
 
-  // 监听同步进度
+  // 监听同步进度（增强：包含当前文件、阶段、计数等）
   onSyncProgress: (
     callback: (progress: {
       total: number
       processed: number
       action: 'upload' | 'download' | 'compare'
+      phase?: 'collect' | 'compare' | 'upload' | 'download' | 'finalize'
+      currentFile?: string
+      uploaded?: number
+      downloaded?: number
+      skipped?: number
+      failed?: number
+      conflicts?: number
     }) => void
+  ) => () => void
+  // 监听冲突事件（WebDAV）
+  onConflict: (
+    callback: (payload: { localPath: string; conflictFilePath: string; timestamp?: number }) => void
   ) => () => void
 }
 
@@ -489,7 +500,18 @@ interface CloudStorageAPI {
       total: number
       processed: number
       action: 'upload' | 'download' | 'compare'
+      phase?: 'collect' | 'compare' | 'upload' | 'download' | 'finalize'
+      currentFile?: string
+      uploaded?: number
+      downloaded?: number
+      skipped?: number
+      failed?: number
+      conflicts?: number
     }) => void
+  ) => () => void
+  // 监听冲突事件（云存储统一）
+  onConflict: (
+    callback: (payload: { localPath: string; conflictFilePath: string; timestamp?: number }) => void
   ) => () => void
 }
 

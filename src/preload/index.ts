@@ -641,6 +641,22 @@ const api = {
         ipcRenderer.removeListener('webdav-sync-progress', listener)
       }
     }
+    ,
+    // 监听冲突事件（WebDAV）
+    onConflict: (
+      callback: (payload: { localPath: string; conflictFilePath: string; timestamp?: number }) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { localPath: string; conflictFilePath: string; timestamp?: number }
+      ): void => {
+        callback(payload)
+      }
+      ipcRenderer.on('webdav-sync-conflict', listener)
+      return () => {
+        ipcRenderer.removeListener('webdav-sync-conflict', listener)
+      }
+    }
   },
 
   // 云存储相关API
@@ -722,6 +738,22 @@ const api = {
       ipcRenderer.on('cloud-sync-progress', listener)
       return () => {
         ipcRenderer.removeListener('cloud-sync-progress', listener)
+      }
+    }
+    ,
+    // 监听冲突事件（云存储统一）
+    onConflict: (
+      callback: (payload: { localPath: string; conflictFilePath: string; timestamp?: number }) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { localPath: string; conflictFilePath: string; timestamp?: number }
+      ): void => {
+        callback(payload)
+      }
+      ipcRenderer.on('cloud-sync-conflict', listener)
+      return () => {
+        ipcRenderer.removeListener('cloud-sync-conflict', listener)
       }
     }
   },

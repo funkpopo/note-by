@@ -18,6 +18,8 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { CharacterCount } from '@tiptap/extension-character-count'
 import { Toast } from '@douyinfe/semi-ui'
 import { EditorSkeleton } from './Skeleton'
+import { withLazyLoad, SmallComponentLoader, LazyVersionComparison } from './LazyComponents'
+const VersionComparisonLazy = withLazyLoad(LazyVersionComparison, SmallComponentLoader)
 import { InlineDiffExtension } from '../extensions/InlineDiffExtension'
 import { editorMemoryManager } from '../utils/EditorMemoryManager'
 import SlashMenu, { getSuggestionItems } from './SlashMenu'
@@ -88,6 +90,15 @@ const Editor: React.FC<EditorProps> = ({
   const unsavedChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editorUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onUpdateRef = useRef(onUpdate)
+
+  // 冲突对比视图状态
+  const [conflictVisible, setConflictVisible] = useState(false)
+  const [conflictHistory, setConflictHistory] = useState<{
+    id: number
+    filePath: string
+    content: string
+    timestamp: number
+  } | null>(null)
 
   useEffect(() => {
     hasUnsavedChangesRef.current = hasUnsavedChanges
@@ -237,6 +248,70 @@ const Editor: React.FC<EditorProps> = ({
       setIsLoading(false)
     }
   }, [])
+
+  // 判断是否同一文件（使用相对路径结尾匹配）
+  const isSameCurrentFile = useCallback(
+    (absLocalPath: string): boolean => {
+      if (!currentFolder || !currentFile) return false
+      const rel = `${currentFolder}/${currentFile}`.replace(/\\/g, '/').replace(/^\/?/, '')
+      const norm = (absLocalPath || '').replace(/\\/g, '/')
+      return norm.endsWith('/' + rel) || norm === rel
+    },
+    [currentFolder, currentFile]
+  )
+
+  // 打开冲突版本对比
+  const openConflictComparison = useCallback(
+    async (payload: { localPath: string; conflictFilePath: string; timestamp?: number }) => {
+      if (!isSameCurrentFile(payload.localPath)) {
+        try {
+          sessionStorage.setItem('pendingConflict', JSON.stringify(payload))
+        } catch {}
+        return
+      }
+      try {
+        const res = await window.api.markdown.readFile(payload.conflictFilePath)
+        if (!res.success || res.content === undefined) return
+        // 记录冲突副本为“历史项”，用于 VersionComparison props
+        setConflictHistory({
+          id: Date.now(),
+          filePath: payload.conflictFilePath,
+          content: String(res.content),
+          timestamp: payload.timestamp || Date.now()
+        })
+        setConflictVisible(true)
+      } catch {}
+    },
+    [isSameCurrentFile]
+  )
+
+  // 监听冲突事件（云存储统一）
+  useEffect(() => {
+    const off = window.api.cloudStorage?.onConflict?.((payload) => {
+      void openConflictComparison(payload)
+    })
+    return () => {
+      try {
+        off && off()
+      } catch {}
+    }
+  }, [openConflictComparison])
+
+  // 初始挂载或切换文件时检查是否有挂起的冲突
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('pendingConflict')
+      if (raw) {
+        const payload = JSON.parse(raw)
+        if (payload && payload.localPath && payload.conflictFilePath) {
+          if (isSameCurrentFile(payload.localPath)) {
+            sessionStorage.removeItem('pendingConflict')
+            void openConflictComparison(payload)
+          }
+        }
+      }
+    } catch {}
+  }, [currentFolder, currentFile, isSameCurrentFile, openConflictComparison])
 
   // 序列化操作较重，封装成函数便于复用和调度
   const flushEditorUpdate = useCallback((editorInstance: any) => {
@@ -763,6 +838,23 @@ const Editor: React.FC<EditorProps> = ({
       {editable && (
         <div className="editor-footer">
           <span className="character-count">{editor.storage.characterCount.characters()} 字</span>
+        </div>
+      )}
+      {conflictVisible && conflictHistory && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'var(--semi-color-bg-0)' }}
+        >
+          <VersionComparisonLazy
+            currentContent={editor?.getHTML() || ''}
+            historyItem={conflictHistory}
+            onClose={() => setConflictVisible(false)}
+            onRestore={(content) => {
+              try {
+                editor.commands.setContent(content)
+                setConflictVisible(false)
+              } catch {}
+            }}
+          />
         </div>
       )}
     </div>

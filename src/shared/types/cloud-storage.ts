@@ -13,6 +13,14 @@ export interface CloudSyncProgress {
   total: number
   processed: number
   action: 'upload' | 'download' | 'compare'
+  // 增强的实时状态字段（可选）
+  phase?: 'collect' | 'compare' | 'upload' | 'download' | 'finalize'
+  currentFile?: string
+  uploaded?: number
+  downloaded?: number
+  skipped?: number
+  failed?: number
+  conflicts?: number
 }
 
 export interface CloudSyncResult {

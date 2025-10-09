@@ -28,6 +28,13 @@ function notifySyncProgress(config: {
   total: number
   processed: number
   action: 'upload' | 'download' | 'compare'
+  phase?: 'collect' | 'compare' | 'upload' | 'download' | 'finalize'
+  currentFile?: string
+  uploaded?: number
+  downloaded?: number
+  skipped?: number
+  failed?: number
+  conflicts?: number
 }): void {
   if (mainWindow) {
     mainWindow.webContents.send('cloud-sync-progress', config)
