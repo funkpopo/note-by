@@ -1,4 +1,5 @@
 import type { ChatSession, ChatMessage, AnalysisCacheItem } from '../../main/database'
+import type { AiApiConfig } from '../../shared/types/common'
 
 // 历史记录项接口
 interface HistoryItem {
@@ -8,17 +9,7 @@ interface HistoryItem {
   timestamp: number
 }
 
-// AI API配置接口
-interface AiApiConfig {
-  id: string
-  name: string
-  apiKey: string
-  apiUrl: string
-  modelName: string
-  temperature?: string
-  maxTokens?: string
-  isThinkingModel?: boolean
-}
+// AiApiConfig moved to shared/types/common
 
 interface ChatAPI {
   createSession: (title?: string) => Promise<string | null>

@@ -1,16 +1,9 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type { CloudStorageConfig } from '../shared/types/cloud-storage'
+import type { AiApiConfig } from '../shared/types/common'
 
 // API配置接口
-interface AiApiConfig {
-  id: string
-  name: string
-  apiKey: string
-  apiUrl: string
-  modelName: string
-  temperature?: string
-  maxTokens?: string
-  isThinkingModel?: boolean // 是否为思维模型
-}
+// Moved to shared/types/common
 
 // 设置API接口定义
 interface SettingsAPI {
@@ -466,9 +459,9 @@ interface WebDAVAPI {
 
 // 云存储API接口定义
 interface CloudStorageAPI {
-  testConnection: (config: any) => Promise<{ success: boolean; message: string }>
-  authenticate: (config: any) => Promise<{ success: boolean; message: string; authUrl?: string }>
-  syncLocalToRemote: (config: any) => Promise<{
+  testConnection: (config: CloudStorageConfig) => Promise<{ success: boolean; message: string }>
+  authenticate: (config: CloudStorageConfig) => Promise<{ success: boolean; message: string; authUrl?: string }>
+  syncLocalToRemote: (config: CloudStorageConfig) => Promise<{
     success: boolean
     message: string
     uploaded: number
@@ -476,7 +469,7 @@ interface CloudStorageAPI {
     failed: number
     skipped: number
   }>
-  syncRemoteToLocal: (config: any) => Promise<{
+  syncRemoteToLocal: (config: CloudStorageConfig) => Promise<{
     success: boolean
     message: string
     uploaded: number
@@ -484,7 +477,7 @@ interface CloudStorageAPI {
     failed: number
     skipped: number
   }>
-  syncBidirectional: (config: any) => Promise<{
+  syncBidirectional: (config: CloudStorageConfig) => Promise<{
     success: boolean
     message: string
     uploaded: number

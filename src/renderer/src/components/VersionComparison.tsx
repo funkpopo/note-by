@@ -29,7 +29,8 @@ import json from 'highlight.js/lib/languages/json'
 import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
-import { smartDiff, DiffResult } from '../utils/diffUtils'
+import { smartDiff, DiffResult, type DiffItem } from '../utils/diffUtils'
+import type { HistoryItem } from '../../../shared/types/common'
 // Lazily load virtual list to reduce initial bundle
 const LazyVirtualList = lazy(() => import('./VirtualList'))
 import type { VirtualListItem } from './VirtualList'
@@ -132,12 +133,7 @@ const ReadOnlyIframeExtension = Node.create({
   }
 })
 
-interface HistoryItem {
-  id: number
-  filePath: string
-  content: string
-  timestamp: number
-}
+// HistoryItem moved to shared/types/common
 
 interface VersionComparisonProps {
   currentContent: string
@@ -213,7 +209,7 @@ const SideBySideEditor: React.FC<{ content: string; title: string; isChanged: bo
 
 // Diff高亮行组件
 const DiffHighlightLine: React.FC<{
-  diff: any
+  diff: DiffItem
   lineNumber: number
   showLineNumbers: boolean
 }> = ({ diff, lineNumber, showLineNumbers }) => {

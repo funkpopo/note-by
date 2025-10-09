@@ -1,30 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IPC_CHANNELS } from '../shared/ipcChannels'
+import { logError } from '../shared/errors'
+import type { AiApiConfig } from '../shared/types/common'
+import type { CloudStorageConfig } from '../shared/types/cloud-storage'
 
-// 简单的错误处理函数
-function logError(message: string, error?: unknown, context?: string): void {
-  const timestamp = new Date().toISOString()
-  const logMessage = `[${timestamp}] [PRELOAD] ${context ? `[${context}] ` : ''}${message}`
-
-  if (error) {
-    console.error(logMessage, error)
-  } else {
-    console.error(logMessage)
-  }
-}
+// Use centralized error logger from shared/errors
 
 // API配置接口
-interface AiApiConfig {
-  id: string
-  name: string
-  apiKey: string
-  apiUrl: string
-  modelName: string
-  temperature?: string
-  maxTokens?: string
-  isThinkingModel?: boolean // 是否为思维模型
-}
+// AiApiConfig moved to shared/types/common
 
 // 统一从 shared 引用通道，保持与主进程一致
 
@@ -191,7 +175,7 @@ const api = {
             try {
               ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
             } catch (err) {
-              logError('Failed to remove stream data listener', err, 'timeout-cleanup')
+              logError('PRELOAD', 'Failed to remove stream data listener', err, { phase: 'timeout-cleanup' })
             }
           }
 
@@ -199,7 +183,7 @@ const api = {
             try {
               ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
             } catch (err) {
-              logError('Failed to remove stream done listener', err, 'timeout-cleanup')
+              logError('PRELOAD', 'Failed to remove stream done listener', err, { phase: 'timeout-cleanup' })
             }
           }
 
@@ -207,7 +191,7 @@ const api = {
             try {
               ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
             } catch (err) {
-              logError('Failed to remove stream error listener', err, 'timeout-cleanup')
+              logError('PRELOAD', 'Failed to remove stream error listener', err, { phase: 'timeout-cleanup' })
             }
           }
 
@@ -235,7 +219,7 @@ const api = {
               try {
                 ipcRenderer.removeListener(`stream-data-${streamId}`, dataListener)
               } catch (err) {
-                logError('Failed to remove data listener in cleanup', err, 'cleanup')
+                logError('PRELOAD', 'Failed to remove data listener in cleanup', err, { phase: 'cleanup' })
               }
             }
 
@@ -243,7 +227,7 @@ const api = {
               try {
                 ipcRenderer.removeListener(`stream-done-${streamId}`, doneListener)
               } catch (err) {
-                logError('Failed to remove done listener in cleanup', err, 'cleanup')
+                logError('PRELOAD', 'Failed to remove done listener in cleanup', err, { phase: 'cleanup' })
               }
             }
 
@@ -251,7 +235,7 @@ const api = {
               try {
                 ipcRenderer.removeListener(`stream-error-${streamId}`, errorListener)
               } catch (err) {
-                logError('Failed to remove error listener in cleanup', err, 'cleanup')
+                logError('PRELOAD', 'Failed to remove error listener in cleanup', err, { phase: 'cleanup' })
               }
             }
           }
@@ -662,16 +646,18 @@ const api = {
   // 云存储相关API
   cloudStorage: {
     // 测试连接
-    testConnection: (config: any): Promise<{ success: boolean; message: string }> =>
+    testConnection: (config: CloudStorageConfig): Promise<{ success: boolean; message: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_TEST_CONNECTION, config),
 
     // 认证服务
-    authenticate: (config: any): Promise<{ success: boolean; message: string; authUrl?: string }> =>
+    authenticate: (
+      config: CloudStorageConfig
+    ): Promise<{ success: boolean; message: string; authUrl?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLOUD_AUTHENTICATE, config),
 
     // 同步本地到远程
     syncLocalToRemote: (
-      config: any
+      config: CloudStorageConfig
     ): Promise<{
       success: boolean
       message: string
@@ -683,7 +669,7 @@ const api = {
 
     // 同步远程到本地
     syncRemoteToLocal: (
-      config: any
+      config: CloudStorageConfig
     ): Promise<{
       success: boolean
       message: string
@@ -695,7 +681,7 @@ const api = {
 
     // 双向同步
     syncBidirectional: (
-      config: any
+      config: CloudStorageConfig
     ): Promise<{
       success: boolean
       message: string
@@ -1018,7 +1004,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
-    logError('Failed to expose context bridge APIs', error, 'contextBridge')
+    logError('PRELOAD', 'Failed to expose context bridge APIs', error, { scope: 'contextBridge' })
   }
 } else {
   // @ts-ignore (define in dts)
