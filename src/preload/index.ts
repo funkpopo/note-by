@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { IPC_CHANNELS } from '../shared/ipcChannels'
 
 // 简单的错误处理函数
 function logError(message: string, error?: unknown, context?: string): void {
@@ -25,94 +26,7 @@ interface AiApiConfig {
   isThinkingModel?: boolean // 是否为思维模型
 }
 
-// 设置的IPC通信频道
-const IPC_CHANNELS = {
-  GET_SETTINGS: 'setting:get-all',
-  SET_SETTINGS: 'setting:set-all',
-  GET_SETTING: 'setting:get',
-  SET_SETTING: 'setting:set',
-  TEST_OPENAI_CONNECTION: 'openai:test-connection',
-  GENERATE_CONTENT: 'openai:generate-content',
-  GENERATE_WITH_MESSAGES: 'openai:generate-with-messages',
-  STREAM_GENERATE_CONTENT: 'openai:stream-generate-content',
-  STOP_STREAM_GENERATE: 'openai:stop-stream-generate',
-  SAVE_API_CONFIG: 'api:save-config',
-  DELETE_API_CONFIG: 'api:delete-config',
-  SAVE_MARKDOWN: 'markdown:save',
-  EXPORT_PDF: 'markdown:export-pdf',
-  EXPORT_DOCX: 'markdown:export-docx',
-  EXPORT_HTML: 'markdown:export-html',
-  EXPORT_NOTION: 'markdown:export-notion',
-  EXPORT_OBSIDIAN: 'markdown:export-obsidian',
-  GET_MARKDOWN_FOLDERS: 'markdown:get-folders',
-  GET_MARKDOWN_FILES: 'markdown:get-files',
-  READ_MARKDOWN_FILE: 'markdown:read-file',
-  CREATE_MARKDOWN_FOLDER: 'markdown:create-folder',
-  DELETE_MARKDOWN_FOLDER: 'markdown:delete-folder',
-  RENAME_MARKDOWN_FOLDER: 'markdown:rename-folder',
-  CREATE_MARKDOWN_NOTE: 'markdown:create-note',
-  DELETE_MARKDOWN_FILE: 'markdown:delete-file',
-  RENAME_MARKDOWN_FILE: 'markdown:rename-file',
-  UPLOAD_FILE: 'markdown:upload-file',
-  DIAGNOSE_ENVIRONMENT: 'system:diagnose-environment',
-  GET_ALL_SETTINGS: 'settings:getAll',
-  UPDATE_SETTING: 'settings:update',
-  CHECK_FILE_EXISTS: 'markdown:checkFileExists',
-  TEST_WEBDAV_CONNECTION: 'webdav:test-connection',
-  SYNC_LOCAL_TO_REMOTE: 'webdav:sync-local-to-remote',
-  SYNC_REMOTE_TO_LOCAL: 'webdav:sync-remote-to-local',
-  SYNC_BIDIRECTIONAL: 'webdav:sync-bidirectional',
-  CHECK_FOR_UPDATES: 'app:check-for-updates',
-  CANCEL_SYNC: 'webdav:cancel-sync',
-  CLEAR_WEBDAV_SYNC_CACHE: 'webdav:clear-sync-cache',
-  WEBDAV_CONFIG_CHANGED: 'webdav:config-changed',
-  // 添加主密码验证相关IPC通道
-  VERIFY_MASTER_PASSWORD: 'webdav:verify-master-password',
-  SET_MASTER_PASSWORD: 'webdav:set-master-password',
-  // 云存储相关IPC通道
-  CLOUD_TEST_CONNECTION: 'cloud:test-connection',
-  CLOUD_AUTHENTICATE: 'cloud:authenticate',
-  CLOUD_SYNC_LOCAL_TO_REMOTE: 'cloud:sync-local-to-remote',
-  CLOUD_SYNC_REMOTE_TO_LOCAL: 'cloud:sync-remote-to-local',
-  CLOUD_SYNC_BIDIRECTIONAL: 'cloud:sync-bidirectional',
-  CLOUD_CANCEL_SYNC: 'cloud:cancel-sync',
-  CLOUD_GET_PROVIDERS: 'cloud:get-providers',
-  CLOUD_CONFIG_CHANGED: 'cloud:config-changed',
-  GET_NOTES_PATH: 'app:get-notes-path',
-  // 添加历史记录相关IPC通道
-  GET_NOTE_HISTORY: 'markdown:get-history',
-  GET_NOTE_HISTORY_BY_ID: 'markdown:get-history-by-id',
-  // 添加数据分析相关IPC通道
-  GET_NOTE_HISTORY_STATS: 'analytics:get-note-history-stats',
-  GET_USER_ACTIVITY_DATA: 'analytics:get-user-activity-data',
-  GET_ANALYSIS_CACHE: 'analytics:get-analysis-cache',
-  SAVE_ANALYSIS_CACHE: 'analytics:save-analysis-cache',
-  RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
-  CHECK_DATABASE_STATUS: 'analytics:check-database-status',
-  // 添加全局标签相关IPC通道
-  GET_GLOBAL_TAGS: 'tags:get-global-tags',
-  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
-  // + Mindmap IPC Channels
-  MINDMAP_SAVE_FILE: 'mindmap:save-file',
-  MINDMAP_LOAD_FILE: 'mindmap:load-file',
-  MINDMAP_EXPORT_HTML: 'mindmap:export-html',
-  DIALOG_SHOW_SAVE: 'dialog:showSaveDialog', // Re-using if a generic one is better, or make specific
-  DIALOG_SHOW_OPEN: 'dialog:showOpenDialog', // Re-using if a generic one is better, or make specific
-  // 添加主题相关IPC通道
-  SET_WINDOW_BACKGROUND: 'window:set-background',
-  // 添加应用导航IPC通道
-  NAVIGATE_TO_VIEW: 'app:navigate-to-view',
-  // 添加聊天历史相关IPC通道
-  CHAT_CREATE_SESSION: 'chat:create-session',
-  CHAT_SAVE_MESSAGE: 'chat:save-message',
-  CHAT_GET_SESSIONS: 'chat:get-sessions',
-  CHAT_GET_SESSION_MESSAGES: 'chat:get-session-messages',
-  CHAT_UPDATE_SESSION_TITLE: 'chat:update-session-title',
-  CHAT_DELETE_SESSION: 'chat:delete-session',
-  CHAT_DELETE_MESSAGE: 'chat:delete-message',
-  CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
-  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
-}
+// 统一从 shared 引用通道，保持与主进程一致
 
 // 内容生成请求接口
 interface ContentGenerationRequest {
