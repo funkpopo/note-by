@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { Button, Space, Divider, Typography, Tooltip } from '@douyinfe/semi-ui'
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import { Button, Space, Divider, Typography, Tooltip, Spin } from '@douyinfe/semi-ui'
 import { IconClose, IconRefresh } from '@douyinfe/semi-icons'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
@@ -30,6 +30,9 @@ import sql from 'highlight.js/lib/languages/sql'
 import bash from 'highlight.js/lib/languages/bash'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
 import { smartDiff, DiffResult } from '../utils/diffUtils'
+// Lazily load virtual list to reduce initial bundle
+const LazyVirtualList = lazy(() => import('./VirtualList'))
+import type { VirtualListItem } from './VirtualList'
 import './VersionComparison.css'
 
 // 使用自定义的Compare图标
@@ -272,11 +275,46 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
 }) => {
   const [showDiff, setShowDiff] = useState(false)
   const [showLineNumbers, setShowLineNumbers] = useState(true)
+  const [diffResult, setDiffResult] = useState<DiffResult>({ diffs: [], hasChanges: false })
+  const [diffLoading, setDiffLoading] = useState<boolean>(true)
+  const [listHeight, setListHeight] = useState<number>(Math.max(320, window.innerHeight - 240))
 
-  // 计算差异
-  const diffResult: DiffResult = useMemo(() => {
-    return smartDiff(historyItem.content, currentContent)
+  // Compute diff in a Web Worker to avoid blocking UI
+  useEffect(() => {
+    let terminated = false
+    setDiffLoading(true)
+    try {
+      const worker = new Worker(new URL('../workers/diffWorker.ts', import.meta.url), {
+        type: 'module'
+      })
+      worker.onmessage = (e: MessageEvent<DiffResult>) => {
+        if (terminated) return
+        setDiffResult(e.data)
+        setDiffLoading(false)
+        worker.terminate()
+      }
+      worker.postMessage({ original: historyItem.content, current: currentContent })
+      return () => {
+        terminated = true
+        try {
+          worker.terminate()
+        } catch {}
+      }
+    } catch {
+      // Fallback to main-thread diff if worker is unavailable
+      const result = smartDiff(historyItem.content, currentContent)
+      setDiffResult(result)
+      setDiffLoading(false)
+      return () => {}
+    }
   }, [historyItem.content, currentContent])
+
+  // Track window resize to keep virtual list height reasonable
+  useEffect(() => {
+    const onResize = () => setListHeight(Math.max(320, window.innerHeight - 240))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // 统计变更信息
   const stats = useMemo(() => {
@@ -367,7 +405,12 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
 
       {/* 内容区域 */}
       <div className="version-comparison-content">
-        {!diffResult.hasChanges ? (
+        {diffLoading ? (
+          <div className="no-changes-message" style={{ gap: 8 }}>
+            <Spin size="large" />
+            <Typography.Text type="secondary">计算差异中...</Typography.Text>
+          </div>
+        ) : !diffResult.hasChanges ? (
           <div className="no-changes-message">
             <IconCompare />
             <Typography.Title heading={5}>没有发现差异</Typography.Title>
@@ -375,19 +418,35 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
           </div>
         ) : showDiff ? (
           // 差异视图
-          <div className="diff-view">
+          <div className="diff-view" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div className="diff-view-header">
               <Typography.Title heading={6}>差异详情</Typography.Title>
             </div>
-            <div className="diff-lines-container">
-              {diffResult.diffs.map((diff, index) => (
-                <DiffHighlightLine
-                  key={`${diff.index}-${index}`}
-                  diff={diff}
-                  lineNumber={index + 1}
-                  showLineNumbers={showLineNumbers}
-                />
-              ))}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <Suspense fallback={<div style={{height: listHeight, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><Spin /></div>}>
+                {(() => {
+                  const items: VirtualListItem[] = diffResult.diffs.map((diff, index) => ({
+                    id: `${diff.index}-${index}`,
+                    content: (
+                      <DiffHighlightLine
+                        diff={diff}
+                        lineNumber={index + 1}
+                        showLineNumbers={showLineNumbers}
+                      />
+                    )
+                  }))
+                  // Fixed row height approximation
+                  const rowHeight = 28
+                  return (
+                    <LazyVirtualList
+                      items={items}
+                      height={listHeight}
+                      itemHeight={rowHeight}
+                      width={'100%'}
+                    />
+                  )
+                })()}
+              </Suspense>
             </div>
           </div>
         ) : (

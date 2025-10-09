@@ -76,6 +76,9 @@ const Editor: React.FC<EditorProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [loadedContent, setLoadedContent] = useState('')
+  const [isProgressiveLoading, setIsProgressiveLoading] = useState(false)
+  const progressiveCancelRef = useRef<{ token: string } | null>(null)
+  const pendingAppendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const currentFileRef = useRef<{ folder?: string; file?: string }>({})
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -142,11 +145,85 @@ const Editor: React.FC<EditorProps> = ({
 
     setIsLoading(true)
     try {
+      // cancel any previous progressive appends
+      if (pendingAppendTimerRef.current) {
+        clearTimeout(pendingAppendTimerRef.current)
+        pendingAppendTimerRef.current = null
+      }
+      progressiveCancelRef.current = null
+
       const filePath = `${folder}/${file}`
       const result = await window.api.markdown.readFile(filePath)
 
       if (result.success && result.content !== undefined) {
-        setLoadedContent(result.content)
+        const html = result.content
+        // 对超大文档启用渐进分块加载，避免一次性注入导致卡顿
+        const PROGRESSIVE_THRESHOLD = 120_000 // ~120KB
+        const useProgressive = typeof html === 'string' && html.length > PROGRESSIVE_THRESHOLD
+
+        if (useProgressive) {
+          setIsProgressiveLoading(true)
+          setLoadedContent('') // 初始不向 useEditor 注入，避免重建
+          // 生成新取消令牌
+          const token = `${Date.now()}_${Math.random()}`
+          progressiveCancelRef.current = { token }
+
+          try {
+            const worker = new Worker(new URL('../workers/htmlChunkWorker.ts', import.meta.url), {
+              type: 'module'
+            })
+            worker.onmessage = (evt: MessageEvent<{ chunks: string[] }>) => {
+              const chunks = evt.data?.chunks || [html]
+              // 若已切换文档或取消，直接丢弃
+              if (!progressiveCancelRef.current || progressiveCancelRef.current.token !== token) {
+                worker.terminate()
+                return
+              }
+              // 首批内容
+              const first = chunks.shift() || ''
+              if (editor) {
+                // 使用 setContent 注入首批内容
+                editor.commands.setContent(first, false, { preserveWhitespace: false })
+              } else {
+                // 若编辑器尚未可用，暂存到状态（触发一次性初始化）
+                setLoadedContent(first)
+              }
+
+              // 逐批追加剩余内容
+              const appendBatches = () => {
+                if (!progressiveCancelRef.current || progressiveCancelRef.current.token !== token) {
+                  return
+                }
+                if (!editor || chunks.length === 0) {
+                  setIsProgressiveLoading(false)
+                  return
+                }
+                const batch = chunks.shift() as string
+                // 将光标移到末尾以追加
+                try {
+                  const endPos = editor.state.doc.content.size
+                  editor.commands.setTextSelection(endPos)
+                  editor.chain().insertContent(batch).run()
+                } catch {
+                  // 回退：合并剩余直接替换
+                  editor.commands.setContent(editor.getHTML() + batch)
+                }
+                // 使用小延迟或空闲回调，避免长任务阻塞
+                pendingAppendTimerRef.current = setTimeout(appendBatches, 8)
+              }
+
+              pendingAppendTimerRef.current = setTimeout(appendBatches, 0)
+              worker.terminate()
+            }
+            worker.postMessage({ html, approxChunkSize: 60_000, enableLazyMedia: true })
+          } catch {
+            // 失败时回退为一次性注入
+            setLoadedContent(html)
+            setIsProgressiveLoading(false)
+          }
+        } else {
+          setLoadedContent(html)
+        }
         setHasUnsavedChanges(false)
       } else {
         Toast.error(`加载文档失败: ${result.error || '未知错误'}`)
@@ -518,6 +595,13 @@ const Editor: React.FC<EditorProps> = ({
         editorUpdateTimeoutRef.current = null
       }
 
+      if (pendingAppendTimerRef.current) {
+        clearTimeout(pendingAppendTimerRef.current)
+        pendingAppendTimerRef.current = null
+      }
+
+      progressiveCancelRef.current = null
+
       editor.commands.setContent(loadedContent)
       setHasUnsavedChanges(false)
       hasUnsavedChangesRef.current = false
@@ -654,6 +738,11 @@ const Editor: React.FC<EditorProps> = ({
       ) : (
         <div className="editor-wrapper">
           <EditorContent editor={editor} />
+          {isProgressiveLoading && (
+            <div className="progressive-loading-indicator">
+              正在分块加载长文档...
+            </div>
+          )}
           {editable && (
             <>
               <TableBubbleMenu

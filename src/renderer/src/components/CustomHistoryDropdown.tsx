@@ -1,126 +1,40 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Button, Spin, Toast } from '@douyinfe/semi-ui'
 import { IconHistory } from '@douyinfe/semi-icons'
-import VersionComparison from './VersionComparison'
-import { useEditor, EditorContent } from '@tiptap/react'
-import { StarterKit } from '@tiptap/starter-kit'
-import { Underline } from '@tiptap/extension-underline'
-import { Typography as TypographyExt } from '@tiptap/extension-typography'
-import { Highlight } from '@tiptap/extension-highlight'
-import { TextAlign } from '@tiptap/extension-text-align'
-import { Link } from '@tiptap/extension-link'
-import { Table } from '@tiptap/extension-table'
-import { TableRow } from '@tiptap/extension-table-row'
-import { TableHeader } from '@tiptap/extension-table-header'
-import { TableCell } from '@tiptap/extension-table-cell'
-import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
-import { Node } from '@tiptap/core'
-import { createLowlight } from 'lowlight'
-import javascript from 'highlight.js/lib/languages/javascript'
-import typescript from 'highlight.js/lib/languages/typescript'
-import python from 'highlight.js/lib/languages/python'
-import java from 'highlight.js/lib/languages/java'
-import cpp from 'highlight.js/lib/languages/cpp'
-import c from 'highlight.js/lib/languages/c'
-import csharp from 'highlight.js/lib/languages/csharp'
-import go from 'highlight.js/lib/languages/go'
-import xml from 'highlight.js/lib/languages/xml'
-import css from 'highlight.js/lib/languages/css'
-import json from 'highlight.js/lib/languages/json'
-import sql from 'highlight.js/lib/languages/sql'
-import bash from 'highlight.js/lib/languages/bash'
-import dockerfile from 'highlight.js/lib/languages/dockerfile'
+import { withLazyLoad, SmallComponentLoader, LazyVersionComparison } from './LazyComponents'
+const VersionComparisonLazy = withLazyLoad(LazyVersionComparison, SmallComponentLoader)
 import './CustomHistoryDropdown.css'
 
-const lowlight = createLowlight()
-
-// 注册需要的语言
-lowlight.register('javascript', javascript)
-lowlight.register('typescript', typescript)
-lowlight.register('python', python)
-lowlight.register('java', java)
-lowlight.register('cpp', cpp)
-lowlight.register('c', c)
-lowlight.register('csharp', csharp)
-lowlight.register('go', go)
-lowlight.register('xml', xml)
-lowlight.register('css', css)
-lowlight.register('json', json)
-lowlight.register('sql', sql)
-lowlight.register('bash', bash)
-lowlight.register('dockerfile', dockerfile)
-
-// 简化的图片扩展（只读）
-const ReadOnlyImageExtension = Node.create({
-  name: 'image',
-  group: 'block',
-  atom: true,
-
-  addAttributes() {
-    return {
-      src: {
-        default: null
-      },
-      alt: {
-        default: null
-      },
-      title: {
-        default: null
-      },
-      width: {
-        default: null
-      },
-      height: {
-        default: null
-      }
-    }
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'img[src]'
-      }
-    ]
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ['img', HTMLAttributes]
+// 轻量历史记录预览（避免创建TipTap实例，提升性能）
+const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
+  const sanitize = (html: string) => {
+    // 移除脚本和样式标签
+    let safe = html.replace(/<\/(?:script|style)>/gi, '')
+    safe = safe.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    // 移除内联事件处理（on*）和javascript:协议
+    safe = safe.replace(/ on[a-z]+\s*=\s*"[^"]*"/gi, '')
+    safe = safe.replace(/ on[a-z]+\s*=\s*'[^']*'/gi, '')
+    safe = safe.replace(/ on[a-z]+\s*=\s*[^\s>]+/gi, '')
+    safe = safe.replace(/javascript:/gi, '')
+    return safe
   }
-})
 
-// 简化的嵌入内容扩展（只读）
-const ReadOnlyIframeExtension = Node.create({
-  name: 'iframe',
-  group: 'block',
-  atom: true,
-
-  addAttributes() {
-    return {
-      src: {
-        default: null
-      },
-      width: {
-        default: '100%'
-      },
-      height: {
-        default: '315'
-      }
-    }
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'iframe[src]'
-      }
-    ]
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ['iframe', HTMLAttributes]
-  }
-})
+  const html = sanitize(content || '')
+  return (
+    <div
+      style={{
+        border: '1px solid var(--semi-color-border)',
+        borderRadius: '4px',
+        padding: '12px',
+        marginTop: '12px',
+        backgroundColor: 'var(--semi-color-fill-0)',
+        maxHeight: '60vh',
+        overflow: 'auto'
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
 
 // 历史记录项接口
 interface HistoryItem {
@@ -128,51 +42,6 @@ interface HistoryItem {
   filePath: string
   content: string
   timestamp: number
-}
-
-// 历史记录预览组件
-const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        code: false,
-        codeBlock: false
-      }),
-      Underline,
-      TypographyExt,
-      Highlight.configure({
-        multicolor: true,
-        HTMLAttributes: {
-          class: 'editor-highlight'
-        }
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph']
-      }),
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'editor-link'
-        }
-      }),
-      ReadOnlyImageExtension,
-      Table.configure({
-        resizable: false
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      CodeBlockLowlight.configure({
-        lowlight,
-        defaultLanguage: 'plaintext'
-      }),
-      ReadOnlyIframeExtension
-    ],
-    content: content,
-    editable: false
-  })
-
-  return <EditorContent editor={editor} />
 }
 
 export interface CustomHistoryDropdownProps {
@@ -423,7 +292,7 @@ const CustomHistoryDropdown: React.FC<CustomHistoryDropdownProps> = ({
             background: 'var(--semi-color-bg-0)'
           }}
         >
-          <VersionComparison
+          <VersionComparisonLazy
             currentContent={currentContent}
             historyItem={selectedHistory}
             onClose={() => setComparisonVisible(false)}

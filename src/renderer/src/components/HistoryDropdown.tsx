@@ -10,7 +10,9 @@ import {
   Space
 } from '@douyinfe/semi-ui'
 import { IconHistory, IconChevronRight } from '@douyinfe/semi-icons'
-import VersionComparison from './VersionComparison'
+import { withLazyLoad, SmallComponentLoader, LazyVersionComparison } from './LazyComponents'
+
+const VersionComparisonLazy = withLazyLoad(LazyVersionComparison, SmallComponentLoader)
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { Underline } from '@tiptap/extension-underline'
@@ -138,48 +140,21 @@ interface HistoryItem {
   timestamp: number
 }
 
-// 历史记录预览组件
+// 轻量历史记录预览（避免创建TipTap实例，提升性能）
 const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        code: false,
-        codeBlock: false
-      }),
-      Underline,
-      TypographyExt,
-      Highlight.configure({
-        multicolor: true,
-        HTMLAttributes: {
-          class: 'editor-highlight'
-        }
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph']
-      }),
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'editor-link'
-        }
-      }),
-      ReadOnlyImageExtension,
-      Table.configure({
-        resizable: false
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      CodeBlockLowlight.configure({
-        lowlight,
-        defaultLanguage: 'plaintext'
-      }),
-      ReadOnlyIframeExtension
-    ],
-    content: content,
-    editable: false
-  })
+  const sanitize = (html: string) => {
+    // 移除脚本和样式标签
+    let safe = html.replace(/<\/(?:script|style)>/gi, '')
+    safe = safe.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    // 移除内联事件处理（on*）和javascript:协议
+    safe = safe.replace(/ on[a-z]+\s*=\s*"[^"]*"/gi, '')
+    safe = safe.replace(/ on[a-z]+\s*=\s*'[^']*'/gi, '')
+    safe = safe.replace(/ on[a-z]+\s*=\s*[^\s>]+/gi, '')
+    safe = safe.replace(/javascript:/gi, '')
+    return safe
+  }
 
+  const html = sanitize(content || '')
   return (
     <div
       style={{
@@ -192,9 +167,8 @@ const HistoryPreview: React.FC<{ content: string }> = ({ content }) => {
         maxHeight: 'calc(100vh - 200px)',
         overflow: 'auto'
       }}
-    >
-      <EditorContent editor={editor} />
-    </div>
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
 
@@ -426,7 +400,7 @@ const HistoryDropdown: React.FC<HistoryDropdownProps> = ({
             background: 'var(--semi-color-bg-0)'
           }}
         >
-          <VersionComparison
+          <VersionComparisonLazy
             currentContent={currentContent}
             historyItem={selectedHistory}
             onClose={() => setComparisonVisible(false)}

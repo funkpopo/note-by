@@ -26,6 +26,7 @@ export const LazyCreateDialog = lazy(() => import('./CreateDialog'))
 // 下拉菜单组件懒加载
 export const LazyHistoryDropdown = lazy(() => import('./HistoryDropdown'))
 export const LazyCustomHistoryDropdown = lazy(() => import('./CustomHistoryDropdown'))
+export const LazyVersionComparison = lazy(() => import('./VersionComparison'))
 
 // 通用加载组件
 export const ComponentLoader: React.FC<{

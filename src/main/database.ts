@@ -5,6 +5,7 @@ import { is } from '@electron-toolkit/utils'
 import { getSetting } from './settings'
 import fsPromises from 'fs/promises'
 import { resolve } from 'path'
+import { LRUCache } from 'lru-cache'
 
 // 导入类型定义，即使初始化失败也能使用类型
 import Database from 'better-sqlite3'
@@ -999,6 +1000,17 @@ async function withDatabase<T>(
 // 保持向后兼容的单例数据库连接（标记为已弃用）
 let db: Database.Database | null = null
 
+// Lightweight in-memory caches to reduce repeated queries
+// Keep TTLs short to avoid stale data and memory growth
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const historyCache = new LRUCache<string, any>({ max: 100, ttl: 5 * 60 * 1000 })
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const historyByIdCache = new LRUCache<number, any>({ max: 500, ttl: 10 * 60 * 1000 })
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const statsCache = new LRUCache<string, any>({ max: 5, ttl: 60 * 1000 })
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const activityCache = new LRUCache<string, any>({ max: 5, ttl: 60 * 1000 })
+
 function getDatabasePath(): string {
   let markdownPath
   if (is.dev) {
@@ -1647,6 +1659,12 @@ export async function addNoteHistory(params: AddHistoryParams): Promise<void> {
 
     return true
   })
+  // Invalidate related caches
+  try {
+    historyCache.delete(params.filePath)
+    statsCache.clear()
+    activityCache.clear()
+  } catch {}
 }
 
 // 历史记录归档管理
@@ -1717,6 +1735,10 @@ interface NoteHistoryItem {
 }
 
 export async function getNoteHistory(filePath: string): Promise<NoteHistoryItem[]> {
+  // Try cache first
+  const cached = historyCache.get(filePath)
+  if (cached) return cached as NoteHistoryItem[]
+
   const result = await withDatabase(async (database) => {
     // 查询历史记录
     const stmt = database.prepare(
@@ -1727,11 +1749,18 @@ export async function getNoteHistory(filePath: string): Promise<NoteHistoryItem[
     return stmt.all(filePath) as NoteHistoryItem[]
   })
 
-  return result || []
+  const list = result || []
+  try {
+    historyCache.set(filePath, list)
+  } catch {}
+  return list
 }
 
 // 获取特定ID的历史记录（使用连接池）
 export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | null> {
+  const cached = historyByIdCache.get(id)
+  if (cached) return cached as NoteHistoryItem
+
   const result = await withDatabase(async (database) => {
     // 查询特定ID的历史记录
     const stmt = database.prepare(
@@ -1742,6 +1771,11 @@ export async function getNoteHistoryById(id: number): Promise<NoteHistoryItem | 
     return stmt.get(id) as NoteHistoryItem | null
   })
 
+  if (result) {
+    try {
+      historyByIdCache.set(id, result)
+    } catch {}
+  }
   return result
 }
 
@@ -1796,6 +1830,9 @@ export interface NoteHistoryStats {
 
 // 获取笔记历史记录统计数据
 export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
+  const cached = statsCache.get('default') as NoteHistoryStats | undefined
+  if (cached) return cached
+
   const result = await withDatabase(async (database) => {
     // 1. 获取笔记总数（去重的文件路径数）
     const totalNotesStmt = database.prepare(
@@ -1932,7 +1969,7 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
     }
 
     // 返回完整的统计数据，确保所有字段都有默认值
-    return {
+    const stats: NoteHistoryStats = {
       totalNotes,
       totalEdits,
       averageEditLength: Math.round(avgLength),
@@ -1946,11 +1983,12 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       tagRelations: tagData?.tagRelations || [],
       documentTags: tagData?.documentTags || []
     }
+    return stats
   })
 
   // 如果查询失败，返回默认的空统计对象
-  return (
-    result || {
+  const finalStats =
+    result || ({
       totalNotes: 0,
       totalEdits: 0,
       averageEditLength: 0,
@@ -1962,8 +2000,11 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
       topTags: [],
       tagRelations: [],
       documentTags: []
-    }
-  )
+    } as NoteHistoryStats)
+  try {
+    statsCache.set('default', finalStats)
+  } catch {}
+  return finalStats
 }
 
 // 用户活动数据
@@ -1992,6 +2033,10 @@ export interface UserActivityData {
 
 // 获取用户活动数据
 export async function getUserActivityData(days: number = 30): Promise<UserActivityData | null> {
+  const cacheKey = `days:${days}`
+  const cached = activityCache.get(cacheKey)
+  if (cached) return cached as UserActivityData
+
   const result = await withDatabase(async (database) => {
     // 计算起始时间（过去days天）
     const startTime = Date.now() - days * 24 * 60 * 60 * 1000
@@ -2138,6 +2183,11 @@ export async function getUserActivityData(days: number = 30): Promise<UserActivi
     return result
   })
 
+  if (result) {
+    try {
+      activityCache.set(cacheKey, result)
+    } catch {}
+  }
   return result
 }
 
