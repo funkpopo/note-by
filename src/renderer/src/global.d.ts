@@ -44,7 +44,6 @@ interface Window {
       // 设置单个设置
       set: <T>(key: string, value: T) => Promise<boolean>
     }
-    // ȫ�ֱ�ǩ API
     tags: {
       getGlobalTags: () => Promise<{
         success: boolean

@@ -116,6 +116,10 @@ const Navigation: React.FC<NavigationProps> = ({
   const [showFilteredOnly] = useState<boolean>(true)
   const [filteredExpandedKeys, setFilteredExpandedKeys] = useState<string[]>([])
   const [doubleClickTimer, setDoubleClickTimer] = useState<NodeJS.Timeout | null>(null)
+  // Resize state & refs to improve drag smoothness
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeRafRef = useRef<number | null>(null)
+  const dragWidthRef = useRef<number>(secondaryNavWidth)
 
   const navWidth = '160px' // 定义固定宽度常量
   const secondaryNavRef = useRef<HTMLDivElement>(null)
@@ -144,9 +148,10 @@ const Navigation: React.FC<NavigationProps> = ({
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    transition: 'width 0.3s ease-in-out',
+    // Disable width transition while dragging to avoid visual lag
+    transition: isResizing ? 'none' : 'width 0.3s ease-in-out',
     flexShrink: 0
-  }), [showSecondaryNav, secondaryNavWidth])
+  }), [showSecondaryNav, secondaryNavWidth, isResizing])
   const skeletonStyle = useMemo<React.CSSProperties>(() => ({ padding: '0', height: '100%' }), [])
   const treeStyle = useMemo<React.CSSProperties>(() => ({
     width: '100%',
@@ -1518,19 +1523,48 @@ const Navigation: React.FC<NavigationProps> = ({
             }}
             onMouseDown={(e): void => {
               e.preventDefault()
+              // Begin resize: lock cursor and selection, disable transition
+              setIsResizing(true)
+              document.body.style.cursor = 'col-resize'
+              const prevUserSelect = document.body.style.userSelect
+              document.body.style.userSelect = 'none'
+
               const startX = e.clientX
               const startWidth = secondaryNavWidth
+              dragWidthRef.current = startWidth
+
+              const scheduleWidthUpdate = () => {
+                if (resizeRafRef.current != null) return
+                resizeRafRef.current = requestAnimationFrame(() => {
+                  setSecondaryNavWidth(dragWidthRef.current)
+                  resizeRafRef.current = null
+                })
+              }
 
               const onMouseMove = (moveEvent: MouseEvent): void => {
-                const newWidth = startWidth + moveEvent.clientX - startX
-                if (newWidth >= 150 && newWidth <= 400) {
-                  setSecondaryNavWidth(newWidth)
+                const tentative = startWidth + moveEvent.clientX - startX
+                const newWidth = Math.max(150, Math.min(400, tentative))
+                if (newWidth !== dragWidthRef.current) {
+                  dragWidthRef.current = newWidth
+                  scheduleWidthUpdate()
                 }
+                // Avoid text selection while resizing
+                try { window.getSelection()?.removeAllRanges() } catch {}
               }
 
               const onMouseUp = (): void => {
                 document.removeEventListener('mousemove', onMouseMove)
                 document.removeEventListener('mouseup', onMouseUp)
+                if (resizeRafRef.current != null) {
+                  cancelAnimationFrame(resizeRafRef.current)
+                  resizeRafRef.current = null
+                }
+                // Ensure final width applied
+                setSecondaryNavWidth(dragWidthRef.current)
+                // Restore cursor and selection, re-enable transition
+                document.body.style.cursor = ''
+                document.body.style.userSelect = prevUserSelect
+                setIsResizing(false)
               }
 
               document.addEventListener('mousemove', onMouseMove)
