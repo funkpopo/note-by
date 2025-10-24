@@ -10,11 +10,7 @@ import {
   writeSettings,
   updateSetting,
   getSetting,
-  AiApiConfig,
-  getWebDAVConfig,
-  updateWebDAVConfig,
-  verifyMasterPassword,
-  encryptWebDAVWithMasterPassword
+  getWebDAVConfig
 } from './settings'
 // AI 相关 IPC 已迁移至 AIService
 import { promises as fsPromises } from 'fs'
