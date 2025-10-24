@@ -284,8 +284,18 @@ export const TextBubbleMenu: React.FC<{
       const settings = await window.api.settings.getAll()
       if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
         setApiConfigs(settings.AiApiConfigs)
-        if (!selectedConfigId && settings.AiApiConfigs.length > 0) {
-          setSelectedConfigId(settings.AiApiConfigs[0].id)
+        
+        // 尝试从localStorage恢复用户上次选择的API配置
+        const savedConfigId = localStorage.getItem('selectedEditorAiConfigId')
+        
+        if (savedConfigId && settings.AiApiConfigs.some((c: any) => c.id === savedConfigId)) {
+          // 如果保存的配置ID仍然存在，使用它
+          setSelectedConfigId(savedConfigId)
+        } else if (!selectedConfigId && settings.AiApiConfigs.length > 0) {
+          // 否则使用第一个配置
+          const firstConfigId = settings.AiApiConfigs[0].id
+          setSelectedConfigId(firstConfigId)
+          localStorage.setItem('selectedEditorAiConfigId', firstConfigId)
         }
       }
     } catch {
@@ -297,6 +307,20 @@ export const TextBubbleMenu: React.FC<{
   useEffect(() => {
     loadApiConfigs()
   }, [loadApiConfigs])
+
+  // 监听localStorage变化以同步多个Editor实例的配置选择
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'selectedEditorAiConfigId' && e.newValue) {
+        setSelectedConfigId(e.newValue)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
 
   // 管理AI处理时的编辑器样式类名 - 内存优化
   useEffect(() => {
@@ -741,10 +765,18 @@ export const TextBubbleMenu: React.FC<{
                 whiteSpace: 'pre-wrap',
                 fontSize: 13,
                 lineHeight: 1.6,
-                border: '1px solid var(--semi-color-border)',
+                // 动态控制边框：有内容时显示边框，无内容时透明
+                border: streamingText || streamError 
+                  ? '1px solid var(--semi-color-border)' 
+                  : '1px solid transparent',
                 borderRadius: 6,
-                padding: '8px 10px',
-                background: 'var(--semi-color-bg-0)'
+                // 动态控制内边距：有内容时正常，无内容时最小化
+                padding: streamingText || streamError ? '8px 10px' : '2px',
+                background: 'var(--semi-color-bg-0)',
+                // 平滑过渡效果
+                transition: 'border-color 0.2s ease, padding 0.2s ease',
+                // 最小高度，避免完全塌陷
+                minHeight: streamingText || streamError ? '40px' : '8px'
               }}
             >
               {streamingText || (streamError ? `发生错误：${streamError}` : '')}
@@ -848,7 +880,12 @@ export const TextBubbleMenu: React.FC<{
           {apiConfigs.length > 1 && (
             <Select
               value={selectedConfigId || undefined}
-              onChange={(value) => setSelectedConfigId(value as string)}
+              onChange={(value) => {
+                const newConfigId = value as string
+                setSelectedConfigId(newConfigId)
+                // 保存用户选择到localStorage
+                localStorage.setItem('selectedEditorAiConfigId', newConfigId)
+              }}
               size="small"
               style={{ width: 120, marginRight: '8px' }}
               placeholder="选择API"
