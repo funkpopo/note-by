@@ -12,6 +12,8 @@ import {
 } from './webdav-cache'
 import { mainWindow } from './index'
 import { app } from 'electron'
+import { SECRET_PLACEHOLDER, buildWebDAVAccount, getSecret } from './secret-store'
+import { decryptWithPassword } from './encryption'
 
 // 添加同步进度通知函数
 function notifySyncProgress(config: {
@@ -135,13 +137,30 @@ export function initWebDAVClient(config: WebDAVConfig): boolean {
   }
 }
 
+async function resolveWebDAVPassword(config: WebDAVConfig & { useCustomEncryption?: boolean; masterPassword?: string }): Promise<string> {
+  let pwd = config.password || ''
+  if (!pwd || pwd === SECRET_PLACEHOLDER) {
+    const account = buildWebDAVAccount()
+    pwd = (await getSecret(account)) || ''
+  }
+  if ((config as any).useCustomEncryption && (config as any).masterPassword && pwd) {
+    try {
+      pwd = decryptWithPassword(pwd, (config as any).masterPassword)
+    } catch {
+      // ignore decrypt failure
+    }
+  }
+  return pwd
+}
+
 export async function testWebDAVConnection(
   config: WebDAVConfig
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const effectivePassword = await resolveWebDAVPassword(config as any)
     const client = createClient(config.url, {
       username: config.username,
-      password: config.password
+      password: effectivePassword
     })
 
     // 尝试列出根目录
@@ -436,7 +455,8 @@ export async function syncLocalToRemote(config: WebDAVConfig): Promise<{
   skipped: number
 }> {
   if (!webdavClient) {
-    const initResult = initWebDAVClient(config)
+    const effectivePassword = await resolveWebDAVPassword(config as any)
+    const initResult = initWebDAVClient({ ...config, password: effectivePassword })
     if (!initResult) {
       return {
         success: false,
@@ -617,7 +637,8 @@ export async function syncRemoteToLocal(config: WebDAVConfig): Promise<{
   skipped: number
 }> {
   if (!webdavClient) {
-    const initResult = initWebDAVClient(config)
+    const effectivePassword = await resolveWebDAVPassword(config as any)
+    const initResult = initWebDAVClient({ ...config, password: effectivePassword })
     if (!initResult) {
       return {
         success: false,
@@ -798,7 +819,8 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
   resetSyncCancellation()
 
   if (!webdavClient) {
-    const initResult = initWebDAVClient(config)
+    const effectivePassword = await resolveWebDAVPassword(config as any)
+    const initResult = initWebDAVClient({ ...config, password: effectivePassword })
     if (!initResult) {
       return {
         success: false,

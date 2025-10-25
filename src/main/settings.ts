@@ -2,31 +2,20 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { is } from '@electron-toolkit/utils'
-import {
-  encrypt,
-  decrypt,
-  encryptWithPassword,
-  decryptWithPassword,
-  generateEncryptionTest
-} from './encryption'
+import { decrypt, encryptWithPassword, decryptWithPassword, generateEncryptionTest } from './encryption'
+import Ajv from 'ajv'
+import { SECRET_PLACEHOLDER, buildApiAccount, buildWebDAVAccount, saveSecret } from './secret-store'
 
-// 获取settings.json的存储路径
-// 在开发环境中，文件位于项目根目录下
-// 在生产环境中，文件位于应用程序同级目录
 function getSettingsPath(): string {
   if (is.dev) {
-    // 开发环境，使用项目根目录
     return path.join(process.cwd(), 'settings.json')
   } else {
-    // 生产环境，使用应用程序所在目录
     return path.join(path.dirname(app.getPath('exe')), 'settings.json')
   }
 }
 
-// 需要加密的设置项键名列表
-const ENCRYPTED_KEYS = ['apiKey', 'webdavPassword']
+// Legacy encrypted keys (for migration only)
 
-// API配置接口
 export interface AiApiConfig {
   id: string
   name: string
@@ -35,36 +24,37 @@ export interface AiApiConfig {
   modelName: string
   temperature?: string
   maxTokens?: string
-  isThinkingModel?: boolean // 是否为思维模型
+  isThinkingModel?: boolean
+  // keytar reference stored in file only
+  apiKeyRef?: string
 }
 
-// WebDAV配置接口
 export interface WebDAVConfig {
   url: string
   username: string
   password: string
   remotePath: string
-  enabled: boolean // 是否启用自动同步
-  syncOnStartup: boolean // 是否在应用启动时自动同步
-  syncDirection: 'localToRemote' | 'remoteToLocal' | 'bidirectional' // 同步方向
-  localPath?: string // 本地路径，在运行时由主进程提供
-  // 添加加密相关字段
-  useCustomEncryption?: boolean // 是否使用自定义加密
-  encryptionTest?: string // 用于验证主密码的测试字符串
-  encryptionTestPlain?: string // 加密前的原始字符串
+  enabled: boolean
+  syncOnStartup: boolean
+  syncDirection: 'localToRemote' | 'remoteToLocal' | 'bidirectional'
+  localPath?: string
+  // custom encryption support
+  useCustomEncryption?: boolean
+  encryptionTest?: string
+  encryptionTestPlain?: string
+  // keytar reference stored in file only
+  passwordRef?: string
 }
 
-// 默认设置
 const defaultSettings = {
   theme: 'light',
-  // 改为空数组，不提供默认API配置
   AiApiConfigs: [] as AiApiConfig[],
   // Window state (size/position)
   windowState: {
     width: 1100,
     height: 720
   },
-  // 默认WebDAV配置
+  // Default WebDAV config
   webdav: {
     url: '',
     username: '',
@@ -73,151 +63,265 @@ const defaultSettings = {
     enabled: false,
     syncOnStartup: false,
     syncDirection: 'bidirectional',
-    useCustomEncryption: false, // 默认不使用自定义加密
+    useCustomEncryption: false,
     encryptionTest: '',
     encryptionTestPlain: ''
   } as WebDAVConfig,
-  // 默认更新设置
   checkUpdatesOnStartup: true,
-  // 默认历史记录管理设置
   historyManagement: {
-    type: 'count', // 'count' 或 'time'
-    maxCount: 20, // 保留的最大记录数
-    maxDays: 7 // 保留的最大天数
+    type: 'count',
+    maxCount: 20,
+    maxDays: 7
   }
 }
 
-// 读取设置
+// JSON Schema + Ajv for validation and auto-defaults
+const settingsSchema = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    theme: { type: 'string', default: 'light' },
+    AiApiConfigs: {
+      type: 'array',
+      default: [],
+      items: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string', default: '' },
+          apiKey: { type: 'string', default: '' },
+          apiKeyRef: { type: 'string', default: '' },
+          apiUrl: { type: 'string', default: '' },
+          modelName: { type: 'string', default: '' },
+          temperature: { type: 'string', default: '' },
+          maxTokens: { type: 'string', default: '' },
+          isThinkingModel: { type: 'boolean', default: false }
+        },
+        required: ['id']
+      }
+    },
+    windowState: {
+      type: 'object',
+      default: { width: 1100, height: 720 },
+      additionalProperties: true,
+      properties: {
+        width: { type: 'number', default: 1100 },
+        height: { type: 'number', default: 720 },
+        x: { type: 'number' },
+        y: { type: 'number' },
+        isMaximized: { type: 'boolean', default: false }
+      }
+    },
+    webdav: {
+      type: 'object',
+      default: {
+        url: '',
+        username: '',
+        password: '',
+        remotePath: '/markdown',
+        enabled: false,
+        syncOnStartup: false,
+        syncDirection: 'bidirectional',
+        useCustomEncryption: false,
+        encryptionTest: '',
+        encryptionTestPlain: ''
+      },
+      additionalProperties: true,
+      properties: {
+        url: { type: 'string', default: '' },
+        username: { type: 'string', default: '' },
+        password: { type: 'string', default: '' },
+        passwordRef: { type: 'string', default: '' },
+        remotePath: { type: 'string', default: '/markdown' },
+        enabled: { type: 'boolean', default: false },
+        syncOnStartup: { type: 'boolean', default: false },
+        syncDirection: {
+          type: 'string',
+          enum: ['localToRemote', 'remoteToLocal', 'bidirectional'],
+          default: 'bidirectional'
+        },
+        useCustomEncryption: { type: 'boolean', default: false },
+        encryptionTest: { type: 'string', default: '' },
+        encryptionTestPlain: { type: 'string', default: '' }
+      }
+    },
+    checkUpdatesOnStartup: { type: 'boolean', default: true },
+    historyManagement: {
+      type: 'object',
+      default: { type: 'count', maxCount: 20, maxDays: 7 },
+      additionalProperties: true,
+      properties: {
+        type: { type: 'string', enum: ['count', 'time'], default: 'count' },
+        maxCount: { type: 'number', default: 20 },
+        maxDays: { type: 'number', default: 7 }
+      }
+    }
+  }
+} as const
+
+const ajv = new Ajv({ useDefaults: true, removeAdditional: false, coerceTypes: true })
+const validateSettings = ajv.compile(settingsSchema as any)
+
+function applySchemaDefaults(raw: Record<string, unknown>): Record<string, unknown> {
+  try {
+    const cloned = JSON.parse(JSON.stringify(raw || {}))
+    validateSettings(cloned)
+    return cloned
+  } catch {
+    return { ...defaultSettings }
+  }
+}
+
+// Read settings (file may contain only secret references)
 export function readSettings(): Record<string, unknown> {
   const settingsPath = getSettingsPath()
-
   try {
     if (fs.existsSync(settingsPath)) {
       const data = fs.readFileSync(settingsPath, 'utf8')
-      const settings = JSON.parse(data)
+      const raw = JSON.parse(data)
+      const settings = applySchemaDefaults(raw)
 
-      // 解密API配置中的API Keys
+      // AI API configs -> set placeholder and migrate legacy encrypted values
       if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
-        ;(settings.AiApiConfigs as AiApiConfig[]).forEach((config) => {
-          if (ENCRYPTED_KEYS.includes('apiKey') && config.apiKey && config.apiKey !== '') {
-            try {
-              config.apiKey = decrypt(config.apiKey)
-            } catch {
-              // 保留原始加密值，以免解密失败导致键被删除
+        let migrated = false
+        ;(settings.AiApiConfigs as AiApiConfig[]).forEach((cfg) => {
+          if (cfg.apiKey && !cfg.apiKeyRef) {
+            const decrypted = decrypt(cfg.apiKey)
+            if (decrypted) {
+              const account = buildApiAccount(cfg.id)
+              void saveSecret(account, decrypted)
+              cfg.apiKeyRef = account
+              cfg.apiKey = SECRET_PLACEHOLDER
+              migrated = true
             }
+          } else if (cfg.apiKeyRef) {
+            cfg.apiKey = SECRET_PLACEHOLDER
+          } else if (!cfg.apiKey) {
+            cfg.apiKey = ''
           }
         })
-      } else {
-        settings.AiApiConfigs = []
+        if (migrated) {
+          try {
+            writeSettings(settings)
+          } catch {}
+        }
       }
 
-      // 解密WebDAV密码
-      if (settings.webdav && settings.webdav.password) {
-        settings.webdav.password = decrypt(settings.webdav.password)
+      // WebDAV password -> set placeholder and migrate legacy
+      if ((settings as any).webdav) {
+        const wd = (settings as any).webdav as WebDAVConfig
+        if ((wd as any).password && !(wd as any).passwordRef) {
+          const decrypted = decrypt((wd as any).password as unknown as string)
+          if (decrypted) {
+            const account = buildWebDAVAccount()
+            void saveSecret(account, decrypted)
+            ;(wd as any).passwordRef = account
+            ;(wd as any).password = SECRET_PLACEHOLDER
+            try {
+              writeSettings(settings)
+            } catch {}
+          }
+        } else if ((wd as any).passwordRef) {
+          ;(wd as any).password = SECRET_PLACEHOLDER
+        } else {
+          ;(wd as any).password = (wd as any).password || ''
+        }
       }
 
       return settings
     }
   } catch {
-    // 忽略读取错误，使用默认设置
+    // ignore
   }
-
   return { ...defaultSettings }
 }
 
-// 写入设置
+// Write settings (store secrets in keytar and keep only references in file)
 export function writeSettings(settings: Record<string, unknown>): void {
   const settingsPath = getSettingsPath()
-
   try {
-    // 合并默认设置和新设置
-    const updatedSettings = { ...defaultSettings, ...settings }
+    const merged = { ...defaultSettings, ...settings }
+    const normalized = applySchemaDefaults(merged)
+    const settingsToSave = JSON.parse(JSON.stringify(normalized)) as Record<string, unknown>
 
-    // 在保存前加密API配置中的API Keys
-    const settingsToSave = { ...updatedSettings }
-
-    if (settingsToSave.AiApiConfigs && Array.isArray(settingsToSave.AiApiConfigs)) {
-      ;(settingsToSave.AiApiConfigs as AiApiConfig[]) = JSON.parse(
-        JSON.stringify(settingsToSave.AiApiConfigs)
-      )
-      ;(settingsToSave.AiApiConfigs as AiApiConfig[]).forEach((config) => {
-        if (config.apiKey && config.apiKey !== '') {
-          config.apiKey = encrypt(config.apiKey)
+    // AI configs secrets -> keytar
+    if (Array.isArray((settingsToSave as any).AiApiConfigs)) {
+      const arr = (settingsToSave as any).AiApiConfigs as AiApiConfig[]
+      for (const cfg of arr) {
+        if (cfg.apiKey && cfg.apiKey !== SECRET_PLACEHOLDER) {
+          const account = cfg.apiKeyRef && cfg.apiKeyRef.startsWith('api:') ? cfg.apiKeyRef : buildApiAccount(cfg.id)
+          void saveSecret(account, cfg.apiKey)
+          cfg.apiKeyRef = account
         }
-      })
+        delete (cfg as any).apiKey
+      }
     }
 
-    // 加密WebDAV密码
-    if (settingsToSave.webdav && (settingsToSave.webdav as WebDAVConfig).password) {
-      const webdavConfig = { ...(settingsToSave.webdav as WebDAVConfig) }
-      webdavConfig.password = encrypt(webdavConfig.password)
-      settingsToSave.webdav = webdavConfig
+    // WebDAV secret -> keytar
+    if ((settingsToSave as any).webdav) {
+      const wd = (settingsToSave as any).webdav as WebDAVConfig
+      if (wd.password && wd.password !== SECRET_PLACEHOLDER) {
+        const account = wd.passwordRef && wd.passwordRef.startsWith('webdav:') ? wd.passwordRef : buildWebDAVAccount()
+        void saveSecret(account, wd.password)
+        wd.passwordRef = account
+      }
+      delete (wd as any).password
     }
 
     fs.writeFileSync(settingsPath, JSON.stringify(settingsToSave, null, 2), 'utf8')
   } catch {
-    // 忽略写入错误
+    // ignore
   }
 }
 
-// 更新单个设置项
+// Update a single setting key
 export function updateSetting(key: string, value: unknown): void {
   const settings = readSettings()
-
-  // 不直接修改settings，因为它已经包含了解密后的值
-  settings[key] = value
+  ;(settings as any)[key] = value
   writeSettings(settings)
 }
 
-// 获取单个设置项
+// Get a setting with default fallback
 export function getSetting<T>(key: string, defaultValue?: T): T | unknown {
   const settings = readSettings()
-  return settings[key] !== undefined ? settings[key] : defaultValue
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (settings as any)[key] !== undefined ? (settings as any)[key] : defaultValue
 }
 
-// 获取WebDAV配置
+// WebDAV helpers
 export function getWebDAVConfig(): WebDAVConfig {
-  const settings = readSettings()
-  return (settings.webdav as WebDAVConfig) || defaultSettings.webdav
+  const settings = readSettings() as any
+  return (settings.webdav as WebDAVConfig) || (defaultSettings.webdav as WebDAVConfig)
 }
 
-// 更新WebDAV配置
 export function updateWebDAVConfig(config: WebDAVConfig): void {
-  const settings = readSettings()
+  const settings = readSettings() as any
   settings.webdav = config
   writeSettings(settings)
 }
 
-// 使用主密码重新加密WebDAV密码
+// Master password support for WebDAV
 export function encryptWebDAVWithMasterPassword(
   config: WebDAVConfig,
   masterPassword: string
 ): WebDAVConfig {
-  // 创建配置副本以免修改原始对象
   const newConfig = { ...config }
-
   if (newConfig.useCustomEncryption && newConfig.password) {
-    // 使用主密码加密WebDAV密码
     newConfig.password = encryptWithPassword(newConfig.password, masterPassword)
-
-    // 生成测试字符串，并使用主密码加密
     if (!newConfig.encryptionTestPlain) {
       newConfig.encryptionTestPlain = generateEncryptionTest()
     }
     newConfig.encryptionTest = encryptWithPassword(newConfig.encryptionTestPlain, masterPassword)
   }
-
   return newConfig
 }
 
-// 验证主密码
 export function verifyMasterPassword(config: WebDAVConfig, masterPassword: string): boolean {
   if (!config.useCustomEncryption || !config.encryptionTest || !config.encryptionTestPlain) {
     return false
   }
-
   try {
-    // 使用主密码解密测试字符串，并与原始值比较
     const decrypted = decryptWithPassword(config.encryptionTest, masterPassword)
     return decrypted === config.encryptionTestPlain
   } catch {
@@ -225,22 +329,17 @@ export function verifyMasterPassword(config: WebDAVConfig, masterPassword: strin
   }
 }
 
-// 使用主密码解密WebDAV配置
 export function decryptWebDAVWithMasterPassword(
   config: WebDAVConfig,
   masterPassword: string
 ): WebDAVConfig {
-  // 创建配置副本以免修改原始对象
   const newConfig = { ...config }
-
   if (newConfig.useCustomEncryption && newConfig.password) {
     try {
-      // 使用主密码解密WebDAV密码
       newConfig.password = decryptWithPassword(newConfig.password, masterPassword)
     } catch {
-      // 解密失败时保留原值
+      // ignore
     }
   }
-
   return newConfig
 }

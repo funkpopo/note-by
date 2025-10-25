@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai'
-import { AiApiConfig } from './settings'
+import { AiApiConfig, readSettings } from './settings'
 import { EventEmitter } from 'events'
+import { SECRET_PLACEHOLDER, buildApiAccount, getSecret } from './secret-store'
 
 // 内容生成请求接口
 export interface ContentGenerationRequest {
@@ -127,9 +128,14 @@ export async function testOpenAIConnection(
   AiApiConfig: AiApiConfig
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const { apiKey, apiUrl, modelName } = AiApiConfig
+    const { apiUrl, modelName } = AiApiConfig
+    let effectiveKey = AiApiConfig.apiKey
+    if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
+      const account = buildApiAccount(AiApiConfig.id)
+      effectiveKey = (await getSecret(account)) || ''
+    }
 
-    if (!apiKey) {
+    if (!effectiveKey) {
       return { success: false, message: 'API Key 未设置' }
     }
 
@@ -148,7 +154,7 @@ export async function testOpenAIConnection(
       // 使用兼容性请求
       const response = await makeCompatibleRequest(
         normalizedApiUrl,
-        apiKey,
+        effectiveKey,
         modelName,
         'ping. Just reply "pong"',
         20,
@@ -201,6 +207,11 @@ export async function generateWithMessages(
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
     const { config, messages, maxTokens = 2000, temperature = 0.7 } = request
+    let effectiveKey = config.apiKey
+    if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
+      const account = buildApiAccount(config.id)
+      effectiveKey = (await getSecret(account)) || ''
+    }
 
     if (!config.apiKey) {
       return { success: false, error: 'API Key 未设置' }
@@ -219,7 +230,7 @@ export async function generateWithMessages(
 
     // 创建 AI 客户端
     const openai = new OpenAI({
-      apiKey: config.apiKey,
+      apiKey: effectiveKey,
       baseURL: normalizedApiUrl,
       dangerouslyAllowBrowser: true, // 允许在浏览器环境运行
       defaultHeaders: {
@@ -305,6 +316,20 @@ export async function generateContent(
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
     const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
+    // Resolve API key if placeholder or empty
+    let effectiveKey = apiKey
+    if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
+      try {
+        const settings = readSettings() as any
+        const match = (settings.AiApiConfigs as any[] | undefined)?.find((c) =>
+          c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
+        )
+        if (match && match.id) {
+          const account = buildApiAccount(match.id)
+          effectiveKey = (await getSecret(account)) || ''
+        }
+      } catch {}
+    }
 
     // 如果请求包含stream=true，则返回错误，提示使用streamGenerateContent
     if (stream) {
@@ -314,7 +339,7 @@ export async function generateContent(
       }
     }
 
-    if (!apiKey) {
+    if (!effectiveKey) {
       return { success: false, error: 'API Key 未设置' }
     }
 
@@ -333,7 +358,7 @@ export async function generateContent(
       // 先尝试使用兼容性请求
       const response = await makeCompatibleRequest(
         normalizedApiUrl,
-        apiKey,
+        effectiveKey,
         modelName,
         prompt,
         maxTokens,
@@ -366,7 +391,7 @@ export async function generateContent(
       // 如果兼容性请求失败，尝试使用OpenAI SDK
       try {
         const openai = new OpenAI({
-          apiKey,
+          apiKey: effectiveKey,
           baseURL: normalizedApiUrl,
           dangerouslyAllowBrowser: true,
           defaultHeaders: {
@@ -426,8 +451,22 @@ export async function streamGenerateContent(
   ;(async (): Promise<void> => {
     try {
       const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
+      // Resolve API key if placeholder or empty
+      let effectiveKey = apiKey
+      if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
+        try {
+          const settings = readSettings() as any
+          const match = (settings.AiApiConfigs as any[] | undefined)?.find((c) =>
+            c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
+          )
+          if (match && match.id) {
+            const account = buildApiAccount(match.id)
+            effectiveKey = (await getSecret(account)) || ''
+          }
+        } catch {}
+      }
 
-      if (!apiKey) {
+      if (!effectiveKey) {
         eventEmitter.emit('error', 'API Key 未设置')
         return
       }
@@ -544,7 +583,7 @@ export async function streamGenerateContent(
         // 如果原生fetch失败，尝试使用OpenAI SDK
         try {
           const openai = new OpenAI({
-            apiKey,
+            apiKey: effectiveKey,
             baseURL: normalizedApiUrl,
             dangerouslyAllowBrowser: true,
             timeout: 60000,
@@ -598,3 +637,4 @@ export async function streamGenerateContent(
 
   return eventEmitter
 }
+
