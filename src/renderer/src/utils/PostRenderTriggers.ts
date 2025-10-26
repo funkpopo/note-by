@@ -38,4 +38,3 @@ export const onEditorFinalized = (): void => {
   scheduleTagRefresh()
   scheduleAnalysisInvalidation()
 }
-

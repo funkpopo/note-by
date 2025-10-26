@@ -11,7 +11,10 @@ import { readSettings, writeSettings, AiApiConfig } from '../settings'
 
 export class AIService {
   private mainWindow: BrowserWindow | null
-  private activeStreams: Map<string, { emitter: EventEmitter & { stop?: () => void }; cleanup: () => void }>
+  private activeStreams: Map<
+    string,
+    { emitter: EventEmitter & { stop?: () => void }; cleanup: () => void }
+  >
 
   constructor(mainWindow: BrowserWindow | null) {
     this.mainWindow = mainWindow
@@ -46,15 +49,26 @@ export class AIService {
           error: null as ((err: string) => void) | null
         }
         const cleanupListeners = (): void => {
-          if (listeners.data) try { emitter.removeListener('data', listeners.data) } catch {}
-          if (listeners.done) try { emitter.removeListener('done', listeners.done) } catch {}
-          if (listeners.error) try { emitter.removeListener('error', listeners.error) } catch {}
+          if (listeners.data)
+            try {
+              emitter.removeListener('data', listeners.data)
+            } catch {}
+          if (listeners.done)
+            try {
+              emitter.removeListener('done', listeners.done)
+            } catch {}
+          if (listeners.error)
+            try {
+              emitter.removeListener('error', listeners.error)
+            } catch {}
           this.activeStreams.delete(streamId)
         }
         const timeoutMs = 60000
         const timeoutId = setTimeout(() => {
           if (!sender.isDestroyed()) {
-            sender.send(`stream-error-${streamId}`, { error: `生成超时 (${timeoutMs / 1000}秒). 请检查网络连接或API服务状态。` })
+            sender.send(`stream-error-${streamId}`, {
+              error: `生成超时 (${timeoutMs / 1000}秒). 请检查网络连接或API服务状态。`
+            })
           }
           cleanupListeners()
         }, timeoutMs)
@@ -94,7 +108,10 @@ export class AIService {
         this.activeStreams.set(streamId, { emitter, cleanup: cleanupListeners })
         return { success: true, streamId }
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : '启动流式生成失败' }
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : '启动流式生成失败'
+        }
       }
     })
 
@@ -111,7 +128,10 @@ export class AIService {
         }
         return { success: false, error: '流式请求不存在或已完成' }
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : '停止流式生成失败' }
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : '停止流式生成失败'
+        }
       }
     })
 
@@ -145,4 +165,3 @@ export class AIService {
     })
   }
 }
-

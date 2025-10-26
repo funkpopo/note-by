@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { ChatMessage } from '../../../main/database'
+import type { ChatMessage } from '../../../shared/types/dto'
 import {
   Typography,
   Button,
@@ -786,7 +786,6 @@ const ChatInterface: React.FC = () => {
             onDone: async (fullContent: string) => {
               // 立即取消任何待处理的节流更新
               throttledUpdateRef.current?.cancel()
-              
 
               // 立即更新最终内容，不使用节流，保留完整内容
               setMessages((prev) => {

@@ -97,4 +97,3 @@ export const useStreamingOverlay = (): StreamingOverlayAPI => {
   if (!ctx) throw new Error('useStreamingOverlay must be used within StreamingOverlayProvider')
   return ctx
 }
-

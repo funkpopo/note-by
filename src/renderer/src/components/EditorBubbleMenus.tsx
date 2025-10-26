@@ -284,10 +284,10 @@ export const TextBubbleMenu: React.FC<{
       const settings = await window.api.settings.getAll()
       if (settings.AiApiConfigs && Array.isArray(settings.AiApiConfigs)) {
         setApiConfigs(settings.AiApiConfigs)
-        
+
         // 尝试从localStorage恢复用户上次选择的API配置
         const savedConfigId = localStorage.getItem('selectedEditorAiConfigId')
-        
+
         if (savedConfigId && settings.AiApiConfigs.some((c: any) => c.id === savedConfigId)) {
           // 如果保存的配置ID仍然存在，使用它
           setSelectedConfigId(savedConfigId)
@@ -514,7 +514,11 @@ export const TextBubbleMenu: React.FC<{
         // 计算AI菜单允许的最大宽度：不超过容器宽度 - 2*EDGE_GAP，同时设上限
         const computedMaxWidth = Math.max(
           240,
-          Math.min(720, (containerRect as DOMRect).width - EDGE_GAP * 2, window.innerWidth - EDGE_GAP * 2)
+          Math.min(
+            720,
+            (containerRect as DOMRect).width - EDGE_GAP * 2,
+            window.innerWidth - EDGE_GAP * 2
+          )
         )
 
         // 估算高度（在渲染前无法精确获取，给个保守值）
@@ -752,8 +756,14 @@ export const TextBubbleMenu: React.FC<{
               : undefined
           }
         >
-          <div className="ai-loading-content" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="ai-loading-text" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            className="ai-loading-content"
+            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          >
+            <div
+              className="ai-loading-text"
+              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            >
               <Spin size="small" />
               <span>AI 正在{featureLabel}...</span>
             </div>
@@ -766,9 +776,10 @@ export const TextBubbleMenu: React.FC<{
                 fontSize: 13,
                 lineHeight: 1.6,
                 // 动态控制边框：有内容时显示边框，无内容时透明
-                border: streamingText || streamError 
-                  ? '1px solid var(--semi-color-border)' 
-                  : '1px solid transparent',
+                border:
+                  streamingText || streamError
+                    ? '1px solid var(--semi-color-border)'
+                    : '1px solid transparent',
                 borderRadius: 6,
                 // 动态控制内边距：有内容时正常，无内容时最小化
                 padding: streamingText || streamError ? '8px 10px' : '2px',

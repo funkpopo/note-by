@@ -138,14 +138,17 @@ export class DatabaseService {
       }
     })
 
-    ipcMain.handle(IPC_CHANNELS.SET_FILE_TAGS, async (_e, filePath: string, tags: string[] = []) => {
-      try {
-        const success = await setTagsForFile(filePath, Array.isArray(tags) ? tags : [])
-        return { success }
-      } catch (error) {
-        return { success: false, error: String(error) }
+    ipcMain.handle(
+      IPC_CHANNELS.SET_FILE_TAGS,
+      async (_e, filePath: string, tags: string[] = []) => {
+        try {
+          const success = await setTagsForFile(filePath, Array.isArray(tags) ? tags : [])
+          return { success }
+        } catch (error) {
+          return { success: false, error: String(error) }
+        }
       }
-    })
+    )
 
     // Chat
     ipcMain.handle(IPC_CHANNELS.CHAT_CREATE_SESSION, async (_e, title?: string) => {
@@ -198,13 +201,16 @@ export class DatabaseService {
       }
     })
 
-    ipcMain.handle(IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE, async (_e, sessionId: string, title: string) => {
-      try {
-        return await updateChatSessionTitle(sessionId, title)
-      } catch (error) {
-        return false
+    ipcMain.handle(
+      IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE,
+      async (_e, sessionId: string, title: string) => {
+        try {
+          return await updateChatSessionTitle(sessionId, title)
+        } catch (error) {
+          return false
+        }
       }
-    })
+    )
 
     ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_SESSION, async (_e, sessionId: string) => {
       try {
@@ -239,4 +245,3 @@ export class DatabaseService {
     })
   }
 }
-

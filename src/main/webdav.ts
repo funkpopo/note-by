@@ -137,7 +137,9 @@ export function initWebDAVClient(config: WebDAVConfig): boolean {
   }
 }
 
-async function resolveWebDAVPassword(config: WebDAVConfig & { useCustomEncryption?: boolean; masterPassword?: string }): Promise<string> {
+async function resolveWebDAVPassword(
+  config: WebDAVConfig & { useCustomEncryption?: boolean; masterPassword?: string }
+): Promise<string> {
   let pwd = config.password || ''
   if (!pwd || pwd === SECRET_PLACEHOLDER) {
     const account = buildWebDAVAccount()
@@ -1126,8 +1128,10 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
                 // 改进冲突处理：若双方都在上次同步后修改，则生成冲突副本
                 const syncRecordTimeLocal = item.syncRecord?.lastModifiedLocal || 0
                 const syncRecordTimeRemote = item.syncRecord?.lastModifiedRemote || 0
-                const localChanged = (item.localModTime || 0) > Math.max(syncRecordTimeLocal, lastSyncTime)
-                const remoteChanged = (item.remoteModTime || 0) > Math.max(syncRecordTimeRemote, lastSyncTime)
+                const localChanged =
+                  (item.localModTime || 0) > Math.max(syncRecordTimeLocal, lastSyncTime)
+                const remoteChanged =
+                  (item.remoteModTime || 0) > Math.max(syncRecordTimeRemote, lastSyncTime)
 
                 if (localChanged && remoteChanged) {
                   // 冲突：保留本地，远程另存为副本
@@ -1193,7 +1197,16 @@ export async function syncBidirectional(config: WebDAVConfig): Promise<{
     await updateLastGlobalSyncTime()
 
     // 最后一次进度更新，确保UI显示100%
-    notifySyncProgress({ total: 1, processed: 1, action: 'compare', phase: 'finalize', uploaded, downloaded, failed, conflicts })
+    notifySyncProgress({
+      total: 1,
+      processed: 1,
+      action: 'compare',
+      phase: 'finalize',
+      uploaded,
+      downloaded,
+      failed,
+      conflicts
+    })
 
     return {
       success: true,

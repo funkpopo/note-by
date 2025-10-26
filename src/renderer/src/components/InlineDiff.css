@@ -118,14 +118,8 @@
 
 .inline-diff-actions {
   position: absolute;
-  bottom: var(
-    --inline-diff-actions-offset,
-    max(8px, calc(var(--inline-diff-gutter, 32px) / 2))
-  );
-  right: var(
-    --inline-diff-actions-offset,
-    max(8px, calc(var(--inline-diff-gutter, 32px) / 2))
-  );
+  bottom: var(--inline-diff-actions-offset, max(8px, calc(var(--inline-diff-gutter, 32px) / 2)));
+  right: var(--inline-diff-actions-offset, max(8px, calc(var(--inline-diff-gutter, 32px) / 2)));
   display: flex;
   gap: var(--inline-diff-actions-gap, 8px);
   opacity: 0;
@@ -253,8 +247,7 @@
           var(--inline-diff-actions-offset-mobile, 4px)
       ),
       calc(
-        var(--inline-diff-actions-size-mobile, 72px) +
-          var(--inline-diff-actions-offset-mobile, 4px)
+        var(--inline-diff-actions-size-mobile, 72px) + var(--inline-diff-actions-offset-mobile, 4px)
       )
     );
   }
@@ -275,8 +268,7 @@
   /* Reserve space for actions on hover (mobile) */
   .inline-diff.hovered .inline-diff-text {
     padding-right: calc(
-      var(--inline-diff-actions-size-mobile, 72px) +
-        var(--inline-diff-actions-offset-mobile, 4px)
+      var(--inline-diff-actions-size-mobile, 72px) + var(--inline-diff-actions-offset-mobile, 4px)
     );
   }
 }

@@ -43,4 +43,3 @@ export async function deleteSecret(account: string): Promise<boolean> {
     return false
   }
 }
-

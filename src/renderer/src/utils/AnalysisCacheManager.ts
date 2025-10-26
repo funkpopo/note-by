@@ -3,7 +3,7 @@
  * 使用LRU缓存来管理数据分析结果的缓存
  */
 import { LRUCache } from 'lru-cache'
-import type { AnalysisCacheItem } from '../../../main/database'
+import type { AnalysisCacheItem } from '../../../shared/types/dto'
 
 // 缓存项包装器
 interface CacheEntry {

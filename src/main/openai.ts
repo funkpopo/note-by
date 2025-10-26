@@ -321,8 +321,8 @@ export async function generateContent(
     if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
       try {
         const settings = readSettings() as any
-        const match = (settings.AiApiConfigs as any[] | undefined)?.find((c) =>
-          c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
+        const match = (settings.AiApiConfigs as any[] | undefined)?.find(
+          (c) => c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
         )
         if (match && match.id) {
           const account = buildApiAccount(match.id)
@@ -456,8 +456,8 @@ export async function streamGenerateContent(
       if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
         try {
           const settings = readSettings() as any
-          const match = (settings.AiApiConfigs as any[] | undefined)?.find((c) =>
-            c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
+          const match = (settings.AiApiConfigs as any[] | undefined)?.find(
+            (c) => c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
           )
           if (match && match.id) {
             const account = buildApiAccount(match.id)
@@ -637,4 +637,3 @@ export async function streamGenerateContent(
 
   return eventEmitter
 }
-

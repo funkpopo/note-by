@@ -53,7 +53,13 @@ class PerformanceMonitor {
    */
   public logAiStreamingEvent(
     stage: 'start' | 'update' | 'complete' | 'error' | 'cancel',
-    payload: { source: 'chat' | 'editor'; model?: string; bytes?: number; tokens?: number; note?: string }
+    payload: {
+      source: 'chat' | 'editor'
+      model?: string
+      bytes?: number
+      tokens?: number
+      note?: string
+    }
   ): void {
     this.emitEvent({
       type: 'user',

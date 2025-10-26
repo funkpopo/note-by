@@ -151,7 +151,14 @@ export class SyncService {
       try {
         return await cloudSyncLocalToRemote(config)
       } catch (error) {
-        return { success: false, message: `同步失败: ${error}`, uploaded: 0, downloaded: 0, failed: 0, skipped: 0 }
+        return {
+          success: false,
+          message: `同步失败: ${error}`,
+          uploaded: 0,
+          downloaded: 0,
+          failed: 0,
+          skipped: 0
+        }
       }
     })
 
@@ -159,7 +166,14 @@ export class SyncService {
       try {
         return await cloudSyncRemoteToLocal(config)
       } catch (error) {
-        return { success: false, message: `同步失败: ${error}`, uploaded: 0, downloaded: 0, failed: 0, skipped: 0 }
+        return {
+          success: false,
+          message: `同步失败: ${error}`,
+          uploaded: 0,
+          downloaded: 0,
+          failed: 0,
+          skipped: 0
+        }
       }
     })
 
@@ -167,7 +181,14 @@ export class SyncService {
       try {
         return await cloudSyncBidirectional(config)
       } catch (error) {
-        return { success: false, message: `同步失败: ${error}`, uploaded: 0, downloaded: 0, failed: 0, skipped: 0 }
+        return {
+          success: false,
+          message: `同步失败: ${error}`,
+          uploaded: 0,
+          downloaded: 0,
+          failed: 0,
+          skipped: 0
+        }
       }
     })
 
@@ -197,4 +218,3 @@ export class SyncService {
     })
   }
 }
-

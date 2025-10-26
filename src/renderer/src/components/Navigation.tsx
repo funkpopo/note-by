@@ -130,49 +130,64 @@ const Navigation: React.FC<NavigationProps> = ({
   const folderOrderRef = useRef<string[]>([])
   const fileListVersionRef = useRef<number | undefined>(fileListVersion)
   const lastLoadedVersionRef = useRef<number | undefined>(undefined)
-  const rootWrapStyle = useMemo<React.CSSProperties>(() => ({ display: 'flex', height: '100%' }), [])
-  const mainNavStyle = useMemo<React.CSSProperties>(() => ({
-    height: '100%',
-    background: 'var(--semi-color-bg-1)',
-    width: collapsed ? '64px' : navWidth,
-    transition: 'width 0.2s ease',
-    flex: 'none',
-    position: 'relative',
-    zIndex: 3
-  }), [collapsed])
-  const secondaryNavStyle = useMemo<React.CSSProperties>(() => ({
-    width: showSecondaryNav ? `${secondaryNavWidth}px` : 0,
-    height: '100%',
-    background: 'var(--semi-color-bg-2)',
-    borderRight: '1px solid var(--semi-color-border)',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    // Disable width transition while dragging to avoid visual lag
-    transition: isResizing ? 'none' : 'width 0.3s ease-in-out',
-    flexShrink: 0
-  }), [showSecondaryNav, secondaryNavWidth, isResizing])
+  const rootWrapStyle = useMemo<React.CSSProperties>(
+    () => ({ display: 'flex', height: '100%' }),
+    []
+  )
+  const mainNavStyle = useMemo<React.CSSProperties>(
+    () => ({
+      height: '100%',
+      background: 'var(--semi-color-bg-1)',
+      width: collapsed ? '64px' : navWidth,
+      transition: 'width 0.2s ease',
+      flex: 'none',
+      position: 'relative',
+      zIndex: 3
+    }),
+    [collapsed]
+  )
+  const secondaryNavStyle = useMemo<React.CSSProperties>(
+    () => ({
+      width: showSecondaryNav ? `${secondaryNavWidth}px` : 0,
+      height: '100%',
+      background: 'var(--semi-color-bg-2)',
+      borderRight: '1px solid var(--semi-color-border)',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      // Disable width transition while dragging to avoid visual lag
+      transition: isResizing ? 'none' : 'width 0.3s ease-in-out',
+      flexShrink: 0
+    }),
+    [showSecondaryNav, secondaryNavWidth, isResizing]
+  )
   const skeletonStyle = useMemo<React.CSSProperties>(() => ({ padding: '0', height: '100%' }), [])
-  const treeStyle = useMemo<React.CSSProperties>(() => ({
-    width: '100%',
-    borderRadius: '3px',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-    MozUserSelect: 'none',
-    msUserSelect: 'none'
-  }), [])
-  const contextMenuStyle = useMemo<React.CSSProperties>(() => ({
-    position: 'fixed',
-    top: contextMenu.y,
-    left: contextMenu.x,
-    zIndex: 1000,
-    background: 'var(--semi-color-bg-2)',
-    boxShadow: 'var(--semi-shadow-elevated)',
-    borderRadius: '4px',
-    padding: '4px 0',
-    minWidth: '180px',
-    border: '1px solid var(--semi-color-border)'
-  }), [contextMenu])
+  const treeStyle = useMemo<React.CSSProperties>(
+    () => ({
+      width: '100%',
+      borderRadius: '3px',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      MozUserSelect: 'none',
+      msUserSelect: 'none'
+    }),
+    []
+  )
+  const contextMenuStyle = useMemo<React.CSSProperties>(
+    () => ({
+      position: 'fixed',
+      top: contextMenu.y,
+      left: contextMenu.x,
+      zIndex: 1000,
+      background: 'var(--semi-color-bg-2)',
+      boxShadow: 'var(--semi-shadow-elevated)',
+      borderRadius: '4px',
+      padding: '4px 0',
+      minWidth: '180px',
+      border: '1px solid var(--semi-color-border)'
+    }),
+    [contextMenu]
+  )
 
   const updateNavItemsFromCache = useCallback((): void => {
     const orderedItems: NavItem[] = []
@@ -182,7 +197,10 @@ const Navigation: React.FC<NavigationProps> = ({
     })
 
     setNavItems((prev) => {
-      if (prev.length === orderedItems.length && prev.every((item, idx) => item === orderedItems[idx])) {
+      if (
+        prev.length === orderedItems.length &&
+        prev.every((item, idx) => item === orderedItems[idx])
+      ) {
         return prev
       }
       return orderedItems
@@ -388,8 +406,7 @@ const Navigation: React.FC<NavigationProps> = ({
       }
 
       try {
-        const shouldFetchFolders =
-          force || !targetFolders || folderOrderRef.current.length === 0
+        const shouldFetchFolders = force || !targetFolders || folderOrderRef.current.length === 0
 
         if (
           mountedRef.current &&
@@ -409,9 +426,7 @@ const Navigation: React.FC<NavigationProps> = ({
             throw new Error(foldersError || 'Failed to get folders')
           }
 
-          const filteredFolders = (folders ?? []).filter(
-            (folder) => !folder.includes('.assets')
-          )
+          const filteredFolders = (folders ?? []).filter((folder) => !folder.includes('.assets'))
           folderOrderRef.current = filteredFolders
 
           const latestFolderSet = new Set(filteredFolders)
@@ -465,7 +480,11 @@ const Navigation: React.FC<NavigationProps> = ({
             settled.forEach((res, idx) => {
               const folder = slice[idx]
               if (res.status === 'fulfilled') {
-                const { success: filesSuccess, files, error: filesError } = res.value as {
+                const {
+                  success: filesSuccess,
+                  files,
+                  error: filesError
+                } = res.value as {
                   success: boolean
                   files?: string[]
                   error?: string
@@ -638,29 +657,32 @@ const Navigation: React.FC<NavigationProps> = ({
   }, [])
 
   // 处理右键菜单事件
-  const handleContextMenu = useCallback((e: React.MouseEvent, itemKey: string, isFolder: boolean): void => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, itemKey: string, isFolder: boolean): void => {
+      e.preventDefault()
+      e.stopPropagation()
 
-    // 确保itemKey存在
-    if (!itemKey) {
-      // 右键菜单: itemKey为空
-      return
-    }
+      // 确保itemKey存在
+      if (!itemKey) {
+        // 右键菜单: itemKey为空
+        return
+      }
 
-    // 计算菜单位置，确保不超出窗口边界
-    const { x, y } = calculateMenuPosition(e.clientX, e.clientY, isFolder, false)
+      // 计算菜单位置，确保不超出窗口边界
+      const { x, y } = calculateMenuPosition(e.clientX, e.clientY, isFolder, false)
 
-    // 设置右键菜单位置和信息
-    setContextMenu({
-      visible: true,
-      x,
-      y,
-      itemKey,
-      isFolder,
-      isEmpty: false
-    })
-  }, [])
+      // 设置右键菜单位置和信息
+      setContextMenu({
+        visible: true,
+        x,
+        y,
+        itemKey,
+        isFolder,
+        isEmpty: false
+      })
+    },
+    []
+  )
 
   // 处理空白区域右键菜单
   const handleEmptyAreaContextMenu = useCallback((e: React.MouseEvent): void => {
@@ -1032,38 +1054,41 @@ const Navigation: React.FC<NavigationProps> = ({
   }
 
   // 处理树节点点击事件
-  const handleTreeSelect = useCallback((selectedKey: string): void => {
-    // 如果有双击计时器正在运行，说明这是双击的一部分，忽略选择事件
-    if (doubleClickTimer) {
-      return
-    }
-
-    // 只对文件夹使用延迟机制，文件直接选择
-    if (selectedKey.startsWith('file:')) {
-      setSelectedKeys([selectedKey])
-      const parts = selectedKey.split(':')
-      if (parts.length === 3) {
-        const folder = parts[1]
-        const file = parts[2]
-
-        // 通知父组件选中了文件
-        if (onFileSelect) {
-          onFileSelect(folder, file)
-        }
+  const handleTreeSelect = useCallback(
+    (selectedKey: string): void => {
+      // 如果有双击计时器正在运行，说明这是双击的一部分，忽略选择事件
+      if (doubleClickTimer) {
+        return
       }
-    } else if (selectedKey.startsWith('folder:')) {
-      // 对文件夹使用延迟机制防止双击冲突
-      const timer = setTimeout(() => {
-        setSelectedKeys([selectedKey])
-        setDoubleClickTimer(null)
-      }, 150)
 
-      setDoubleClickTimer(timer)
-    } else {
-      // 其他情况直接选择
-      setSelectedKeys([selectedKey])
-    }
-  }, [doubleClickTimer, onFileSelect])
+      // 只对文件夹使用延迟机制，文件直接选择
+      if (selectedKey.startsWith('file:')) {
+        setSelectedKeys([selectedKey])
+        const parts = selectedKey.split(':')
+        if (parts.length === 3) {
+          const folder = parts[1]
+          const file = parts[2]
+
+          // 通知父组件选中了文件
+          if (onFileSelect) {
+            onFileSelect(folder, file)
+          }
+        }
+      } else if (selectedKey.startsWith('folder:')) {
+        // 对文件夹使用延迟机制防止双击冲突
+        const timer = setTimeout(() => {
+          setSelectedKeys([selectedKey])
+          setDoubleClickTimer(null)
+        }, 150)
+
+        setDoubleClickTimer(timer)
+      } else {
+        // 其他情况直接选择
+        setSelectedKeys([selectedKey])
+      }
+    },
+    [doubleClickTimer, onFileSelect]
+  )
 
   // 处理树节点展开/折叠事件
   const handleTreeExpand = useCallback((expandedKeys: string[]): void => {
@@ -1071,72 +1096,74 @@ const Navigation: React.FC<NavigationProps> = ({
   }, [])
 
   // 处理双击事件，用于展开/收起文件夹
-  const handleTreeDoubleClick = useCallback((e: React.MouseEvent, nodeKey: string): void => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleTreeDoubleClick = useCallback(
+    (e: React.MouseEvent, nodeKey: string): void => {
+      e.preventDefault()
+      e.stopPropagation()
 
-    // 只对文件夹处理双击事件
-    if (nodeKey.startsWith('folder:')) {
-      // 清除单击的计时器，阻止单击的选择行为
-      if (doubleClickTimer) {
-        clearTimeout(doubleClickTimer)
-        setDoubleClickTimer(null)
+      // 只对文件夹处理双击事件
+      if (nodeKey.startsWith('folder:')) {
+        // 清除单击的计时器，阻止单击的选择行为
+        if (doubleClickTimer) {
+          clearTimeout(doubleClickTimer)
+          setDoubleClickTimer(null)
+        }
+
+        // 根据当前是否在搜索状态选择正确的展开状态
+        const currentExpandedKeys = searchText ? filteredExpandedKeys : expandedKeys
+        const setCurrentExpandedKeys = searchText ? setFilteredExpandedKeys : setExpandedKeys
+
+        if (currentExpandedKeys.includes(nodeKey)) {
+          // 收起文件夹
+          setCurrentExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey))
+        } else {
+          // 展开文件夹
+          setCurrentExpandedKeys([...currentExpandedKeys, nodeKey])
+        }
       }
-
-      // 根据当前是否在搜索状态选择正确的展开状态
-      const currentExpandedKeys = searchText ? filteredExpandedKeys : expandedKeys
-      const setCurrentExpandedKeys = searchText ? setFilteredExpandedKeys : setExpandedKeys
-
-      if (currentExpandedKeys.includes(nodeKey)) {
-        // 收起文件夹
-        setCurrentExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey))
-      } else {
-        // 展开文件夹
-        setCurrentExpandedKeys([...currentExpandedKeys, nodeKey])
-      }
-    }
-  }, [doubleClickTimer, filteredExpandedKeys, expandedKeys, searchText])
+    },
+    [doubleClickTimer, filteredExpandedKeys, expandedKeys, searchText]
+  )
 
   // 自定义渲染Tree节点标签
-  const renderTreeLabel = useCallback((
-    label?: React.ReactNode,
-    data?: TreeNodeData,
-    _searchWord?: string
-  ): React.ReactNode => {
-    // 处理可能为undefined的情况
-    if (!data || !data.key) {
-      return label
-    }
+  const renderTreeLabel = useCallback(
+    (label?: React.ReactNode, data?: TreeNodeData, _searchWord?: string): React.ReactNode => {
+      // 处理可能为undefined的情况
+      if (!data || !data.key) {
+        return label
+      }
 
-    const nodeKey = data.key.toString()
-    const isFolder = nodeKey.startsWith('folder:')
+      const nodeKey = data.key.toString()
+      const isFolder = nodeKey.startsWith('folder:')
 
-    return (
-      <span
-        style={{
-          userSelect: 'none', // 禁止选中文本
-          WebkitUserSelect: 'none',
-          MozUserSelect: 'none',
-          msUserSelect: 'none',
-          cursor: 'pointer',
-          display: 'inline-block',
-          width: '100%'
-        }}
-        onDoubleClick={(e) => {
-          if (isFolder) {
-            handleTreeDoubleClick(e, nodeKey)
-          }
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          handleContextMenu(e, nodeKey, isFolder)
-        }}
-      >
-        {label}
-      </span>
-    )
-  }, [handleTreeDoubleClick, handleContextMenu])
+      return (
+        <span
+          style={{
+            userSelect: 'none', // 禁止选中文本
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            cursor: 'pointer',
+            display: 'inline-block',
+            width: '100%'
+          }}
+          onDoubleClick={(e) => {
+            if (isFolder) {
+              handleTreeDoubleClick(e, nodeKey)
+            }
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleContextMenu(e, nodeKey, isFolder)
+          }}
+        >
+          {label}
+        </span>
+      )
+    },
+    [handleTreeDoubleClick, handleContextMenu]
+  )
 
   // 打开确认对话框
   const openConfirmDialog = (
@@ -1310,9 +1337,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     }}
                     onClick={handleCreateNoteInFolder}
                   >
-                    <IconPlus
-                      style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
-                    />
+                    <IconPlus style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
                     <Typography.Text>{t('navigation.newNote')}</Typography.Text>
                   </div>
                   <div
@@ -1326,9 +1351,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     }}
                     onClick={handleCreateSubFolder}
                   >
-                    <IconFolder
-                      style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
-                    />
+                    <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
                     <Typography.Text>{t('navigation.newSubFolder')}</Typography.Text>
                   </div>
                   <div className="context-menu-divider" />
@@ -1343,9 +1366,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     }}
                     onClick={handleRenameFolder}
                   >
-                    <IconEdit
-                      style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
-                    />
+                    <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
                     <Typography.Text>{t('navigation.renameFolder')}</Typography.Text>
                   </div>
                   <div className="context-menu-divider" />
@@ -1370,9 +1391,7 @@ const Navigation: React.FC<NavigationProps> = ({
                       hideContextMenu()
                     }}
                   >
-                    <IconDelete
-                      style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
-                    />
+                    <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
                     <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
                       {t('navigation.deleteFolder')}
                     </Typography.Text>
@@ -1393,9 +1412,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     }}
                     onClick={handleRenameFile}
                   >
-                    <IconEdit
-                      style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }}
-                    />
+                    <IconEdit style={{ marginRight: '8px', color: 'var(--semi-color-tertiary)' }} />
                     <Typography.Text>{t('navigation.renameNote')}</Typography.Text>
                   </div>
                   <div
@@ -1444,9 +1461,7 @@ const Navigation: React.FC<NavigationProps> = ({
                       hideContextMenu()
                     }}
                   >
-                    <IconDelete
-                      style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }}
-                    />
+                    <IconDelete style={{ marginRight: '8px', color: 'var(--semi-color-danger)' }} />
                     <Typography.Text style={{ color: 'var(--semi-color-danger)' }}>
                       {t('navigation.deleteNote')}
                     </Typography.Text>
@@ -1467,9 +1482,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     }}
                     onClick={handleCreateFolder}
                   >
-                    <IconFolder
-                      style={{ marginRight: '8px', color: 'var(--semi-color-info)' }}
-                    />
+                    <IconFolder style={{ marginRight: '8px', color: 'var(--semi-color-info)' }} />
                     <Typography.Text>{t('navigation.newFolder')}</Typography.Text>
                   </div>
                   <div className="context-menu-divider" />
@@ -1484,9 +1497,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     }}
                     onClick={() => handleCreateNote()}
                   >
-                    <IconFile
-                      style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }}
-                    />
+                    <IconFile style={{ marginRight: '8px', color: 'var(--semi-color-primary)' }} />
                     <Typography.Text>{t('navigation.newNote')}</Typography.Text>
                   </div>
                 </>
@@ -1549,7 +1560,9 @@ const Navigation: React.FC<NavigationProps> = ({
                   scheduleWidthUpdate()
                 }
                 // Avoid text selection while resizing
-                try { window.getSelection()?.removeAllRanges() } catch {}
+                try {
+                  window.getSelection()?.removeAllRanges()
+                } catch {}
               }
 
               const onMouseUp = (): void => {
@@ -1573,7 +1586,6 @@ const Navigation: React.FC<NavigationProps> = ({
           />
         </div>
       )}
-
 
       {/* 确认对话框 */}
       <ConfirmDialog
@@ -1618,4 +1630,3 @@ const Navigation: React.FC<NavigationProps> = ({
 }
 
 export default Navigation
-

@@ -5,13 +5,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { IPC_CHANNELS } from '../shared/ipcChannels'
 import { ServiceContainer } from './container'
-import {
-  readSettings,
-  writeSettings,
-  updateSetting,
-  getSetting,
-  getWebDAVConfig
-} from './settings'
+import { readSettings, writeSettings, updateSetting, getSetting, getWebDAVConfig } from './settings'
 // AI 相关 IPC 已迁移至 AIService
 import { promises as fsPromises } from 'fs'
 // 导出相关 IPC 已迁移至 ExportService
@@ -250,11 +244,13 @@ function createWindow(): void {
   const appWithIsQuitting = app as any
   appWithIsQuitting.isQuitting = false
   // Create the browser window.
-  const savedWinState = (getSetting('windowState', { width: 1100, height: 720 }) as unknown) as
+  const savedWinState = getSetting('windowState', { width: 1100, height: 720 }) as unknown as
     | { width?: number; height?: number; x?: number; y?: number; isMaximized?: boolean }
     | undefined
-  const desiredWidth = savedWinState && typeof savedWinState.width === 'number' ? savedWinState.width : 1100
-  const desiredHeight = savedWinState && typeof savedWinState.height === 'number' ? savedWinState.height : 720
+  const desiredWidth =
+    savedWinState && typeof savedWinState.width === 'number' ? savedWinState.width : 1100
+  const desiredHeight =
+    savedWinState && typeof savedWinState.height === 'number' ? savedWinState.height : 720
 
   mainWindow = new BrowserWindow({
     width: desiredWidth,

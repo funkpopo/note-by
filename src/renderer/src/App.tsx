@@ -95,36 +95,36 @@ const App: React.FC = () => {
   return (
     <StreamingOverlayProvider>
       <Layout
-      className="components-layout-demo"
-      style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}
-    >
-      <Layout style={{ flexDirection: 'row', height: '100vh', width: '100vw' }}>
-        <div style={{ display: 'flex', height: '100vh', position: 'relative' }}>
-          <Navigation
-            onNavChange={handleNavChange}
-            onFileSelect={handleFileSelect}
-            fileListVersion={fileListVersion}
-            onFileDeleted={handleFileDeleted}
-            currentView={currentView}
-          />
-        </div>
-        <Layout style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden' }}>
-          <Content
-            style={{
-              height: '100vh',
-              width: '100%',
-              padding: 0,
-              background: 'var(--semi-color-bg-0)',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            {renderContent()}
-          </Content>
+        className="components-layout-demo"
+        style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}
+      >
+        <Layout style={{ flexDirection: 'row', height: '100vh', width: '100vw' }}>
+          <div style={{ display: 'flex', height: '100vh', position: 'relative' }}>
+            <Navigation
+              onNavChange={handleNavChange}
+              onFileSelect={handleFileSelect}
+              fileListVersion={fileListVersion}
+              onFileDeleted={handleFileDeleted}
+              currentView={currentView}
+            />
+          </div>
+          <Layout style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden' }}>
+            <Content
+              style={{
+                height: '100vh',
+                width: '100%',
+                padding: 0,
+                background: 'var(--semi-color-bg-0)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {renderContent()}
+            </Content>
+          </Layout>
         </Layout>
-      </Layout>
       </Layout>
     </StreamingOverlayProvider>
   )

@@ -6,7 +6,10 @@ export class AppError extends Error {
   code?: string
   data?: Record<string, unknown>
 
-  constructor(message: string, options?: { code?: string; cause?: unknown; data?: Record<string, unknown> }) {
+  constructor(
+    message: string,
+    options?: { code?: string; cause?: unknown; data?: Record<string, unknown> }
+  ) {
     super(message)
     this.name = 'AppError'
     this.code = options?.code
@@ -63,4 +66,3 @@ export async function withHandledError<T>(
     return { ok: false, error }
   }
 }
-

@@ -23,4 +23,3 @@ ctx.onmessage = (e: MessageEvent<DiffRequest>) => {
 }
 
 export {}
-

@@ -198,6 +198,3 @@ const InlineDiff: React.FC<NodeViewProps> = ({ node, getPos, editor }) => {
 }
 
 export default InlineDiff
-
-
-

@@ -49,4 +49,3 @@ const StreamingOverlay: React.FC<StreamingOverlayProps> = ({
 }
 
 export default StreamingOverlay
-

@@ -42,4 +42,3 @@ export const rendererErrorHandler = {
   info: errorHandler.info.bind(errorHandler),
   debug: errorHandler.debug.bind(errorHandler)
 }
-

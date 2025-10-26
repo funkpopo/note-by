@@ -78,22 +78,23 @@ export async function syncLocalToRemote(config: CloudStorageConfig): Promise<Clo
       action: 'upload'
     })
 
-    const result: CloudSyncResult = config.provider === 'webdav'
-      ? await webdavSyncLocalToRemote({
-          url: (config as any).url || '',
-          username: (config as any).username || '',
-          password: (config as any).password || '',
-          remotePath: (config as any).remotePath || '/notes',
-          localPath: (config as any).localPath || getMarkdownFolderPath()
-        }).then((r) => ({
-          success: r.success,
-          message: r.message,
-          uploaded: r.uploaded ?? 0,
-          downloaded: 0,
-          failed: r.failed ?? 0,
-          skipped: (r as any).skipped ?? 0
-        }))
-      : await cloudStorageManager.syncLocalToRemote(config)
+    const result: CloudSyncResult =
+      config.provider === 'webdav'
+        ? await webdavSyncLocalToRemote({
+            url: (config as any).url || '',
+            username: (config as any).username || '',
+            password: (config as any).password || '',
+            remotePath: (config as any).remotePath || '/notes',
+            localPath: (config as any).localPath || getMarkdownFolderPath()
+          }).then((r) => ({
+            success: r.success,
+            message: r.message,
+            uploaded: r.uploaded ?? 0,
+            downloaded: 0,
+            failed: r.failed ?? 0,
+            skipped: (r as any).skipped ?? 0
+          }))
+        : await cloudStorageManager.syncLocalToRemote(config)
 
     notifySyncProgress({
       total: 100,
@@ -124,22 +125,23 @@ export async function syncRemoteToLocal(config: CloudStorageConfig): Promise<Clo
       action: 'download'
     })
 
-    const result: CloudSyncResult = config.provider === 'webdav'
-      ? await webdavSyncRemoteToLocal({
-          url: (config as any).url || '',
-          username: (config as any).username || '',
-          password: (config as any).password || '',
-          remotePath: (config as any).remotePath || '/notes',
-          localPath: (config as any).localPath || getMarkdownFolderPath()
-        }).then((r) => ({
-          success: r.success,
-          message: r.message,
-          uploaded: 0,
-          downloaded: r.downloaded ?? 0,
-          failed: r.failed ?? 0,
-          skipped: (r as any).skipped ?? 0
-        }))
-      : await cloudStorageManager.syncRemoteToLocal(config)
+    const result: CloudSyncResult =
+      config.provider === 'webdav'
+        ? await webdavSyncRemoteToLocal({
+            url: (config as any).url || '',
+            username: (config as any).username || '',
+            password: (config as any).password || '',
+            remotePath: (config as any).remotePath || '/notes',
+            localPath: (config as any).localPath || getMarkdownFolderPath()
+          }).then((r) => ({
+            success: r.success,
+            message: r.message,
+            uploaded: 0,
+            downloaded: r.downloaded ?? 0,
+            failed: r.failed ?? 0,
+            skipped: (r as any).skipped ?? 0
+          }))
+        : await cloudStorageManager.syncRemoteToLocal(config)
 
     notifySyncProgress({
       total: 100,
@@ -170,22 +172,23 @@ export async function syncBidirectional(config: CloudStorageConfig): Promise<Clo
       action: 'compare'
     })
 
-    const result: CloudSyncResult = config.provider === 'webdav'
-      ? await webdavSyncBidirectional({
-          url: (config as any).url || '',
-          username: (config as any).username || '',
-          password: (config as any).password || '',
-          remotePath: (config as any).remotePath || '/notes',
-          localPath: (config as any).localPath || getMarkdownFolderPath()
-        }).then((r) => ({
-          success: r.success,
-          message: r.message,
-          uploaded: r.uploaded ?? 0,
-          downloaded: r.downloaded ?? 0,
-          failed: r.failed ?? 0,
-          skipped: ((r as any).skippedUpload ?? 0) + ((r as any).skippedDownload ?? 0)
-        }))
-      : await cloudStorageManager.syncBidirectional(config)
+    const result: CloudSyncResult =
+      config.provider === 'webdav'
+        ? await webdavSyncBidirectional({
+            url: (config as any).url || '',
+            username: (config as any).username || '',
+            password: (config as any).password || '',
+            remotePath: (config as any).remotePath || '/notes',
+            localPath: (config as any).localPath || getMarkdownFolderPath()
+          }).then((r) => ({
+            success: r.success,
+            message: r.message,
+            uploaded: r.uploaded ?? 0,
+            downloaded: r.downloaded ?? 0,
+            failed: r.failed ?? 0,
+            skipped: ((r as any).skippedUpload ?? 0) + ((r as any).skippedDownload ?? 0)
+          }))
+        : await cloudStorageManager.syncBidirectional(config)
 
     notifySyncProgress({
       total: 100,

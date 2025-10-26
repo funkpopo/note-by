@@ -380,7 +380,10 @@ export class GoogleDriveStorageService implements ICloudStorageService {
             // 同步markdown文件
             let success = false
             try {
-              const meta = await this.drive.files.get({ fileId: remoteFile.id, fields: 'md5Checksum, size' })
+              const meta = await this.drive.files.get({
+                fileId: remoteFile.id,
+                fields: 'md5Checksum, size'
+              })
               const remoteMd5 = meta.data.md5Checksum as string | undefined
               const remoteSize = parseInt((meta.data.size as string) || '0')
               let same = false

@@ -2,7 +2,12 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { is } from '@electron-toolkit/utils'
-import { decrypt, encryptWithPassword, decryptWithPassword, generateEncryptionTest } from './encryption'
+import {
+  decrypt,
+  encryptWithPassword,
+  decryptWithPassword,
+  generateEncryptionTest
+} from './encryption'
 import Ajv from 'ajv'
 import { SECRET_PLACEHOLDER, buildApiAccount, buildWebDAVAccount, saveSecret } from './secret-store'
 
@@ -250,7 +255,10 @@ export function writeSettings(settings: Record<string, unknown>): void {
       const arr = (settingsToSave as any).AiApiConfigs as AiApiConfig[]
       for (const cfg of arr) {
         if (cfg.apiKey && cfg.apiKey !== SECRET_PLACEHOLDER) {
-          const account = cfg.apiKeyRef && cfg.apiKeyRef.startsWith('api:') ? cfg.apiKeyRef : buildApiAccount(cfg.id)
+          const account =
+            cfg.apiKeyRef && cfg.apiKeyRef.startsWith('api:')
+              ? cfg.apiKeyRef
+              : buildApiAccount(cfg.id)
           void saveSecret(account, cfg.apiKey)
           cfg.apiKeyRef = account
         }
@@ -262,7 +270,10 @@ export function writeSettings(settings: Record<string, unknown>): void {
     if ((settingsToSave as any).webdav) {
       const wd = (settingsToSave as any).webdav as WebDAVConfig
       if (wd.password && wd.password !== SECRET_PLACEHOLDER) {
-        const account = wd.passwordRef && wd.passwordRef.startsWith('webdav:') ? wd.passwordRef : buildWebDAVAccount()
+        const account =
+          wd.passwordRef && wd.passwordRef.startsWith('webdav:')
+            ? wd.passwordRef
+            : buildWebDAVAccount()
         void saveSecret(account, wd.password)
         wd.passwordRef = account
       }

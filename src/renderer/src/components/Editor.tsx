@@ -556,7 +556,9 @@ const Editor: React.FC<EditorProps> = ({
           }
           onFileChanged?.()
           // Trigger tag refresh and analysis invalidation after a finalized save (debounced)
-          try { onEditorFinalized() } catch {}
+          try {
+            onEditorFinalized()
+          } catch {}
         } else {
           Toast.error(`保存失败: ${result.error || '未知错误'}`)
         }
@@ -814,9 +816,7 @@ const Editor: React.FC<EditorProps> = ({
         <div className="editor-wrapper">
           <EditorContent editor={editor} />
           {isProgressiveLoading && (
-            <div className="progressive-loading-indicator">
-              正在分块加载长文档...
-            </div>
+            <div className="progressive-loading-indicator">正在分块加载长文档...</div>
           )}
           {editable && (
             <>
@@ -842,7 +842,12 @@ const Editor: React.FC<EditorProps> = ({
       )}
       {conflictVisible && conflictHistory && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'var(--semi-color-bg-0)' }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1100,
+            background: 'var(--semi-color-bg-0)'
+          }}
         >
           <VersionComparisonLazy
             currentContent={editor?.getHTML() || ''}

@@ -1,5 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Space, Dropdown, List, Toast, Spin, Typography as SemiTypography, TagInput, Tag } from '@douyinfe/semi-ui'
+import {
+  Button,
+  Space,
+  Dropdown,
+  List,
+  Toast,
+  Spin,
+  Typography as SemiTypography,
+  TagInput,
+  Tag
+} from '@douyinfe/semi-ui'
 import { IconFile, IconSave, IconChevronDown as IconChevronDownSemi } from '@douyinfe/semi-icons'
 import CustomDropdown from './CustomDropdown'
 import CustomHistoryDropdown from './CustomHistoryDropdown'
@@ -236,7 +246,9 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   }
 
   // Deterministic tag color mapping (consistent per tag value)
-  const getTagColor = (tag: string): {
+  const getTagColor = (
+    tag: string
+  ): {
     color:
       | 'amber'
       | 'blue'
@@ -317,7 +329,9 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
         <div className="editor-header-left">
           <div className="file-info">
             <IconFile size="small" style={{ color: 'var(--semi-color-text-2)' }} />
-            <div className="file-title" title={displayName}>{displayName}</div>
+            <div className="file-title" title={displayName}>
+              {displayName}
+            </div>
             {hasUnsavedChanges && (
               <div className="unsaved-indicator">
                 <span>●</span>
@@ -377,7 +391,9 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
       </div>
 
       <div className="editor-tag-bar">
-        <SemiTypography.Text className="editor-tag-label" type="tertiary" size="small">标签</SemiTypography.Text>
+        <SemiTypography.Text className="editor-tag-label" type="tertiary" size="small">
+          标签
+        </SemiTypography.Text>
         <div className="editor-tag-input-container">
           <TagInput
             value={fileTags}
@@ -389,7 +405,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             placeholder="添加标签"
             addOnBlur
             allowDuplicates={false}
-            separator="," 
+            separator=","
             disabled={!filePath}
             style={{ width: '100%' }}
             renderTagItem={(value, _index, onClose) => {
@@ -412,11 +428,12 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
         {savingTags && (
           <div className="editor-tag-status">
             <Spin size="small" />
-            <SemiTypography.Text type="tertiary" size="small">保存中...</SemiTypography.Text>
+            <SemiTypography.Text type="tertiary" size="small">
+              保存中...
+            </SemiTypography.Text>
           </div>
         )}
       </div>
     </div>
   )
 }
-

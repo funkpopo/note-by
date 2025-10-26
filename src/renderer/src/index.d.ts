@@ -1,4 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type { Result } from '../../shared/types/result'
+
+type R<T = Record<string, unknown>> = Result<T>
 
 // 流式内容回调接口
 interface StreamCallbacks {
@@ -24,7 +27,7 @@ interface Window {
         apiKey: string
         apiUrl: string
         modelName: string
-      }) => Promise<{ success: boolean; message: string }>
+      }) => Promise<R<{ message: string }>>
 
       generateContent: (request: {
         apiKey: string
@@ -33,7 +36,7 @@ interface Window {
         prompt: string
         maxTokens?: number
         stream?: boolean
-      }) => Promise<{ success: boolean; content?: string; error?: string }>
+      }) => Promise<R<{ content?: string }>>
 
       streamGenerateContent: (
         request: {
@@ -44,7 +47,7 @@ interface Window {
           maxTokens?: number
         },
         callbacks: StreamCallbacks
-      ) => Promise<{ success: boolean; streamId?: string; error?: string }>
+      ) => Promise<R<{ streamId?: string }>>
     }
     api: {
       saveConfig: (config: {
@@ -53,65 +56,42 @@ interface Window {
         apiKey: string
         apiUrl: string
         modelName: string
-      }) => Promise<{ success: boolean; error?: string }>
-      deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
+      }) => Promise<R<{}>>
+      deleteConfig: (configId: string) => Promise<R<{}>>
     }
     markdown: {
-      save: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
-      exportToPdf: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
-      exportToDocx: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
-      checkFileExists: (
-        filePath: string
-      ) => Promise<{ success: boolean; exists: boolean; error?: string }>
-      getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
-      getFiles: (
-        folderName: string
-      ) => Promise<{ success: boolean; files?: string[]; error?: string }>
-      readFile: (
-        filePath: string
-      ) => Promise<{ success: boolean; content?: string; error?: string }>
-      createFolder: (
-        folderName: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
-      deleteFolder: (folderName: string) => Promise<{ success: boolean; error?: string }>
-      renameFolder: (
-        oldFolderName: string,
-        newFolderName: string
-      ) => Promise<{ success: boolean; error?: string }>
+      save: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+      exportToPdf: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+      exportToDocx: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+      checkFileExists: (filePath: string) => Promise<R<{ exists: boolean }>>
+      getFolders: () => Promise<R<{ folders?: string[] }>>
+      getFiles: (folderName: string) => Promise<R<{ files?: string[] }>>
+      readFile: (filePath: string) => Promise<R<{ content?: string }>>
+      createFolder: (folderName: string) => Promise<R<{ path?: string }>>
+      deleteFolder: (folderName: string) => Promise<R<{}>>
+      renameFolder: (oldFolderName: string, newFolderName: string) => Promise<R<{}>>
       createNote: (
         folderName: string,
         fileName: string,
         content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
-      deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
-      renameFile: (
-        oldFilePath: string,
-        newFilePath: string
-      ) => Promise<{ success: boolean; error?: string }>
+      ) => Promise<R<{ path?: string }>>
+      deleteFile: (filePath: string) => Promise<R<{}>>
+      renameFile: (oldFilePath: string, newFilePath: string) => Promise<R<{}>>
       uploadFile: (
         filePath: string,
         fileData: string,
         fileName: string
-      ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
-      getHistory: (filePath: string) => Promise<{
-        success: boolean
-        history?: Array<{ id: number; filePath: string; content: string; timestamp: number }>
-        error?: string
-      }>
-      getHistoryById: (historyId: number) => Promise<{
-        success: boolean
-        history?: { id: number; filePath: string; content: string; timestamp: number }
-        error?: string
-      }>
+      ) => Promise<R<{ url?: string; path?: string }>>
+      getHistory: (
+        filePath: string
+      ) => Promise<
+        R<{ history?: Array<{ id: number; filePath: string; content: string; timestamp: number }> }>
+      >
+      getHistoryById: (
+        historyId: number
+      ) => Promise<
+        R<{ history?: { id: number; filePath: string; content: string; timestamp: number } }>
+      >
     }
     webdav: {
       testConnection: (config: {
@@ -119,69 +99,55 @@ interface Window {
         username: string
         password: string
         remotePath: string
-      }) => Promise<{ success: boolean; message: string }>
+      }) => Promise<R<{ message: string }>>
       syncLocalToRemote: (config: {
         url: string
         username: string
         password: string
         remotePath: string
         localPath?: string
-      }) => Promise<{
-        success: boolean
-        message: string
-        uploaded: number
-        failed: number
-      }>
+      }) => Promise<R<{ message: string; uploaded: number; failed: number }>>
       syncRemoteToLocal: (config: {
         url: string
         username: string
         password: string
         remotePath: string
         localPath?: string
-      }) => Promise<{
-        success: boolean
-        message: string
-        downloaded: number
-        failed: number
-      }>
+      }) => Promise<R<{ message: string; downloaded: number; failed: number }>>
       syncBidirectional: (config: {
         url: string
         username: string
         password: string
         remotePath: string
         localPath?: string
-      }) => Promise<{
-        success: boolean
-        message: string
-        uploaded: number
-        downloaded: number
-        failed: number
-        cancelled?: boolean
-      }>
-      cancelSync: () => Promise<{
-        success: boolean
-        message: string
-      }>
+      }) => Promise<
+        R<{
+          message: string
+          uploaded: number
+          downloaded: number
+          failed: number
+          cancelled?: boolean
+        }>
+      >
+      cancelSync: () => Promise<R<{ message: string }>>
     }
     system: {
-      diagnoseEnvironment: () => Promise<{
-        success: boolean
-        systemInfo: {
-          os: string
-          arch: string
-          electronVersion: string
-          nodeVersion: string
-          chromiumVersion: string
-        }
-        error?: string
-      }>
+      diagnoseEnvironment: () => Promise<
+        R<{
+          systemInfo: {
+            os: string
+            arch: string
+            electronVersion: string
+            nodeVersion: string
+            chromiumVersion: string
+          }
+        }>
+      >
     }
     mindmap: {
-      save: (content: string) => Promise<{ success: boolean; path?: string; error?: string }>
-      load: () => Promise<{ success: boolean; data?: string; cancelled?: boolean; error?: string }>
-      exportHtml: (
-        imageDataUrl: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      save: (content: string) => Promise<R<{ path?: string }>>
+      load: () => Promise<R<{ data?: string; cancelled?: boolean }>>
+      exportHtml: (imageDataUrl: string) => Promise<R<{ path?: string }>>
       showSaveDialog: (options: Electron.SaveDialogOptions) => Promise<string | undefined>
       showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<string | undefined>
     }

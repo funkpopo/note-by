@@ -1,13 +1,11 @@
-import type { ChatSession, ChatMessage, AnalysisCacheItem } from '../../main/database'
-import type { AiApiConfig } from '../../shared/types/common'
+import type { ChatSession, ChatMessage, AnalysisCacheItem } from '../../shared/types/dto'
+import type { AiApiConfig, HistoryItem } from '../../shared/types/common'
+import type { Result } from '../../shared/types/result'
+
+type R<T = Record<string, unknown>> = Result<T>
 
 // 历史记录项接口
-interface HistoryItem {
-  id: number
-  filePath: string
-  content: string
-  timestamp: number
-}
+// HistoryItem moved to shared/types/common
 
 // AiApiConfig moved to shared/types/common
 
@@ -36,57 +34,39 @@ interface Window {
       set: <T>(key: string, value: T) => Promise<boolean>
     }
     tags: {
-      getGlobalTags: () => Promise<{
-        success: boolean
-        tagsData?: {
-          topTags: Array<{ tag: string; count: number }>
-          tagRelations: Array<{ source: string; target: string; strength: number }>
-          documentTags: Array<{ filePath: string; tags: string[] }>
-        }
-        error?: string
-      }>
-      refreshGlobalTags: () => Promise<{
-        success: boolean
-        tagsData?: {
-          topTags: Array<{ tag: string; count: number }>
-          tagRelations: Array<{ source: string; target: string; strength: number }>
-          documentTags: Array<{ filePath: string; tags: string[] }>
-        }
-        error?: string
-      }>
-      getFileTags: (filePath: string) => Promise<{ success: boolean; tags?: string[]; error?: string }>
-      setFileTags: (filePath: string, tags: string[]) => Promise<{ success: boolean; error?: string }>
+      getGlobalTags: () => Promise<
+        R<{
+          tagsData?: {
+            topTags: Array<{ tag: string; count: number }>
+            tagRelations: Array<{ source: string; target: string; strength: number }>
+            documentTags: Array<{ filePath: string; tags: string[] }>
+          }
+        }>
+      >
+      refreshGlobalTags: () => Promise<
+        R<{
+          tagsData?: {
+            topTags: Array<{ tag: string; count: number }>
+            tagRelations: Array<{ source: string; target: string; strength: number }>
+            documentTags: Array<{ filePath: string; tags: string[] }>
+          }
+        }>
+      >
+      getFileTags: (filePath: string) => Promise<R<{ tags?: string[] }>>
+      setFileTags: (filePath: string, tags: string[]) => Promise<R<{}>>
     }
     // 数据分析相关API
     analytics: {
       // 获取笔记历史统计数据
-      getNoteHistoryStats: () => Promise<{
-        success: boolean
-        stats: StatsData
-        error?: string
-      }>
+      getNoteHistoryStats: () => Promise<R<{ stats: StatsData }>>
       // 获取用户活动数据
-      getUserActivityData: (days: number) => Promise<{
-        success: boolean
-        activityData: ActivityData
-        error?: string
-      }>
+      getUserActivityData: (days: number) => Promise<R<{ activityData: ActivityData }>>
       // 获取分析缓存
-      getAnalysisCache: () => Promise<{
-        success: boolean
-        cache?: AnalysisCacheItem
-        error?: string
-      }>
+      getAnalysisCache: () => Promise<R<{ cache?: AnalysisCacheItem }>>
       // 保存分析缓存
-      saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<{
-        success: boolean
-        error?: string
-      }>
+      saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<R<{}>>
       // 重置分析缓存
-      resetAnalysisCache: () => Promise<{
-        success: boolean
-        error?: string
-      }>
+      resetAnalysisCache: () => Promise<R<{}>>
     }
     // OpenAI相关API
     openai: {
@@ -97,7 +77,7 @@ interface Window {
         apiKey: string
         apiUrl: string
         modelName: string
-      }) => Promise<{ success: boolean; message: string }>
+      }) => Promise<R<{ message: string }>>
 
       // AI生成（支持消息格式）
       generate: (request: {
@@ -105,7 +85,7 @@ interface Window {
         messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
         maxTokens?: number
         temperature?: number
-      }) => Promise<{ success: boolean; content?: string; error?: string }>
+      }) => Promise<R<{ content?: string }>>
 
       // 流式生成内容
       streamGenerateContent: (
@@ -121,7 +101,7 @@ interface Window {
           onDone: (content: string) => void
           onError: (error: string) => void
         }
-      ) => Promise<{ success: boolean; streamId?: string; error?: string }>
+      ) => Promise<R<{ streamId?: string }>>
 
       // 生成内容
       generateContent: (request: {
@@ -130,17 +110,10 @@ interface Window {
         modelName: string
         prompt: string
         maxTokens?: number
-      }) => Promise<{
-        success: boolean
-        content?: string
-        error?: string
-      }>
+      }) => Promise<R<{ content?: string }>>
 
       // 停止流式生成
-      stopStreamGenerate: (streamId: string) => Promise<{
-        success: boolean
-        error?: string
-      }>
+      stopStreamGenerate: (streamId: string) => Promise<R<{}>>
     }
     // API配置管理
     api: {
@@ -151,9 +124,9 @@ interface Window {
         apiKey: string
         apiUrl: string
         modelName: string
-      }) => Promise<{ success: boolean; error?: string }>
+      }) => Promise<R<{}>>
       // 删除配置
-      deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
+      deleteConfig: (configId: string) => Promise<R<{}>>
     }
     // 更新检查相关API
     updates: {
@@ -172,100 +145,64 @@ interface Window {
     // Markdown文件管理
     markdown: {
       // 保存Markdown文件
-      save: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      save: (filePath: string, content: string) => Promise<R<{ path?: string }>>
       // 导出PDF文件
-      exportToPdf: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportToPdf: (filePath: string, content: string) => Promise<R<{ path?: string }>>
       // 导出DOCX文件
-      exportToDocx: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportToDocx: (filePath: string, content: string) => Promise<R<{ path?: string }>>
       // 导出HTML文件
-      exportToHtml: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportToHtml: (filePath: string, content: string) => Promise<R<{ path?: string }>>
       // 导出为Notion格式
-      exportToNotion: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportToNotion: (filePath: string, content: string) => Promise<R<{ path?: string }>>
       // 导出为Obsidian格式
-      exportToObsidian: (
-        filePath: string,
-        content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      exportToObsidian: (filePath: string, content: string) => Promise<R<{ path?: string }>>
 
       // 检查文件是否存在
-      checkFileExists: (
-        filePath: string
-      ) => Promise<{ success: boolean; exists: boolean; error?: string }>
+      checkFileExists: (filePath: string) => Promise<R<{ exists: boolean }>>
 
       // 获取文件夹列表
-      getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
+      getFolders: () => Promise<R<{ folders?: string[] }>>
 
       // 获取特定文件夹中的文件列表
-      getFiles: (
-        folderName: string
-      ) => Promise<{ success: boolean; files?: string[]; error?: string }>
+      getFiles: (folderName: string) => Promise<R<{ files?: string[] }>>
 
       // 读取Markdown文件内容
-      readFile: (
-        filePath: string
-      ) => Promise<{ success: boolean; content?: string; error?: string }>
+      readFile: (filePath: string) => Promise<R<{ content?: string }>>
 
       // 创建新文件夹
-      createFolder: (
-        folderName: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      createFolder: (folderName: string) => Promise<R<{ path?: string }>>
 
       // 删除文件夹
-      deleteFolder: (folderName: string) => Promise<{ success: boolean; error?: string }>
+      deleteFolder: (folderName: string) => Promise<R<{}>>
 
       // 重命名文件夹
-      renameFolder: (
-        oldFolderName: string,
-        newFolderName: string
-      ) => Promise<{ success: boolean; error?: string }>
+      renameFolder: (oldFolderName: string, newFolderName: string) => Promise<R<{}>>
 
       // 创建新笔记
       createNote: (
         folderName: string,
         fileName: string,
         content: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      ) => Promise<R<{ path?: string }>>
 
       // 删除笔记文件
-      deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
+      deleteFile: (filePath: string) => Promise<R<{}>>
 
       // 重命名笔记文件
-      renameFile: (
-        oldFilePath: string,
-        newFilePath: string
-      ) => Promise<{ success: boolean; error?: string }>
+      renameFile: (oldFilePath: string, newFilePath: string) => Promise<R<{}>>
 
       // 上传文件（用于图片等资源文件）
       uploadFile: (
         filePath: string,
         fileContent: string,
         fileName: string
-      ) => Promise<{ success: boolean; url?: string; error?: string }>
+      ) => Promise<R<{ url?: string }>>
 
       // 获取文件历史记录列表
-      getHistory: (
-        filePath: string
-      ) => Promise<{ success: boolean; history?: HistoryItem[]; error?: string }>
+      getHistory: (filePath: string) => Promise<R<{ history?: HistoryItem[] }>>
 
       // 获取指定ID的历史记录
-      getHistoryById: (
-        historyId: number
-      ) => Promise<{ success: boolean; history?: HistoryItem; error?: string }>
+      getHistoryById: (historyId: number) => Promise<R<{ history?: HistoryItem }>>
     }
     // WebDAV同步相关API
     webdav: {
@@ -275,7 +212,7 @@ interface Window {
         username: string
         password: string
         remotePath: string
-      }) => Promise<{ success: boolean; message: string }>
+      }) => Promise<R<{ message: string }>>
 
       // 同步本地到远程
       syncLocalToRemote: (config: {
@@ -286,13 +223,7 @@ interface Window {
         localPath?: string
         useCustomEncryption?: boolean // 是否使用自定义加密
         masterPassword?: string // 主密码，仅在useCustomEncryption为true时需要
-      }) => Promise<{
-        success: boolean
-        message: string
-        uploaded: number
-        failed: number
-        skipped?: number
-      }>
+      }) => Promise<R<{ message: string; uploaded: number; failed: number; skipped?: number }>>
 
       // 同步远程到本地
       syncRemoteToLocal: (config: {
@@ -303,13 +234,7 @@ interface Window {
         localPath?: string
         useCustomEncryption?: boolean // 是否使用自定义加密
         masterPassword?: string // 主密码，仅在useCustomEncryption为true时需要
-      }) => Promise<{
-        success: boolean
-        message: string
-        downloaded: number
-        failed: number
-        skipped?: number
-      }>
+      }) => Promise<R<{ message: string; downloaded: number; failed: number; skipped?: number }>>
 
       // 双向同步
       syncBidirectional: (config: {
@@ -320,26 +245,23 @@ interface Window {
         localPath?: string
         useCustomEncryption?: boolean // 是否使用自定义加密
         masterPassword?: string // 主密码，仅在useCustomEncryption为true时需要
-      }) => Promise<{
-        success: boolean
-        message: string
-        uploaded: number
-        downloaded: number
-        failed: number
-        skippedUpload: number
-        skippedDownload: number
-        cancelled?: boolean
-      }>
+      }) => Promise<
+        R<{
+          message: string
+          uploaded: number
+          downloaded: number
+          failed: number
+          skippedUpload: number
+          skippedDownload: number
+          cancelled?: boolean
+        }>
+      >
 
       // 取消同步
       cancelSync: () => void
 
       // 清除同步缓存
-      clearSyncCache: () => Promise<{
-        success: boolean
-        message?: string
-        error?: string
-      }>
+      clearSyncCache: () => Promise<R<{ message?: string }>>
 
       // 监听同步进度
       onSyncProgress: (
@@ -358,21 +280,13 @@ interface Window {
       ) => () => void
 
       // 验证主密码
-      verifyMasterPassword: (password: string) => Promise<{
-        success: boolean
-        message?: string
-        error?: string
-      }>
+      verifyMasterPassword: (password: string) => Promise<R<{ message?: string }>>
 
       // 设置主密码
       setMasterPassword: (config: {
         password: string
         webdavConfig: Record<string, unknown>
-      }) => Promise<{
-        success: boolean
-        message?: string
-        error?: string
-      }>
+      }) => Promise<R<{ message?: string }>>
 
       // 通知WebDAV配置已变更
       notifyConfigChanged: () => Promise<{
@@ -391,22 +305,20 @@ interface Window {
     }
     // 思维导图相关API
     mindmap: {
-      save: (content: string) => Promise<{ success: boolean; path?: string; error?: string }>
-      load: () => Promise<{ success: boolean; data?: string; cancelled?: boolean; error?: string }>
-      exportHtml: (
-        imageDataUrl: string
-      ) => Promise<{ success: boolean; path?: string; error?: string }>
+      save: (content: string) => Promise<R<{ path?: string }>>
+      load: () => Promise<R<{ data?: string; cancelled?: boolean }>>
+      exportHtml: (imageDataUrl: string) => Promise<R<{ path?: string }>>
       showSaveDialog: (options: Electron.SaveDialogOptions) => Promise<string | undefined>
       showOpenDialog: (options: Electron.OpenDialogOptions) => Promise<string | undefined>
     }
     // 窗口相关API
     window: {
-      setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
+      setBackgroundColor: (backgroundColor: string) => Promise<R<{}>>
     }
     // 应用导航相关API
     navigation: {
       // 导航到指定视图
-      navigateToView: (viewKey: string) => Promise<{ success: boolean; error?: string }>
+      navigateToView: (viewKey: string) => Promise<R<{}>>
       // 监听导航事件
       onNavigate: (callback: (viewKey: string) => void) => () => void
     }

@@ -203,10 +203,10 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
     const provider = (v.provider || prev?.provider || 'webdav') as ProviderId
     const nextItem: CloudStorageItem = {
       provider,
-      enabled: v.enabled ?? (prev?.enabled ?? true),
+      enabled: v.enabled ?? prev?.enabled ?? true,
       remotePath: v.remotePath || prev?.remotePath || '/notes',
       localPath: v.localPath || prev?.localPath || (await getLocalPath()),
-      syncOnStartup: v.syncOnStartup ?? (prev?.syncOnStartup ?? false),
+      syncOnStartup: v.syncOnStartup ?? prev?.syncOnStartup ?? false,
       syncDirection: ((v.syncDirection as any) || prev?.syncDirection || 'bidirectional') as any,
       // 保留已有认证信息（basic 表单不包含 auth 字段，避免被清空）
       auth: (v.auth !== undefined ? v.auth : prev?.auth) || {},
@@ -546,7 +546,9 @@ const CloudStorageManager: React.FC<CloudStorageManagerProps> = ({ onSyncComplet
               <Text size="small">失败: {syncProgress.failed}</Text>
             )}
             {typeof syncProgress.conflicts === 'number' && syncProgress.conflicts > 0 && (
-              <Text size="small" type="danger">冲突: {syncProgress.conflicts}</Text>
+              <Text size="small" type="danger">
+                冲突: {syncProgress.conflicts}
+              </Text>
             )}
           </div>
           {syncProgress.currentFile && (

@@ -389,7 +389,7 @@ class EnhancedDatabasePool {
     }
   }
 
-  private   initializeTables(connection: Database.Database): void {
+  private initializeTables(connection: Database.Database): void {
     try {
       // ===== 文件元数据表优化 =====
       // 创建优化的文档元数据表
@@ -1086,7 +1086,7 @@ export async function setTagsForFile(filePath: string, tags: string[]): Promise<
   )
 
   // 转换为新的标签格式
-  const tagObjects = normalized.map(tag => ({
+  const tagObjects = normalized.map((tag) => ({
     tag,
     category: 'general' as const,
     confidence: 1.0,
@@ -1123,10 +1123,7 @@ export async function getTagRelationsFromDB(): Promise<
   return result || []
 }
 
-export async function renameFileTags(
-  oldFilePath: string,
-  newFilePath: string
-): Promise<boolean> {
+export async function renameFileTags(oldFilePath: string, newFilePath: string): Promise<boolean> {
   const result = await withDatabase(async (database) => {
     const stmt = database.prepare('UPDATE note_tags SET file_path = ? WHERE file_path = ?')
     stmt.run(newFilePath, oldFilePath)
@@ -1135,16 +1132,13 @@ export async function renameFileTags(
   return Boolean(result)
 }
 
-export async function renameFolderTags(
-  oldFolder: string,
-  newFolder: string
-): Promise<boolean> {
+export async function renameFolderTags(oldFolder: string, newFolder: string): Promise<boolean> {
   // 仅处理以该前缀开头的相对路径
   const oldPrefix = oldFolder.endsWith('/') ? oldFolder : `${oldFolder}/`
   const newPrefix = newFolder.endsWith('/') ? newFolder : `${newFolder}/`
   const result = await withDatabase(async (database) => {
     const stmt = database.prepare(
-      "UPDATE note_tags SET file_path = REPLACE(file_path, ?, ?) WHERE file_path LIKE ?"
+      'UPDATE note_tags SET file_path = REPLACE(file_path, ?, ?) WHERE file_path LIKE ?'
     )
     stmt.run(newPrefix, newPrefix, `${oldPrefix}%`)
     return true
@@ -1202,13 +1196,15 @@ export async function updateTagStatistics(): Promise<boolean> {
 }
 
 // 获取标签统计数据
-export async function getTagStatistics(): Promise<Array<{
-  tag: string
-  category: string
-  fileCount: number
-  avgConfidence: number
-  lastUsedAt: number
-}>> {
+export async function getTagStatistics(): Promise<
+  Array<{
+    tag: string
+    category: string
+    fileCount: number
+    avgConfidence: number
+    lastUsedAt: number
+  }>
+> {
   const result = await withDatabase(async (database) => {
     const stmt = database.prepare(`
       SELECT tag, category, file_count as fileCount, avg_confidence as avgConfidence, last_used_at as lastUsedAt
@@ -1270,17 +1266,22 @@ export async function batchUpdateTags(
 }
 
 // 获取智能标签建议（基于现有标签关系）
-export async function getTagSuggestions(filePath: string, limit: number = 10): Promise<Array<{
-  tag: string
-  category: string
-  confidence: number
-  reason: string
-}>> {
+export async function getTagSuggestions(
+  filePath: string,
+  limit: number = 10
+): Promise<
+  Array<{
+    tag: string
+    category: string
+    confidence: number
+    reason: string
+  }>
+> {
   const result = await withDatabase(async (database) => {
     // 获取当前文件的标签
     const currentTagsStmt = database.prepare('SELECT tag FROM note_tags WHERE file_path = ?')
     const currentTags = currentTagsStmt.all(filePath) as Array<{ tag: string }>
-    const currentTagSet = new Set(currentTags.map(t => t.tag))
+    const currentTagSet = new Set(currentTags.map((t) => t.tag))
 
     if (currentTagSet.size === 0) {
       // 如果文件没有标签，返回最热门的标签
@@ -1298,7 +1299,7 @@ export async function getTagSuggestions(filePath: string, limit: number = 10): P
         fileCount: number
       }>
 
-      return popular.map(item => ({
+      return popular.map((item) => ({
         tag: item.tag,
         category: item.category,
         confidence: Math.min(item.avgConfidence * 0.8, 0.9), // 降低推荐置信度
@@ -1315,8 +1316,12 @@ export async function getTagSuggestions(filePath: string, limit: number = 10): P
         AVG(t2.confidence) as avg_confidence
       FROM note_tags t1
       JOIN note_tags t2 ON t1.file_path = t2.file_path AND t1.tag != t2.tag
-      WHERE t1.tag IN (${Array.from(currentTagSet).map(() => '?').join(',')})
-        AND t2.tag NOT IN (${Array.from(currentTagSet).map(() => '?').join(',')})
+      WHERE t1.tag IN (${Array.from(currentTagSet)
+        .map(() => '?')
+        .join(',')})
+        AND t2.tag NOT IN (${Array.from(currentTagSet)
+          .map(() => '?')
+          .join(',')})
       GROUP BY t2.tag, t2.tag_category
       ORDER BY cooccurrence DESC, avg_confidence DESC
       LIMIT ?
@@ -1330,7 +1335,7 @@ export async function getTagSuggestions(filePath: string, limit: number = 10): P
       avg_confidence: number
     }>
 
-    return suggestions.map(item => ({
+    return suggestions.map((item) => ({
       tag: item.suggested_tag,
       category: item.category,
       confidence: Math.min(item.avg_confidence * (item.cooccurrence / 10), 0.95),
@@ -1564,7 +1569,7 @@ export async function getFilesByDirectory(dirPath: string): Promise<FileMetadata
     `)
 
     const rows = stmt.all(dirPath) as any[]
-    return rows.map(row => ({ ...row, isDeleted: Boolean(row.isDeleted) }))
+    return rows.map((row) => ({ ...row, isDeleted: Boolean(row.isDeleted) }))
   })
   return result || []
 }
@@ -1696,7 +1701,10 @@ export async function archiveOldHistoryRecords(archiveAfterDays: number = 90): P
 }
 
 // 从归档表查询历史记录
-export async function getArchivedNoteHistory(filePath: string, limit: number = 50): Promise<NoteHistoryItem[]> {
+export async function getArchivedNoteHistory(
+  filePath: string,
+  limit: number = 50
+): Promise<NoteHistoryItem[]> {
   const result = await withDatabase(async (database) => {
     const stmt = database.prepare(`
       SELECT id, file_path as filePath, content, timestamp, change_type as changeType, change_summary as changeSummary
@@ -1988,7 +1996,8 @@ export async function getNoteHistoryStats(): Promise<NoteHistoryStats | null> {
 
   // 如果查询失败，返回默认的空统计对象
   const finalStats =
-    result || ({
+    result ||
+    ({
       totalNotes: 0,
       totalEdits: 0,
       averageEditLength: 0,
@@ -2461,7 +2470,7 @@ export async function getMergedTagsData(markdownPath: string): Promise<{
     try {
       await withDatabase(async (database) => {
         const rows = database
-          .prepare("SELECT file_path as filePath, tag FROM note_tags")
+          .prepare('SELECT file_path as filePath, tag FROM note_tags')
           .all() as Array<{ filePath: string; tag: string }>
         for (const row of rows) {
           if (!dbTagsByFile[row.filePath]) dbTagsByFile[row.filePath] = []

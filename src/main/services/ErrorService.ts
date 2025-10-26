@@ -35,4 +35,3 @@ const config: ErrorHandlerConfig = {
 }
 
 export const mainErrorHandler = UnifiedErrorHandler.getInstance(config)
-

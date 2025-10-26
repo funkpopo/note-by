@@ -414,12 +414,28 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
           </div>
         ) : showDiff ? (
           // 差异视图
-          <div className="diff-view" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div
+            className="diff-view"
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          >
             <div className="diff-view-header">
               <Typography.Title heading={6}>差异详情</Typography.Title>
             </div>
             <div style={{ flex: 1, minHeight: 0 }}>
-              <Suspense fallback={<div style={{height: listHeight, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><Spin /></div>}>
+              <Suspense
+                fallback={
+                  <div
+                    style={{
+                      height: listHeight,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Spin />
+                  </div>
+                }
+              >
                 {(() => {
                   const items: VirtualListItem[] = diffResult.diffs.map((diff, index) => ({
                     id: `${diff.index}-${index}`,

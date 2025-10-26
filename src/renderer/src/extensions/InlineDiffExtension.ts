@@ -141,5 +141,3 @@ export const InlineDiffExtension = Node.create<InlineDiffOptions>({
 })
 
 export default InlineDiffExtension
-
-

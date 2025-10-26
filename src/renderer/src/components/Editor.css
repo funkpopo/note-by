@@ -417,7 +417,9 @@
 
 .ai-stream-text {
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   font-size: 13px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -434,8 +436,12 @@
 }
 
 @keyframes ai-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Bubble Menu 分隔符 */
@@ -527,21 +533,25 @@
   /* Inline Diff 操作按钮在移动端的默认可见度 */
   --inline-diff-actions-opacity-mobile: 0.3;
   /* Inline Diff 按钮和间距（可按需覆盖） */
-  --inline-diff-actions-gap: 8px;                /* 按钮之间的间距 */
-  --inline-diff-button-count: 2;                 /* 按钮数量（默认2个：取消/确认） */
-  --inline-diff-button-size: 28px;               /* 单个按钮宽度（含边框） */
+  --inline-diff-actions-gap: 8px; /* 按钮之间的间距 */
+  --inline-diff-button-count: 2; /* 按钮数量（默认2个：取消/确认） */
+  --inline-diff-button-size: 28px; /* 单个按钮宽度（含边框） */
   --inline-diff-button-count-mobile: var(--inline-diff-button-count, 2);
   --inline-diff-button-size-mobile: var(--inline-diff-button-size, 28px);
   /* 根据按钮数量与尺寸推导操作区总宽度（避免手动维护） */
   --inline-diff-actions-size: calc(
     (var(--inline-diff-button-count, 2) * var(--inline-diff-button-size, 28px)) +
-    ((var(--inline-diff-button-count, 2) - 1) * var(--inline-diff-actions-gap, 8px))
+      ((var(--inline-diff-button-count, 2) - 1) * var(--inline-diff-actions-gap, 8px))
   );
   --inline-diff-actions-size-mobile: calc(
-    (var(--inline-diff-button-count-mobile, var(--inline-diff-button-count, 2)) *
-      var(--inline-diff-button-size-mobile, var(--inline-diff-button-size, 28px))) +
-    ((var(--inline-diff-button-count-mobile, var(--inline-diff-button-count, 2)) - 1) *
-      var(--inline-diff-actions-gap, 8px))
+    (
+        var(--inline-diff-button-count-mobile, var(--inline-diff-button-count, 2)) *
+          var(--inline-diff-button-size-mobile, var(--inline-diff-button-size, 28px))
+      ) +
+      (
+        (var(--inline-diff-button-count-mobile, var(--inline-diff-button-count, 2)) - 1) *
+          var(--inline-diff-actions-gap, 8px)
+      )
   );
   padding: 24px;
   outline: none;
@@ -1909,4 +1919,3 @@ body:has(.bubble-menu.ai-bubble-menu.ai-loading-menu) .ProseMirror ::-moz-select
     padding: 12px;
   }
 }
-

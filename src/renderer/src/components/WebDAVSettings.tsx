@@ -804,17 +804,37 @@ const WebDAVSettings: React.FC<WebDAVSettingsProps> = ({ onSyncComplete }) => {
                     : '正在比较文件内容...'}
                 {syncProgress.phase ? `（阶段：${syncProgress.phase}）` : ''}
               </div>
-              <div style={{ fontSize: '12px', marginTop: '4px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {typeof syncProgress.uploaded === 'number' && <span>上传: {syncProgress.uploaded}</span>}
-                {typeof syncProgress.downloaded === 'number' && <span>下载: {syncProgress.downloaded}</span>}
-                {typeof syncProgress.skipped === 'number' && <span>跳过: {syncProgress.skipped}</span>}
-                {typeof syncProgress.failed === 'number' && <span>失败: {syncProgress.failed}</span>}
+              <div
+                style={{
+                  fontSize: '12px',
+                  marginTop: '4px',
+                  display: 'flex',
+                  gap: 12,
+                  flexWrap: 'wrap'
+                }}
+              >
+                {typeof syncProgress.uploaded === 'number' && (
+                  <span>上传: {syncProgress.uploaded}</span>
+                )}
+                {typeof syncProgress.downloaded === 'number' && (
+                  <span>下载: {syncProgress.downloaded}</span>
+                )}
+                {typeof syncProgress.skipped === 'number' && (
+                  <span>跳过: {syncProgress.skipped}</span>
+                )}
+                {typeof syncProgress.failed === 'number' && (
+                  <span>失败: {syncProgress.failed}</span>
+                )}
                 {typeof syncProgress.conflicts === 'number' && syncProgress.conflicts > 0 && (
-                  <span style={{ color: 'var(--semi-color-danger)' }}>冲突: {syncProgress.conflicts}</span>
+                  <span style={{ color: 'var(--semi-color-danger)' }}>
+                    冲突: {syncProgress.conflicts}
+                  </span>
                 )}
               </div>
               {syncProgress.currentFile && (
-                <div style={{ fontSize: '12px', marginTop: '4px' }}>当前: {syncProgress.currentFile}</div>
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                  当前: {syncProgress.currentFile}
+                </div>
               )}
             </div>
           }

@@ -3,6 +3,7 @@ import { Typography, Button, Input, List, Toast } from '@douyinfe/semi-ui'
 import { IconSearch, IconDelete, IconClose } from '@douyinfe/semi-icons'
 import { zhCN } from '../locales/zh-CN'
 import { enUS } from '../locales/en-US'
+import type { ChatSession } from '../../../shared/types/dto'
 
 const { Text } = Typography
 
@@ -17,14 +18,7 @@ const getTranslations = (): typeof zhCN => {
   return lang === 'zh-CN' ? zhCN : enUS
 }
 
-interface ChatSession {
-  id: string
-  title?: string
-  createdAt: number
-  updatedAt: number
-  messageCount: number
-  isArchived: boolean
-}
+// ChatSession type moved to shared/types/dto
 
 interface ChatHistorySidebarProps {
   isOpen: boolean

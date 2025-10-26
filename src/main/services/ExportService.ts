@@ -34,10 +34,7 @@ export class ExportService {
       sections: [
         {
           properties: {},
-          children: [
-            new Paragraph({ heading: HeadingLevel.HEADING_1 }),
-            ...paragraphs
-          ]
+          children: [new Paragraph({ heading: HeadingLevel.HEADING_1 }), ...paragraphs]
         }
       ]
     })
@@ -49,11 +46,14 @@ export class ExportService {
     ipcMain.handle(IPC_CHANNELS.EXPORT_PDF, async (_e, filePath: string, content: string) => {
       try {
         const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
-        const { canceled, filePath: savePath } = await dialog.showSaveDialog(this.mainWindow ?? undefined, {
-          title: '导出PDF',
-          defaultPath: join(app.getPath('documents'), `${fileName}.pdf`),
-          filters: [{ name: 'PDF文件', extensions: ['pdf'] }]
-        })
+        const { canceled, filePath: savePath } = await dialog.showSaveDialog(
+          this.mainWindow ?? undefined,
+          {
+            title: '导出PDF',
+            defaultPath: join(app.getPath('documents'), `${fileName}.pdf`),
+            filters: [{ name: 'PDF文件', extensions: ['pdf'] }]
+          }
+        )
         if (canceled || !savePath) return { success: false, error: '用户取消了操作' }
         await mdToPdf({ content }, { dest: savePath })
         shell.openPath(savePath)
@@ -67,11 +67,14 @@ export class ExportService {
     ipcMain.handle(IPC_CHANNELS.EXPORT_DOCX, async (_e, filePath: string, content: string) => {
       try {
         const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
-        const { canceled, filePath: savePath } = await dialog.showSaveDialog(this.mainWindow ?? undefined, {
-          title: '导出DOCX',
-          defaultPath: join(app.getPath('documents'), `${fileName}.docx`),
-          filters: [{ name: 'DOCX文件', extensions: ['docx'] }]
-        })
+        const { canceled, filePath: savePath } = await dialog.showSaveDialog(
+          this.mainWindow ?? undefined,
+          {
+            title: '导出DOCX',
+            defaultPath: join(app.getPath('documents'), `${fileName}.docx`),
+            filters: [{ name: 'DOCX文件', extensions: ['docx'] }]
+          }
+        )
         if (canceled || !savePath) return { success: false, error: '用户取消了操作' }
         const buffer = await this.markdownToDocx(content)
         await fsPromises.writeFile(savePath, buffer)
@@ -86,13 +89,21 @@ export class ExportService {
     ipcMain.handle(IPC_CHANNELS.EXPORT_HTML, async (_e, filePath: string, content: string) => {
       try {
         const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
-        const { canceled, filePath: savePath } = await dialog.showSaveDialog(this.mainWindow ?? undefined, {
-          title: '导出HTML',
-          defaultPath: join(app.getPath('documents'), `${fileName}.html`),
-          filters: [{ name: 'HTML文件', extensions: ['html'] }]
-        })
+        const { canceled, filePath: savePath } = await dialog.showSaveDialog(
+          this.mainWindow ?? undefined,
+          {
+            title: '导出HTML',
+            defaultPath: join(app.getPath('documents'), `${fileName}.html`),
+            filters: [{ name: 'HTML文件', extensions: ['html'] }]
+          }
+        )
         if (canceled || !savePath) return { success: false, error: '用户取消了操作' }
-        const converter = new showdown.Converter({ tables: true, tasklists: true, strikethrough: true, emoji: true })
+        const converter = new showdown.Converter({
+          tables: true,
+          tasklists: true,
+          strikethrough: true,
+          emoji: true
+        })
         const htmlContent = converter.makeHtml(content)
         const htmlDocument = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -147,11 +158,14 @@ ${htmlContent}
       try {
         const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
         const metadata = extractMetadata(content, filePath)
-        const { canceled, filePath: savePath } = await dialog.showSaveDialog(this.mainWindow ?? undefined, {
-          title: '导出为Notion格式',
-          defaultPath: join(app.getPath('documents'), `${fileName}-notion.md`),
-          filters: [{ name: 'Markdown文件', extensions: ['md'] }]
-        })
+        const { canceled, filePath: savePath } = await dialog.showSaveDialog(
+          this.mainWindow ?? undefined,
+          {
+            title: '导出为Notion格式',
+            defaultPath: join(app.getPath('documents'), `${fileName}-notion.md`),
+            filters: [{ name: 'Markdown文件', extensions: ['md'] }]
+          }
+        )
         if (canceled || !savePath) return { success: false, error: '用户取消了操作' }
         const notionContent = convertToNotionFormat(content)
         await fileStreamManager.writeFileStream(savePath, notionContent, { encoding: 'utf-8' })
@@ -159,7 +173,11 @@ ${htmlContent}
         return {
           success: true,
           path: savePath,
-          metadata: { title: metadata.title, wordCount: metadata.wordCount, format: 'Notion Markdown' }
+          metadata: {
+            title: metadata.title,
+            wordCount: metadata.wordCount,
+            format: 'Notion Markdown'
+          }
         }
       } catch (error) {
         return { success: false, error: String(error) }
@@ -171,11 +189,14 @@ ${htmlContent}
       try {
         const fileName = filePath.split('/').pop()?.replace('.md', '') || 'exported'
         const metadata = extractMetadata(content, filePath)
-        const { canceled, filePath: savePath } = await dialog.showSaveDialog(this.mainWindow ?? undefined, {
-          title: '导出为Obsidian格式',
-          defaultPath: join(app.getPath('documents'), `${fileName}-obsidian.md`),
-          filters: [{ name: 'Markdown文件', extensions: ['md'] }]
-        })
+        const { canceled, filePath: savePath } = await dialog.showSaveDialog(
+          this.mainWindow ?? undefined,
+          {
+            title: '导出为Obsidian格式',
+            defaultPath: join(app.getPath('documents'), `${fileName}-obsidian.md`),
+            filters: [{ name: 'Markdown文件', extensions: ['md'] }]
+          }
+        )
         if (canceled || !savePath) return { success: false, error: '用户取消了操作' }
         const obsidianContent = convertToObsidianFormat(content)
         await fileStreamManager.writeFileStream(savePath, obsidianContent, { encoding: 'utf-8' })
@@ -183,7 +204,11 @@ ${htmlContent}
         return {
           success: true,
           path: savePath,
-          metadata: { title: metadata.title, wordCount: metadata.wordCount, format: 'Obsidian Markdown' }
+          metadata: {
+            title: metadata.title,
+            wordCount: metadata.wordCount,
+            format: 'Obsidian Markdown'
+          }
         }
       } catch (error) {
         return { success: false, error: String(error) }
@@ -191,4 +216,3 @@ ${htmlContent}
     })
   }
 }
-

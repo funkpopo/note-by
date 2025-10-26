@@ -74,4 +74,3 @@ ctx.onmessage = (e: MessageEvent<ChunkRequest>) => {
 }
 
 export {}
-

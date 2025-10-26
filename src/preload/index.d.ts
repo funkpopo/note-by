@@ -1,6 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { CloudStorageConfig } from '../shared/types/cloud-storage'
 import type { AiApiConfig } from '../shared/types/common'
+import type { Result } from '../shared/types/result'
+import type { AnalysisCacheItem } from '../shared/types/dto'
+
+type R<T = Record<string, unknown>> = Result<T>
+import type { AnalysisCacheItem } from '../shared/types/dto'
 
 // API配置接口
 // Moved to shared/types/common
@@ -15,12 +20,13 @@ interface SettingsAPI {
 
 // 更新检查API接口定义
 interface UpdatesAPI {
-  checkForUpdates: () => Promise<{
-    hasUpdate: boolean
-    latestVersion: string
-    currentVersion: string
-    error?: string
-  }>
+  checkForUpdates: () => Promise<
+    R<{
+      hasUpdate: boolean
+      latestVersion: string
+      currentVersion: string
+    }>
+  >
   onUpdateAvailable: (
     callback: (updateInfo: { latestVersion: string; currentVersion: string }) => void
   ) => void
@@ -28,7 +34,7 @@ interface UpdatesAPI {
 
 // OpenAI API接口定义
 interface OpenAIAPI {
-  testConnection: (AiApiConfig: AiApiConfig) => Promise<{ success: boolean; message: string }>
+  testConnection: (AiApiConfig: AiApiConfig) => Promise<R<{ message: string }>>
   generateContent: (request: {
     apiKey: string
     apiUrl: string
@@ -36,7 +42,7 @@ interface OpenAIAPI {
     prompt: string
     maxTokens?: number
     stream?: boolean
-  }) => Promise<{ success: boolean; content?: string; error?: string }>
+  }) => Promise<R<{ content?: string }>>
 
   streamGenerateContent: (
     request: {
@@ -51,22 +57,20 @@ interface OpenAIAPI {
       onDone: (content: string) => void
       onError: (error: string) => void
     }
-  ) => Promise<{ success: boolean; streamId?: string; error?: string }>
+  ) => Promise<R<{ streamId?: string }>>
 
-  stopStreamGenerate: (streamId: string) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  stopStreamGenerate: (streamId: string) => Promise<R<{}>>
 }
 
 // API配置管理接口定义
 interface ApiConfigAPI {
-  saveConfig: (config: AiApiConfig) => Promise<{ success: boolean; error?: string }>
-  deleteConfig: (configId: string) => Promise<{ success: boolean; error?: string }>
+  saveConfig: (config: AiApiConfig) => Promise<R<{}>>
+  deleteConfig: (configId: string) => Promise<R<{}>>
 }
 
 // 分析缓存项接口
-interface AnalysisCacheItem {
+/* AnalysisCacheItem moved to shared/types/dto */
+interface _LegacyAnalysisCacheItem_DoNotUse {
   date: string
   stats: {
     totalNotes: number
@@ -157,122 +161,105 @@ interface AnalysisCacheItem {
 // 数据分析API接口定义
 interface AnalyticsAPI {
   // 获取笔记历史统计数据
-  getNoteHistoryStats: () => Promise<{
-    success: boolean
-    stats?: {
-      totalNotes: number
-      totalEdits: number
-      averageEditLength: number
-      mostEditedNotes: Array<{
-        filePath: string
-        count: number
-        lastEditTime: number
-      }>
-      notesByDate: Array<{
-        date: string
-        count: number
-      }>
-      editsByDate: Array<{
-        date: string
-        count: number
-      }>
-      editTimeDistribution: Array<{
-        hour: number
-        count: number
-      }>
-      topFolders: Array<{
-        folder: string
-        count: number
-      }>
-    }
-    error?: string
-  }>
+  getNoteHistoryStats: () => Promise<
+    R<{
+      stats?: {
+        totalNotes: number
+        totalEdits: number
+        averageEditLength: number
+        mostEditedNotes: Array<{
+          filePath: string
+          count: number
+          lastEditTime: number
+        }>
+        notesByDate: Array<{
+          date: string
+          count: number
+        }>
+        editsByDate: Array<{
+          date: string
+          count: number
+        }>
+        editTimeDistribution: Array<{
+          hour: number
+          count: number
+        }>
+        topFolders: Array<{
+          folder: string
+          count: number
+        }>
+      }
+    }>
+  >
 
   // 获取用户活动数据
-  getUserActivityData: (days?: number) => Promise<{
-    success: boolean
-    activityData?: {
-      dailyActivity: Record<
-        string,
-        {
-          createdNotes: number
-          editedNotes: number
-          totalEdits: number
-          charactersAdded: number
-          activeHours: number[]
-        }
-      >
-      noteDetails: Array<{
-        filePath: string
-        firstEdit: number
-        lastEdit: number
-        editCount: number
-        averageEditSize: number
-      }>
-    }
-    error?: string
-  }>
+  getUserActivityData: (days?: number) => Promise<
+    R<{
+      activityData?: {
+        dailyActivity: Record<
+          string,
+          {
+            createdNotes: number
+            editedNotes: number
+            totalEdits: number
+            charactersAdded: number
+            activeHours: number[]
+          }
+        >
+        noteDetails: Array<{
+          filePath: string
+          firstEdit: number
+          lastEdit: number
+          editCount: number
+          averageEditSize: number
+        }>
+      }
+    }>
+  >
 
   // 获取分析缓存
-  getAnalysisCache: () => Promise<{
-    success: boolean
-    cache?: AnalysisCacheItem
-    error?: string
-  }>
+  getAnalysisCache: () => Promise<R<{ cache?: AnalysisCacheItem }>>
 
   // 保存分析缓存
-  saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  saveAnalysisCache: (cacheData: AnalysisCacheItem) => Promise<R<{}>>
 
   // 重置分析缓存
-  resetAnalysisCache: () => Promise<{
-    success: boolean
-    error?: string
-  }>
+  resetAnalysisCache: () => Promise<R<{}>>
 }
 
 // 全局标签API接口定义
 interface TagsAPI {
   // 获取全局标签数据
-  getGlobalTags: () => Promise<{
-    success: boolean
-    tagsData?: {
-      topTags: Array<{ tag: string; count: number }>
-      tagRelations: Array<{ source: string; target: string; strength: number }>
-      documentTags: Array<{ filePath: string; tags: string[] }>
-    }
-    error?: string
-  }>
+  getGlobalTags: () => Promise<
+    R<{
+      tagsData?: {
+        topTags: Array<{ tag: string; count: number }>
+        tagRelations: Array<{ source: string; target: string; strength: number }>
+        documentTags: Array<{ filePath: string; tags: string[] }>
+      }
+    }>
+  >
 
   // 刷新全局标签数据
-  refreshGlobalTags: () => Promise<{
-    success: boolean
-    tagsData?: {
-      topTags: Array<{ tag: string; count: number }>
-      tagRelations: Array<{ source: string; target: string; strength: number }>
-      documentTags: Array<{ filePath: string; tags: string[] }>
-    }
-    error?: string
-  }>
+  refreshGlobalTags: () => Promise<
+    R<{
+      tagsData?: {
+        topTags: Array<{ tag: string; count: number }>
+        tagRelations: Array<{ source: string; target: string; strength: number }>
+        documentTags: Array<{ filePath: string; tags: string[] }>
+      }
+    }>
+  >
 
-  getFileTags: (filePath: string) => Promise<{
-    success: boolean
-    tags?: string[]
-    error?: string
-  }>
+  getFileTags: (filePath: string) => Promise<R<{ tags?: string[] }>>
 
-  setFileTags: (filePath: string, tags: string[]) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  setFileTags: (filePath: string, tags: string[]) => Promise<R<{}>>
 }
 
 // 应用导航API接口定义
 interface NavigationAPI {
   // 导航到指定视图
-  navigateToView: (viewKey: string) => Promise<{ success: boolean; error?: string }>
+  navigateToView: (viewKey: string) => Promise<R<{}>>
 
   // 监听导航事件
   onNavigate: (callback: (viewKey: string) => void) => () => void
@@ -349,7 +336,7 @@ interface WebDAVAPI {
     username: string
     password: string
     remotePath: string
-  }) => Promise<{ success: boolean; message: string }>
+  }) => Promise<R<{ message: string }>>
 
   // 同步本地到远程
   syncLocalToRemote: (config: {
@@ -358,13 +345,7 @@ interface WebDAVAPI {
     password: string
     remotePath: string
     localPath?: string
-  }) => Promise<{
-    success: boolean
-    message: string
-    uploaded: number
-    failed: number
-    skipped: number
-  }>
+  }) => Promise<R<{ message: string; uploaded: number; failed: number; skipped: number }>>
 
   // 同步远程到本地
   syncRemoteToLocal: (config: {
@@ -373,13 +354,7 @@ interface WebDAVAPI {
     password: string
     remotePath: string
     localPath?: string
-  }) => Promise<{
-    success: boolean
-    message: string
-    downloaded: number
-    failed: number
-    skipped: number
-  }>
+  }) => Promise<R<{ message: string; downloaded: number; failed: number; skipped: number }>>
 
   // 双向同步
   syncBidirectional: (config: {
@@ -388,53 +363,35 @@ interface WebDAVAPI {
     password: string
     remotePath: string
     localPath?: string
-  }) => Promise<{
-    success: boolean
-    message: string
-    uploaded: number
-    downloaded: number
-    failed: number
-    cancelled?: boolean
-    skippedUpload: number
-    skippedDownload: number
-  }>
+  }) => Promise<
+    R<{
+      message: string
+      uploaded: number
+      downloaded: number
+      failed: number
+      cancelled?: boolean
+      skippedUpload: number
+      skippedDownload: number
+    }>
+  >
 
   // 取消同步
-  cancelSync: () => Promise<{
-    success: boolean
-    message: string
-  }>
+  cancelSync: () => Promise<R<{ message: string }>>
 
   // 清除同步缓存
-  clearSyncCache: () => Promise<{
-    success: boolean
-    message?: string
-    error?: string
-  }>
+  clearSyncCache: () => Promise<R<{ message?: string }>>
 
   // 验证主密码
-  verifyMasterPassword: (password: string) => Promise<{
-    success: boolean
-    message?: string
-    error?: string
-  }>
+  verifyMasterPassword: (password: string) => Promise<R<{ message?: string }>>
 
   // 设置主密码
   setMasterPassword: (config: {
     password: string
     webdavConfig: Record<string, unknown>
-  }) => Promise<{
-    success: boolean
-    message?: string
-    error?: string
-  }>
+  }) => Promise<R<{ message?: string }>>
 
   // 通知WebDAV配置已变更
-  notifyConfigChanged: () => Promise<{
-    success: boolean
-    message?: string
-    error?: string
-  }>
+  notifyConfigChanged: () => Promise<R<{ message?: string }>>
 
   // 监听同步进度（增强：包含当前文件、阶段、计数等）
   onSyncProgress: (
@@ -459,35 +416,26 @@ interface WebDAVAPI {
 
 // 云存储API接口定义
 interface CloudStorageAPI {
-  testConnection: (config: CloudStorageConfig) => Promise<{ success: boolean; message: string }>
-  authenticate: (config: CloudStorageConfig) => Promise<{ success: boolean; message: string; authUrl?: string }>
-  syncLocalToRemote: (config: CloudStorageConfig) => Promise<{
-    success: boolean
-    message: string
-    uploaded: number
-    downloaded: number
-    failed: number
-    skipped: number
-  }>
-  syncRemoteToLocal: (config: CloudStorageConfig) => Promise<{
-    success: boolean
-    message: string
-    uploaded: number
-    downloaded: number
-    failed: number
-    skipped: number
-  }>
-  syncBidirectional: (config: CloudStorageConfig) => Promise<{
-    success: boolean
-    message: string
-    uploaded: number
-    downloaded: number
-    failed: number
-    skipped: number
-  }>
-  cancelSync: () => Promise<{ success: boolean; message: string }>
+  testConnection: (config: CloudStorageConfig) => Promise<R<{ message: string }>>
+  authenticate: (config: CloudStorageConfig) => Promise<R<{ message: string; authUrl?: string }>>
+  syncLocalToRemote: (
+    config: CloudStorageConfig
+  ) => Promise<
+    R<{ message: string; uploaded: number; downloaded: number; failed: number; skipped: number }>
+  >
+  syncRemoteToLocal: (
+    config: CloudStorageConfig
+  ) => Promise<
+    R<{ message: string; uploaded: number; downloaded: number; failed: number; skipped: number }>
+  >
+  syncBidirectional: (
+    config: CloudStorageConfig
+  ) => Promise<
+    R<{ message: string; uploaded: number; downloaded: number; failed: number; skipped: number }>
+  >
+  cancelSync: () => Promise<R<{ message: string }>>
   getProviders: () => Promise<Array<{ id: string; name: string; description: string }>>
-  notifyConfigChanged: () => Promise<{ success: boolean; message: string }>
+  notifyConfigChanged: () => Promise<R<{ message: string }>>
   onSyncProgress: (
     callback: (progress: {
       total: number
@@ -510,7 +458,7 @@ interface CloudStorageAPI {
 
 // 窗口API接口定义
 interface WindowAPI {
-  setBackgroundColor: (backgroundColor: string) => Promise<{ success: boolean; error?: string }>
+  setBackgroundColor: (backgroundColor: string) => Promise<R<{}>>
 }
 
 // 全局API接口定义
@@ -521,65 +469,37 @@ interface API {
   api: ApiConfigAPI
   updates: UpdatesAPI
   markdown: {
-    save: (
-      filePath: string,
-      content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
-    exportToPdf: (
-      filePath: string,
-      content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
-    exportToDocx: (
-      filePath: string,
-      content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
-    exportToHtml: (
-      filePath: string,
-      content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
-    exportToNotion: (
-      filePath: string,
-      content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
-    exportToObsidian: (
-      filePath: string,
-      content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
-    getFolders: () => Promise<{ success: boolean; folders?: string[]; error?: string }>
-    getFiles: (
-      folderName: string
-    ) => Promise<{ success: boolean; files?: string[]; error?: string }>
-    readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>
+    save: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+    exportToPdf: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+    exportToDocx: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+    exportToHtml: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+    exportToNotion: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+    exportToObsidian: (filePath: string, content: string) => Promise<R<{ path?: string }>>
+    getFolders: () => Promise<R<{ folders?: string[] }>>
+    getFiles: (folderName: string) => Promise<R<{ files?: string[] }>>
+    readFile: (filePath: string) => Promise<R<{ content?: string }>>
 
     // 创建新文件夹
-    createFolder: (
-      folderName: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
+    createFolder: (folderName: string) => Promise<R<{ path?: string }>>
 
     // 删除文件夹
-    deleteFolder: (folderName: string) => Promise<{ success: boolean; error?: string }>
+    deleteFolder: (folderName: string) => Promise<R<{}>>
 
     // 重命名文件夹
-    renameFolder: (
-      oldFolderName: string,
-      newFolderName: string
-    ) => Promise<{ success: boolean; error?: string }>
+    renameFolder: (oldFolderName: string, newFolderName: string) => Promise<R<{}>>
 
     // 创建新笔记
     createNote: (
       folderName: string,
       fileName: string,
       content: string
-    ) => Promise<{ success: boolean; path?: string; error?: string }>
+    ) => Promise<R<{ path?: string }>>
 
     // 删除笔记文件
-    deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>
+    deleteFile: (filePath: string) => Promise<R<{}>>
 
     // 重命名笔记文件
-    renameFile: (
-      oldFilePath: string,
-      newFilePath: string
-    ) => Promise<{ success: boolean; error?: string }>
+    renameFile: (oldFilePath: string, newFilePath: string) => Promise<R<{}>>
 
     /**
      * 获取文档历史记录
@@ -631,7 +551,7 @@ interface API {
       filePath: string,
       fileData: string,
       fileName: string
-    ) => Promise<{ success: boolean; url?: string; path?: string; error?: string }>
+    ) => Promise<R<{ url?: string; path?: string }>>
   }
   webdav: WebDAVAPI
   cloudStorage: CloudStorageAPI
