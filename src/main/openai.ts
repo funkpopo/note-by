@@ -172,7 +172,7 @@ export function mapApiError(
     const sdkError = error as Record<string, unknown>
 
     // OpenAI SDK specific error handling
-    if (sdkError.status) {
+    if (sdkError.status && typeof sdkError.status === 'number') {
       diagnosticInfo.statusCode = sdkError.status
       const mapping = ERROR_MAPPING[sdkError.status]
       if (mapping) {
@@ -181,13 +181,13 @@ export function mapApiError(
       }
     }
 
-    if (sdkError.message) {
+    if (sdkError.message && typeof sdkError.message === 'string') {
       errorMessage = sdkError.message
       diagnosticInfo.originalError = sdkError.message
     }
 
     // 检查错误代码
-    if (sdkError.code) {
+    if (sdkError.code && (typeof sdkError.code === 'string' || typeof sdkError.code === 'number')) {
       const codeMapping = ERROR_MAPPING[sdkError.code]
       if (codeMapping) {
         errorType = codeMapping.type
@@ -346,8 +346,9 @@ async function makeCompatibleRequest(
 export async function testOpenAIConnection(
   AiApiConfig: AiApiConfig
 ): Promise<{ success: boolean; message: string }> {
+  const { apiUrl, modelName } = AiApiConfig
+
   try {
-    const { apiUrl, modelName } = AiApiConfig
     let effectiveKey = AiApiConfig.apiKey
     if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
       const account = buildApiAccount(AiApiConfig.id)
@@ -403,7 +404,7 @@ export async function testOpenAIConnection(
   } catch (error: unknown) {
     // 使用统一错误映射函数
     const diagnosis = mapApiError(error, {
-      url: normalizedApiUrl,
+      url: normalizeApiUrl(apiUrl),
       model: modelName
     })
 
@@ -425,8 +426,9 @@ interface AIGenerateRequest {
 export async function generateWithMessages(
   request: AIGenerateRequest
 ): Promise<{ success: boolean; content?: string; error?: string }> {
+  const { config, messages, maxTokens = 2000, temperature = 0.7 } = request
+
   try {
-    const { config, messages, maxTokens = 2000, temperature = 0.7 } = request
     let effectiveKey = config.apiKey
     if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
       const account = buildApiAccount(config.id)
@@ -516,8 +518,9 @@ export async function generateWithMessages(
 export async function generateContent(
   request: ContentGenerationRequest
 ): Promise<{ success: boolean; content?: string; error?: string }> {
+  const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
+
   try {
-    const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
     // Resolve API key if placeholder or empty
     let effectiveKey = apiKey
     if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
@@ -655,9 +658,10 @@ export async function streamGenerateContent(
   }
 
   // 异步处理流式请求
+  const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
+
   ;(async (): Promise<void> => {
     try {
-      const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
       // Resolve API key if placeholder or empty
       let effectiveKey = apiKey
       if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
@@ -693,7 +697,7 @@ export async function streamGenerateContent(
       // 处理并规范化API URL
       const normalizedApiUrl = normalizeApiUrl(apiUrl)
 
-      try {
+    try {
         // 先尝试使用原生fetch进行流式请求
 
         const url = `${normalizedApiUrl}/v1/chat/completions`
@@ -840,7 +844,7 @@ export async function streamGenerateContent(
 
       // 使用统一错误映射函数
       const diagnosis = mapApiError(error, {
-        url: normalizedApiUrl,
+        url: normalizeApiUrl(apiUrl),
         model: modelName
       })
 
