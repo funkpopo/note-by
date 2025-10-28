@@ -213,7 +213,7 @@ export async function generateWithMessages(
       effectiveKey = (await getSecret(account)) || ''
     }
 
-    if (!config.apiKey) {
+    if (!effectiveKey) {
       return { success: false, error: 'API Key 未设置' }
     }
 
@@ -500,7 +500,7 @@ export async function streamGenerateContent(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${effectiveKey}`,
             Accept: 'text/event-stream',
             'User-Agent': 'NoteBy/1.0'
           },
