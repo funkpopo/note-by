@@ -10,6 +10,7 @@ import {
 } from './encryption'
 import Ajv from 'ajv'
 import { SECRET_PLACEHOLDER, buildApiAccount, buildWebDAVAccount, saveSecret } from './secret-store'
+import { ApiErrorType, ApiErrorDiagnosis } from '../shared/types/common'
 
 function getSettingsPath(): string {
   if (is.dev) {
@@ -354,3 +355,6 @@ export function decryptWebDAVWithMasterPassword(
   }
   return newConfig
 }
+
+// Re-export error types for convenience
+export { ApiErrorType, ApiErrorDiagnosis }

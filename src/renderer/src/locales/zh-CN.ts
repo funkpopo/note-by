@@ -470,6 +470,50 @@ export interface ExtendedDictionary {
       noTextSelected: string
     }
   }
+  api?: {
+    errors: {
+      // Authentication & Authorization
+      invalidApiKey: string
+      expiredApiKey: string
+      unauthorized: string
+      forbidden: string
+
+      // Network & Connection
+      networkError: string
+      connectionTimeout: string
+      dnsResolutionFailed: string
+      sslCertificateError: string
+      connectionRefused: string
+
+      // API Rate Limiting & Quotas
+      rateLimitExceeded: string
+      quotaExceeded: string
+      insufficientBalance: string
+      dailyLimitReached: string
+
+      // Model & Configuration
+      modelNotFound: string
+      modelNotAvailable: string
+      invalidModel: string
+      unsupportedModel: string
+
+      // Request Issues
+      invalidRequest: string
+      malformedJson: string
+      contentTooLarge: string
+      invalidParameters: string
+
+      // Server Issues
+      serverError: string
+      serviceUnavailable: string
+      apiMaintenance: string
+      gatewayTimeout: string
+
+      // Generic
+      unknownError: string
+      requestFailed: string
+    }
+  }
   placeholder?: {
     folderName: string
     noteName: string
@@ -959,6 +1003,51 @@ export const zhCN: ExtendedDictionary = {
       incompleteConfig: 'AI API配置不完整，请检查设置',
       processingFailed: 'AI处理失败',
       noTextSelected: '请先选择要处理的文本'
+    }
+  },
+  // AI API错误信息
+  api: {
+    errors: {
+      // Authentication & Authorization
+      invalidApiKey: 'API密钥无效或格式错误，请检查密钥',
+      expiredApiKey: 'API密钥已过期，请更新密钥',
+      unauthorized: 'API访问未授权，请检查权限',
+      forbidden: 'API访问被拒绝，请检查账户权限',
+
+      // Network & Connection
+      networkError: '网络连接错误，请检查网络连接',
+      connectionTimeout: '连接超时，请检查网络或稍后重试',
+      dnsResolutionFailed: '域名解析失败，请检查域名是否正确',
+      sslCertificateError: 'SSL证书验证失败，请检查证书或网络安全设置',
+      connectionRefused: '连接被拒绝，请检查服务器状态或防火墙设置',
+
+      // API Rate Limiting & Quotas
+      rateLimitExceeded: 'API请求频率过高，请稍后重试',
+      quotaExceeded: '已达到API使用配额限制，请升级账户或等待重置',
+      insufficientBalance: '账户余额不足，请充值或检查账单',
+      dailyLimitReached: '已达到每日使用限制，请明日重试',
+
+      // Model & Configuration
+      modelNotFound: '指定的模型不存在，请检查模型名称',
+      modelNotAvailable: '模型当前不可用，请尝试其他模型',
+      invalidModel: '模型配置无效，请检查模型参数',
+      unsupportedModel: '不支持的模型类型，请选择兼容的模型',
+
+      // Request Issues
+      invalidRequest: '请求格式错误，请检查参数',
+      malformedJson: 'JSON格式错误，请检查请求体',
+      contentTooLarge: '内容过大，超过API限制',
+      invalidParameters: '参数无效，请检查输入',
+
+      // Server Issues
+      serverError: '服务器内部错误，请稍后重试',
+      serviceUnavailable: '服务暂时不可用，请稍后重试',
+      apiMaintenance: 'API正在维护中，请稍后重试',
+      gatewayTimeout: '网关超时，请稍后重试',
+
+      // Generic
+      unknownError: '未知错误，请重试或联系技术支持',
+      requestFailed: '请求失败，请检查配置和网络'
     }
   },
   // 全局占位符文本

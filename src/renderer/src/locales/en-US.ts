@@ -207,6 +207,50 @@ export interface ExtendedDictionary {
       noTextSelected: string
     }
   }
+  api?: {
+    errors: {
+      // Authentication & Authorization
+      invalidApiKey: string
+      expiredApiKey: string
+      unauthorized: string
+      forbidden: string
+
+      // Network & Connection
+      networkError: string
+      connectionTimeout: string
+      dnsResolutionFailed: string
+      sslCertificateError: string
+      connectionRefused: string
+
+      // API Rate Limiting & Quotas
+      rateLimitExceeded: string
+      quotaExceeded: string
+      insufficientBalance: string
+      dailyLimitReached: string
+
+      // Model & Configuration
+      modelNotFound: string
+      modelNotAvailable: string
+      invalidModel: string
+      unsupportedModel: string
+
+      // Request Issues
+      invalidRequest: string
+      malformedJson: string
+      contentTooLarge: string
+      invalidParameters: string
+
+      // Server Issues
+      serverError: string
+      serviceUnavailable: string
+      apiMaintenance: string
+      gatewayTimeout: string
+
+      // Generic
+      unknownError: string
+      requestFailed: string
+    }
+  }
   placeholder?: {
     folderName: string
     noteName: string
@@ -702,6 +746,52 @@ export const enUS: ExtendedDictionary = {
       incompleteConfig: 'AI API configuration incomplete, please check settings',
       processingFailed: 'AI processing failed',
       noTextSelected: 'Please select text to process first'
+    }
+  },
+  // AI API Error Messages
+  api: {
+    errors: {
+      // Authentication & Authorization
+      invalidApiKey: 'API key is invalid or malformed, please check the key',
+      expiredApiKey: 'API key has expired, please update the key',
+      unauthorized: 'API access unauthorized, please check permissions',
+      forbidden: 'API access forbidden, please check account permissions',
+
+      // Network & Connection
+      networkError: 'Network connection error, please check your connection',
+      connectionTimeout: 'Connection timeout, please check network or retry later',
+      dnsResolutionFailed: 'DNS resolution failed, please check domain name',
+      sslCertificateError:
+        'SSL certificate verification failed, please check certificate or network security settings',
+      connectionRefused: 'Connection refused, please check server status or firewall settings',
+
+      // API Rate Limiting & Quotas
+      rateLimitExceeded: 'API request rate exceeded, please retry later',
+      quotaExceeded: 'API usage quota reached, please upgrade account or wait for reset',
+      insufficientBalance: 'Insufficient account balance, please top up or check billing',
+      dailyLimitReached: 'Daily usage limit reached, please try again tomorrow',
+
+      // Model & Configuration
+      modelNotFound: 'Specified model does not exist, please check model name',
+      modelNotAvailable: 'Model currently unavailable, please try another model',
+      invalidModel: 'Model configuration invalid, please check model parameters',
+      unsupportedModel: 'Unsupported model type, please select a compatible model',
+
+      // Request Issues
+      invalidRequest: 'Request format error, please check parameters',
+      malformedJson: 'JSON format error, please check request body',
+      contentTooLarge: 'Content too large, exceeds API limit',
+      invalidParameters: 'Parameters invalid, please check input',
+
+      // Server Issues
+      serverError: 'Internal server error, please retry later',
+      serviceUnavailable: 'Service temporarily unavailable, please retry later',
+      apiMaintenance: 'API under maintenance, please retry later',
+      gatewayTimeout: 'Gateway timeout, please retry later',
+
+      // Generic
+      unknownError: 'Unknown error, please retry or contact technical support',
+      requestFailed: 'Request failed, please check configuration and network'
     }
   },
   // Global placeholder texts

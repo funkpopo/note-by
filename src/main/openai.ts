@@ -1,7 +1,253 @@
 import { OpenAI } from 'openai'
-import { AiApiConfig, readSettings } from './settings'
+import { AiApiConfig, ApiErrorType, ApiErrorDiagnosis, readSettings } from './settings'
 import { EventEmitter } from 'events'
 import { SECRET_PLACEHOLDER, buildApiAccount, getSecret } from './secret-store'
+
+// 错误映射配置
+const ERROR_MAPPING: Record<
+  number | string,
+  { type: ApiErrorType; patterns?: RegExp[]; suggestions?: string[] }
+> = {
+  // HTTP Status Code Mappings
+  400: {
+    type: ApiErrorType.INVALID_REQUEST,
+    patterns: [/max_tokens/i, /invalid.*model/i, /malformed.*json/i, /content.*too.*large/i],
+    suggestions: ['检查请求参数格式', '调整max_tokens参数', '检查模型名称']
+  },
+  401: {
+    type: ApiErrorType.INVALID_API_KEY,
+    patterns: [/invalid.*key/i, /unauthorized/i, /authentication.*failed/i],
+    suggestions: ['检查API密钥是否正确', '确认密钥是否已过期', '重新生成API密钥']
+  },
+  403: {
+    type: ApiErrorType.FORBIDDEN,
+    patterns: [/forbidden/i, /access.*denied/i, /permission.*denied/i],
+    suggestions: ['检查账户权限', '确认API密钥权限', '联系服务提供商']
+  },
+  404: {
+    type: ApiErrorType.MODEL_NOT_FOUND,
+    patterns: [/model.*not.*found/i, /endpoint.*not.*found/i, /not.*found/i],
+    suggestions: ['检查模型名称是否正确', '确认API端点URL', '查看支持的模型列表']
+  },
+  408: {
+    type: ApiErrorType.CONNECTION_TIMEOUT,
+    suggestions: ['检查网络连接', '增加超时时间', '稍后重试']
+  },
+  429: {
+    type: ApiErrorType.RATE_LIMIT_EXCEEDED,
+    patterns: [/rate.*limit/i, /too.*many.*requests/i, /quota.*exceeded/i],
+    suggestions: ['减少请求频率', '等待一段时间后重试', '升级账户配额']
+  },
+  500: {
+    type: ApiErrorType.SERVER_ERROR,
+    suggestions: ['稍后重试', '检查服务状态', '联系技术支持']
+  },
+  502: {
+    type: ApiErrorType.GATEWAY_TIMEOUT,
+    suggestions: ['检查网络连接', '稍后重试', '联系服务提供商']
+  },
+  503: {
+    type: ApiErrorType.SERVICE_UNAVAILABLE,
+    patterns: [/service.*unavailable/i, /maintenance/i],
+    suggestions: ['稍后重试', '检查服务状态页面']
+  },
+  504: {
+    type: ApiErrorType.GATEWAY_TIMEOUT,
+    suggestions: ['检查网络连接', '增加超时时间', '稍后重试']
+  },
+
+  // Error Message Pattern Mappings (for cases where status code might be generic)
+  insufficient_quota: {
+    type: ApiErrorType.INSUFFICIENT_BALANCE,
+    suggestions: ['检查账户余额', '充值账户', '查看账单详情']
+  },
+  billing_hard_limit_reached: {
+    type: ApiErrorType.QUOTA_EXCEEDED,
+    suggestions: ['升级账户计划', '联系销售支持']
+  },
+  model_not_found: {
+    type: ApiErrorType.MODEL_NOT_FOUND,
+    suggestions: ['检查模型名称', '选择其他可用模型']
+  },
+  model_not_available: {
+    type: ApiErrorType.MODEL_NOT_AVAILABLE,
+    suggestions: ['选择其他可用模型', '检查服务状态']
+  }
+}
+
+/**
+ * 统一API错误映射和诊断函数
+ * @param error - 原始错误对象
+ * @param context - 错误上下文信息
+ * @returns 诊断后的错误信息
+ */
+export function mapApiError(
+  error: unknown,
+  context?: {
+    url?: string
+    model?: string
+    statusCode?: number
+    responseText?: string
+  }
+): ApiErrorDiagnosis {
+  const diagnosticInfo: ApiErrorDiagnosis['diagnosticInfo'] = {
+    timestamp: Date.now(),
+    url: context?.url,
+    model: context?.model
+  }
+
+  let errorType = ApiErrorType.UNKNOWN_ERROR
+  let errorMessage = '发生未知错误'
+  let suggestions: string[] = ['请重试或联系技术支持']
+
+  // 处理网络错误
+  if (error instanceof TypeError) {
+    if (error.message.includes('fetch')) {
+      errorType = ApiErrorType.NETWORK_ERROR
+      errorMessage = '网络连接错误'
+      suggestions = ['检查网络连接', '确认URL是否正确', '检查防火墙设置']
+    } else if (error.message.includes('certificate')) {
+      errorType = ApiErrorType.SSL_CERTIFICATE_ERROR
+      errorMessage = 'SSL证书验证失败'
+      suggestions = ['检查网络安全设置', '确认证书有效性']
+    } else if (error.message.includes('ENOTFOUND') || error.message.includes('DNS')) {
+      errorType = ApiErrorType.DNS_RESOLUTION_FAILED
+      errorMessage = '域名解析失败'
+      suggestions = ['检查域名拼写', '确认DNS设置', '检查网络连接']
+    } else if (error.message.includes('ECONNREFUSED')) {
+      errorType = ApiErrorType.CONNECTION_REFUSED
+      errorMessage = '连接被拒绝'
+      suggestions = ['检查服务器状态', '确认端口设置', '检查防火墙']
+    }
+  }
+
+  // 处理HTTP响应错误
+  const statusCode = context?.statusCode
+  if (statusCode) {
+    diagnosticInfo.statusCode = statusCode
+
+    const mapping = ERROR_MAPPING[statusCode]
+    if (mapping) {
+      errorType = mapping.type
+
+      // 检查错误消息模式匹配
+      const responseText = context?.responseText || ''
+      if (mapping.patterns) {
+        for (const pattern of mapping.patterns) {
+          if (pattern.test(responseText)) {
+            suggestions = mapping.suggestions || suggestions
+            break
+          }
+        }
+      } else {
+        suggestions = mapping.suggestions || suggestions
+      }
+
+      // 解析具体错误消息
+      try {
+        const errorJson = JSON.parse(responseText)
+        const apiError = errorJson.error || errorJson
+        if (apiError.message) {
+          errorMessage = apiError.message
+          diagnosticInfo.originalError = apiError.message
+        }
+
+        // 检查特定错误类型
+        if (apiError.type) {
+          const messageMapping = ERROR_MAPPING[apiError.type]
+          if (messageMapping) {
+            errorType = messageMapping.type
+            suggestions = messageMapping.suggestions || suggestions
+          }
+        }
+      } catch {
+        // 如果无法解析JSON，使用默认错误消息
+        errorMessage = responseText || `HTTP ${statusCode} 错误`
+      }
+    }
+  }
+
+  // 处理OpenAI SDK错误
+  if (error && typeof error === 'object') {
+    const sdkError = error as Record<string, unknown>
+
+    // OpenAI SDK specific error handling
+    if (sdkError.status) {
+      diagnosticInfo.statusCode = sdkError.status
+      const mapping = ERROR_MAPPING[sdkError.status]
+      if (mapping) {
+        errorType = mapping.type
+        suggestions = mapping.suggestions || suggestions
+      }
+    }
+
+    if (sdkError.message) {
+      errorMessage = sdkError.message
+      diagnosticInfo.originalError = sdkError.message
+    }
+
+    // 检查错误代码
+    if (sdkError.code) {
+      const codeMapping = ERROR_MAPPING[sdkError.code]
+      if (codeMapping) {
+        errorType = codeMapping.type
+        suggestions = codeMapping.suggestions || suggestions
+      }
+    }
+  }
+
+  // 处理通用Error对象
+  if (error instanceof Error) {
+    if (!diagnosticInfo.originalError) {
+      diagnosticInfo.originalError = error.message
+    }
+
+    // 检查是否是超时错误
+    if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
+      errorType = ApiErrorType.CONNECTION_TIMEOUT
+      errorMessage = '连接超时'
+      suggestions = ['增加超时时间', '检查网络连接', '稍后重试']
+    }
+  }
+
+  diagnosticInfo.suggestions = suggestions
+
+  return {
+    type: errorType,
+    message: errorMessage,
+    diagnosticInfo
+  }
+}
+
+/**
+ * 获取本地化的错误消息
+ * 注意：此函数需要在渲染进程中调用，因为需要访问i18n
+ * @param diagnosis - 错误诊断结果
+ * @param locale - 本地化字典
+ * @returns 本地化的错误信息
+ */
+export function getLocalizedErrorMessage(
+  diagnosis: ApiErrorDiagnosis,
+  locale: { api?: { errors?: Record<string, string> } }
+): {
+  message: string
+  suggestions: string[]
+  diagnosticInfo: ApiErrorDiagnosis['diagnosticInfo']
+} {
+  const apiErrors = locale.api?.errors
+  let localizedMessage = diagnosis.message
+
+  // 如果有对应的本地化消息，使用本地化版本
+  if (apiErrors && apiErrors[diagnosis.type]) {
+    localizedMessage = apiErrors[diagnosis.type]
+  }
+
+  return {
+    message: localizedMessage,
+    suggestions: diagnosis.diagnosticInfo.suggestions || [],
+    diagnosticInfo: diagnosis.diagnosticInfo
+  }
+}
 
 // 内容生成请求接口
 export interface ContentGenerationRequest {
@@ -46,7 +292,7 @@ async function makeCompatibleRequest(
   prompt: string,
   maxTokens: number = 2000,
   stream: boolean = false
-): Promise<any> {
+): Promise<Response> {
   const url = `${apiUrl}/v1/chat/completions`
 
   const requestBody = {
@@ -80,42 +326,17 @@ async function makeCompatibleRequest(
       errorBody: errorText
     })
 
-    let errorMessage = `API请求失败 (HTTP ${response.status})`
+    // 使用统一错误映射函数
+    const diagnosis = mapApiError(null, {
+      url: apiUrl,
+      model: modelName,
+      statusCode: response.status,
+      responseText: errorText
+    })
 
-    // 尝试解析错误消息
-    try {
-      const errorJson = JSON.parse(errorText)
-      if (errorJson.error?.message) {
-        errorMessage = errorJson.error.message
-      } else if (errorJson.message) {
-        errorMessage = errorJson.message
-      }
-    } catch {}
+    console.error('[OpenAI] Error Diagnosis:', diagnosis)
 
-    // 根据状态码提供更具体的错误信息
-    if (response.status === 400) {
-      // 检查是否是max_tokens错误
-      if (errorMessage.includes('max_tokens')) {
-        // 提取限制值
-        const match = errorMessage.match(/\d+/g)
-        const limit = match ? match[match.length - 1] : ''
-        errorMessage = `该模型的max_tokens限制为${limit}，请在设置中调整Max Tokens参数为${limit}或更小的值`
-      } else if (errorMessage.includes('model')) {
-        errorMessage = `模型名称错误: ${errorMessage}`
-      } else {
-        errorMessage = `请求格式错误: ${errorMessage}`
-      }
-    } else if (response.status === 401) {
-      errorMessage = 'API密钥无效或已过期，请检查API Key'
-    } else if (response.status === 404) {
-      errorMessage = 'API端点不存在，请检查API地址是否正确'
-    } else if (response.status === 429) {
-      errorMessage = 'API请求频率过高，请稍后再试'
-    } else if (response.status >= 500) {
-      errorMessage = 'API服务器错误，请稍后再试'
-    }
-
-    throw new Error(errorMessage)
+    throw new Error(diagnosis.message)
   }
 
   return response
@@ -180,14 +401,15 @@ export async function testOpenAIConnection(
       throw error
     }
   } catch (error: unknown) {
-    // 提取更友好的错误信息
-    let errorMessage = '连接失败'
+    // 使用统一错误映射函数
+    const diagnosis = mapApiError(error, {
+      url: normalizedApiUrl,
+      model: modelName
+    })
 
-    if (error instanceof Error) {
-      errorMessage += `: ${error.message}`
-    }
+    console.error('[OpenAI] Connection Test Error Diagnosis:', diagnosis)
 
-    return { success: false, message: errorMessage }
+    return { success: false, message: diagnosis.message }
   }
 }
 
@@ -278,33 +500,15 @@ export async function generateWithMessages(
       return { success: false, error: '生成内容为空' }
     }
   } catch (error: unknown) {
-    // 提取更友好的错误信息
-    let errorMessage = '生成失败'
+    // 使用统一错误映射函数
+    const diagnosis = mapApiError(error, {
+      url: config.apiUrl,
+      model: config.modelName
+    })
 
-    if (error instanceof Error) {
-      errorMessage += `: ${error.message}`
-    }
+    console.error('[OpenAI] Generation Error Diagnosis:', diagnosis)
 
-    // 处理AI API的错误，它们可能有特定的结构
-    const apiError = error as { response?: { status?: number }; status?: number }
-    const statusCode = apiError.status || apiError.response?.status
-
-    if (statusCode) {
-      errorMessage += ` (HTTP 状态码: ${statusCode})`
-
-      // 为常见错误提供更具体的说明
-      if (statusCode === 404) {
-        errorMessage += '。可能是API URL不正确，请检查URL格式。'
-      } else if (statusCode === 401) {
-        errorMessage += '。API密钥可能无效或已过期。'
-      } else if (statusCode === 429) {
-        errorMessage += '。请求频率过高或达到API限制。'
-      } else if (statusCode >= 500) {
-        errorMessage += '。服务器端错误，可能是API服务暂时不可用。'
-      }
-    }
-
-    return { success: false, error: errorMessage }
+    return { success: false, error: diagnosis.message }
   }
 }
 
@@ -318,15 +522,17 @@ export async function generateContent(
     let effectiveKey = apiKey
     if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
       try {
-        const settings = readSettings() as any
-        const match = (settings.AiApiConfigs as any[] | undefined)?.find(
+        const settings = readSettings()
+        const match = (settings.AiApiConfigs as AiApiConfig[] | undefined)?.find(
           (c) => c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
         )
         if (match && match.id) {
           const account = buildApiAccount(match.id)
           effectiveKey = (await getSecret(account)) || ''
         }
-      } catch {}
+      } catch {
+        // Ignore errors when reading settings
+      }
     }
 
     // 如果请求包含stream=true，则返回错误，提示使用streamGenerateContent
@@ -422,12 +628,15 @@ export async function generateContent(
   } catch (error: unknown) {
     console.error('[OpenAI] Generate content error:', error)
 
-    let errorMessage = '内容生成失败'
-    if (error instanceof Error) {
-      errorMessage = error.message
-    }
+    // 使用统一错误映射函数
+    const diagnosis = mapApiError(error, {
+      url: apiUrl,
+      model: modelName
+    })
 
-    return { success: false, error: errorMessage }
+    console.error('[OpenAI] Content Generation Error Diagnosis:', diagnosis)
+
+    return { success: false, error: diagnosis.message }
   }
 }
 
@@ -453,15 +662,17 @@ export async function streamGenerateContent(
       let effectiveKey = apiKey
       if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
         try {
-          const settings = readSettings() as any
-          const match = (settings.AiApiConfigs as any[] | undefined)?.find(
+          const settings = readSettings()
+          const match = (settings.AiApiConfigs as AiApiConfig[] | undefined)?.find(
             (c) => c && typeof c === 'object' && c.apiUrl === apiUrl && c.modelName === modelName
           )
           if (match && match.id) {
             const account = buildApiAccount(match.id)
             effectiveKey = (await getSecret(account)) || ''
           }
-        } catch {}
+        } catch {
+          // Ignore errors when reading settings
+        }
       }
 
       if (!effectiveKey) {
@@ -513,23 +724,17 @@ export async function streamGenerateContent(
             errorText
           })
 
-          let errorMessage = `流式生成失败 (HTTP ${response.status})`
-          try {
-            const errorJson = JSON.parse(errorText)
-            if (errorJson.error?.message) {
-              errorMessage = errorJson.error.message
-            }
-          } catch {}
+          // 使用统一错误映射函数
+          const diagnosis = mapApiError(null, {
+            url: normalizedApiUrl,
+            model: modelName,
+            statusCode: response.status,
+            responseText: errorText
+          })
 
-          if (response.status === 400) {
-            errorMessage = `请求格式错误: ${errorMessage}`
-          } else if (response.status === 401) {
-            errorMessage = 'API密钥无效'
-          } else if (response.status === 404) {
-            errorMessage = 'API端点不存在'
-          }
+          console.error('[OpenAI Stream] Error Diagnosis:', diagnosis)
 
-          eventEmitter.emit('error', errorMessage)
+          eventEmitter.emit('error', diagnosis.message)
           return
         }
 
@@ -619,17 +824,29 @@ export async function streamGenerateContent(
         } catch (sdkError) {
           console.error('[OpenAI Stream] SDK fallback also failed:', sdkError)
 
-          let errorMessage = '流式生成失败'
-          if (error instanceof Error) {
-            errorMessage = error.message
-          }
-          eventEmitter.emit('error', errorMessage)
+          // 使用统一错误映射函数
+          const diagnosis = mapApiError(sdkError, {
+            url: normalizedApiUrl,
+            model: modelName
+          })
+
+          console.error('[OpenAI Stream] SDK Error Diagnosis:', diagnosis)
+
+          eventEmitter.emit('error', diagnosis.message)
         }
       }
     } catch (error) {
       console.error('[OpenAI Stream] Unexpected error:', error)
-      const errorMessage = error instanceof Error ? error.message : '发生未知错误'
-      eventEmitter.emit('error', errorMessage)
+
+      // 使用统一错误映射函数
+      const diagnosis = mapApiError(error, {
+        url: normalizedApiUrl,
+        model: modelName
+      })
+
+      console.error('[OpenAI Stream] Unexpected Error Diagnosis:', diagnosis)
+
+      eventEmitter.emit('error', diagnosis.message)
     }
   })()
 
