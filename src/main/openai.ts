@@ -13,7 +13,7 @@ export interface ContentGenerationRequest {
   stream?: boolean // 添加流式输出选项
 }
 
-// 处理API URL，确保格式正确
+// 处理API URL，确保格式正确，只返回基础URL（不含路径）
 function normalizeApiUrl(url: string): string {
   if (!url) return ''
 
@@ -25,16 +25,14 @@ function normalizeApiUrl(url: string): string {
     normalizedUrl = 'https://' + normalizedUrl
   }
 
-  // 对于OpenAI兼容API，确保路径正确
-  // 如果URL不包含/v1，且看起来像是基础域名，自动添加/v1
-  if (!normalizedUrl.includes('/v1') && !normalizedUrl.includes('/api')) {
-    // 检查是否是标准OpenAI域名
-    if (normalizedUrl.includes('api.openai.com')) {
-      normalizedUrl = normalizedUrl + '/v1'
-    } else if (!normalizedUrl.endsWith('/chat/completions')) {
-      // 对于其他API，如果没有明确的路径，添加/v1
-      normalizedUrl = normalizedUrl + '/v1'
-    }
+  // 提取基础URL，移除路径部分
+  // 支持多种输入格式：https://xxx, https://xxx/v1, https://xxx/v1/, https://xxx/v1/chat/completions
+  try {
+    const urlObj = new URL(normalizedUrl)
+    // 重构基础URL，只保留协议、域名和端口
+    normalizedUrl = `${urlObj.protocol}//${urlObj.host}`
+  } catch {
+    // 如果URL解析失败，保持原样（可能是不完整的域名）
   }
 
   return normalizedUrl
@@ -49,7 +47,7 @@ async function makeCompatibleRequest(
   maxTokens: number = 2000,
   stream: boolean = false
 ): Promise<any> {
-  const url = `${apiUrl}/chat/completions`
+  const url = `${apiUrl}/v1/chat/completions`
 
   const requestBody = {
     model: modelName,
@@ -231,7 +229,7 @@ export async function generateWithMessages(
     // 创建 AI 客户端
     const openai = new OpenAI({
       apiKey: effectiveKey,
-      baseURL: normalizedApiUrl,
+      baseURL: `${normalizedApiUrl}/v1`,
       dangerouslyAllowBrowser: true, // 允许在浏览器环境运行
       defaultHeaders: {
         'User-Agent': 'NoteBy/1.0',
@@ -392,7 +390,7 @@ export async function generateContent(
       try {
         const openai = new OpenAI({
           apiKey: effectiveKey,
-          baseURL: normalizedApiUrl,
+          baseURL: `${normalizedApiUrl}/v1`,
           dangerouslyAllowBrowser: true,
           defaultHeaders: {
             'User-Agent': 'NoteBy/1.0',
@@ -487,7 +485,7 @@ export async function streamGenerateContent(
       try {
         // 先尝试使用原生fetch进行流式请求
 
-        const url = `${normalizedApiUrl}/chat/completions`
+        const url = `${normalizedApiUrl}/v1/chat/completions`
         const requestBody = {
           model: modelName,
           messages: [{ role: 'user', content: prompt }],
@@ -584,7 +582,7 @@ export async function streamGenerateContent(
         try {
           const openai = new OpenAI({
             apiKey: effectiveKey,
-            baseURL: normalizedApiUrl,
+            baseURL: `${normalizedApiUrl}/v1`,
             dangerouslyAllowBrowser: true,
             timeout: 60000,
             maxRetries: 0
