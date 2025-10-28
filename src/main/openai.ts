@@ -756,38 +756,50 @@ export async function streamGenerateContent(
         let fullContent = ''
         let buffer = ''
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
 
-          for (const line of lines) {
-            if (line.trim() === '') continue
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') {
-                eventEmitter.emit('done', fullContent)
-                return
-              }
-
-              try {
-                const json = JSON.parse(data)
-                const content = json.choices?.[0]?.delta?.content || ''
-                if (content) {
-                  fullContent += content
-                  eventEmitter.emit('data', content)
+            for (const line of lines) {
+              if (line.trim() === '') continue
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') {
+                  eventEmitter.emit('done', fullContent)
+                  reader.releaseLock() // 释放ReadableStream
+                  return
                 }
-              } catch (e) {
-                console.error('[OpenAI Stream] Error parsing chunk:', e, data)
+
+                try {
+                  const json = JSON.parse(data)
+                  const content = json.choices?.[0]?.delta?.content || ''
+                  if (content) {
+                    fullContent += content
+                    eventEmitter.emit('data', content)
+                  }
+                } catch (e) {
+                  console.error('[OpenAI Stream] Error parsing chunk:', e, data)
+                }
               }
             }
           }
-        }
 
-        eventEmitter.emit('done', fullContent)
+          eventEmitter.emit('done', fullContent)
+          reader.releaseLock() // 释放ReadableStream
+        } catch (streamError) {
+          console.error('[OpenAI Stream] Stream reading error:', streamError)
+          try {
+            reader.cancel() // 取消并释放流
+          } catch {
+            // 忽略取消时的错误
+          }
+          throw streamError
+        }
       } catch (error) {
         console.error('[OpenAI Stream] Streaming error:', error)
 

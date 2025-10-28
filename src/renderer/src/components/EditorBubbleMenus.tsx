@@ -334,14 +334,20 @@ export const TextBubbleMenu: React.FC<{
     loadApiConfigs()
   }, [loadApiConfigs])
 
-  // 组件卸载时清理节流相关的资源
+  // 组件卸载时清理节流相关的资源和流式请求
   useEffect(() => {
     return () => {
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current)
       }
+      // 组件卸载时自动停止正在进行的流式请求
+      if (currentStreamId) {
+        window.api.openai.stopStreamGenerate(currentStreamId).catch((error) => {
+          console.error('停止流式请求失败:', error)
+        })
+      }
     }
-  }, [])
+  }, [currentStreamId])
 
   // 监听localStorage变化以同步多个Editor实例的配置选择
   useEffect(() => {

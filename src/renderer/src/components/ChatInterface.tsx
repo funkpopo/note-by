@@ -540,8 +540,12 @@ const ChatInterface: React.FC = () => {
     // 组件卸载时清理
     return () => {
       throttledUpdateRef.current?.cancel()
+      // 组件卸载时自动停止正在进行的流式请求
+      if (currentStreamCleanup) {
+        currentStreamCleanup()
+      }
     }
-  }, [])
+  }, [currentStreamCleanup])
 
   // 加载指定会话的消息
   const loadSessionMessages = useCallback(

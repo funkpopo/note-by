@@ -21,7 +21,33 @@ export class AIService {
     this.activeStreams = new Map()
   }
 
+  /**
+   * 清理所有活跃的流式请求
+   */
+  private cleanupAllActiveStreams(): void {
+    for (const [streamId, streamInfo] of this.activeStreams) {
+      try {
+        // 停止流式请求
+        if (streamInfo.emitter && typeof streamInfo.emitter.stop === 'function') {
+          streamInfo.emitter.stop()
+        }
+        // 执行清理函数
+        streamInfo.cleanup()
+      } catch (error) {
+        console.error(`清理流式请求 ${streamId} 失败:`, error)
+      }
+    }
+    this.activeStreams.clear()
+  }
+
   public registerIpcHandlers(): void {
+    // 页面卸载时自动清理所有活跃的流式请求
+    if (this.mainWindow) {
+      this.mainWindow.on('close', () => {
+        this.cleanupAllActiveStreams()
+      })
+    }
+
     // Connection test
     ipcMain.handle(IPC_CHANNELS.TEST_OPENAI_CONNECTION, async (_e, cfg) => {
       return testOpenAIConnection(cfg)
