@@ -2,6 +2,10 @@ import { OpenAI } from 'openai'
 import { AiApiConfig, ApiErrorType, ApiErrorDiagnosis, readSettings } from './settings'
 import { EventEmitter } from 'events'
 import { SECRET_PLACEHOLDER, buildApiAccount, getSecret } from './secret-store'
+import { version } from '../../package.json'
+
+// User-Agent 字符串
+const USER_AGENT = `Note-by/${version}`
 
 // 错误映射配置
 const ERROR_MAPPING: Record<
@@ -313,7 +317,7 @@ async function makeCompatibleRequest(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
-      'User-Agent': 'NoteBy/1.0'
+      'User-Agent': USER_AGENT
     },
     body: JSON.stringify(requestBody)
   })
@@ -456,7 +460,7 @@ export async function generateWithMessages(
       baseURL: `${normalizedApiUrl}/v1`,
       dangerouslyAllowBrowser: true, // 允许在浏览器环境运行
       defaultHeaders: {
-        'User-Agent': 'NoteBy/1.0',
+        'User-Agent': USER_AGENT,
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
@@ -602,7 +606,7 @@ export async function generateContent(
           baseURL: `${normalizedApiUrl}/v1`,
           dangerouslyAllowBrowser: true,
           defaultHeaders: {
-            'User-Agent': 'NoteBy/1.0',
+            'User-Agent': USER_AGENT,
             Accept: 'application/json',
             'Content-Type': 'application/json'
           },
@@ -715,7 +719,7 @@ export async function streamGenerateContent(
             'Content-Type': 'application/json',
             Authorization: `Bearer ${effectiveKey}`,
             Accept: 'text/event-stream',
-            'User-Agent': 'NoteBy/1.0'
+            'User-Agent': USER_AGENT
           },
           body: JSON.stringify(requestBody),
           signal: abortController.signal

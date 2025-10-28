@@ -275,6 +275,32 @@ export const TextBubbleMenu: React.FC<{
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null)
   const [streamError, setStreamError] = useState<string | null>(null)
 
+  // 流式渲染节流与批量合并优化
+  const pendingTextUpdateRef = useRef<string>('')
+  const rafIdRef = useRef<number | null>(null)
+
+  // 节流的流式文本更新函数
+  const throttledStreamingUpdate = useCallback(() => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current)
+    }
+
+    rafIdRef.current = requestAnimationFrame(() => {
+      setStreamingText((prev) => prev + pendingTextUpdateRef.current)
+      pendingTextUpdateRef.current = ''
+      rafIdRef.current = null
+    })
+  }, [])
+
+  // 累积文本更新的函数
+  const accumulateTextUpdate = useCallback(
+    (chunk: string) => {
+      pendingTextUpdateRef.current += stripThinkingForStreaming(chunk)
+      throttledStreamingUpdate()
+    },
+    [throttledStreamingUpdate]
+  )
+
   // 内存优化：使用 useCallback 防止不必要的重新渲染
   const cleanupRef = useRef<(() => void) | null>(null)
 
@@ -307,6 +333,15 @@ export const TextBubbleMenu: React.FC<{
   useEffect(() => {
     loadApiConfigs()
   }, [loadApiConfigs])
+
+  // 组件卸载时清理节流相关的资源
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current)
+      }
+    }
+  }, [])
 
   // 监听localStorage变化以同步多个Editor实例的配置选择
   useEffect(() => {
@@ -404,10 +439,17 @@ export const TextBubbleMenu: React.FC<{
             maxTokens: parseInt(config.maxTokens || '2000')
           },
           {
-            onData: (chunk: string) => {
-              setStreamingText((prev) => prev + stripThinkingForStreaming(chunk))
-            },
+            onData: accumulateTextUpdate,
             onDone: async (content: string) => {
+              // 确保所有待处理的文本更新都被应用
+              if (rafIdRef.current !== null) {
+                cancelAnimationFrame(rafIdRef.current)
+                rafIdRef.current = null
+              }
+              if (pendingTextUpdateRef.current) {
+                setStreamingText((prev) => prev + pendingTextUpdateRef.current)
+                pendingTextUpdateRef.current = ''
+              }
               const { displayText } = processThinkingContent(content || '')
               await onFinal(displayText.trim())
             },
@@ -444,7 +486,7 @@ export const TextBubbleMenu: React.FC<{
         setPreservedSelection(null)
       }
     },
-    [getCurrentConfig]
+    [getCurrentConfig, accumulateTextUpdate]
   )
 
   // AI功能
@@ -803,6 +845,15 @@ export const TextBubbleMenu: React.FC<{
                       await window.api.openai.stopStreamGenerate(currentStreamId)
                     }
                   } catch {}
+                  // 停止时立即应用所有待处理的文本更新
+                  if (rafIdRef.current !== null) {
+                    cancelAnimationFrame(rafIdRef.current)
+                    rafIdRef.current = null
+                  }
+                  if (pendingTextUpdateRef.current) {
+                    setStreamingText((prev) => prev + pendingTextUpdateRef.current)
+                    pendingTextUpdateRef.current = ''
+                  }
                   setIsLoading(false)
                   setLoadingFeature(null)
                   setBubbleMenuPosition(null)
