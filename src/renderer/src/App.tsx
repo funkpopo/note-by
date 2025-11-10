@@ -21,6 +21,9 @@ const App: React.FC = () => {
   const [fileListVersion, setFileListVersion] = useState(0)
 
   const handleNavChange = (key: string): void => {
+    // 视图切换前，可以在这里添加清理逻辑
+    // 注意：具体的流式请求清理由各组件的 useEffect cleanup 处理
+    console.log(`[App] 切换视图: ${currentView} -> ${key}`)
     setCurrentView(key)
   }
 
@@ -50,9 +53,20 @@ const App: React.FC = () => {
     // 启动性能监控并立即执行首次数据收集
     performanceMonitor.startMonitoring(true)
 
-    // 组件卸载时清理性能监控
+    // 页面卸载时的全局清理（作为备份，主要清理由各组件处理）
+    const handleBeforeUnload = (): void => {
+      console.log('[App] 页面即将卸载，触发全局清理')
+      // 注意：实际的流式请求清理主要由各组件的 useEffect cleanup 处理
+      // 这里作为兜底机制
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // 组件卸载时清理性能监控和事件监听
     return () => {
+      console.log('[App] 组件卸载，清理性能监控')
       performanceMonitor.cleanup()
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [])
 

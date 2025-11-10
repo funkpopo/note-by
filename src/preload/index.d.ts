@@ -36,7 +36,8 @@ interface UpdatesAPI {
 interface OpenAIAPI {
   testConnection: (AiApiConfig: AiApiConfig) => Promise<R<{ message: string }>>
   generateContent: (request: {
-    apiKey: string
+    configId?: string
+    apiKey?: string
     apiUrl: string
     modelName: string
     prompt: string
@@ -46,7 +47,8 @@ interface OpenAIAPI {
 
   streamGenerateContent: (
     request: {
-      apiKey: string
+      configId?: string
+      apiKey?: string
       apiUrl: string
       modelName: string
       prompt: string

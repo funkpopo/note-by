@@ -527,6 +527,13 @@ const ChatInterface: React.FC = () => {
     cancel: () => void
   } | null>(null)
 
+  // 使用 ref 保存最新的 cleanup 函数，避免 useEffect 重复执行
+  const currentStreamCleanupRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    currentStreamCleanupRef.current = currentStreamCleanup
+  }, [currentStreamCleanup])
+
   useEffect(() => {
     // 初始化节流函数 - 减少节流间隔，提高流式显示流畅度
     throttledUpdateRef.current = throttle(
@@ -539,13 +546,14 @@ const ChatInterface: React.FC = () => {
 
     // 组件卸载时清理
     return () => {
+      console.log('[ChatInterface] 组件卸载，清理流式请求和节流函数')
       throttledUpdateRef.current?.cancel()
       // 组件卸载时自动停止正在进行的流式请求
-      if (currentStreamCleanup) {
-        currentStreamCleanup()
+      if (currentStreamCleanupRef.current) {
+        currentStreamCleanupRef.current()
       }
     }
-  }, [currentStreamCleanup])
+  }, []) // 移除 currentStreamCleanup 依赖，只在挂载和卸载时执行
 
   // 加载指定会话的消息
   const loadSessionMessages = useCallback(

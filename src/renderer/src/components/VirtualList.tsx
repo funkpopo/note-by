@@ -1,5 +1,8 @@
 import React, { memo } from 'react'
-import { FixedSizeList as List, ListChildComponentProps } from 'react-window'
+import * as ReactWindow from 'react-window'
+
+const List = ReactWindow.FixedSizeList
+type ListChildComponentProps = ReactWindow.ListChildComponentProps
 
 // 虚拟列表项的数据类型
 export interface VirtualListItem {

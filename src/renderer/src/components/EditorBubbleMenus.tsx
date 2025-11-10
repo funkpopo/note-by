@@ -334,20 +334,28 @@ export const TextBubbleMenu: React.FC<{
     loadApiConfigs()
   }, [loadApiConfigs])
 
+  // 使用 ref 保存最新的 streamId，避免 useEffect 重复执行
+  const currentStreamIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    currentStreamIdRef.current = currentStreamId
+  }, [currentStreamId])
+
   // 组件卸载时清理节流相关的资源和流式请求
   useEffect(() => {
     return () => {
+      console.log('[EditorBubbleMenus] 组件卸载，清理流式请求和动画帧')
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current)
       }
       // 组件卸载时自动停止正在进行的流式请求
-      if (currentStreamId) {
-        window.api.openai.stopStreamGenerate(currentStreamId).catch((error) => {
+      if (currentStreamIdRef.current) {
+        window.api.openai.stopStreamGenerate(currentStreamIdRef.current).catch((error) => {
           console.error('停止流式请求失败:', error)
         })
       }
     }
-  }, [currentStreamId])
+  }, []) // 移除 currentStreamId 依赖，只在挂载和卸载时执行
 
   // 监听localStorage变化以同步多个Editor实例的配置选择
   useEffect(() => {

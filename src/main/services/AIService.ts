@@ -22,28 +22,61 @@ export class AIService {
   }
 
   /**
+   * 清理单个流式请求
+   */
+  private cleanupStream(streamId: string): void {
+    const streamInfo = this.activeStreams.get(streamId)
+    if (!streamInfo) return
+
+    try {
+      // 停止流式请求（关闭 AbortController）
+      if (streamInfo.emitter && typeof streamInfo.emitter.stop === 'function') {
+        streamInfo.emitter.stop()
+      }
+      // 执行清理函数（移除监听器）
+      streamInfo.cleanup()
+    } catch (error) {
+      console.error(`清理流式请求 ${streamId} 失败:`, error)
+    } finally {
+      // 确保从 Map 中删除
+      this.activeStreams.delete(streamId)
+    }
+  }
+
+  /**
    * 清理所有活跃的流式请求
    */
   private cleanupAllActiveStreams(): void {
-    for (const [streamId, streamInfo] of this.activeStreams) {
-      try {
-        // 停止流式请求
-        if (streamInfo.emitter && typeof streamInfo.emitter.stop === 'function') {
-          streamInfo.emitter.stop()
-        }
-        // 执行清理函数
-        streamInfo.cleanup()
-      } catch (error) {
-        console.error(`清理流式请求 ${streamId} 失败:`, error)
-      }
+    const streamIds = Array.from(this.activeStreams.keys())
+    for (const streamId of streamIds) {
+      this.cleanupStream(streamId)
     }
-    this.activeStreams.clear()
   }
 
   public registerIpcHandlers(): void {
     // 页面卸载时自动清理所有活跃的流式请求
     if (this.mainWindow) {
+      // 窗口关闭时清理
       this.mainWindow.on('close', () => {
+        console.log('[AIService] 窗口关闭，清理所有流式请求')
+        this.cleanupAllActiveStreams()
+      })
+
+      // 窗口销毁时清理（确保清理）
+      this.mainWindow.on('closed', () => {
+        console.log('[AIService] 窗口已销毁，清理所有流式请求')
+        this.cleanupAllActiveStreams()
+      })
+
+      // 监听渲染进程崩溃
+      this.mainWindow.webContents.on('render-process-gone', () => {
+        console.log('[AIService] 渲染进程崩溃，清理所有流式请求')
+        this.cleanupAllActiveStreams()
+      })
+
+      // 监听页面卸载（导航离开）
+      this.mainWindow.webContents.on('did-start-navigation', () => {
+        console.log('[AIService] 页面导航开始，清理所有流式请求')
         this.cleanupAllActiveStreams()
       })
     }
@@ -75,6 +108,7 @@ export class AIService {
           error: null as ((err: string) => void) | null
         }
         const cleanupListeners = (): void => {
+          clearTimeout(timeoutId)
           if (listeners.data)
             try {
               emitter.removeListener('data', listeners.data)
@@ -87,6 +121,7 @@ export class AIService {
             try {
               emitter.removeListener('error', listeners.error)
             } catch {}
+          // 从 activeStreams 中删除
           this.activeStreams.delete(streamId)
         }
         const timeoutMs = 60000
@@ -146,10 +181,8 @@ export class AIService {
       try {
         const streamInfo = this.activeStreams.get(streamId)
         if (streamInfo) {
-          if (streamInfo.emitter && typeof streamInfo.emitter.stop === 'function') {
-            streamInfo.emitter.stop()
-          }
-          streamInfo.cleanup()
+          // 使用统一的清理方法
+          this.cleanupStream(streamId)
           return { success: true }
         }
         return { success: false, error: '流式请求不存在或已完成' }

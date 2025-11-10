@@ -255,12 +255,13 @@ export function getLocalizedErrorMessage(
 
 // 内容生成请求接口
 export interface ContentGenerationRequest {
-  apiKey: string
+  configId?: string
+  apiKey?: string
   apiUrl: string
   modelName: string
   prompt: string
   maxTokens?: number
-  stream?: boolean // 添加流式输出选项
+  stream?: boolean
 }
 
 // 处理API URL，确保格式正确，只返回基础URL（不含路径）
@@ -522,12 +523,17 @@ export async function generateWithMessages(
 export async function generateContent(
   request: ContentGenerationRequest
 ): Promise<{ success: boolean; content?: string; error?: string }> {
-  const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
+  const { configId, apiKey, apiUrl, modelName, prompt, maxTokens = 2000, stream = false } = request
 
   try {
-    // Resolve API key if placeholder or empty
-    let effectiveKey = apiKey
-    if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
+    // 优先使用 configId 从 Keytar 获取密钥
+    let effectiveKey = ''
+    if (configId) {
+      const account = buildApiAccount(configId)
+      effectiveKey = (await getSecret(account)) || ''
+    } else if (apiKey && apiKey !== SECRET_PLACEHOLDER) {
+      effectiveKey = apiKey
+    } else if (!apiKey || apiKey === SECRET_PLACEHOLDER) {
       try {
         const settings = readSettings()
         const match = (settings.AiApiConfigs as AiApiConfig[] | undefined)?.find(
@@ -655,20 +661,39 @@ export async function streamGenerateContent(
 
   // 创建AbortController用于中断请求
   const abortController = new AbortController()
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
 
   // 添加停止方法到EventEmitter
   ;(eventEmitter as EventEmitter & { stop: () => void }).stop = () => {
-    abortController.abort()
+    console.log('[OpenAI Stream] 停止流式请求')
+    try {
+      // 取消读取器
+      if (reader) {
+        reader.cancel('用户停止请求').catch((err) => {
+          console.error('[OpenAI Stream] 取消读取器失败:', err)
+        })
+        reader = null
+      }
+      // 中止请求
+      abortController.abort()
+    } catch (error) {
+      console.error('[OpenAI Stream] 停止流式请求时出错:', error)
+    }
   }
 
   // 异步处理流式请求
-  const { apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
+  const { configId, apiKey, apiUrl, modelName, prompt, maxTokens = 2000 } = request
 
   ;(async (): Promise<void> => {
     try {
-      // Resolve API key if placeholder or empty
-      let effectiveKey = apiKey
-      if (!effectiveKey || effectiveKey === SECRET_PLACEHOLDER) {
+      // 优先使用 configId 从 Keytar 获取密钥
+      let effectiveKey = ''
+      if (configId) {
+        const account = buildApiAccount(configId)
+        effectiveKey = (await getSecret(account)) || ''
+      } else if (apiKey && apiKey !== SECRET_PLACEHOLDER) {
+        effectiveKey = apiKey
+      } else if (!apiKey || apiKey === SECRET_PLACEHOLDER) {
         try {
           const settings = readSettings()
           const match = (settings.AiApiConfigs as AiApiConfig[] | undefined)?.find(
@@ -746,7 +771,7 @@ export async function streamGenerateContent(
           return
         }
 
-        const reader = response.body?.getReader()
+        reader = response.body?.getReader() ?? null
         if (!reader) {
           eventEmitter.emit('error', '无法创建流读取器')
           return
@@ -771,7 +796,12 @@ export async function streamGenerateContent(
                 const data = line.slice(6)
                 if (data === '[DONE]') {
                   eventEmitter.emit('done', fullContent)
-                  reader.releaseLock() // 释放ReadableStream
+                  try {
+                    reader.releaseLock() // 释放ReadableStream
+                    reader = null
+                  } catch (e) {
+                    console.error('[OpenAI Stream] 释放读取器失败:', e)
+                  }
                   return
                 }
 
@@ -790,15 +820,32 @@ export async function streamGenerateContent(
           }
 
           eventEmitter.emit('done', fullContent)
-          reader.releaseLock() // 释放ReadableStream
+          try {
+            reader.releaseLock() // 释放ReadableStream
+            reader = null
+          } catch (e) {
+            console.error('[OpenAI Stream] 释放读取器失败:', e)
+          }
         } catch (streamError) {
           console.error('[OpenAI Stream] Stream reading error:', streamError)
-          try {
-            reader.cancel() // 取消并释放流
-          } catch {
-            // 忽略取消时的错误
+          // 尝试取消并释放流
+          if (reader) {
+            try {
+              await reader.cancel() // 取消并释放流
+              reader = null
+            } catch (cancelError) {
+              console.error('[OpenAI Stream] 取消读取器失败:', cancelError)
+            }
           }
-          throw streamError
+
+          // 只有在不是用户主动取消的情况下才抛出错误
+          if (!abortController.signal.aborted) {
+            throw streamError
+          } else {
+            console.log('[OpenAI Stream] 用户已停止请求')
+            eventEmitter.emit('error', '请求已被用户停止')
+            return
+          }
         }
       } catch (error) {
         console.error('[OpenAI Stream] Streaming error:', error)

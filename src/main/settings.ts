@@ -10,7 +10,8 @@ import {
 } from './encryption'
 import Ajv from 'ajv'
 import { SECRET_PLACEHOLDER, buildApiAccount, buildWebDAVAccount, saveSecret } from './secret-store'
-import { ApiErrorType, ApiErrorDiagnosis } from '../shared/types/common'
+import { ApiErrorType } from '../shared/types/common'
+import type { ApiErrorDiagnosis } from '../shared/types/common'
 
 function getSettingsPath(): string {
   if (is.dev) {
