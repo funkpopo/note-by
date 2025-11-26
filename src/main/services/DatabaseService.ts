@@ -9,19 +9,10 @@ import {
   saveAnalysisCache,
   resetAnalysisCache,
   checkDatabaseStatus,
-  getMergedTagsData,
-  getTagsByFile,
-  setTagsForFile,
   type AnalysisCacheItem
 } from '../database'
 
 export class DatabaseService {
-  private getNotesPath: () => string
-
-  constructor(getNotesPath: () => string) {
-    this.getNotesPath = getNotesPath
-  }
-
   public registerIpcHandlers(): void {
     // Note history
     ipcMain.handle(IPC_CHANNELS.GET_NOTE_HISTORY, async (_e, filePath: string) => {
@@ -97,47 +88,5 @@ export class DatabaseService {
         return { success: false, error: String(error), status: null }
       }
     })
-
-    // Tags
-    ipcMain.handle(IPC_CHANNELS.GET_GLOBAL_TAGS, async () => {
-      try {
-        const markdownPath = this.getNotesPath()
-        const tagsData = await getMergedTagsData(markdownPath)
-        return { success: true, tagsData }
-      } catch (error) {
-        return { success: false, error: String(error), tagsData: null }
-      }
-    })
-
-    ipcMain.handle(IPC_CHANNELS.REFRESH_GLOBAL_TAGS, async () => {
-      try {
-        const markdownPath = this.getNotesPath()
-        const tagsData = await getMergedTagsData(markdownPath)
-        return { success: true, tagsData }
-      } catch (error) {
-        return { success: false, error: String(error), tagsData: null }
-      }
-    })
-
-    ipcMain.handle(IPC_CHANNELS.GET_FILE_TAGS, async (_e, filePath: string) => {
-      try {
-        const tags = await getTagsByFile(filePath)
-        return { success: true, tags }
-      } catch (error) {
-        return { success: false, error: String(error) }
-      }
-    })
-
-    ipcMain.handle(
-      IPC_CHANNELS.SET_FILE_TAGS,
-      async (_e, filePath: string, tags: string[] = []) => {
-        try {
-          const success = await setTagsForFile(filePath, Array.isArray(tags) ? tags : [])
-          return { success }
-        } catch (error) {
-          return { success: false, error: String(error) }
-        }
-      }
-    )
   }
 }

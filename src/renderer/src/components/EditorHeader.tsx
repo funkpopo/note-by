@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Button,
   Space,
@@ -6,9 +6,7 @@ import {
   List,
   Toast,
   Spin,
-  Typography as SemiTypography,
-  TagInput,
-  Tag
+  Typography as SemiTypography
 } from '@douyinfe/semi-ui'
 import { IconFile, IconSave, IconChevronDown as IconChevronDownSemi } from '@douyinfe/semi-icons'
 import CustomDropdown from './CustomDropdown'
@@ -134,9 +132,6 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onContentRestore
 }) => {
   const [isExporting, setIsExporting] = useState(false)
-  const [fileTags, setFileTags] = useState<string[]>([])
-  const [savingTags, setSavingTags] = useState(false)
-  const saveTimer = useRef<number | null>(null)
 
   const filePath = useMemo(() => {
     if (!currentFolder || !currentFile) return ''
@@ -146,52 +141,6 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   const displayName = useMemo(() => {
     return currentFile ? currentFile.replace(/\.md$/i, '') : ''
   }, [currentFile])
-
-  const loadTags = useCallback(async (): Promise<void> => {
-    if (!filePath) return
-    try {
-      const res = await window.electron.ipcRenderer.invoke('tags:get-file-tags', filePath)
-      if (res && res.success && Array.isArray(res.tags)) {
-        setFileTags(res.tags)
-      } else {
-        setFileTags([])
-      }
-    } catch {
-      setFileTags([])
-    }
-  }, [filePath])
-
-  useEffect(() => {
-    void loadTags()
-  }, [loadTags])
-
-  const persistTags = useCallback(
-    async (tags: string[]): Promise<void> => {
-      if (!filePath) return
-      try {
-        setSavingTags(true)
-        await window.electron.ipcRenderer.invoke('tags:set-file-tags', filePath, tags)
-        try {
-          await window.api.tags.refreshGlobalTags()
-        } catch {
-          // ignore refresh errors
-        }
-      } finally {
-        setSavingTags(false)
-      }
-    },
-    [filePath]
-  )
-
-  const schedulePersist = useCallback(
-    (tags: string[]) => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current)
-      saveTimer.current = window.setTimeout(() => {
-        void persistTags(tags)
-      }, 600)
-    },
-    [persistTags]
-  )
 
   const handleExport = useCallback(
     async (format: string) => {
@@ -244,76 +193,6 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   if (!currentFolder || !currentFile) {
     return null
   }
-
-  // Deterministic tag color mapping (consistent per tag value)
-  const getTagColor = (
-    tag: string
-  ): {
-    color:
-      | 'amber'
-      | 'blue'
-      | 'cyan'
-      | 'green'
-      | 'grey'
-      | 'indigo'
-      | 'light-blue'
-      | 'light-green'
-      | 'lime'
-      | 'orange'
-      | 'pink'
-      | 'purple'
-      | 'red'
-      | 'teal'
-      | 'violet'
-      | 'yellow'
-      | 'white'
-    type: 'light' | 'solid' | 'ghost'
-  } => {
-    const palette: Array<
-      | 'amber'
-      | 'blue'
-      | 'cyan'
-      | 'green'
-      | 'grey'
-      | 'indigo'
-      | 'light-blue'
-      | 'light-green'
-      | 'lime'
-      | 'orange'
-      | 'pink'
-      | 'purple'
-      | 'red'
-      | 'teal'
-      | 'violet'
-      | 'yellow'
-    > = [
-      'blue',
-      'green',
-      'amber',
-      'cyan',
-      'indigo',
-      'light-blue',
-      'light-green',
-      'lime',
-      'orange',
-      'pink',
-      'purple',
-      'red',
-      'teal',
-      'violet',
-      'yellow'
-    ]
-    let hash = 5381
-    const str = (tag || '').toString().trim().toLowerCase()
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) + hash + str.charCodeAt(i)
-      hash |= 0
-    }
-    const idx = Math.abs(hash) % palette.length
-    return { color: palette[idx], type: 'light' }
-  }
-
-  // use memoized filePath above
 
   const exportFormats = [
     { key: 'pdf', label: '导出PDF' },
@@ -371,7 +250,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                 icon={<IconFile />}
                 type="tertiary"
                 size="default"
-                loading={isExporting || savingTags}
+                loading={isExporting}
                 disabled={!currentContent || hasUnsavedChanges}
               >
                 导出
@@ -388,51 +267,6 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             </Button>
           </Space>
         </div>
-      </div>
-
-      <div className="editor-tag-bar">
-        <SemiTypography.Text className="editor-tag-label" type="tertiary" size="small">
-          标签
-        </SemiTypography.Text>
-        <div className="editor-tag-input-container">
-          <TagInput
-            value={fileTags}
-            onChange={(val) => {
-              const list = (val || []).map((v) => String(v).trim()).filter(Boolean)
-              setFileTags(list)
-              schedulePersist(list)
-            }}
-            placeholder="添加标签"
-            addOnBlur
-            allowDuplicates={false}
-            separator=","
-            disabled={!filePath}
-            style={{ width: '100%' }}
-            renderTagItem={(value, _index, onClose) => {
-              const { color, type } = getTagColor(String(value))
-              return (
-                <Tag
-                  color={color}
-                  type={type}
-                  size="small"
-                  closable
-                  onClose={onClose}
-                  style={{ marginRight: 4 }}
-                >
-                  {String(value)}
-                </Tag>
-              )
-            }}
-          />
-        </div>
-        {savingTags && (
-          <div className="editor-tag-status">
-            <Spin size="small" />
-            <SemiTypography.Text type="tertiary" size="small">
-              保存中...
-            </SemiTypography.Text>
-          </div>
-        )}
       </div>
     </div>
   )

@@ -858,16 +858,6 @@ const api = {
     }> => ipcRenderer.invoke(IPC_CHANNELS.CHECK_DATABASE_STATUS)
   },
 
-  // 全局标签相关API
-  tags: {
-    // 获取全局标签数据
-    getGlobalTags: (): Promise<string[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_GLOBAL_TAGS),
-
-    // 刷新全局标签数据
-    refreshGlobalTags: (): Promise<string[]> =>
-      ipcRenderer.invoke(IPC_CHANNELS.REFRESH_GLOBAL_TAGS)
-  },
-
   // Mindmap API
   mindmap: {
     save: (content: string): Promise<{ success: boolean; path?: string; error?: string }> =>

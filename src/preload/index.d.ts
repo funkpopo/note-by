@@ -229,35 +229,6 @@ interface AnalyticsAPI {
   resetAnalysisCache: () => Promise<R<{}>>
 }
 
-// 全局标签API接口定义
-interface TagsAPI {
-  // 获取全局标签数据
-  getGlobalTags: () => Promise<
-    R<{
-      tagsData?: {
-        topTags: Array<{ tag: string; count: number }>
-        tagRelations: Array<{ source: string; target: string; strength: number }>
-        documentTags: Array<{ filePath: string; tags: string[] }>
-      }
-    }>
-  >
-
-  // 刷新全局标签数据
-  refreshGlobalTags: () => Promise<
-    R<{
-      tagsData?: {
-        topTags: Array<{ tag: string; count: number }>
-        tagRelations: Array<{ source: string; target: string; strength: number }>
-        documentTags: Array<{ filePath: string; tags: string[] }>
-      }
-    }>
-  >
-
-  getFileTags: (filePath: string) => Promise<R<{ tags?: string[] }>>
-
-  setFileTags: (filePath: string, tags: string[]) => Promise<R<{}>>
-}
-
 // 应用导航API接口定义
 interface NavigationAPI {
   // 导航到指定视图
@@ -558,7 +529,6 @@ interface API {
   webdav: WebDAVAPI
   cloudStorage: CloudStorageAPI
   analytics: AnalyticsAPI
-  tags: TagsAPI
   navigation: NavigationAPI
   chat: ChatAPI
   window: WindowAPI

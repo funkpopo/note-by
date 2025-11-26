@@ -23,28 +23,6 @@ interface Window {
       // 设置单个设置
       set: <T>(key: string, value: T) => Promise<boolean>
     }
-    tags: {
-      getGlobalTags: () => Promise<
-        R<{
-          tagsData?: {
-            topTags: Array<{ tag: string; count: number }>
-            tagRelations: Array<{ source: string; target: string; strength: number }>
-            documentTags: Array<{ filePath: string; tags: string[] }>
-          }
-        }>
-      >
-      refreshGlobalTags: () => Promise<
-        R<{
-          tagsData?: {
-            topTags: Array<{ tag: string; count: number }>
-            tagRelations: Array<{ source: string; target: string; strength: number }>
-            documentTags: Array<{ filePath: string; tags: string[] }>
-          }
-        }>
-      >
-      getFileTags: (filePath: string) => Promise<R<{ tags?: string[] }>>
-      setFileTags: (filePath: string, tags: string[]) => Promise<R<{}>>
-    }
     // 数据分析相关API
     analytics: {
       // 获取笔记历史统计数据

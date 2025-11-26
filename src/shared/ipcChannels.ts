@@ -79,12 +79,6 @@ export const IPC_CHANNELS = {
   RESET_ANALYSIS_CACHE: 'analytics:reset-analysis-cache',
   CHECK_DATABASE_STATUS: 'analytics:check-database-status',
 
-  // Tags
-  GET_GLOBAL_TAGS: 'tags:get-global-tags',
-  REFRESH_GLOBAL_TAGS: 'tags:refresh-global-tags',
-  GET_FILE_TAGS: 'tags:get-file-tags',
-  SET_FILE_TAGS: 'tags:set-file-tags',
-
   // Mindmap
   MINDMAP_SAVE_FILE: 'mindmap:save-file',
   MINDMAP_LOAD_FILE: 'mindmap:load-file',

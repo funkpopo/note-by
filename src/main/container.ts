@@ -17,7 +17,7 @@ export class ServiceContainer {
     this.exporter = new ExportService(mainWindow)
     this.ai = new AIService(mainWindow)
     this.sync = new SyncService(() => this.file.getMarkdownFolderPath())
-    this.db = new DatabaseService(() => this.file.getMarkdownFolderPath())
+    this.db = new DatabaseService()
   }
 
   registerAll(): void {
