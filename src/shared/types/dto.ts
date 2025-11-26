@@ -88,22 +88,3 @@ export interface AnalysisCacheItem {
   }
 }
 
-export interface ChatSession {
-  id: string
-  title?: string
-  createdAt: number
-  updatedAt: number
-  messageCount: number
-  isArchived: boolean
-}
-
-export interface ChatMessage {
-  id: string
-  sessionId: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
-  parentId?: string
-  createdAt: number
-  modelId?: string
-}

@@ -14,7 +14,6 @@ import {
   IconMoreStroked,
   IconMoon,
   IconSun,
-  IconComment,
   IconCopy
 } from '@douyinfe/semi-icons'
 import { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree'
@@ -248,17 +247,6 @@ const Navigation: React.FC<NavigationProps> = ({
           setShowSecondaryNav(false)
           onNavChange('MindMap')
           setSelectedKeys(['MindMap'])
-        },
-        style: { paddingBlock: '8px' }
-      },
-      {
-        itemKey: 'Chat',
-        text: t('navigation.chat'),
-        icon: <IconComment />,
-        onClick: (): void => {
-          setShowSecondaryNav(false)
-          onNavChange('Chat')
-          setSelectedKeys(['Chat'])
         },
         style: { paddingBlock: '8px' }
       },

@@ -5,7 +5,6 @@ import { Spin } from '@douyinfe/semi-ui'
 export const LazyDataAnalysis = lazy(() => import('./DataAnalysis'))
 export const LazyMindMapPage = lazy(() => import('./MindMapPage'))
 export const LazyEditor = lazy(() => import('./Editor'))
-export const LazyChatInterface = lazy(() => import('./ChatInterface'))
 export const LazySettings = lazy(() => import('./Settings'))
 
 // 小型组件懒加载
@@ -61,9 +60,6 @@ export const MindMapLoader: React.FC = () => (
   <ComponentLoader height="100vh" text="思维导图加载中..." />
 )
 
-export const ChatLoader: React.FC = () => (
-  <ComponentLoader height="500px" text="AI聊天界面加载中..." />
-)
 
 export const SettingsLoader: React.FC = () => (
   <ComponentLoader height="400px" text="设置页面加载中..." />
@@ -101,5 +97,4 @@ export const withLazyLoad = <P extends object>(
 // 导出简化的懒加载组件（向后兼容）
 export const SmartDataAnalysis = withLazyLoad(LazyDataAnalysis, DataAnalysisLoader)
 export const SmartMindMap = withLazyLoad(LazyMindMapPage, MindMapLoader)
-export const SmartChat = withLazyLoad(LazyChatInterface, ChatLoader)
 export const SmartSettings = withLazyLoad(LazySettings, SettingsLoader)

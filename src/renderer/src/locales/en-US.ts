@@ -47,64 +47,6 @@ export interface ExtendedDictionary {
       retrying: string
     }
   }
-  chat?: {
-    inputPlaceholder: string
-    modelSelector: {
-      placeholder: string
-      noModels: string
-      thinkingBadge: string
-    }
-    messages: {
-      statusIndicator: {
-        loading: string
-        streaming: string
-        incomplete: string
-        error: string
-      }
-    }
-    actions: {
-      send: string
-      stop: string
-      clear: string
-      copy: string
-      retry: string
-      delete: string
-      history: string
-      newSession: string
-    }
-    suggestions: string[]
-    notifications: {
-      copied: string
-      stopped: string
-      cleared: string
-      deleted: string
-      retrying: string
-      sendFailed: string
-      selectModel: string
-      noMessage: string
-      retryFailed: string
-      deleteFailed: string
-      noUserMessage: string
-      saveFailed: string
-      loadFailed: string
-    }
-    history: {
-      title: string
-      empty: string
-      newChat: string
-      loadFailed: string
-      saveFailed: string
-      deleteFailed: string
-      deleteConfirm: string
-      searchPlaceholder: string
-      createdAt: string
-      lastMessage: string
-      loading: string
-      notFound: string
-      titleUpdated: string
-      titleUpdateFailed: string
-    }
-  }
   editor?: {
     actions: {
       save: string
@@ -320,7 +262,6 @@ export const enUS: ExtendedDictionary = {
     notes: 'Notes',
     dataAnalysis: 'Data Analysis',
     mindMap: 'Mind Map',
-    chat: 'Chat',
     settings: 'Settings',
     themeToggle: 'Theme Toggle',
     sync: 'Sync',
@@ -578,70 +519,6 @@ export const enUS: ExtendedDictionary = {
       success: 'Analysis Complete',
       failed: 'Analysis Failed',
       retrying: 'Retrying...'
-    }
-  },
-  // Chat Interface Internationalization
-  chat: {
-    inputPlaceholder: 'Type your question... (Shift+Enter for new line, Enter to send)',
-    modelSelector: {
-      placeholder: 'Select AI Model',
-      noModels: 'No AI configurations available',
-      thinkingBadge: 'Thinking'
-    },
-    messages: {
-      statusIndicator: {
-        loading: 'Thinking...',
-        streaming: 'AI is thinking...',
-        incomplete: '⚠️ Generation interrupted',
-        error: '❌ Generation error'
-      }
-    },
-    actions: {
-      send: 'Send',
-      stop: 'Stop',
-      clear: 'Clear Chat',
-      copy: 'Copy',
-      retry: 'Regenerate',
-      delete: 'Delete',
-      history: 'Chat History',
-      newSession: 'New Session'
-    },
-    suggestions: [
-      '📝 Help me write an article about: ',
-      '🧮 Solve this math problem: ',
-      '💡 Give me advice about',
-      '🔍 Explain this concept: '
-    ],
-    notifications: {
-      copied: 'Copied to clipboard',
-      stopped: 'Generation stopped',
-      cleared: 'Chat cleared',
-      deleted: 'Message deleted',
-      retrying: 'Regenerating response...',
-      sendFailed: 'Failed to send message',
-      selectModel: 'Please select an AI model first',
-      noMessage: 'Cannot find corresponding user message, unable to regenerate',
-      retryFailed: 'Regeneration failed, please try again later',
-      deleteFailed: 'Failed to delete message, please try again later',
-      noUserMessage: '💡 Please select an AI model in the top right corner to start chatting',
-      saveFailed: 'Failed to save chat history',
-      loadFailed: 'Failed to load chat history'
-    },
-    history: {
-      title: 'Chat History',
-      empty: 'No chat history',
-      newChat: 'New Chat',
-      loadFailed: 'Failed to load chat history',
-      saveFailed: 'Failed to save chat history',
-      deleteFailed: 'Failed to delete chat history',
-      deleteConfirm: 'Are you sure you want to delete this conversation?',
-      searchPlaceholder: 'Search conversations...',
-      createdAt: 'Created at',
-      lastMessage: 'Last message',
-      loading: 'Loading chat history...',
-      notFound: 'No chat history found',
-      titleUpdated: 'Chat title updated',
-      titleUpdateFailed: 'Failed to update chat title'
     }
   },
   // Editor Interface Internationalization

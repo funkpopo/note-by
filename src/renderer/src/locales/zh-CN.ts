@@ -37,7 +37,6 @@ export interface ExtendedDictionary {
     notes: string
     dataAnalysis: string
     mindMap: string
-    chat: string
     settings: string
     themeToggle: string
     sync: string
@@ -313,61 +312,6 @@ export interface ExtendedDictionary {
       retrying: string
     }
   }
-  chat?: {
-    actions: {
-      send: string
-      stop: string
-      clear: string
-      history: string
-      copy: string
-      retry: string
-      delete: string
-      newSession: string
-    }
-    notifications: {
-      copied: string
-      cleared: string
-      stopped: string
-      retrying: string
-      deleted: string
-      deleteFailed: string
-      saveFailed: string
-      loadFailed: string
-      selectModel: string
-      noMessage: string
-      retryFailed: string
-      noUserMessage: string
-    }
-    inputPlaceholder: string
-    modelSelector: {
-      placeholder: string
-      thinkingBadge: string
-      noModels: string
-    }
-    suggestions: string[]
-    messages: {
-      statusIndicator: {
-        loading: string
-        streaming: string
-        incomplete: string
-        error: string
-      }
-    }
-    history: {
-      title: string
-      newChat: string
-      empty: string
-      searchPlaceholder: string
-      deleteConfirm: string
-      saveFailed: string
-      loadFailed: string
-      deleteFailed: string
-      loading: string
-      notFound: string
-      titleUpdated: string
-      titleUpdateFailed: string
-    }
-  }
   editor?: {
     actions: {
       save: string
@@ -583,7 +527,6 @@ export const zhCN: ExtendedDictionary = {
     notes: '笔记',
     dataAnalysis: '数据分析',
     mindMap: '思维导图',
-    chat: '对话',
     settings: '设置',
     themeToggle: '主题切换',
     sync: '同步',
@@ -839,67 +782,6 @@ export const zhCN: ExtendedDictionary = {
       success: '分析完成',
       failed: '分析失败',
       retrying: '正在重试...'
-    }
-  },
-  // 聊天界面国际化
-  chat: {
-    inputPlaceholder: '输入你的问题... (Shift+Enter换行，Enter发送)',
-    modelSelector: {
-      placeholder: '选择AI模型',
-      noModels: '暂无AI配置',
-      thinkingBadge: '思维'
-    },
-    messages: {
-      statusIndicator: {
-        loading: '正在思考中...',
-        streaming: 'AI正在思考...',
-        incomplete: '⚠️ 生成被中断',
-        error: '❌ 生成出错'
-      }
-    },
-    actions: {
-      send: '发送',
-      stop: '停止',
-      clear: '清空对话',
-      copy: '复制',
-      retry: '重新生成',
-      delete: '删除',
-      history: '对话历史',
-      newSession: '新建会话'
-    },
-    suggestions: [
-      '📝 帮我写一篇文章，题材是: ',
-      '🧮 需要解决下述的数学问题: ',
-      '💡 给我一些建议，关于',
-      '🔍 解释这个概念: '
-    ],
-    notifications: {
-      copied: '已复制到剪贴板',
-      stopped: '已停止生成',
-      cleared: '会话已清空',
-      deleted: '消息已删除',
-      retrying: '正在重新生成回复...',
-      selectModel: '请先选择AI模型',
-      noMessage: '无法找到对应的用户消息，无法重新生成',
-      retryFailed: '重新生成失败，请稍后重试',
-      deleteFailed: '删除消息失败，请稍后重试',
-      noUserMessage: '💡 请先在右上角选择AI模型再开始对话',
-      saveFailed: '保存对话历史失败',
-      loadFailed: '加载对话历史失败'
-    },
-    history: {
-      title: '对话历史',
-      empty: '暂无对话历史',
-      newChat: '新对话',
-      loadFailed: '加载对话历史失败',
-      saveFailed: '保存对话历史失败',
-      deleteFailed: '删除对话历史失败',
-      deleteConfirm: '确定删除这个对话吗？',
-      searchPlaceholder: '搜索对话...',
-      loading: '加载中...',
-      notFound: '未找到对话',
-      titleUpdated: '标题已更新',
-      titleUpdateFailed: '更新标题失败'
     }
   },
   // 编辑器界面国际化

@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC_CHANNELS } from '../../shared/ipcChannels'
 import {
-  addNoteHistory,
   getNoteHistory,
   getNoteHistoryById,
   getNoteHistoryStats,
@@ -13,15 +12,6 @@ import {
   getMergedTagsData,
   getTagsByFile,
   setTagsForFile,
-  createChatSession,
-  saveChatMessage,
-  getChatSessions,
-  getChatMessages,
-  updateChatSessionTitle,
-  deleteChatSession,
-  deleteChatMessage,
-  getChatSessionStats,
-  cleanupOldChatSessions,
   type AnalysisCacheItem
 } from '../database'
 
@@ -149,99 +139,5 @@ export class DatabaseService {
         }
       }
     )
-
-    // Chat
-    ipcMain.handle(IPC_CHANNELS.CHAT_CREATE_SESSION, async (_e, title?: string) => {
-      try {
-        const sessionId = await createChatSession(title)
-        return sessionId
-      } catch (error) {
-        return null
-      }
-    })
-
-    ipcMain.handle(
-      IPC_CHANNELS.CHAT_SAVE_MESSAGE,
-      async (
-        _e,
-        message: {
-          id: string
-          sessionId: string
-          role: 'user' | 'assistant' | 'system'
-          content: string
-          status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
-          parentId?: string
-          createdAt?: number
-          modelId?: string
-        }
-      ) => {
-        try {
-          const msgToSave = { ...message, createdAt: message.createdAt ?? Date.now() }
-          const success = await saveChatMessage(msgToSave)
-          return success
-        } catch (error) {
-          return false
-        }
-      }
-    )
-
-    ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSIONS, async () => {
-      try {
-        return await getChatSessions()
-      } catch (error) {
-        return []
-      }
-    })
-
-    ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSION_MESSAGES, async (_e, sessionId: string) => {
-      try {
-        return await getChatMessages(sessionId)
-      } catch (error) {
-        return []
-      }
-    })
-
-    ipcMain.handle(
-      IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE,
-      async (_e, sessionId: string, title: string) => {
-        try {
-          return await updateChatSessionTitle(sessionId, title)
-        } catch (error) {
-          return false
-        }
-      }
-    )
-
-    ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_SESSION, async (_e, sessionId: string) => {
-      try {
-        return await deleteChatSession(sessionId)
-      } catch (error) {
-        return false
-      }
-    })
-
-    ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_MESSAGE, async (_e, messageId: string) => {
-      try {
-        return await deleteChatMessage(messageId)
-      } catch (error) {
-        return false
-      }
-    })
-
-    ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSION_STATS, async () => {
-      try {
-        return await getChatSessionStats()
-      } catch (error) {
-        return { totalSessions: 0, totalMessages: 0, activeSessions: 0 }
-      }
-    })
-
-    ipcMain.handle(IPC_CHANNELS.CHAT_CLEANUP_OLD_SESSIONS, async (_e, keepCount?: number) => {
-      try {
-        return await cleanupOldChatSessions(keepCount)
-      } catch (error) {
-        return 0
-      }
-    })
   }
 }

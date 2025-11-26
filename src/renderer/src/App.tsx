@@ -6,7 +6,6 @@ import { performanceMonitor } from './utils/PerformanceMonitor'
 import {
   SmartDataAnalysis,
   SmartMindMap,
-  SmartChat,
   SmartSettings,
   withLazyLoad,
   LazyEditor,
@@ -99,8 +98,6 @@ const App: React.FC = () => {
         return <SmartDataAnalysis />
       case 'MindMap':
         return <SmartMindMap />
-      case 'Chat':
-        return <SmartChat />
       default:
         return <div>分组管理内容</div>
     }

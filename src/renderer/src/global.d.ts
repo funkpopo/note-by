@@ -9,19 +9,9 @@ type R<T = Record<string, unknown>> = Result<T>
 
 // AiApiConfig moved to shared/types/common
 
-interface ChatAPI {
-  createSession: (title?: string) => Promise<string | null>
-  saveMessage: (message: Omit<ChatMessage, 'id'>) => Promise<boolean>
-  getSessions: () => Promise<ChatSession[]>
-  getSessionMessages: (sessionId: string) => Promise<ChatMessage[]>
-  updateSessionTitle: (sessionId: string, title: string) => Promise<boolean>
-  deleteSession: (sessionId: string) => Promise<boolean>
-  deleteMessage: (messageId: string) => Promise<boolean>
-}
 
 interface Window {
   api: {
-    chat: ChatAPI
     // 设置相关API
     settings: {
       // 获取所有设置

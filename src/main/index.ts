@@ -33,16 +33,7 @@ import {
   renameFolderTags,
   deleteFileTags,
   checkDatabaseStatus,
-  type AnalysisCacheItem,
-  createChatSession,
-  saveChatMessage,
-  getChatSessions,
-  getChatMessages,
-  updateChatSessionTitle,
-  deleteChatSession,
-  deleteChatMessage,
-  getChatSessionStats,
-  cleanupOldChatSessions
+  type AnalysisCacheItem
 } from './database'
 import { closeAllDatabaseConnections } from './database'
 
@@ -174,12 +165,6 @@ function createTray(): void {
       label: '🧠 思维导图',
       click: (): void => {
         navigateToView('MindMap')
-      }
-    },
-    {
-      label: '💬 对话',
-      click: (): void => {
-        navigateToView('Chat')
       }
     },
     {
@@ -1438,132 +1423,6 @@ app.whenReady().then(() => {
       return { success: true, viewKey }
     } catch (error) {
       return { success: false, error: String(error) }
-    }
-  })
-
-  // 聊天历史相关处理器
-  // 创建新的聊天会话
-  ipcMain.handle(IPC_CHANNELS.CHAT_CREATE_SESSION, async (_, title?: string) => {
-    try {
-      const sessionId = await createChatSession(title)
-      return sessionId
-    } catch (error) {
-      console.error('创建聊天会话失败:', error)
-      return null
-    }
-  })
-
-  // 保存聊天消息
-  ipcMain.handle(
-    IPC_CHANNELS.CHAT_SAVE_MESSAGE,
-    async (
-      _,
-      message: {
-        id: string
-        sessionId: string
-        role: 'user' | 'assistant' | 'system'
-        content: string
-        status?: 'loading' | 'streaming' | 'incomplete' | 'complete' | 'error'
-        parentId?: string
-        createdAt?: number
-        modelId?: string
-      }
-    ) => {
-      try {
-        const msgToSave = {
-          ...message,
-          createdAt: message.createdAt ?? Date.now()
-        }
-        const success = await saveChatMessage(msgToSave)
-        return success
-      } catch (error) {
-        console.error('保存聊天消息失败:', error)
-        return false
-      }
-    }
-  )
-
-  // 获取所有聊天会话
-  ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSIONS, async () => {
-    try {
-      const sessions = await getChatSessions()
-      return sessions
-    } catch (error) {
-      console.error('获取聊天会话失败:', error)
-      return []
-    }
-  })
-
-  // 获取指定会话的消息
-  ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSION_MESSAGES, async (_, sessionId: string) => {
-    try {
-      const messages = await getChatMessages(sessionId)
-      return messages
-    } catch (error) {
-      console.error('获取会话消息失败:', error)
-      return []
-    }
-  })
-
-  // 更新会话标题
-  ipcMain.handle(
-    IPC_CHANNELS.CHAT_UPDATE_SESSION_TITLE,
-    async (_, sessionId: string, title: string) => {
-      try {
-        const success = await updateChatSessionTitle(sessionId, title)
-        return success
-      } catch (error) {
-        console.error('更新会话标题失败:', error)
-        return false
-      }
-    }
-  )
-
-  // 删除聊天会话
-  ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_SESSION, async (_, sessionId: string) => {
-    try {
-      const success = await deleteChatSession(sessionId)
-      return success
-    } catch (error) {
-      console.error('删除聊天会话失败:', error)
-      return false
-    }
-  })
-
-  // 删除单条聊天消息
-  ipcMain.handle(IPC_CHANNELS.CHAT_DELETE_MESSAGE, async (_, messageId: string) => {
-    try {
-      const success = await deleteChatMessage(messageId)
-      return success
-    } catch (error) {
-      console.error('删除聊天消息失败:', error)
-      return false
-    }
-  })
-
-  // 获取会话统计信息
-  ipcMain.handle(IPC_CHANNELS.CHAT_GET_SESSION_STATS, async () => {
-    try {
-      const stats = await getChatSessionStats()
-      return stats
-    } catch (error) {
-      console.error('获取会话统计失败:', error)
-      return {
-        totalSessions: 0,
-        totalMessages: 0,
-        activeSessions: 0
-      }
-    }
-  })
-
-  // 清理旧的会话
-  ipcMain.handle(IPC_CHANNELS.CHAT_CLEANUP_OLD_SESSIONS, async (_, keepCount?: number) => {
-    try {
-      const deletedCount = await cleanupOldChatSessions(keepCount)
-      return deletedCount
-    } catch (error) {
-      console.error('清理旧会话失败:', error)
-      return 0
     }
   })
 

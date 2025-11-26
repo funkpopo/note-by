@@ -99,17 +99,6 @@ export const IPC_CHANNELS = {
   MEMORY_GET_REPORT: 'memory:get-report',
   MEMORY_CLEANUP: 'memory:cleanup',
   MEMORY_FORCE_GC: 'memory:force-gc',
-
-  // Chat History
-  CHAT_CREATE_SESSION: 'chat:create-session',
-  CHAT_SAVE_MESSAGE: 'chat:save-message',
-  CHAT_GET_SESSIONS: 'chat:get-sessions',
-  CHAT_GET_SESSION_MESSAGES: 'chat:get-session-messages',
-  CHAT_UPDATE_SESSION_TITLE: 'chat:update-session-title',
-  CHAT_DELETE_SESSION: 'chat:delete-session',
-  CHAT_DELETE_MESSAGE: 'chat:delete-message',
-  CHAT_GET_SESSION_STATS: 'chat:get-session-stats',
-  CHAT_CLEANUP_OLD_SESSIONS: 'chat:cleanup-old-sessions'
 } as const
 
 export type IPCChannelKey = keyof typeof IPC_CHANNELS
